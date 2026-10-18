@@ -1,2 +1,11 @@
-.godot/
-exports/
+# Godot's generated imports, shader caches, editor state and local logs.
+/.godot/
+
+# Generated builds; export presets belong in source control when added.
+/exports/
+
+# Local credentials; commit a placeholder example only when needed.
+.env
+.env.*
+!.env.example
+/secrets/

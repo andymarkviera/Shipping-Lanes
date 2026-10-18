@@ -14,10 +14,13 @@
 
 ## Open and check
 
-Import `project.godot` through Godot's Project Manager, then open it and press F6
-with `scenes/setup.tscn` open, or F5 to run the project.
-The window should say “Shipping Lanes” and “Project setup ready”.
-The output should include “Shipping Lanes: setup scene loaded successfully.”
+Use `tools/Godot.ps1 -Mode Editor` through PowerShell 7, then F5 to run the
+project. `-Mode Run` runs it directly and `-Mode Check` verifies import/startup
+headlessly. See `README.md` and `ENVIRONMENT.md` for complete commands.
+The current entry point is `features/main/main.tscn`; the window says “Shipping
+Lanes” and “Project ready”. Output includes “Shipping Lanes: Main scene loaded
+successfully.” Step 05 replaces the earlier setup scene referenced historically
+below.
 
 ## Step 01 — Project contract
 
@@ -220,4 +223,52 @@ entries are checked against source SHA-256 hashes and a sidecar records the
 archive checksum. Restore to a new directory and follow `ENVIRONMENT.md`; the
 launcher needs the cached or exact installed engine build.
 
-Next roadmap task: Step 05, `repository-and-project-skeleton`.
+Step 04's next task was Step 05, `repository-and-project-skeleton`, subsequently
+requested by Andy.
+
+## Step 05 — Repository and project skeleton
+
+Task ID: `repository-and-project-skeleton`  
+Status: complete — October 18, 2026.
+
+- Initialized a local Git repository only inside `ShippingLanes`, with the
+  existing Step 04 project preserved in commit `8cf76a4` and tag
+  `step-04-engine-baseline` before editing the skeleton. No remote was configured.
+- Replaced the original setup entry point with `features/main/main.tscn`.
+  Main directly composes `World` (an empty Node3D scene) and `UI` (a CanvasLayer
+  with the identifying startup screen). The typed startup script retains its UID.
+- Grouped scenes/scripts by feature in `features/main`, `features/world` and
+  `features/ui`. Added `README.md` with launch commands, layout, scope links and
+  recovery instructions; updated current commands without rewriting historical
+  validation records.
+- Expanded ignore rules for generated Godot data, export output and local
+  credentials. Added text normalization and retained Markdown's intentional
+  line breaks. Source scenes, script UID sidecars and future export presets
+  remain trackable.
+- Commit identity is explicitly `Codex <codex@localhost>` for these automation
+  checkpoints. User-wide Git settings and synced reference files are unchanged.
+
+Validation:
+
+- Saved launcher `-Mode Check` passed full editor import and Main startup with
+  exit code 0, the expected Main success message and no engine/script errors.
+- Native Windows/OpenGL launch on the RTX 3070 passed with exit code 0. The
+  loaded tree contains Main with World and UI as siblings; the captured
+  1152×648 screen clearly displays “Shipping Lanes” and “Project ready”.
+- Capture: `../output/checks/step-05-main.png`; native log:
+  `.godot/step-05-graphics.log`; import/startup logs:
+  `.godot/environment-import.log` and `.godot/environment-startup.log`.
+- Independent read-only scene/path/scope review passed. Git ignore checks
+  confirm cache/build/credential exclusion and source/UID/preset inclusion.
+- The world remains empty. Gameplay, ship import, multiplayer services and
+  desktop export are not implemented by this step.
+
+Recoverable baseline: Git tag `step-05-project-skeleton` plus
+`../output/checkpoints/step-05-project-skeleton-2026-10-18.zip`. The ZIP includes
+tracked project source/records, excludes `.git`, generated caches, the engine,
+development saves and the external Blender source, and has a SHA-256 sidecar.
+Its file contents are verified against the saved source. Extract into a new
+folder and follow `README.md` / `ENVIRONMENT.md` to restore without replacing
+current work. The Git repository also retains the previous setup baseline.
+
+Next roadmap task: Step 06, `export-pipeline-smoke-test`.

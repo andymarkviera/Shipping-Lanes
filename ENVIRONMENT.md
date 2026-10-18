@@ -66,7 +66,7 @@ From the workspace folder containing `ShippingLanes`, use PowerShell 7:
 # Open the project editor; press F5 there to run it.
 pwsh -NoProfile -File .\ShippingLanes\tools\Godot.ps1 -Mode Editor
 
-# Run the existing setup scene directly.
+# Run the current Main scene directly.
 pwsh -NoProfile -File .\ShippingLanes\tools\Godot.ps1 -Mode Run
 
 # Wait for complete editor import and a bounded headless startup.
@@ -82,9 +82,10 @@ installation is performed by the launcher.
 Logs are written under `.godot/environment-*.log`; engine errors fail the check
 even if the engine returns exit code 0. The script waits for process completion
 and uses structured arguments, including paths with spaces. It does not automate
-the editor UI. The setup window should display “Shipping Lanes” and “Project
-setup ready”; `.godot/environment-startup.log` currently includes the setup
-success message. These instructions do not start gameplay implementation.
+the editor UI. The current Main window displays “Shipping Lanes” and “Project
+ready”; `.godot/environment-startup.log` includes “Shipping Lanes: Main scene
+loaded successfully.” Step 05 replaces the earlier setup scene; historical
+measurements below describe that earlier scene.
 
 ## Actual checks and measured limits
 
@@ -148,5 +149,6 @@ its own user-data location; portable editor APPDATA redirection does not establi
 normal installed-player save behavior. See [Godot export](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_projects.html)
 and [command-line usage](https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tutorial.html).
 
-Next original task: Step 05, repository and project skeleton. No gameplay or ship
-asset integration is completed by this environment baseline.
+Step 05 subsequently establishes the repository and Main scene. The next task is
+Step 06, the export pipeline smoke test. No gameplay or ship asset integration is
+completed by this environment baseline.
