@@ -1,12 +1,15 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
     [int]$QuitAfter = 0,
-    [string]$EngineSource
+    [string]$EngineSource,
+    [ValidateSet('Debug', 'Release')]
+    [string]$Configuration = 'Debug',
+    [string]$TemplateSource
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,12 +20,14 @@ $portableRoot = Join-Path $workspaceRoot 'output/tools/godot-4.7.2'
 $enginePath = Join-Path $portableRoot 'godot.windows.opt.tools.64.exe'
 $taskAppData = Join-Path $portableRoot 'user_data'
 $logRoot = Join-Path $projectRoot '.godot'
+$exportRoot = Join-Path $projectRoot ('exports/windows-x86_64/' + $Configuration.ToLowerInvariant())
+$exportPath = Join-Path $exportRoot 'ShippingLanes.exe'
 
 [System.IO.Directory]::CreateDirectory($portableRoot) | Out-Null
 [System.IO.Directory]::CreateDirectory($logRoot) | Out-Null
 [System.IO.Directory]::CreateDirectory((Join-Path $taskAppData 'Godot/app_userdata/Shipping Lanes')) | Out-Null
 
-if (-not (Test-Path -LiteralPath $enginePath -PathType Leaf)) {
+if ($Mode -ne 'RunExport' -and -not (Test-Path -LiteralPath $enginePath -PathType Leaf)) {
     if (-not $EngineSource) { $EngineSource = $baseline.engine_source }
     if (-not (Test-Path -LiteralPath $EngineSource -PathType Leaf)) {
         throw 'Pinned Godot is unavailable. Supply -EngineSource with the recorded exact build.'
@@ -32,24 +37,28 @@ if (-not (Test-Path -LiteralPath $enginePath -PathType Leaf)) {
     }
     Copy-Item -LiteralPath $EngineSource -Destination $enginePath
 }
-if ((Get-FileHash -LiteralPath $enginePath -Algorithm SHA256).Hash -ne $baseline.engine_sha256) {
+if ($Mode -ne 'RunExport' -and (Get-FileHash -LiteralPath $enginePath -Algorithm SHA256).Hash -ne $baseline.engine_sha256) {
     throw 'Cached Godot differs from the pinned build. Existing files have been preserved.'
 }
 [System.IO.File]::WriteAllText((Join-Path $portableRoot '_sc_'), '')
 
 function Invoke-ProjectGodot {
-    param([string]$LogName, [string[]]$Arguments)
+    param([string]$LogName, [string[]]$Arguments, [switch]$Exported)
     $logPath = Join-Path $logRoot $LogName
+    # Remove a stale log so it cannot make a failed launch appear successful.
+    if (Test-Path -LiteralPath $logPath) { Remove-Item -LiteralPath $logPath }
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-    $startInfo.FileName = $enginePath
-    $startInfo.WorkingDirectory = $projectRoot
+    $startInfo.FileName = if ($Exported) { $exportPath } else { $enginePath }
+    $startInfo.WorkingDirectory = if ($Exported) { $exportRoot } else { $projectRoot }
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
     # Child process only: no machine/user environment or Steam settings are changed.
     $startInfo.Environment['APPDATA'] = $taskAppData
-    foreach ($argument in @('--path', $projectRoot, '--log-file', $logPath) + $Arguments) {
+    $baseArguments = @('--log-file', $logPath)
+    if (-not $Exported) { $baseArguments = @('--path', $projectRoot) + $baseArguments }
+    foreach ($argument in $baseArguments + $Arguments) {
         $startInfo.ArgumentList.Add($argument)
     }
     $process = [System.Diagnostics.Process]::Start($startInfo)
@@ -71,7 +80,35 @@ function Invoke-ProjectGodot {
     finally { $process.Dispose() }
 }
 
-Write-Host "Using pinned Godot $($baseline.engine_version)"
+function Install-ExportTemplates {
+    $templates = Get-Content -LiteralPath (Join-Path $projectRoot 'export-templates.json') -Raw | ConvertFrom-Json
+    if ($templates.version -ne $baseline.export_template_version) { throw 'Template and engine version pins disagree.' }
+    $templateRoot = Join-Path $portableRoot ('editor_data/export_templates/' + $templates.version)
+    $sourceRoot = if ($TemplateSource) { $TemplateSource } else { $templates.source }
+    [System.IO.Directory]::CreateDirectory($templateRoot) | Out-Null
+    foreach ($file in $templates.files) {
+        $destination = Join-Path $templateRoot $file.name
+        if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) {
+            $source = Join-Path $sourceRoot $file.name
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+                throw "Missing pinned template $($file.name). Supply -TemplateSource with the recorded matching files."
+            }
+            if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -ne $file.sha256) {
+                throw "Template source hash mismatch: $($file.name). Existing files preserved."
+            }
+            Copy-Item -LiteralPath $source -Destination $destination
+        }
+        if ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -ne $file.sha256) {
+            throw "Cached template hash mismatch: $($file.name). Existing files preserved."
+        }
+    }
+    if ((Get-Content -LiteralPath (Join-Path $templateRoot 'version.txt') -Raw).Trim() -ne $templates.version) {
+        throw 'Export template version metadata does not match the pin.'
+    }
+    Write-Host "Verified Windows templates $($templates.version)"
+}
+
+if ($Mode -ne 'RunExport') { Write-Host "Using pinned Godot $($baseline.engine_version)" }
 switch ($Mode) {
     'Check' {
         Invoke-ProjectGodot -LogName 'environment-import.log' -Arguments @('--headless', '--editor', '--import')
@@ -79,6 +116,28 @@ switch ($Mode) {
     }
     'Import' {
         Invoke-ProjectGodot -LogName 'environment-import.log' -Arguments @('--headless', '--editor', '--import')
+    }
+    'Export' {
+        Install-ExportTemplates
+        [System.IO.Directory]::CreateDirectory($exportRoot) | Out-Null
+        Invoke-ProjectGodot -LogName 'environment-import.log' -Arguments @('--headless', '--editor', '--import')
+        $exportOption = '--export-' + $Configuration.ToLowerInvariant()
+        Invoke-ProjectGodot -LogName ('export-' + $Configuration.ToLowerInvariant() + '.log') -Arguments @('--headless', $exportOption, 'Windows Desktop', $exportPath)
+        foreach ($artifact in @($exportPath, [System.IO.Path]::ChangeExtension($exportPath, '.pck'))) {
+            if (-not (Test-Path -LiteralPath $artifact -PathType Leaf) -or (Get-Item -LiteralPath $artifact).Length -eq 0) {
+                throw "Export artifact missing or empty: $artifact"
+            }
+        }
+        Write-Host "Export ready: $exportPath (keep the .pck beside it)"
+    }
+    'RunExport' {
+        foreach ($artifact in @($exportPath, [System.IO.Path]::ChangeExtension($exportPath, '.pck'))) {
+            if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) { throw "Build $Configuration first: missing $artifact" }
+        }
+        $launchArguments = @()
+        if ($Headless) { $launchArguments += '--headless' }
+        if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        Invoke-ProjectGodot -Exported -LogName ('export-run-' + $Configuration.ToLowerInvariant() + '.log') -Arguments $launchArguments
     }
     default {
         $launchArguments = @()

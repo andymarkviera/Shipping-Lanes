@@ -1,5 +1,14 @@
 # Asset references
 
+## Coastal color reference — received October 18, 2026
+
+- Andy selected the ocean and rock colors in `Photo 1.jpg`, allowing regional
+  variation. Only that coastal portion informs the palette.
+- Original: `C:/Users/andyv/.codex/codex-remote-attachments/01a150a5-fa2a-7451-9158-f147593d52ef/22AEA3C9-2668-4127-9183-D523C2116BBC/1-Photo-1.jpg`.
+- Preserved externally, not copied into the game, exported or used as a texture.
+- Interpreted colors and reusable original material swatches are recorded in
+  `ART_DIRECTION.md`; apply during later water and world art tasks.
+
 ## Starter container ship — received October 18, 2026
 
 - Asset ID: `starter_container_01`.

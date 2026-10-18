@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "version": "4.7.2.stable",
+  "platform": "Windows x86_64",
+  "source": "C:/Program Files (x86)/Steam/steamapps/common/Godot Engine/editor_data/export_templates/4.7.2.stable",
+  "files": [
+    { "name": "version.txt", "sha256": "38885C88F75ABBC797A1DB7559719800279A00CFB9FA8B2E2868A7F6F84BAD2E" },
+    { "name": "windows_debug_x86_64.exe", "sha256": "51498B72B3A237F882EBD7D1787F06A4BC1EAF0572DAAB93837ADCFD3CFDC107" },
+    { "name": "windows_debug_x86_64_console.exe", "sha256": "5514C7645EE897A01F540D3CF22EDE5BADF92394521A08BFAB66A54D7369E6E6" },
+    { "name": "windows_release_x86_64.exe", "sha256": "D34D36F3BE1A6C49C56525AE86469B92E4F417DDF0B43CF00DD80C385C4B0562" },
+    { "name": "windows_release_x86_64_console.exe", "sha256": "52BDCAE9068E8D23B840E5C63B0C1798FFE2CB66144E5C4BC7AF11FB8C8600DF" },
+    { "name": "icudt_godot.dat", "sha256": "64E407B570A21A4B740531A14CD95F0CEFC46CEF3D8224FD09A0DD386FB7016A" }
+  ]
+}

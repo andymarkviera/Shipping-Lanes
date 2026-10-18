@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Coastal Rock - Starting Swatch"
+albedo_color = Color(0.462745098, 0.4117647059, 0.3568627451, 1)
+roughness = 0.9

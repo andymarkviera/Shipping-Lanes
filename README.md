@@ -63,8 +63,13 @@ The workspace's `sources/` and attached reference documents are read-only.
 - [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md), [UNCERTAINTIES.md](UNCERTAINTIES.md)
   and [BUILD_DEPENDENCIES.md](BUILD_DEPENDENCIES.md): coverage and decision gates.
 
-Step 05 establishes this skeleton. Step 06 is the desktop export smoke test;
-no exported build is available yet.
+Step 06 adds tested Windows debug and release exports. See [EXPORT.md](EXPORT.md)
+for exact build/run commands and the sandbox's writable-data requirement.
+Next is Step 07, model and asset conventions.
+
+[ART_DIRECTION.md](ART_DIRECTION.md) records Andy's coastal photo palette:
+muted blue-green water, warm gray-brown rocks, pale foam and regional variation.
+Reusable material swatches are ready for later map work; the current world is empty.
 
 ## Local version control and recovery
 

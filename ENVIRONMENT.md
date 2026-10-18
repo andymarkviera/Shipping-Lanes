@@ -126,29 +126,18 @@ No minimum hardware promise is set yet. Test lower-end machines and the actual
 Windows distribution targets before release; Godot's own [system requirements](https://docs.godotengine.org/en/4.7/about/system_requirements.html)
 are an engine baseline, not this game's proven requirements.
 
-## Export preparation (Step 06 still pending)
+## Windows export workflow — completed at Step 06
 
-The installed Steam editor has a `4.7.2.stable` template directory including
-`windows_debug_x86_64.exe` and `windows_release_x86_64.exe`. Their availability
-was inspected; no export was attempted. The isolated editor's template folder is
-currently empty. At Step 06, stage the matching x86_64 templates and required
-metadata in the portable editor's `editor_data/export_templates/4.7.2.stable/`
-or install the exact matching official template package there; preserve originals.
-Do not use templates from an auto-updated, incompatible engine.
+Matching Windows x86_64 templates are pinned in `export-templates.json` and
+staged in the writable portable template directory. `tools/Godot.ps1` now
+supports `-Mode Export` and `-Mode RunExport`, with `-Configuration Debug` or
+`Release`. See `EXPORT.md` for complete commands, output locations and evidence.
 
-Create a Windows Desktop x86_64 preset and a generated output folder at Step 06,
-then run the equivalent command with the same child environment as the launcher:
+Both standalone builds launch cleanly using writable child APPDATA. A separate
+copy of the release EXE/PCK also passed outside the project. An inherited
+Windows APPDATA launch reached Main but could not write shader cache under the
+sandbox; normal-profile clean-machine behavior remains unverified. Use the
+saved launcher for the verified local workflow.
 
-```text
-godot --headless --path <project> --export-debug "Windows Desktop" <generated-output>/ShippingLanes.exe
-```
-
-This is a future instruction: no preset exists yet and export/clean-install
-support is not claimed. Run the exported executable outside the editor and check
-its own user-data location; portable editor APPDATA redirection does not establish
-normal installed-player save behavior. See [Godot export](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_projects.html)
-and [command-line usage](https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tutorial.html).
-
-Step 05 subsequently establishes the repository and Main scene. The next task is
-Step 06, the export pipeline smoke test. No gameplay or ship asset integration is
-completed by this environment baseline.
+Next original task: Step 07, model and asset conventions. The world is empty;
+the new coastal palette is prepared for later map implementation.

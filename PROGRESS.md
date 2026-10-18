@@ -271,4 +271,50 @@ Its file contents are verified against the saved source. Extract into a new
 folder and follow `README.md` / `ENVIRONMENT.md` to restore without replacing
 current work. The Git repository also retains the previous setup baseline.
 
-Next roadmap task: Step 06, `export-pipeline-smoke-test`.
+Step 05's next task was Step 06, `export-pipeline-smoke-test`, subsequently
+requested by Andy.
+
+## Step 06 — Export pipeline smoke test
+
+Task ID: `export-pipeline-smoke-test`  
+Status: complete — October 18, 2026 (local Windows smoke test).
+
+- Pinned matching 4.7.2 Windows x86_64 export template hashes and staged verified
+  copies into the portable editor's writable template folder. Steam originals
+  remain unchanged.
+- Added a Windows Desktop preset selecting Main and its dependencies, with
+  separate EXE/PCK and no signing credentials. Added Export and RunExport modes
+  to the saved launcher, plus complete commands and limits in `EXPORT.md`.
+- Debug and release export operations passed full import/packaging with exit 0.
+  Both built executables launched through RunExport on RTX 3070 / OpenGL, printed
+  the Main startup marker and exited 0 without engine/script errors.
+- Copied only the release EXE/PCK outside the project into
+  `../output/smoke/step-06 standalone/`. With a writable child APPDATA directory,
+  this independent copy launched without editor or project-path arguments,
+  exited 0 with no errors, and produced a visually checked 1152×648 startup frame.
+  Evidence: `../output/checks/step-06-isolated.log` and
+  `step-06-isolated00000009.png`.
+- The initial standalone attempt using inherited Windows APPDATA reached Main
+  but logged a shader-cache write error under the sandbox. It is not recorded
+  as a clean pass. Normal-profile/clean-machine behavior remains unverified;
+  use the saved launcher for the verified development workflow.
+- Generated builds/cache and local credentials remain excluded from Git.
+  No gameplay, installer, signing, cross-platform or capacity validation is claimed.
+
+Additional user-requested art direction:
+
+- Recorded the supplied photo's ocean/rock palette and regional variation in
+  `ART_DIRECTION.md`, D026 and the asset references. Prepared three original
+  StandardMaterial3D swatches for coastal water, rock and foam; all three loaded
+  successfully in Godot (`../output/checks/step-06-materials.log`).
+- The source photo remains external and unchanged. Map geometry, water effects
+  and ship import are later work. These unused swatches are not included in the
+  Main-only smoke export.
+
+Recoverable baseline: Git tag `step-06-export-pipeline` and source-only archive
+`../output/checkpoints/step-06-export-pipeline-2026-10-18.zip`, with verified
+contents and SHA-256 sidecar. Generated builds, large templates, engine,
+development data and external art sources are excluded. Follow `EXPORT.md`
+to rebuild from this source checkpoint.
+
+Next roadmap task: Step 07, `model-and-asset-conventions`.
