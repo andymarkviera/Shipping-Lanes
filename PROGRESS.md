@@ -1,0 +1,223 @@
+# Shipping Lanes progress
+
+## Setup checkpoint — October 18, 2026
+
+- Created a minimal Godot 4.7 project with a startup scene and typed GDScript.
+- Verified direct file creation, editing, and readback in this workspace.
+- No gameplay implemented during initial setup.
+- Engine verified: Godot 4.7.2.stable.steam.ed1daf0bf.
+- Executable: `C:/Program Files (x86)/Steam/steamapps/common/Godot Engine/godot.windows.opt.tools.64.exe`.
+- Headless editor import completed with exit code 0.
+- Headless startup completed with exit code 0 and printed the setup success message.
+- Default user log location was not writable in the sandbox; reran successfully with an explicit log under `.godot/`.
+- Requested a visible setup window launch; visual appearance still needs Andy's confirmation.
+
+## Open and check
+
+Import `project.godot` through Godot's Project Manager, then open it and press F6
+with `scenes/setup.tscn` open, or F5 to run the project.
+The window should say “Shipping Lanes” and “Project setup ready”.
+The output should include “Shipping Lanes: setup scene loaded successfully.”
+
+## Step 01 — Project contract
+
+Task ID: `project-contract`  
+Status: complete — October 18, 2026.
+
+- Read the current setup project and all five supplied design/reference files at
+  the level relevant to the contract.
+- Added `GAME_SPEC.md` separating confirmed scope, provisional defaults, open
+  decisions with deadlines, and deferred/excluded features.
+- Preserved the connected-world/globe/circumnavigation design direction from the
+  newer map reference without finalizing its proposed geometry or launch count.
+- Added `DECISIONS.md` with stable decision IDs and source precedence.
+- Distinguished the first container-voyage milestone from the complete version 1
+  release. No gameplay or project settings changed in Step 01.
+- No additional product answer is needed to complete this documentation step.
+
+Review checklist: cargo scope, Windows/Godot baseline, both online modes,
+public/private ownership, ship-only controls, recovery, placeholder art, and
+version 1 criteria are explicit. Research uncertainties remain evidence gaps,
+not silently adopted mechanics.
+
+Validation: reviewed the contract against the supplied confirmed scope and
+research caveats. Godot 4.7.2 headless editor import and setup startup each
+returned exit code 0; startup printed the setup success message and neither
+log contained errors. Logs: `.godot/step-01-import.log` and
+`.godot/step-01-startup.log`. This verifies the existing scaffold only; no
+gameplay, visual playtest, export, or multiplayer capacity is claimed.
+
+Recoverable checkpoint: `../output/checkpoints/step-01-project-contract-2026-10-18.zip`,
+containing the project files and these records, excluding generated `.godot`
+cache/logs. Extract to a new folder and import `ShippingLanes/project.godot`
+to restore it. The archive's SHA-256 is recorded in the adjacent `.sha256` file.
+
+Step 01's next task was Step 02, `online-architecture-decision`, subsequently
+requested by Andy. Hardware baseline, full project skeleton, and export pipeline
+steps remain incomplete despite the minimal setup scaffold.
+
+## Step 02 — Online architecture decision
+
+Task ID: `online-architecture-decision`  
+Status: complete — October 18, 2026 (architecture decision only).
+
+- Added `ONLINE_ARCHITECTURE.md` covering both modes, authority/save boundaries,
+  public identity and private guests, selected providers/storage, lease fencing,
+  durable handoff, host departure, outages, and a later implementation proof matrix.
+- Selected Keycloak/OIDC + PostgreSQL-backed public account service, per-world
+  SQLite private saves, and Godot ENet/UDP with authenticated DTLS. These are
+  engineering decisions; nothing was installed, registered, or deployed.
+- Updated the contract's identity/storage decision and decisions D011–D017.
+- No gameplay, network code, project settings, service code, or assets changed.
+- Public sign-in is required; guests use private/local worlds. A listed player
+  host remains private-economy. Stale public owners cannot write after transfer.
+
+Acceptance review: both modes have explicit authority/save rules; public money
+and fleet follow canonical account state; private saves cannot import public
+wealth; one backend owner and durable handoff are defined; 100 players remains
+an unmeasured target. Dependency, crash/retry, identity, networking, and load
+proofs are assigned to later runtime work and are not reported as passed here.
+
+Validation: reviewed against Step 02 and official Godot 4.7, Keycloak/OIDC,
+PostgreSQL, SQLite, and native-app authentication references. Independent scope
+and failure-path review passed after clarifying that operation hashes exclude
+transport/lease fields and normal business rejections do not freeze simulation.
+Godot 4.7.2 headless editor import and startup each returned exit code 0; startup
+printed the setup success message and neither log contained errors. Runtime
+file hashes matched their pre-step baseline. Logs: `.godot/step-02-import.log`
+and `.godot/step-02-startup.log`. No backend, networking, database durability,
+identity, export, visual playtest, or load test ran in this documentation step.
+
+Recoverable checkpoint: `../output/checkpoints/step-02-online-architecture-2026-10-18.zip`.
+Includes project files and records, excluding generated cache/logs; archive
+entries are checked against source SHA-256 hashes. The archive checksum is in
+the adjacent `.sha256` file. Extract to a new folder and import
+`ShippingLanes/project.godot` to restore the scaffold and decision records.
+
+Step 02's next task was Step 03, `feature-and-uncertainty-inventory`, subsequently
+requested by Andy.
+
+## Step 03 — Feature and uncertainty inventory
+
+Task ID: `feature-and-uncertainty-inventory`  
+Status: complete — October 18, 2026 (inventory and scheduling only).
+
+- Created `FEATURE_INVENTORY.md`: 56 rows placing every agreed feature or
+  reference category into core/support, conditional, expansion or deferred/excluded
+  scope, with original stable task IDs and milestone/gate references.
+- Created `UNCERTAINTIES.md`: 42 open rule groups with a responsible owner,
+  latest decision point, and required resolution evidence. Existing confirmed
+  scope and Step 02 provider/authority choices are not reopened.
+- Created `BUILD_DEPENDENCIES.md`: eight planned prerequisite tasks, including
+  early geographic/storage proofs, connected-world network proof, public storage,
+  authenticated admission, public authority integration, starter-route distances,
+  and a launch hull/passage envelope. Original roadmap numbering remains stable.
+- Resolved scheduling conflicts: schema before world proof, route/quotes before
+  late world expansion, SQLite-safe backup behavior, and early identity/storage
+  integration before public handoff and shared markets/refineries.
+- Recorded the first playable two-port/two-hull milestone explicitly. Container
+  quote/reward rules must be decided before offers, then verified at payout.
+- Supplied starter Blender model remains untouched and unimported; asset inspection
+  is assigned to Step 07. The external model is not copied into checkpoint archives.
+- No gameplay, project settings, network/service code, assets, or original attached
+  reference documents were changed.
+
+Acceptance and document validation:
+
+- Scope and dependency reviews found no missing agreed category or dependency
+  cycle after correcting the container quote deadline, two-hull milestone, and
+  explicit partial-discharge policy.
+- 56 unique feature rows, 42 unique uncertainty groups, eight unique supplemental
+  tasks and 59 distinct valid task references; no duplicate IDs or missing refs.
+  Report: `../output/checks/step-03-inventory-validation.json`.
+- Due uncertainties remain open with owners/deadlines. Completing this inventory
+  does not mark any proposed provider/asset/geographic/network experiment passed.
+
+Engine validation and correction to earlier quick checks:
+
+- Waited explicitly for Godot processes to exit this time. Earlier quick shell
+  invocations could return before the Windows GUI-subsystem executable finished;
+  their import/no-error claims did not establish full editor readiness. Those
+  earlier readiness claims are superseded by this fuller check.
+- Installed Steam Godot import completed with exit code 0 and no project script
+  or resource-import failures, but logged user-data access and editor-settings
+  permission errors. A hash-identical local verification copy, with portable
+  editor data under `../output/tools/godot-4.7.2/`, removed the installation-folder
+  settings errors. Its remaining editor error is inability to open `user://` for
+  profiler snapshot storage; full editor readiness is not yet passed.
+- The local copy's headless setup startup passed with exit code 0, the expected
+  success message and no runtime errors. All four project runtime file hashes
+  and the external starter Blender source hash were unchanged.
+- Logs: `.godot/step-03-portable-import.log` and
+  `.godot/step-03-portable-startup.log`; structured result:
+  `../output/checks/step-03-engine-validation.json`.
+- Remaining environment issue is assigned to U001 and Step 04. The Steam
+  installation was not modified. No gameplay, export, network, durability or
+  capacity test ran in this documentation step.
+- Portable-mode basis: [Godot 4.7 data paths](https://docs.godotengine.org/en/4.7/tutorials/io/data_paths.html).
+
+Recoverable checkpoint: `../output/checkpoints/step-03-feature-inventory-2026-10-18.zip`.
+Includes local project/decision/inventory files, excluding generated `.godot`
+cache/logs, the external Blender source and the verification engine copy.
+Archive contents are checked against source SHA-256 hashes; the archive checksum
+is in its adjacent `.sha256` file. Extract to a new folder and import
+`ShippingLanes/project.godot` to restore the scaffold and records; see the known
+environment limitation above before claiming full editor readiness.
+
+Step 03's next task was Step 04, `engine-and-hardware-baseline`, subsequently
+requested by Andy. Its remaining environment issue is resolved below.
+
+## Step 04 — Engine and hardware baseline
+
+Task ID: `engine-and-hardware-baseline`  
+Status: complete — October 18, 2026.
+
+- Recorded measured Windows x64 hardware: i7-12700KF (12 cores/20 threads),
+  RTX 3070 (8192 MiB VRAM, driver 617.14), and 15.84 GiB OS-visible physical
+  RAM. Exact installed DIMM capacity was unavailable; raw evidence and limits
+  are in `hardware-baseline.json`.
+- Pinned exact Godot 4.7.2 Steam build/commit/SHA-256 in `engine-baseline.json`;
+  selected Compatibility/OpenGL and made the driver explicit in `project.godot`.
+- Added `tools/Godot.ps1` to launch the editor, run the project, or check full
+  import/startup using the pinned engine copy. Child-only APPDATA plus portable
+  editor settings resolves the Step 03 user-data/settings error. No Steam
+  installation or user/system environment change was required.
+- Added `ENVIRONMENT.md` with launch/check/install/export instructions, actual
+  evidence, limits and provisional client/server performance/resource targets.
+  Matching named installed Windows export templates were found; staging them and
+  creating/running an export remain Step 06, not completed here.
+
+Validation:
+
+- Full headless editor import and setup startup via saved launcher `-Mode Check`
+  passed with exit code 0 and no engine/script/environment errors. The editor
+  filesystem scan/layout completed, and setup printed its expected success message.
+- Saved launcher `-Mode Run -QuitAfter 10` and `-Mode Editor -QuitAfter 120`
+  each passed with exit code 0 using the actual RTX 3070 / OpenGL driver.
+- Native setup frame capture was inspected. After 60 warmup frames, 180 measured
+  frames at a 60 FPS cap averaged 16.666 ms (p95 16.679 ms). The actual drawable
+  size was 1920×1061 after Windows constrained the requested 1920×1080 window.
+  This is a setup UI/frame-pacing check, not ship/world throughput or full 1080p proof.
+- Isolated `user://` write/flush/read passed and the temporary file was removed.
+- All setup scene/script/UID and external Blender source hashes matched the
+  pre-step baseline. Gameplay and ship assets were not changed or imported.
+- Launcher/path approach received independent review. Raw reports/capture are
+  `../output/checks/step-04-hardware.json`, `step-04-graphics.json` and
+  `step-04-setup.png`; engine logs are `.godot/environment-*.log` and
+  `.godot/step-04-*.log`.
+
+Known limits: only this Windows build/hardware and an empty setup project were
+tested. Export, lower-end support, representative gameplay memory/frame budgets,
+networking, public services and 100-player capacity remain unverified. Normal
+Steam launches do not inherit the isolated launcher paths; use the saved helper
+for the verified direct-file workflow. Development saves through the helper use
+its separate local data directory and must not be discarded when refreshing tools.
+
+Recoverable checkpoint: `../output/checkpoints/step-04-engine-baseline-2026-10-18.zip`.
+Includes project source/records/launcher/pins; excludes generated cache, runtime
+data, the large verification engine and the external Blender source. Archive
+entries are checked against source SHA-256 hashes and a sidecar records the
+archive checksum. Restore to a new directory and follow `ENVIRONMENT.md`; the
+launcher needs the cached or exact installed engine build.
+
+Next roadmap task: Step 05, `repository-and-project-skeleton`.

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "inspected_at_utc": "2026-10-18T20:36:47.7020177Z",
+  "scope": "Read-only Windows hardware baseline; no installed software, settings, or game project changes.",
+  "operating_system": {
+    "architecture": "x64",
+    "display_version": "26H2",
+    "build": "26300.9711",
+    "edition_id": "Core",
+    "installation_type": "Client",
+    "registry_product_name": "Windows 10 Home",
+    "registry_build_lab_ex": "26100.1.amd64fre.ge_release.240331-1435",
+    "source": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion; Environment.Is64BitOperatingSystem",
+    "reliability": "Registry values read successfully. ProductName and BuildLabEx may be legacy values; no Windows marketing-name assertion is made."
+  },
+  "cpu": {
+    "model": "12th Gen Intel(R) Core(TM) i7-12700KF",
+    "vendor": "GenuineIntel",
+    "identifier": "Intel64 Family 6 Model 151 Stepping 2",
+    "physical_core_count": 12,
+    "logical_processor_count": 20,
+    "sources": [
+      "HKLM\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+      "kernel32.GetLogicalProcessorInformationEx(RelationProcessorCore)",
+      "kernel32.GetActiveProcessorCount(ALL_PROCESSOR_GROUPS)"
+    ],
+    "reliability": "Model is the reported registry string; counts are current OS-exposed topology. Environment.ProcessorCount independently returned 20."
+  },
+  "memory": {
+    "os_visible_physical_bytes": 17009004544,
+    "os_visible_physical_gib": 15.840869903564453,
+    "installed_capacity_bytes": null,
+    "source": "kernel32.GlobalMemoryStatusEx",
+    "installed_capacity_probe": "kernel32.GetPhysicallyInstalledSystemMemory returned false, Win32 error 5 (access denied)",
+    "reliability": "OS-visible total physical memory is verified. Exact installed DIMM capacity and configuration were unavailable; 16 GiB installed is not asserted."
+  },
+  "graphics": [
+    {
+      "model": "NVIDIA GeForce RTX 3070",
+      "dedicated_vram_mib": 8192,
+      "dedicated_vram_bytes": 8589934592,
+      "driver_version": "617.14",
+      "registry_driver_version": "32.0.16.1714",
+      "registry_driver_date": "2026-09-17",
+      "registry_provider": "NVIDIA",
+      "registry_matching_device_id": "pci\\ven_10de&dev_2488",
+      "sources": [
+        "C:\\Windows\\System32\\nvidia-smi.exe --query-gpu=name,memory.total,driver_version --format=csv,noheader",
+        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000"
+      ],
+      "reliability": "NVIDIA native query confirms model, VRAM, and active NVIDIA driver; registry 64-bit qwMemorySize independently matches 8 GiB. The legacy 32-bit MemorySize value was not used."
+    }
+  ],
+  "limitations": [
+    "No runtime frame rate or renderer performance is inferred from hardware specifications.",
+    "Firmware-reported installed RAM capacity and DIMM details are unavailable within this sandbox.",
+    "CIM/WMI is not used; native APIs and registry provide the recorded evidence."
+  ]
+}
