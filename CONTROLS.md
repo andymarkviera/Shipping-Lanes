@@ -81,3 +81,6 @@ Screenshot: `../output/checks/step-08-settings.png`; test log:
 Step 09 adds application-level navigation and mouse ownership; see
 [APPLICATION_FLOW.md](APPLICATION_FLOW.md). Escape now opens the session menu
 while playing. Settings can be reached from the title or session menu.
+
+Step 10 makes the settings panel opaque and sliders continuous. Only camera
+sensitivity shows a numeric readout. Save/Cancel behavior is unchanged.

@@ -7,10 +7,16 @@ var settings_return: State = State.TITLE
 var session: TestSession
 var continuation: Dictionary = {}
 var orbit_captured: bool = false
+var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var controls: PlayerControls = $Controls
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	var errors: PackedStringArray = catalog.load_definitions(PrototypeCatalog.RECORDS)
+	if not errors.is_empty():
+		push_error("Catalog validation failed: " + "; ".join(errors))
+		get_tree().quit(1)
+		return
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_min_size(Vector2i(960, 640))
 		DisplayServer.window_set_title("Container Ship Sim")

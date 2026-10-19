@@ -419,3 +419,29 @@ Recovery: tag `step-09-application-flow`; verified source ZIP with SHA-256 sidec
 `../output/checkpoints/step-09-application-flow-2026-10-18.zip`.
 
 Next roadmap task: Step 10, `definitions-and-stable-ids`.
+
+## Step 10 — Definitions and stable IDs
+
+Task ID: `definitions-and-stable-ids`  
+Status: complete — October 19, 2026.
+
+- Added four custom definition types with a four-record prototype catalog and
+  preserved the existing starter ship definition ID. Main validates it at boot.
+- Added transactional registry validation and defensive copies; mutable ShipState
+  contains independent fuel and deeply copied cargo, referencing a stable ID.
+- CatalogCheck passes instance isolation, source safety, bad references/types,
+  duplicate IDs, failed replacement retention, and wrapper metadata checks.
+- User-requested settings changes are complete: opaque panel, continuous sliders,
+  sensitivity number retained, volume number removed. ControlsCheck passes and
+  the native settings capture was visually inspected. FlowCheck also passes.
+- Export validation caught packed reference fields disappearing in the release;
+  typed string arrays corrected the issue. Rebuilt release boots and validates
+  the complete catalog without errors. See DEFINITIONS.md for limits.
+- No capacities, prices, starting supplies, map geometry or save contracts are
+  inferred from these placeholders.
+
+Recovery: tag `step-10-definitions`; verified source archive and SHA-256 sidecar:
+`../output/checkpoints/step-10-definitions-2026-10-19.zip`.
+
+Next: geographic-contract-feasibility, then private-storage-dependency-proof,
+both required before Step 11 save-and-protocol-contracts (BUILD_DEPENDENCIES.md).

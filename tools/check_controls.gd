@@ -106,6 +106,11 @@ func run_checks() -> void:
 	expect(not panel.visible, "Second Escape closes settings")
 	key(KEY_ESCAPE, false)
 	panel.open(controls)
+	expect(panel.get_theme_stylebox("panel").bg_color.a == 1.0, "Settings panel is opaque")
+	expect(panel.volume.step == 0.0 and panel.sensitivity.step == 0.0, "Sliders move continuously")
+	expect(panel.volume.get_parent().get_child_count() == 2 and panel.sensitivity.get_parent().get_child_count() == 3, "Only sensitivity has a number")
+	panel.volume.value = 0.2537
+	expect(is_equal_approx(panel.volume.value, 0.2537), "Volume accepts non-step values")
 	panel.volume.value = 0.25
 	panel.invert_y.button_pressed = true
 	panel.save()

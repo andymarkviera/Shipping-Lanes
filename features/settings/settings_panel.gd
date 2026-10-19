@@ -14,6 +14,12 @@ var fullscreen_option: CheckBox
 var save_button: Button
 
 func _ready() -> void:
+	var background: StyleBoxFlat = StyleBoxFlat.new()
+	background.bg_color = Color("243642")
+	background.border_color = Color("8299a5")
+	background.set_border_width_all(1)
+	background.set_corner_radius_all(6)
+	add_theme_stylebox_override("panel", background)
 	hide()
 	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	offset_left = -340
@@ -31,8 +37,8 @@ func _ready() -> void:
 	heading.text = "Controls & settings"
 	heading.add_theme_font_size_override("font_size", 24)
 	column.add_child(heading)
-	volume = add_slider(column, "Master volume", 0.0, 1.0, 0.05)
-	sensitivity = add_slider(column, "Camera sensitivity", 0.25, 3.0, 0.05)
+	volume = add_slider(column, "Master volume", 0.0, 1.0, false)
+	sensitivity = add_slider(column, "Camera sensitivity", 0.25, 3.0, true)
 	invert_y = CheckBox.new()
 	invert_y.text = "Invert camera Y: Off"
 	invert_y.toggled.connect(func(enabled: bool) -> void: invert_y.text = "Invert camera Y: " + ("On" if enabled else "Off"))
@@ -84,7 +90,7 @@ func _ready() -> void:
 	save_button.pressed.connect(save)
 	footer.add_child(save_button)
 
-func add_slider(parent: VBoxContainer, title: String, minimum: float, maximum: float, step_size: float) -> HSlider:
+func add_slider(parent: VBoxContainer, title: String, minimum: float, maximum: float, show_value: bool) -> HSlider:
 	var row: HBoxContainer = HBoxContainer.new()
 	parent.add_child(row)
 	var label: Label = Label.new()
@@ -94,13 +100,15 @@ func add_slider(parent: VBoxContainer, title: String, minimum: float, maximum: f
 	var slider: HSlider = HSlider.new()
 	slider.min_value = minimum
 	slider.max_value = maximum
-	slider.step = step_size
+	slider.step = 0.0
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(slider)
-	var value_label: Label = Label.new()
-	value_label.custom_minimum_size.x = 55
-	row.add_child(value_label)
-	slider.value_changed.connect(func(value: float) -> void: value_label.text = "%.2f" % value)
+	if show_value:
+		var value_label: Label = Label.new()
+		value_label.custom_minimum_size.x = 55
+		value_label.text = "%.2f" % slider.value
+		row.add_child(value_label)
+		slider.value_changed.connect(func(value: float) -> void: value_label.text = "%.2f" % value)
 	return slider
 
 func open(service: PlayerControls) -> void:

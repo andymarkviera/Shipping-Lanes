@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ship_starter_container_01"
+display_name = "Starter container ship"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+cargo_type_ids = Array[String](["cargo_test_container"])

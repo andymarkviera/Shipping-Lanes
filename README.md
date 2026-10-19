@@ -108,3 +108,9 @@ The main menu now displays Container Ship Sim. Play opens a local test session;
 Servers explains online availability, and Fleet remains disabled. The background
 is reserved for later artwork. See [APPLICATION_FLOW.md](APPLICATION_FLOW.md)
 for Continue, pause, focus handling and the repeatable `-Mode FlowCheck` command.
+
+## Content foundation
+
+[DEFINITIONS.md](DEFINITIONS.md) describes the four prototype definitions, stable
+IDs, independent ship state and `-Mode CatalogCheck`. Main validates the catalog
+on startup. These records do not yet create a playable ship, port or cargo job.

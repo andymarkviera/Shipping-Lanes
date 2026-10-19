@@ -79,3 +79,8 @@ References: [Godot Windows export](https://docs.godotengine.org/en/4.7/tutorials
 
 Step 09 also explicitly includes `features/main/test_session.gd`, loaded by Main.
 The release was rebuilt and its native startup verified after this addition.
+
+Step 10 explicitly exports the prototype catalog scripts/records and the starter
+ship scene referenced by path. Catalog validation runs at exported startup. Typed
+Array[String] reference fields passed release validation after packed-string
+fields were observed empty in the first release attempt.
