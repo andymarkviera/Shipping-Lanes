@@ -76,3 +76,6 @@ fail on nonzero exit or engine errors. Logs are in `.godot/export-*.log`.
 References: [Godot Windows export](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_windows.html),
 [command-line export and capture](https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tutorial.html),
 [Windows export options](https://docs.godotengine.org/en/4.7/classes/class_editorexportplatformwindows.html).
+
+Step 09 also explicitly includes `features/main/test_session.gd`, loaded by Main.
+The release was rebuilt and its native startup verified after this addition.

@@ -38,6 +38,8 @@ separate from proposed implementation choices and append deliberate revisions.
 | D029 | Input foundation verified | Physical keyboard bindings, fixed mouse orbit/wheel actions and validated local JSON preferences are owned by Main's PlayerControls. Menus, GUI focus and window focus gate all vehicle requests; release controls before resuming. Walking stays deferred under helm-only scope. See CONTROLS.md. |
 | D030 | Preferences and export boundary | Settings drafts apply only after successful Save; invalid/future data uses defaults without automatic overwrite. Main and the script-loaded defaults Resource are explicit export roots. Session pause/title/continue behavior remains Step 09. |
 
+| D031 | Application flow and branding | Container Ship Sim is the visible menu/window title; internal Shipping Lanes preferences path stays stable. Play uses a local hosted-policy fixture until quick-join exists; Servers is an honest placeholder. Continue is in-memory only. No global tree pause; gameplay reset preserves preferences. |
+
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another
 game and cannot override our requirements. The map guide adds selected visual

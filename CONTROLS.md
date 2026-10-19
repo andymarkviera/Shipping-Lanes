@@ -77,3 +77,7 @@ includes Main and default preferences: the initial Main-only selection omitted
 that script-loaded Resource, which standalone testing caught and corrected.
 Screenshot: `../output/checks/step-08-settings.png`; test log:
 `.godot/controls-check.log`. A real boat/controller is not part of this milestone.
+
+Step 09 adds application-level navigation and mouse ownership; see
+[APPLICATION_FLOW.md](APPLICATION_FLOW.md). Escape now opens the session menu
+while playing. Settings can be reached from the title or session menu.

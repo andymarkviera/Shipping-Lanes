@@ -101,3 +101,10 @@ neither includes the external Blender source or development saves.
 Git available on this machine at setup:
 `C:/Users/andyv/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/git/cmd/git.exe`.
 This is a local tooling path, not a bundled game dependency.
+
+## Menu and session testing
+
+The main menu now displays Container Ship Sim. Play opens a local test session;
+Servers explains online availability, and Fleet remains disabled. The background
+is reserved for later artwork. See [APPLICATION_FLOW.md](APPLICATION_FLOW.md)
+for Continue, pause, focus handling and the repeatable `-Mode FlowCheck` command.

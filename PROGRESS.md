@@ -394,3 +394,28 @@ contents and SHA-256 sidecar. Generated builds/cache and local preferences are
 excluded; preserved Blender source and game resources remain tracked.
 
 Next roadmap task: Step 09, `application-flow-and-focus`.
+
+## Step 09 — Application flow and focus
+
+Task ID: `application-flow-and-focus`  
+Status: complete — October 18, 2026.
+
+- Built Container Ship Sim title UI from Andy's layout: Play, Servers, Settings,
+  disabled Fleet, Exit, and conditional Continue test session. Background art is
+  deferred. Play starts a local fixture until quick-join networking exists.
+- Added boot/title/session/pause/settings/return transitions, disposable session
+  ownership, in-memory continuation, independent settings, and keyboard focus.
+- Hosted-style session processing continues behind menus; offline test policy
+  pauses only its own updates. SceneTree is never globally paused.
+- Focus loss releases mouse and opens the local pause menu; returning focus
+  requires Resume. Mouse capture and release-before-input rules are enforced.
+- FlowCheck passed twelve repeated session lifecycles and pause/focus/settings
+  checks; ControlsCheck still passes. Native title/pause renders inspected.
+- Release export initially exposed an omitted script-loaded fixture; explicit
+  export roots fixed it. Rebuilt Windows release launched with no script errors.
+- See APPLICATION_FLOW.md for limits: no actual servers, sailing or disk saves.
+
+Recovery: tag `step-09-application-flow`; verified source ZIP with SHA-256 sidecar:
+`../output/checkpoints/step-09-application-flow-2026-10-18.zip`.
+
+Next roadmap task: Step 10, `definitions-and-stable-ids`.

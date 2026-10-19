@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -121,6 +121,9 @@ switch ($Mode) {
     }
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
+    }
+    'FlowCheck' {
+        Invoke-ProjectGodot -LogName 'flow-check.log' -Arguments @('--headless', '--script', 'res://tools/check_flow.gd')
     }
     'ControlsCheck' {
         Invoke-ProjectGodot -LogName 'controls-check.log' -Arguments @('--headless', '--script', 'res://tools/check_controls.gd')
