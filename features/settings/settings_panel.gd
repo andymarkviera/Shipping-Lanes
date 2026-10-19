@@ -12,6 +12,7 @@ var sensitivity: HSlider
 var invert_y: CheckBox
 var fullscreen_option: CheckBox
 var save_button: Button
+var water_quality: OptionButton
 
 func _ready() -> void:
 	var background: StyleBoxFlat = StyleBoxFlat.new()
@@ -47,11 +48,21 @@ func _ready() -> void:
 	fullscreen_option.text = "Fullscreen: Off"
 	fullscreen_option.toggled.connect(func(enabled: bool) -> void: fullscreen_option.text = "Fullscreen: " + ("On" if enabled else "Off"))
 	column.add_child(fullscreen_option)
+	var water_row: HBoxContainer = HBoxContainer.new()
+	column.add_child(water_row)
+	var water_label: Label = Label.new()
+	water_label.text = "Water quality"
+	water_label.custom_minimum_size.x = 180
+	water_row.add_child(water_label)
+	water_quality = OptionButton.new()
+	for choice: String in ["Low", "Medium", "High"]: water_quality.add_item(choice)
+	water_quality.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	water_row.add_child(water_quality)
 	var hint: Label = Label.new()
 	hint.text = "Select a key to change it. Escape cancels.\nCamera: hold right mouse to orbit; scroll wheel to zoom."
 	column.add_child(hint)
 	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.custom_minimum_size.y = 190
+	scroll.custom_minimum_size.y = 155
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(scroll)
 	var bindings_column: VBoxContainer = VBoxContainer.new()
@@ -126,6 +137,7 @@ func refresh() -> void:
 	sensitivity.value = draft.camera_sensitivity
 	invert_y.button_pressed = draft.invert_camera_y
 	fullscreen_option.button_pressed = draft.fullscreen
+	water_quality.select(draft.water_quality)
 	for action: String in rows:
 		rows[action].text = OS.get_keycode_string(draft.bindings[action])
 
@@ -157,6 +169,7 @@ func save() -> void:
 	draft.camera_sensitivity = sensitivity.value
 	draft.invert_camera_y = invert_y.button_pressed
 	draft.fullscreen = fullscreen_option.button_pressed
+	draft.water_quality = water_quality.selected
 	var error: String = controls.save_preferences(draft)
 	if error.is_empty():
 		close()

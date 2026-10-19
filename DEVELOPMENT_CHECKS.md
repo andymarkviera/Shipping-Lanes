@@ -72,3 +72,5 @@ Step 17 expands HandlingCheck to 42 checks, including throttle ramps, rapid reve
 Step 18 expands HandlingCheck to 72 checks, adding repeatable turning, bounded lateral motion, steering signs, maneuvering input, and a solid-quay sideways approach.
 
 Step 19 adds CameraCheck to Full (13 stages / 41 scripts). Twenty camera checks cover size-independent focus, smoothing, input and pier avoidance. Release verification uses -Mode RunExport -Configuration Release -Headless -CameraProbe.
+
+Step 20 adds WaterCheck to Full (14 stages / 45 scripts). Thirty-five checks verify visual/physics separation, tiers, palettes and preference compatibility/save/cancel. Exported -WaterProbe without -Headless also exercises native shader rendering.

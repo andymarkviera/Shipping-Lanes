@@ -150,3 +150,5 @@ Step 17 updates the handling test: W/S adjust a retained throttle order; X order
 Step 18: A/D rudder, Q/E lateral thrusters, gold turning markers and a solid practice quay are available in Boat Handling Test.
 
 Step 19: [Orbit camera](CAMERA.md) adds RMB orbit, wheel zoom, C recenter and pier avoidance to Boat Handling Test.
+
+Step 20: [Stylized water](WATER_PRESENTATION.md) adds bold-blue animated patterns, gentle visual bobbing and saved water quality settings. A muted coastal palette is ready for later regions.

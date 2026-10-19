@@ -91,3 +91,5 @@ single-key rebindable gameplay actions; it does not take mouse/keyboard focus.
 Handling fixture (Step 17): hold W/S to raise/lower commanded throttle; release to retain the setting. X orders zero while engine output ramps down and momentum remains. Saved bindings apply. Escape returns to title; Space brake is reserved. A/D control speed-sensitive rudder; Q/E push sideways at low speed. Directions are relative to the ship. Rudder yaw reverses while travelling astern; thruster directions do not.
 
 Step 19 camera: hold RMB and drag to orbit; wheel zooms; C recenters aft (saved binding applies). Sensitivity/inversion use Settings. RMB release, focus loss and leaving the test release capture.
+
+Water quality: choose Low, Medium or High in the main-menu Settings, save, then open Boat Handling Test. Low keeps the blue/pale pattern with a flat surface and reduced visual bobbing.

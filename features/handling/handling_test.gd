@@ -1,6 +1,8 @@
 extends Node3D
 const Ship = preload("res://features/handling/handling_ship.gd")
 var ship: HandlingShip
+var ocean: OceanPresentation
+var visual_root: ShipVisualMotion
 var controls: PlayerControls
 var camera: OrbitCameraRig
 var readout: Label
@@ -28,16 +30,23 @@ func _ready() -> void:
 	ship = Ship.new()
 	ship.name = "BoxShip"
 	add_child(ship)
-	box(ship, Vector3(13, 4, 64), Vector3(0, 1, 0), Color("435762"))
-	box(ship, Vector3(10, 5, 8), Vector3(0, 5, -22), Color("e7ede7"))
-	box(ship, Vector3(4, 0.2, 6), Vector3(0, 3.1, 25), Color("d5ac6c"))
+	visual_root = ShipVisualMotion.new()
+	visual_root.name = "VisualRoot"
+	ship.add_child(visual_root)
+	visual_root.quality = controls.preferences.water_quality
+	box(visual_root, Vector3(13, 4, 64), Vector3(0, 1, 0), Color("435762"))
+	box(visual_root, Vector3(10, 5, 8), Vector3(0, 5, -22), Color("e7ede7"))
+	box(visual_root, Vector3(4, 0.2, 6), Vector3(0, 3.1, 25), Color("d5ac6c"))
 	var collision: CollisionShape3D = CollisionShape3D.new()
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = Vector3(13, 4, 64)
 	collision.shape = shape
 	collision.position.y = 1.0
 	ship.add_child(collision)
-	box(self, Vector3(4000, 0.2, 4000), Vector3(0, -1.1, 0), Color("8eaeb7"))
+	ocean = OceanPresentation.new()
+	ocean.quality = controls.preferences.water_quality
+	add_child(ocean)
+	ocean.position.y = -1.0
 	# Stationary lane markers make coasting visible without animated water.
 	for index: int in range(-20, 81):
 		for side: int in [-1, 1]:
@@ -62,7 +71,7 @@ func _ready() -> void:
 	var environment: WorldEnvironment = WorldEnvironment.new()
 	environment.environment = Environment.new()
 	environment.environment.background_mode = Environment.BG_COLOR
-	environment.environment.background_color = Color("b9cbd0")
+	environment.environment.background_color = Color("a0dce9")
 	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.environment.ambient_light_color = Color("dce5e5")
 	environment.environment.ambient_light_energy = 0.65

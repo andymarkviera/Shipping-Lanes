@@ -80,3 +80,5 @@ become approved formulas just because they appear in the inventory.
 | D042 | Maneuvering prototype | Rudder yaw scales with signed forward speed, with bounded rate and acceleration; astern reverses yaw. Paired lateral thrust translates without yaw, fades with speed, and is bounded by lateral drag. ShipDefinition owns six validated tuning fields. Controlled local velocity rotates with hull; realistic sideslip/angular contact deferred. |
 
 | D043 | Camera rig | Explicit CameraFocus interface, hull-relative zoom, heading-relative orbit and exponential smoothing. Sphere sweep shortens the camera arm around solid geometry, excluding the target hull; recovery smooths. No fixed ship path. See CAMERA.md for target-switch and collision limits. |
+
+| D044 | Water art and motion | Andy selected bright bold blue with broad pale animated patterns from his stylized reference; muted coastal colors remain for later areas. Original opaque procedural shader, visual-only waves/bobbing, steady body/collider/camera focus. Saved Low/Medium/High tiers; no physical sea forces. |

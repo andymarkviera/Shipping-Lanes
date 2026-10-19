@@ -661,3 +661,26 @@ captures inspected. CAMERA.md records interface, limits and static-pier scope.
 Recovery: tag `step-19-camera`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-19-camera-2026-10-19.zip`.
 Next: Step 20, water presentation.
+
+## Step 20 — Water presentation
+
+Task ID: `water-presentation`  
+Status: complete — October 19, 2026.
+
+Added original procedural bright-blue water with broad pale drifting patterns,
+soft swells and a separate muted coastal palette resource. Andy chose bold blue
+for the first area; region selection remains future work. Low/Medium/High quality
+is saved in Settings, with backward-compatible defaulting for old preferences.
+
+Visual hull bobbing is isolated below VisualRoot; the navigation body, collider
+and camera focus stay steady. No physical wave force or network transform change.
+WATER_PRESENTATION.md records boundaries, quality costs and pending water effects.
+
+WaterCheck passes 35 checks in editor and native OpenGL Windows Release. Full
+passes 14 stages / 45 scripts; 72 handling and 20 camera checks remain passing.
+Low/Medium/High and settings captures inspected. No actual networked sea state,
+shore foam, detailed wake or global ocean yet.
+
+Recovery: tag `step-20-water-presentation`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-20-water-presentation-2026-10-19.zip`.
+Next: Step 21, hull-and-shore-collision.

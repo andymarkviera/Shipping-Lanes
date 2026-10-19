@@ -105,3 +105,5 @@ U008 update (Step 17): command/engine ramping and limits are implemented and che
 U008 update (Step 18): rudder/thruster fixture parameters and astern rule implemented; tuning and controlled-body lateral grip remain provisional pending handling-feel review.
 
 U008 update (Step 19): orbit/zoom/recenter and two-size focus/pier checks complete; camera distances and smoothing remain subject to feel review.
+
+U033 update (Step 20): initial water art is bold blue with flowing pale patterns; coastal palette retained for future regions. Three quality tiers and visual-only bobbing verified. Physical waves/current/wind remain unapproved; no networked sea state implemented.

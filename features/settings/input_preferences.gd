@@ -23,6 +23,7 @@ const LABELS: Dictionary = {
 @export_range(0.25, 3.0) var camera_sensitivity: float = 1.0
 @export var invert_camera_y: bool = false
 @export var fullscreen: bool = false
+@export_enum("Low", "Medium", "High") var water_quality: int = 1
 @export var bindings: Dictionary = DEFAULT_BINDINGS.duplicate()
 
 static func valid_key(code: int) -> bool:
@@ -32,6 +33,7 @@ static func valid_key(code: int) -> bool:
 			KEY_LEFT, KEY_RIGHT, KEY_HOME, KEY_END, KEY_PAGEUP, KEY_PAGEDOWN, KEY_INSERT, KEY_DELETE]
 
 func validation_error() -> String:
+	if water_quality < 0 or water_quality > 2: return "Invalid water quality."
 	if not is_finite(master_volume) or master_volume < 0.0 or master_volume > 1.0:
 		return "Volume must be between 0 and 100%."
 	if not is_finite(camera_sensitivity) or camera_sensitivity < 0.25 or camera_sensitivity > 3.0:
@@ -54,7 +56,7 @@ func validation_error() -> String:
 	return ""
 
 func to_data() -> Dictionary:
-	return {"version": 1, "master_volume": master_volume, "camera_sensitivity": camera_sensitivity,
+	return {"version": 1, "water_quality": water_quality, "master_volume": master_volume, "camera_sensitivity": camera_sensitivity,
 		"invert_camera_y": invert_camera_y, "fullscreen": fullscreen, "bindings": bindings.duplicate()}
 
 static func from_data(data: Variant) -> InputPreferences:
@@ -73,6 +75,10 @@ static func from_data(data: Variant) -> InputPreferences:
 	result.camera_sensitivity = data.camera_sensitivity
 	result.invert_camera_y = data.invert_camera_y
 	result.fullscreen = data.fullscreen
+	var quality: Variant = data.get("water_quality", 1)
+	if not (quality is int or quality is float) or not is_finite(float(quality)) or float(quality) != floor(float(quality)) or quality < 0 or quality > 2:
+		return null
+	result.water_quality = int(quality)
 	result.bindings = {}
 	for action: Variant in data.bindings:
 		var value: Variant = data.bindings[action]

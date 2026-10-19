@@ -60,8 +60,8 @@ performance. The checks pass in editor and Windows Release. The full 12-stage
 suite passed, and the updated native HUD capture was inspected.
 
 The box hull has a gold bow marker and white aft block. Lane markers show motion
-across flat coastal water. The Step 19 orbit camera provides RMB orbit, wheel zoom and recenter; see CAMERA.md. No persisted ship
-state or multiplayer movement yet. Water presentation remains Step 20. The starter model is preserved for later integration.
+across the stylized water surface. The Step 19 orbit camera provides RMB orbit, wheel zoom and recenter; see CAMERA.md. No persisted ship
+state or multiplayer movement yet. Step 20 water and visual-only hull bobbing are documented in WATER_PRESENTATION.md. The starter model is preserved for later integration.
 
 ## Step 18: maneuvering
 
