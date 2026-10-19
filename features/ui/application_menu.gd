@@ -4,6 +4,8 @@ extends Control
 signal selected(action: String)
 var pages: Dictionary = {}
 var first_buttons: Dictionary = {}
+var timer_details: Label
+var timer_button: Button
 var session_revision: int = 0
 var session_details: Label
 var session_result: Label
@@ -60,6 +62,9 @@ func _ready() -> void:
 	session_result = Label.new()
 	session_result.add_theme_font_size_override("font_size", 16)
 	playing.add_child(session_result)
+	timer_button = button(playing, "START 10-SECOND TEST", "test_timer")
+	timer_details = Label.new()
+	playing.add_child(timer_details)
 	var paused: VBoxContainer = page("paused")
 	label(paused, "SESSION MENU", 26)
 	label(paused, "Your controls are released. Hosted sessions\nkeep running while this menu is open.", 18)
@@ -113,3 +118,6 @@ func show_session_state(snapshot: Dictionary, message: String) -> void:
 	session_revision = snapshot.revision
 	session_details.text = "TEST STATE  |  Credits: %s  |  Containers: %d" % [GameUnits.format_minor(snapshot.player.wallet_minor).value, snapshot.inventory.cargo.cargo_test_container]
 	session_result.text = message
+
+func show_timer(view: Dictionary) -> void:
+	timer_details.text = "Timer: %s  |  Remaining: %.1f s" % [view.status, float(view.remaining_ms) / 1000.0]

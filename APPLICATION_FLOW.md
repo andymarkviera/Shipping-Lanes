@@ -54,3 +54,7 @@ persisted gameplay Continue, world simulation or ship controller is present yet.
 Step 13 extends Continue with a trusted in-memory authority handle, preserving test
 wallet/cargo across menu teardown. New Session resets it. This remains nondurable;
 see STATE_OWNERSHIP.md. The local screen adds a disposable test load action.
+
+Step 14 explicitly detaches the owned operation clock on title transfer and
+reanchors on Continue; title time gives no offline catch-up. New Session or app
+teardown cancels pending test work. See SIMULATION_LIFECYCLE.md.

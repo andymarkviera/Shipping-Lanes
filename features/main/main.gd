@@ -12,6 +12,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--clocks-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/clocks_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--session-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/session_probe.tscn")
 		return
@@ -47,6 +50,7 @@ func navigate(action: String) -> void:
 	match action:
 		"play": start_session()
 		"test_load": request_test_load()
+		"test_timer": request_test_timer()
 		"continue": continue_session()
 		"servers": transition(State.SERVERS)
 		"settings": open_settings()
@@ -56,19 +60,21 @@ func navigate(action: String) -> void:
 		"exit": get_tree().quit()
 
 func start_session(hosted: bool = true, snapshot: Dictionary = {}) -> void:
+	if snapshot.is_empty() and continuation.has("authority"):
+		continuation.authority.detach_clock(true)
 	destroy_session()
 	session = Session.new()
 	session.name = "TestSession"
 	session.hosted = hosted
-	session.elapsed = float(snapshot.get("elapsed", 0.0))
 	session.restore_continuation(snapshot.get("authority", null))
 	$World.add_child(session)
 	continuation = {}
 	transition(State.PLAYING)
 	menu.show_session_state(session.state_view(), "Disposable test credits and cargo only.")
 
-func destroy_session() -> void:
+func destroy_session(preserve_for_continue: bool = false) -> void:
 	if is_instance_valid(session):
+		session.stop(preserve_for_continue)
 		$World.remove_child(session)
 		session.queue_free()
 	session = null
@@ -81,7 +87,7 @@ func continue_session() -> void:
 func return_to_title() -> void:
 	if is_instance_valid(session):
 		continuation = session.snapshot()
-	destroy_session()
+	destroy_session(true)
 	transition(State.TITLE)
 
 func pause_session() -> void:
@@ -142,3 +148,15 @@ func request_test_load() -> void:
 		return
 	var result: Dictionary = session.request_test_load(menu.session_revision)
 	menu.show_session_state(result.state, result.message)
+
+func request_test_timer() -> void:
+	if state != State.PLAYING or not is_instance_valid(session): return
+	var result: Dictionary = session.request_test_timer()
+	menu.show_session_state(session.state_view(), result.message)
+
+func _process(_delta: float) -> void:
+	if is_instance_valid(session):
+		menu.show_timer(session.timer_view())
+func _exit_tree() -> void:
+	if continuation.has("authority"):
+		continuation.authority.detach_clock(true)

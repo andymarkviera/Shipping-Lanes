@@ -20,12 +20,12 @@ func run() -> void:
 		app.start_session()
 		await process_frame
 		check(app.get_node("World").get_child_count() == 1, "One active session")
-		app.session.elapsed = 15.0 + cycle
+		var saved_elapsed: float = app.session.elapsed
 		app.return_to_title()
 		check(app.get_node("World").get_child_count() == 0, "Title tears down session")
 		check(app.menu.continue_button.visible, "Continue visible with snapshot")
 		app.continue_session()
-		check(app.session.elapsed == 15.0 + cycle, "Continue restores in-memory snapshot")
+		check(app.session.elapsed == saved_elapsed, "Continue restores in-memory snapshot")
 		app.start_session()
 		check(app.session.elapsed == 0.0, "New session resets gameplay")
 		check(app.controls.preferences.to_data() == preferences, "Gameplay reset preserves settings")
@@ -35,7 +35,7 @@ func run() -> void:
 	app.start_session(true)
 	app.pause_session()
 	var before: float = app.session.elapsed
-	await create_timer(0.05).timeout
+	await create_timer(0.12).timeout
 	check(app.session.elapsed > before, "Hosted policy keeps session running")
 	check(not paused and not app.controls.input_allowed(), "Local menu cannot pause tree or send helm input")
 	app.open_settings()
@@ -44,7 +44,7 @@ func run() -> void:
 	app.start_session(false)
 	app.pause_session()
 	before = app.session.elapsed
-	await create_timer(0.05).timeout
+	await create_timer(0.12).timeout
 	check(app.session.elapsed == before, "Offline fixture pauses locally")
 	app.transition(app.State.PLAYING)
 	await process_frame

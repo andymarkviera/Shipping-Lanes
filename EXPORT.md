@@ -101,3 +101,5 @@ Step 12 includes the units probe; RunExport -Headless -UnitsProbe passes 50 chec
 
 Step 13 packages the session authority and probe; RunExport -Headless -SessionProbe
 passes 21 checks including the real menu button signal and response display.
+
+Step 14 adds ClocksProbe: RunExport -Headless -ClocksProbe passes 22 checks.

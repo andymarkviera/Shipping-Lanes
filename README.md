@@ -134,3 +134,7 @@ UnitsCheck verifies math and navigation/payout fixture agreement; no playtest ne
 [STATE_OWNERSHIP.md](STATE_OWNERSHIP.md) explains the session-owned test state.
 Play now includes a disposable container-load button with approval/rejection
 feedback. SessionCheck verifies this path automatically, including Continue/reset.
+
+[SIMULATION_LIFECYCLE.md](SIMULATION_LIFECYCLE.md) records timer ownership and pause/
+Continue/cancel rules. Play includes a no-economy ten-second timer test; ClocksCheck
+verifies it without requiring a manual playtest.

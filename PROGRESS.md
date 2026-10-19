@@ -540,3 +540,24 @@ no actual multiplayer, durable transactions, real loading or economy tuning yet.
 Recovery: tag `step-13-state-ownership`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-13-state-ownership-2026-10-19.zip`.
 Next: Step 14, simulation-lifecycle-and-clocks.
+
+## Step 14 — Simulation lifecycle and clocks
+
+Task ID: `simulation-lifecycle-and-clocks`  
+Status: complete — October 19, 2026.
+
+Added a session-authority-owned 20 Hz operation clock with integer microsecond
+remainder and bounded monotonic sample catch-up. A ten-second no-economy test
+operation has explicit start/deadline/completion timestamps and completes once.
+Menus display copied progress; hosted menus do not pause work, offline fixture
+pause does, and title/Continue explicitly transfer and suspend authority.
+New Session and application teardown cancel pending work.
+
+22 checks pass in editor and exported Release. SessionCheck (21) and FlowCheck
+also pass; native release startup and the timer UI capture were inspected.
+SIMULATION_LIFECYCLE.md records clock domains, 250 ms catch-up cap, timestamp
+policy and limits: no durable timers, offline awards or public backend time yet.
+
+Recovery: tag `step-14-simulation-lifecycle`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-14-simulation-lifecycle-2026-10-19.zip`.
+Next: Step 15, development-tools-and-checks.

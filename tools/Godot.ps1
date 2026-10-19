@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -14,10 +14,12 @@ param(
     [switch]$ContractsProbe,
     [switch]$UnitsProbe,
     [switch]$SessionProbe,
+    [switch]$ClocksProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
+if ($ClocksProbe -and ($Mode -ne 'RunExport' -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-ClocksProbe requires RunExport without other probes.' }
 if ($SessionProbe -and ($Mode -ne 'RunExport' -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-SessionProbe requires RunExport without other probes.' }
 if ($UnitsProbe -and ($Mode -ne 'RunExport' -or $ContractsProbe -or $GeographyProbe)) { throw '-UnitsProbe requires RunExport without other probes.' }
 if ($Scene -and $Mode -ne 'Run') { throw '-Scene requires Run.' }
@@ -152,6 +154,9 @@ switch ($Mode) {
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
     }
+    'ClocksCheck' {
+        Invoke-ProjectGodot -LogName 'clocks-check.log' -Arguments @('--headless', '--scene', 'res://tools/clocks_probe.tscn')
+    }
     'SessionCheck' {
         Invoke-ProjectGodot -LogName 'session-check.log' -Arguments @('--headless', '--scene', 'res://tools/session_probe.tscn')
     }
@@ -199,6 +204,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($ClocksProbe) { $launchArguments += @('--', '--clocks-check') }
         if ($SessionProbe) { $launchArguments += @('--', '--session-check') }
         if ($UnitsProbe) { $launchArguments += @('--', '--units-check') }
         if ($ContractsProbe) { $launchArguments += @('--', '--contracts-check') }

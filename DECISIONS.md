@@ -52,6 +52,8 @@ separate from proposed implementation choices and append deliberate revisions.
 
 | D037 | Session mutation ownership | A per-session authority owns fixture player/ship/wallet/cargo. UI sends a narrow revision-based request and reads copies; approved state publishes together. Continue retains authority in memory. This does not implement durable replay handling or authenticate network clients. |
 
+| D038 | Simulation clock lifecycle | Authority owns 50 ms operation ticks and monotonic baseline/remainder. At most 250 ms per sample is credited; no queued offline catch-up. Hosted menus continue, offline pause freezes, Continue transfers/reanchors, and replacement/teardown cancels pending test work. Public backend and durable timers remain later work. |
+
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another
 game and cannot override our requirements. The map guide adds selected visual

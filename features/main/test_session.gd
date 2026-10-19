@@ -1,26 +1,40 @@
 class_name TestSession
 extends Node
-## Disposable flow fixture, not a world clock or network implementation.
+## Session owns processing; authority owns clock and pending test work.
 var _authority: SessionAuthority = SessionAuthority.new()
+var _stopped: bool = false
 var hosted: bool = true
 var locally_paused: bool = false
-var elapsed: float = 0.0
+var elapsed: float:
+	get: return float(_authority.timer_view().clock.clock_ms) / 1000.0
 
-func _process(delta: float) -> void:
-	if hosted or not locally_paused:
-		elapsed += delta
+func _ready() -> void:
+	_authority.attach_clock()
+
+func _process(_delta: float) -> void:
+	_authority.pump(Time.get_ticks_usec(), hosted or not locally_paused)
+
+func stop(preserve_for_continue: bool) -> void:
+	_stopped = true
+	_authority.detach_clock(not preserve_for_continue)
+
+func _exit_tree() -> void:
+	if not _stopped: stop(false)
 
 func snapshot() -> Dictionary:
-	return {"hosted": hosted, "elapsed": elapsed, "authority": _authority}
+	return {"hosted":hosted,"authority":_authority}
 
 func restore_continuation(authority: SessionAuthority) -> void:
-	# Trusted in-memory continuation, never a file/network deserialization path.
-	if authority != null:
-		_authority = authority
+	if authority != null: _authority = authority
 
 func state_view() -> Dictionary:
 	return _authority.view()
 
 func request_test_load(expected_revision: Variant) -> Dictionary:
-	# Local fixture adapter resolves actor and controlled ship outside UI payload.
 	return _authority.request_test_load(SessionAuthority.PLAYER_ID, SessionAuthority.SHIP_ID, expected_revision)
+
+func request_test_timer() -> Dictionary:
+	return _authority.request_test_timer(SessionAuthority.PLAYER_ID)
+
+func timer_view() -> Dictionary:
+	return _authority.timer_view()
