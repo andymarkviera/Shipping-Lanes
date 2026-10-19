@@ -50,6 +50,8 @@ separate from proposed implementation choices and append deliberate revisions.
 
 | D036 | Units and distance | Explicit compatible dimensions only; integer minor-credit money and checked arithmetic. Prototype scales are 1:1, not final geography. One fixed millimeter route measurement feeds navigation and payout fixtures; holds, slots, mass, DWT and volume never substitute for each other. |
 
+| D037 | Session mutation ownership | A per-session authority owns fixture player/ship/wallet/cargo. UI sends a narrow revision-based request and reads copies; approved state publishes together. Continue retains authority in memory. This does not implement durable replay handling or authenticate network clients. |
+
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another
 game and cannot override our requirements. The map guide adds selected visual

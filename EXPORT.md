@@ -98,3 +98,6 @@ Step 11 packages plain contract fixtures and supports RunExport -Headless
 -ContractsProbe. Editor and release report CONTRACT_CHECK_PASS (66 checks).
 
 Step 12 includes the units probe; RunExport -Headless -UnitsProbe passes 50 checks.
+
+Step 13 packages the session authority and probe; RunExport -Headless -SessionProbe
+passes 21 checks including the real menu button signal and response display.

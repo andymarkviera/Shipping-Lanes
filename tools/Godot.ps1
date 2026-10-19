@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -13,10 +13,12 @@ param(
     [switch]$GeographyProbe,
     [switch]$ContractsProbe,
     [switch]$UnitsProbe,
+    [switch]$SessionProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
+if ($SessionProbe -and ($Mode -ne 'RunExport' -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-SessionProbe requires RunExport without other probes.' }
 if ($UnitsProbe -and ($Mode -ne 'RunExport' -or $ContractsProbe -or $GeographyProbe)) { throw '-UnitsProbe requires RunExport without other probes.' }
 if ($Scene -and $Mode -ne 'Run') { throw '-Scene requires Run.' }
 if ($ContractsProbe -and ($Mode -ne 'RunExport' -or $GeographyProbe)) { throw '-ContractsProbe requires RunExport without GeographyProbe.' }
@@ -150,6 +152,9 @@ switch ($Mode) {
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
     }
+    'SessionCheck' {
+        Invoke-ProjectGodot -LogName 'session-check.log' -Arguments @('--headless', '--scene', 'res://tools/session_probe.tscn')
+    }
     'UnitsCheck' {
         Invoke-ProjectGodot -LogName 'units-check.log' -Arguments @('--headless', '--scene', 'res://tools/units_probe.tscn')
     }
@@ -194,6 +199,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($SessionProbe) { $launchArguments += @('--', '--session-check') }
         if ($UnitsProbe) { $launchArguments += @('--', '--units-check') }
         if ($ContractsProbe) { $launchArguments += @('--', '--contracts-check') }
         if ($GeographyProbe) { $launchArguments += @('--', '--geography-check') }

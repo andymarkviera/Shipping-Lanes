@@ -12,6 +12,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--session-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/session_probe.tscn")
+		return
 	if OS.get_cmdline_user_args().has("--units-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/units_probe.tscn")
 		return
@@ -43,6 +46,7 @@ func _ready() -> void:
 func navigate(action: String) -> void:
 	match action:
 		"play": start_session()
+		"test_load": request_test_load()
 		"continue": continue_session()
 		"servers": transition(State.SERVERS)
 		"settings": open_settings()
@@ -57,9 +61,11 @@ func start_session(hosted: bool = true, snapshot: Dictionary = {}) -> void:
 	session.name = "TestSession"
 	session.hosted = hosted
 	session.elapsed = float(snapshot.get("elapsed", 0.0))
+	session.restore_continuation(snapshot.get("authority", null))
 	$World.add_child(session)
 	continuation = {}
 	transition(State.PLAYING)
+	menu.show_session_state(session.state_view(), "Disposable test credits and cargo only.")
 
 func destroy_session() -> void:
 	if is_instance_valid(session):
@@ -130,3 +136,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		State.PAUSED: transition(State.PLAYING)
 		State.SERVERS: return_to_title()
 	get_viewport().set_input_as_handled()
+
+func request_test_load() -> void:
+	if state != State.PLAYING or not is_instance_valid(session):
+		return
+	var result: Dictionary = session.request_test_load(menu.session_revision)
+	menu.show_session_state(result.state, result.message)

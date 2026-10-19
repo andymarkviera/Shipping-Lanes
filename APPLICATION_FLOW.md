@@ -50,3 +50,7 @@ Release export startup passes. The explicitly loaded test_session script is an
 export root alongside Main and default preferences; a first standalone run caught
 its omission before correction. No real server discovery, network reconnect,
 persisted gameplay Continue, world simulation or ship controller is present yet.
+
+Step 13 extends Continue with a trusted in-memory authority handle, preserving test
+wallet/cargo across menu teardown. New Session resets it. This remains nondurable;
+see STATE_OWNERSHIP.md. The local screen adds a disposable test load action.

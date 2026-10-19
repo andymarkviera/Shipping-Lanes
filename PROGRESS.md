@@ -521,3 +521,22 @@ The check launcher now times out failed probes after 30 seconds.
 Recovery: tag `step-12-units-time`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-12-units-time-2026-10-19.zip`.
 Next: Step 13, state-ownership-boundaries.
+
+## Step 13 — State ownership boundaries
+
+Task ID: `state-ownership-boundaries`  
+Status: complete — October 19, 2026.
+
+Added a per-session in-memory authority for fixture player/ship/wallet/inventory.
+A real test button sends a narrow request; the owner validates actor/ship/revision/
+funds and publishes the wallet/cargo change together or returns a clear rejection.
+UI reads defensive copies. Local and hosted-policy fixtures share the action path.
+Continue retains the authority; New Session resets it without changing settings.
+
+21 checks pass in editor and exported Release; FlowCheck and native startup also
+pass. The test screen was visually inspected. STATE_OWNERSHIP.md records limits:
+no actual multiplayer, durable transactions, real loading or economy tuning yet.
+
+Recovery: tag `step-13-state-ownership`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-13-state-ownership-2026-10-19.zip`.
+Next: Step 14, simulation-lifecycle-and-clocks.

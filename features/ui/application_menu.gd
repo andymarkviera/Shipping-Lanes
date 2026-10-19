@@ -4,6 +4,10 @@ extends Control
 signal selected(action: String)
 var pages: Dictionary = {}
 var first_buttons: Dictionary = {}
+var session_revision: int = 0
+var session_details: Label
+var session_result: Label
+var test_load_button: Button
 var continue_button: Button
 
 func _ready() -> void:
@@ -49,6 +53,13 @@ func _ready() -> void:
 	label(playing, "LOCAL TEST SESSION", 26)
 	label(playing, "Session ready. Boat controls and the world\nwill arrive in later build steps.\n\nEscape opens the session menu.", 18)
 	button(playing, "SESSION MENU", "pause")
+	session_details = Label.new()
+	session_details.add_theme_font_size_override("font_size", 18)
+	playing.add_child(session_details)
+	test_load_button = button(playing, "LOAD TEST CONTAINER — 100 CREDITS", "test_load")
+	session_result = Label.new()
+	session_result.add_theme_font_size_override("font_size", 16)
+	playing.add_child(session_result)
 	var paused: VBoxContainer = page("paused")
 	label(paused, "SESSION MENU", 26)
 	label(paused, "Your controls are released. Hosted sessions\nkeep running while this menu is open.", 18)
@@ -97,3 +108,8 @@ func show_page(id: String, can_continue: bool) -> void:
 		pages[key].visible = key == id
 	if pages.has(id) and id != "playing":
 		first_buttons[pages[id]].grab_focus()
+
+func show_session_state(snapshot: Dictionary, message: String) -> void:
+	session_revision = snapshot.revision
+	session_details.text = "TEST STATE  |  Credits: %s  |  Containers: %d" % [GameUnits.format_minor(snapshot.player.wallet_minor).value, snapshot.inventory.cargo.cargo_test_container]
+	session_result.text = message
