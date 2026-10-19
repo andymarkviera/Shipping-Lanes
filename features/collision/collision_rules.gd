@@ -1,0 +1,19 @@
+class_name CollisionRules
+extends RefCounted
+const HULL: int = 1 << 0
+const SHORE: int = 1 << 1
+const TRIGGER: int = 1 << 2
+const CARGO_VISUAL: int = 1 << 3
+const CHARACTER: int = 1 << 4
+const SOLID_WATERCRAFT: int = HULL | SHORE
+const SUPPORTED_SPEED_MPS: float = 20.0
+
+static func add_box_hull(body: CollisionObject3D, size: Vector3 = Vector3(13, 4, 64)) -> CollisionShape3D:
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	collider.name = "HullCollision"
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = size
+	collider.shape = shape
+	collider.position.y = 1.0
+	body.add_child(collider)
+	return collider

@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -19,10 +19,12 @@ param(
     [switch]$HandlingProbe,
     [switch]$CameraProbe,
     [switch]$WaterProbe,
+    [switch]$CollisionProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
+if ($CollisionProbe -and ($Mode -ne 'RunExport' -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-CollisionProbe requires RunExport without other probes.' }
 if ($WaterProbe -and ($Mode -ne 'RunExport' -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-WaterProbe requires RunExport without other probes.' }
 if ($CameraProbe -and ($Mode -ne 'RunExport' -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-CameraProbe requires RunExport without other probes.' }
 if ($HandlingProbe -and ($Mode -ne 'RunExport' -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-HandlingProbe requires RunExport without other probes.' }
@@ -101,7 +103,7 @@ function Invoke-ProjectGodot {
     try {
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if ($LogName.EndsWith('-check.log') -or ($Exported -and ($WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe))) {
+        if ($LogName.EndsWith('-check.log') -or ($Exported -and ($CollisionProbe -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe))) {
             if (-not $process.WaitForExit(30000)) {
                 $process.Kill()
                 $process.WaitForExit()
@@ -162,6 +164,9 @@ switch ($Mode) {
     }
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
+    }
+    'CollisionCheck' {
+        Invoke-ProjectGodot -LogName 'collision-check.log' -Arguments @('--headless', '--scene', 'res://tools/collision_probe.tscn')
     }
     'WaterCheck' {
         Invoke-ProjectGodot -LogName 'water-check.log' -Arguments @('--headless', '--scene', 'res://tools/water_probe.tscn')
@@ -225,6 +230,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($CollisionProbe) { $launchArguments += @('--', '--collision-check') }
         if ($WaterProbe) { $launchArguments += @('--', '--water-check') }
         if ($CameraProbe) { $launchArguments += @('--', '--camera-check') }
         if ($HandlingProbe) { $launchArguments += @('--', '--handling-check') }

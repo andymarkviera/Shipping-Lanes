@@ -107,3 +107,5 @@ U008 update (Step 18): rudder/thruster fixture parameters and astern rule implem
 U008 update (Step 19): orbit/zoom/recenter and two-size focus/pier checks complete; camera distances and smoothing remain subject to feel review.
 
 U033 update (Step 20): initial water art is bold blue with flowing pale patterns; coastal palette retained for future regions. Three quality tiers and visual-only bobbing verified. Physical waves/current/wind remain unapproved; no networked sea state implemented.
+
+Step 21 collision checkpoint: current planar hull/shore contacts verified through 20 m/s. Real ship geometry, moving-body mass exchange, grounding, damage and network reconciliation still require their later implementation/checks.

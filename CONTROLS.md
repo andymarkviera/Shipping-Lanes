@@ -93,3 +93,5 @@ Handling fixture (Step 17): hold W/S to raise/lower commanded throttle; release 
 Step 19 camera: hold RMB and drag to orbit; wheel zooms; C recenters aft (saved binding applies). Sensitivity/inversion use Settings. RMB release, focus loss and leaving the test release capture.
 
 Water quality: choose Low, Medium or High in the main-menu Settings, save, then open Boat Handling Test. Low keeps the blue/pale pattern with a flat surface and reduced visual bobbing.
+
+Collision course: the thin head-on pier is 300 m ahead; angled pier and rock blocks are port-side, coastline beyond the gold course. Near-wall turns may be blocked; use lateral thrusters to gain clearance.

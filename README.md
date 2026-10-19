@@ -152,3 +152,5 @@ Step 18: A/D rudder, Q/E lateral thrusters, gold turning markers and a solid pra
 Step 19: [Orbit camera](CAMERA.md) adds RMB orbit, wheel zoom, C recenter and pier avoidance to Boat Handling Test.
 
 Step 20: [Stylized water](WATER_PRESENTATION.md) adds bold-blue animated patterns, gentle visual bobbing and saved water quality settings. A muted coastal palette is ready for later regions.
+
+Step 21: [Hull and shore collision](COLLISION.md) adds coast/rock blockouts, thin/angled piers and guarded turning to Boat Handling Test.

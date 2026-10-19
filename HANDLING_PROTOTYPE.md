@@ -35,7 +35,7 @@ handling values, not approved ship balance. No fuel consumption is implied.
 Selected CharacterBody3D in floating mode at an explicit 60 Hz physics tick,
 with +Z as the bow. Controlled velocity is straightforward to tune and constrain
 to a flat water plane. Linear drag preserves inertia. move_and_slide provides a
-collision-capable boundary; collision response has not been tuned.
+collision boundary; Step 21 contact behavior is documented in COLLISION.md.
 
 A force-driven RigidBody3D would naturally exchange impulses and support physical
 buoyancy, but requires mass, rotational constraints and contact tuning. Those
@@ -105,3 +105,5 @@ thruster cutoff, invalid input/tuning and mapped controls/focus. A real physics
 approach uses the box collider and solid quay. A parallel turning body checks
 position/heading repeatability at 30/60/144 loop caps. All 72 checks pass in editor
 and Windows Release; Full remains 12 stages. Native course/HUD capture inspected.
+
+Step 21 adds a swept collision and angular-clearance guard with a 20 m/s total speed cap. See COLLISION.md for course layout and collision limits.

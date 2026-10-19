@@ -684,3 +684,23 @@ shore foam, detailed wake or global ocean yet.
 Recovery: tag `step-20-water-presentation`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-20-water-presentation-2026-10-19.zip`.
 Next: Step 21, hull-and-shore-collision.
+
+## Step 21 — Hull and shore collision
+
+Task ID: `hull-and-shore-collision`  
+Status: complete — October 19, 2026.
+
+Added shared collision layer policy, reusable simple hull collider, coast/rock
+blockouts and thin/angled piers. Hull movement uses fixed-tick shape sweeps with
+20 m/s supported total-speed cap and non-bouncing contact velocity. Rotation is
+conservatively checked against solids before applying it. Camera queries use the
+same solid layers; water/bobbing remain isolated.
+
+CollisionCheck passes 35 assertions over 16 fixtures / 180 ticks in editor and
+Windows Release. Full passes 15 stages / 48 compiled scripts; existing handling,
+camera and water checks still pass. Native course inspected. COLLISION.md records
+supported speed, masks, angular checks, clear-spawn requirement and limitations.
+
+Recovery: tag `step-21-hull-shore-collision`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-21-hull-shore-collision-2026-10-19.zip`.
+Next: Step 22, handling-feedback-pass.

@@ -82,3 +82,5 @@ become approved formulas just because they appear in the inventory.
 | D043 | Camera rig | Explicit CameraFocus interface, hull-relative zoom, heading-relative orbit and exponential smoothing. Sphere sweep shortens the camera arm around solid geometry, excluding the target hull; recovery smooths. No fixed ship path. See CAMERA.md for target-switch and collision limits. |
 
 | D044 | Water art and motion | Andy selected bright bold blue with broad pale animated patterns from his stylized reference; muted coastal colors remain for later areas. Original opaque procedural shader, visual-only waves/bobbing, steady body/collider/camera focus. Saved Low/Medium/High tiers; no physical sea forces. |
+
+| D045 | Prototype collision | Swept CharacterBody movement at 60 Hz, 20 m/s total cap, no bounce impulses; conservative angular overlap guard prevents hull turning into solids. Hull/shore are solid layers; triggers, cargo visuals and characters separate. Vertical shore proxies and clear spawns required. See COLLISION.md. |

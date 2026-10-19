@@ -37,12 +37,7 @@ func _ready() -> void:
 	box(visual_root, Vector3(13, 4, 64), Vector3(0, 1, 0), Color("435762"))
 	box(visual_root, Vector3(10, 5, 8), Vector3(0, 5, -22), Color("e7ede7"))
 	box(visual_root, Vector3(4, 0.2, 6), Vector3(0, 3.1, 25), Color("d5ac6c"))
-	var collision: CollisionShape3D = CollisionShape3D.new()
-	var shape: BoxShape3D = BoxShape3D.new()
-	shape.size = Vector3(13, 4, 64)
-	collision.shape = shape
-	collision.position.y = 1.0
-	ship.add_child(collision)
+	CollisionRules.add_box_hull(ship)
 	ocean = OceanPresentation.new()
 	ocean.quality = controls.preferences.water_quality
 	add_child(ocean)
@@ -54,7 +49,8 @@ func _ready() -> void:
 	# Starboard berth, solid quay with a pale approach strip; no mooring logic yet.
 	var quay: StaticBody3D = StaticBody3D.new()
 	quay.name = "PracticeBerth"
-	add_child(quay)
+	quay.collision_layer = CollisionRules.SHORE
+	quay.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
 	quay.position = Vector3(-32, 0, 0)
 	box(quay, Vector3(8, 4, 100), Vector3.ZERO, Color("76695b"))
 	box(quay, Vector3(0.5, 0.2, 90), Vector3(4.1, 2.1, 0), Color("e7ede7"))
@@ -63,8 +59,11 @@ func _ready() -> void:
 	quay_shape.size = Vector3(8, 4, 100)
 	quay_collision.shape = quay_shape
 	quay.add_child(quay_collision)
+	add_child(quay)
 	for waypoint: Vector3 in [Vector3(0, 0, 100), Vector3(-80, 0, 200), Vector3(-160, 0, 100)]:
 		box(self, Vector3(4, 6, 4), waypoint, Color("d5ac6c"))
+	var course: CollisionCourse = CollisionCourse.new()
+	add_child(course)
 	var light: DirectionalLight3D = DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-55, -25, 0)
 	add_child(light)

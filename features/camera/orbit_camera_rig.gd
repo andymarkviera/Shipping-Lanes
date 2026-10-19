@@ -110,6 +110,7 @@ func _physics_process(delta: float) -> void:
 	var offset: Vector3 = Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * distance
 	var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
 	query.shape = probe
+	query.collision_mask = CollisionRules.SOLID_WATERCRAFT
 	query.transform = Transform3D(Basis.IDENTITY, pivot)
 	query.exclude = focus.excluded_bodies()
 	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state

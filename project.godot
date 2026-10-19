@@ -23,3 +23,10 @@ environment/defaults/default_clear_color=Color(0.025, 0.065, 0.1, 1)
 [physics]
 
 common/physics_ticks_per_second=60
+
+[layer_names]
+3d_physics/layer_1="Hulls"
+3d_physics/layer_2="Shore and piers"
+3d_physics/layer_3="Triggers"
+3d_physics/layer_4="Cargo visuals (reserved)"
+3d_physics/layer_5="Characters (reserved)"
