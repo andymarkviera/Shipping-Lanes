@@ -580,3 +580,22 @@ and timing/fixture limits. No manual testing required.
 Recovery: tag `step-15-development-checks`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-15-development-checks-2026-10-19.zip`.
 Next: Step 16, handling-prototype.
+
+## Step 16 — Handling prototype
+
+Task ID: `handling-prototype`  
+Status: complete — October 19, 2026.
+
+Added an isolated box-ship scene, reachable through Boat Handling Test on the
+main menu. Forward propulsion, linear drag, inertia and reverse braking use an
+explicit 60 Hz CharacterBody3D physics loop. Flat coastal water, stationary lane
+markers, a temporary camera and live diagnostics make movement inspectable.
+HANDLING_PROTOTYPE.md records the controlled/force-driven body comparison.
+
+Eighteen handling checks pass at 30/60/144 loop caps in editor and Release;
+Full passes all 12 stages, including compilation of 38 scripts. Native scene
+capture inspected. No multiplayer, final ship tuning, rudder or waves yet.
+
+Recovery: tag `step-16-handling-prototype`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-16-handling-prototype-2026-10-19.zip`.
+Next: Step 17, throttle-and-reverse.

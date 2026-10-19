@@ -64,3 +64,5 @@ It does not edit the real catalog. Native startup and a 1152 x 648 overlay captu
 were inspected. This completes development-tools-and-checks; Step 16 begins actual
 handling. There is no new movement simulation in this step, and no manual user
 testing is required.
+
+Step 16 adds HandlingCheck to Full (12 stages). It checks 300 fixed physics ticks at each of three loop caps. Export verification: tools/Godot.ps1 -Mode RunExport -Configuration Release -Headless -HandlingProbe.

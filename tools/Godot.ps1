@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -16,10 +16,12 @@ param(
     [switch]$SessionProbe,
     [switch]$ClocksProbe,
     [switch]$DiagnosticsProbe,
+    [switch]$HandlingProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
+if ($HandlingProbe -and ($Mode -ne 'RunExport' -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-HandlingProbe requires RunExport without other probes.' }
 if ($DiagnosticsProbe -and ($Mode -ne 'RunExport' -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-DiagnosticsProbe requires RunExport without other probes.' }
 if ($ClocksProbe -and ($Mode -ne 'RunExport' -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-ClocksProbe requires RunExport without other probes.' }
 if ($SessionProbe -and ($Mode -ne 'RunExport' -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-SessionProbe requires RunExport without other probes.' }
@@ -95,7 +97,7 @@ function Invoke-ProjectGodot {
     try {
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if ($LogName.EndsWith('-check.log') -or ($Exported -and ($DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe))) {
+        if ($LogName.EndsWith('-check.log') -or ($Exported -and ($HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe))) {
             if (-not $process.WaitForExit(30000)) {
                 $process.Kill()
                 $process.WaitForExit()
@@ -157,6 +159,9 @@ switch ($Mode) {
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
     }
+    'HandlingCheck' {
+        Invoke-ProjectGodot -LogName 'handling-check.log' -Arguments @('--headless', '--scene', 'res://tools/handling_probe.tscn')
+    }
     'DiagnosticsCheck' {
         Invoke-ProjectGodot -LogName 'diagnostics-check.log' -Arguments @('--headless', '--scene', 'res://tools/diagnostics_probe.tscn')
     }
@@ -210,6 +215,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($HandlingProbe) { $launchArguments += @('--', '--handling-check') }
         if ($DiagnosticsProbe) { $launchArguments += @('--', '--diagnostics-check') }
         if ($ClocksProbe) { $launchArguments += @('--', '--clocks-check') }
         if ($SessionProbe) { $launchArguments += @('--', '--session-check') }

@@ -97,3 +97,5 @@ stable decision ID to `DECISIONS.md`, update the U-row's status/reference, and
 revisit affected features/dependents. Resolve engineering choices autonomously;
 ask Andy for material remaining scope/play-policy choices only at their deadline.
 Do not mark an uncertainty resolved solely because a task was scheduled.
+
+U008 update (Step 16): initial planar CharacterBody3D and thrust/drag fixture selected in HANDLING_PROTOTYPE.md. Loaded handling, steering, camera and Andy's approval of feel remain open.

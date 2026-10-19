@@ -39,6 +39,7 @@ func _ready() -> void:
 	add_child(footer)
 	var home: VBoxContainer = page("title")
 	button(home, "PLAY", "play")
+	button(home, "BOAT HANDLING TEST", "handling")
 	continue_button = button(home, "CONTINUE TEST SESSION", "continue")
 	button(home, "SERVERS", "servers")
 	button(home, "SETTINGS", "settings")

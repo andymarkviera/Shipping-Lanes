@@ -3,7 +3,7 @@
 param([switch]$Full)
 $ErrorActionPreference = 'Stop'
 $modes = @('Check','UnitsCheck','CatalogCheck','DiagnosticsCheck')
-if ($Full) { $modes += @('ControlsCheck','FlowCheck','ContractsCheck','GeographyCheck','SessionCheck','ClocksCheck','AssetCheck') }
+if ($Full) { $modes += @('ControlsCheck','FlowCheck','ContractsCheck','GeographyCheck','SessionCheck','ClocksCheck','AssetCheck','HandlingCheck') }
 foreach ($mode in $modes) {
     & (Join-Path $PSScriptRoot 'Godot.ps1') -Mode $mode
 }

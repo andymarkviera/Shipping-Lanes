@@ -72,3 +72,5 @@ these rules can be claimed as working behavior.
 Step 03 maps feature coverage and decision deadlines only. Due rules must be
 resolved before their dependent implementation; known evidence gaps do not
 become approved formulas just because they appear in the inventory.
+
+| D040 | Initial handling body | CharacterBody3D, floating mode, explicit 60 Hz physics; +Z bow and planar linear-drag motion. Force-driven body reconsidered only if contacts/buoyancy require it. See HANDLING_PROTOTYPE.md; tuning remains provisional. |

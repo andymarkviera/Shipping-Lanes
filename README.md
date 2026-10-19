@@ -142,3 +142,5 @@ verifies it without requiring a manual playtest.
 [DEVELOPMENT_CHECKS.md](DEVELOPMENT_CHECKS.md): run tools/CheckProject.ps1 for the
 foundation checks or add -Full for 11 stages. Ctrl+F3 toggles the read-only developer
 overlay; motion fields will connect in the handling prototype.
+
+Step 16: [Boat handling prototype](HANDLING_PROTOTYPE.md). Launch it from **Boat Handling Test** in the main menu.
