@@ -96,3 +96,5 @@ successful tests in Debug and Release and the fresh-import pre-registration fix.
 
 Step 11 packages plain contract fixtures and supports RunExport -Headless
 -ContractsProbe. Editor and release report CONTRACT_CHECK_PASS (66 checks).
+
+Step 12 includes the units probe; RunExport -Headless -UnitsProbe passes 50 checks.

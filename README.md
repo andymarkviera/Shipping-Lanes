@@ -127,3 +127,6 @@ matching SQLite DLL alongside EXE and PCK. No gameplay saves exist yet.
 Save/protocol record drafts and safe plain-data validation are documented in
 [SAVE_PROTOCOL_CONTRACTS.md](SAVE_PROTOCOL_CONTRACTS.md). ContractsCheck exercises
 representative and malformed records; it does not write game saves.
+
+[UNITS_AND_TIME.md](UNITS_AND_TIME.md) records shared conversions and rounding.
+UnitsCheck verifies math and navigation/payout fixture agreement; no playtest needed.

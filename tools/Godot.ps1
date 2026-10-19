@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -12,10 +12,12 @@ param(
     [string]$TemplateSource,
     [switch]$GeographyProbe,
     [switch]$ContractsProbe,
+    [switch]$UnitsProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
+if ($UnitsProbe -and ($Mode -ne 'RunExport' -or $ContractsProbe -or $GeographyProbe)) { throw '-UnitsProbe requires RunExport without other probes.' }
 if ($Scene -and $Mode -ne 'Run') { throw '-Scene requires Run.' }
 if ($ContractsProbe -and ($Mode -ne 'RunExport' -or $GeographyProbe)) { throw '-ContractsProbe requires RunExport without GeographyProbe.' }
 if ($GeographyProbe -and $Mode -ne 'RunExport') { throw '-GeographyProbe requires RunExport.' }
@@ -87,7 +89,13 @@ function Invoke-ProjectGodot {
     try {
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        $process.WaitForExit()
+        if ($LogName.EndsWith('-check.log')) {
+            if (-not $process.WaitForExit(30000)) {
+                $process.Kill()
+                $process.WaitForExit()
+                throw "Check timed out; see $logPath"
+            }
+        } else { $process.WaitForExit() }
         $outputText = $stdout.GetAwaiter().GetResult()
         $errorText = $stderr.GetAwaiter().GetResult()
         if ($outputText) { Write-Host $outputText.TrimEnd() }
@@ -142,6 +150,9 @@ switch ($Mode) {
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
     }
+    'UnitsCheck' {
+        Invoke-ProjectGodot -LogName 'units-check.log' -Arguments @('--headless', '--scene', 'res://tools/units_probe.tscn')
+    }
     'ContractsCheck' {
         Invoke-ProjectGodot -LogName 'contracts-check.log' -Arguments @('--headless', '--scene', 'res://tools/contracts_probe.tscn')
     }
@@ -183,6 +194,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($UnitsProbe) { $launchArguments += @('--', '--units-check') }
         if ($ContractsProbe) { $launchArguments += @('--', '--contracts-check') }
         if ($GeographyProbe) { $launchArguments += @('--', '--geography-check') }
         Invoke-ProjectGodot -Exported -LogName ('export-run-' + $Configuration.ToLowerInvariant() + '.log') -Arguments $launchArguments

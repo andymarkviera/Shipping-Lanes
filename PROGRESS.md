@@ -502,3 +502,22 @@ Export includes fixtures and a diagnostic route. No user playtest is needed.
 Recovery: tag `step-11-save-protocol-contracts`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-11-save-protocol-contracts-2026-10-19.zip`.
 Next: Step 12, units-and-time.
+
+## Step 12 — Units and time
+
+Task ID: `units-and-time`  
+Status: complete — October 19, 2026.
+
+Added explicit dimensional conversions, integer decimal-money parsing/formatting
+and checked addition, rounding choices, positive time scaling, and a fixed voyage
+distance shared by navigation and payout fixtures. Holds, DWT, mass, volume,
+container count/slots and heavy payload counts remain distinct.
+
+50 checks pass in editor and exported Release; native release startup passes.
+UNITS_AND_TIME.md records references, defaults, rounding/bounds and limitations.
+No final map compression, clock, reward rate or physical cargo capacity is chosen.
+The check launcher now times out failed probes after 30 seconds.
+
+Recovery: tag `step-12-units-time`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-12-units-time-2026-10-19.zip`.
+Next: Step 13, state-ownership-boundaries.
