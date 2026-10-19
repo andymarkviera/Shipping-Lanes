@@ -38,3 +38,9 @@ func request_test_timer() -> Dictionary:
 
 func timer_view() -> Dictionary:
 	return _authority.timer_view()
+
+func diagnostic_view() -> Dictionary:
+	var current: Dictionary = _authority.view()
+	return {"role":"Local test (hosted policy)" if hosted else "Offline test",
+		"ship_id":current.ship.id,"fuel_ml":current.ship.fuel_ml,
+		"speed_mps":null,"throttle":null,"position_m":null}

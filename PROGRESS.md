@@ -561,3 +561,22 @@ policy and limits: no durable timers, offline awards or public backend time yet.
 Recovery: tag `step-14-simulation-lifecycle`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-14-simulation-lifecycle-2026-10-19.zip`.
 Next: Step 15, development-tools-and-checks.
+
+## Step 15 — Development tools and checks
+
+Task ID: `development-tools-and-checks`  
+Status: complete — October 19, 2026.
+
+Added an optional read-only Ctrl+F3 overlay for role, ship ID, fuel and timing;
+speed/throttle/position explicitly remain unconnected until movement exists.
+Added recursive GDScript compilation to Check and a four-stage CheckProject runner
+with an 11-stage Full option. Invalid definition diagnostics name source/target.
+
+Full passed all 11 stages and 35 scripts compiled. Nine diagnostic checks pass
+in editor and Windows Release, including overlay-off normal action/pause. Native
+startup and the overlay capture were inspected. DEVELOPMENT_CHECKS.md has commands
+and timing/fixture limits. No manual testing required.
+
+Recovery: tag `step-15-development-checks`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-15-development-checks-2026-10-19.zip`.
+Next: Step 16, handling-prototype.

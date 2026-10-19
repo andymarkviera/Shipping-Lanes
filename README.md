@@ -138,3 +138,7 @@ feedback. SessionCheck verifies this path automatically, including Continue/rese
 [SIMULATION_LIFECYCLE.md](SIMULATION_LIFECYCLE.md) records timer ownership and pause/
 Continue/cancel rules. Play includes a no-economy ten-second timer test; ClocksCheck
 verifies it without requiring a manual playtest.
+
+[DEVELOPMENT_CHECKS.md](DEVELOPMENT_CHECKS.md): run tools/CheckProject.ps1 for the
+foundation checks or add -Full for 11 stages. Ctrl+F3 toggles the read-only developer
+overlay; motion fields will connect in the handling prototype.

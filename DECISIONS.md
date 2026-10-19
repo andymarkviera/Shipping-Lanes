@@ -54,6 +54,8 @@ separate from proposed implementation choices and append deliberate revisions.
 
 | D038 | Simulation clock lifecycle | Authority owns 50 ms operation ticks and monotonic baseline/remainder. At most 250 ms per sample is credited; no queued offline catch-up. Hosted menus continue, offline pause freezes, Continue transfers/reanchors, and replacement/teardown cancels pending test work. Public backend and durable timers remain later work. |
 
+| D039 | Developer diagnostics | Default-off Ctrl+F3 overlay reads copies and shows absent motion fields honestly. CheckProject combines import, all-script compilation, unit/catalog and overlay checks; Full runs 11 stages. Empty-menu timing is not representative performance evidence. |
+
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another
 game and cannot override our requirements. The map guide adds selected visual

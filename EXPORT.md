@@ -103,3 +103,6 @@ Step 13 packages the session authority and probe; RunExport -Headless -SessionPr
 passes 21 checks including the real menu button signal and response display.
 
 Step 14 adds ClocksProbe: RunExport -Headless -ClocksProbe passes 22 checks.
+
+Step 15 DiagnosticsProbe passes nine checks in Release. The optional developer
+overlay is available with Ctrl+F3, off by default; no movement data is fabricated.

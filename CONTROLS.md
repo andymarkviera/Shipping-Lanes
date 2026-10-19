@@ -84,3 +84,6 @@ while playing. Settings can be reached from the title or session menu.
 
 Step 10 makes the settings panel opaque and sliders continuous. Only camera
 sensitivity shows a numeric readout. Save/Cancel behavior is unchanged.
+
+Ctrl+F3 toggles the read-only developer overlay. This chord is separate from
+single-key rebindable gameplay actions; it does not take mouse/keyboard focus.

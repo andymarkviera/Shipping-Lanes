@@ -2,6 +2,7 @@ extends Node
 ## Application owns local navigation; it never pauses the shared SceneTree.
 enum State { BOOT, TITLE, SERVERS, PLAYING, PAUSED, SETTINGS }
 const Session = preload("res://features/main/test_session.gd")
+var developer_overlay: DeveloperOverlay
 var state: State = State.BOOT
 var settings_return: State = State.TITLE
 var session: TestSession
@@ -12,6 +13,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--diagnostics-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/diagnostics_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--clocks-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/clocks_probe.tscn")
 		return
@@ -38,6 +42,8 @@ func _ready() -> void:
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_min_size(Vector2i(960, 640))
 		DisplayServer.window_set_title("Container Ship Sim")
+	developer_overlay = DeveloperOverlay.new()
+	add_child(developer_overlay)
 	menu.selected.connect(navigate)
 	$UI/Settings.closed.connect(func() -> void: transition(settings_return))
 	controls.command_requested.connect(func(action: StringName) -> void:
@@ -155,6 +161,8 @@ func request_test_timer() -> void:
 	menu.show_session_state(session.state_view(), result.message)
 
 func _process(_delta: float) -> void:
+	if is_instance_valid(developer_overlay):
+		developer_overlay.set_snapshot(session.diagnostic_view() if is_instance_valid(session) else {})
 	if is_instance_valid(session):
 		menu.show_timer(session.timer_view())
 func _exit_tree() -> void:
