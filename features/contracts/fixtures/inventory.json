@@ -1,0 +1,18 @@
+{
+  "revision": 0,
+  "kind": "inventory",
+  "data": {
+    "lines": [
+      {
+        "cargo_id": "cargo_test_container",
+        "quantity": 2,
+        "unit": "count"
+      }
+    ],
+    "owner_id": "ship_test"
+  },
+  "id": "inventory_test",
+  "protocol_version": 1,
+  "realm_id": "realm_test_private",
+  "schema_version": 1
+}

@@ -93,3 +93,6 @@ SQLite packaging: keep the entire export folder, including the selected
 libgdsqlite.windows.template_debug.x86_64.dll or template_release DLL. The launcher
 verifies its hash. Licenses are packaged in the PCK. STORAGE_PROOF.md records
 successful tests in Debug and Release and the fresh-import pre-registration fix.
+
+Step 11 packages plain contract fixtures and supports RunExport -Headless
+-ContractsProbe. Editor and release report CONTRACT_CHECK_PASS (66 checks).

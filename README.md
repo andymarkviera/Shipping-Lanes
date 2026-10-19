@@ -123,3 +123,7 @@ Private storage dependency proof is complete with a cold-import workaround; see
 [STORAGE_PROOF.md](STORAGE_PROOF.md). On a fresh restore, run tools/Godot.ps1 -Mode
 Check before opening directly in Godot. Export distributions now require the
 matching SQLite DLL alongside EXE and PCK. No gameplay saves exist yet.
+
+Save/protocol record drafts and safe plain-data validation are documented in
+[SAVE_PROTOCOL_CONTRACTS.md](SAVE_PROTOCOL_CONTRACTS.md). ContractsCheck exercises
+representative and malformed records; it does not write game saves.

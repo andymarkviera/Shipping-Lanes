@@ -1,0 +1,23 @@
+{
+  "revision": 0,
+  "kind": "ship",
+  "data": {
+    "fuel_ml": 40000,
+    "owner_id": "player_test",
+    "inventory_id": "inventory_test",
+    "definition_id": "ship_starter_container_01",
+    "location": {
+      "latitude_deg": 10.0,
+      "frame": "meridian_tangent_v1",
+      "longitude_deg": 179.999,
+      "altitude_m": 0,
+      "world_id": "world_coordinate_fixture",
+      "content_revision": 1,
+      "heading_deg": 90
+    }
+  },
+  "id": "ship_test",
+  "protocol_version": 1,
+  "realm_id": "realm_test_private",
+  "schema_version": 1
+}

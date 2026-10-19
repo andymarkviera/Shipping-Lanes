@@ -24,6 +24,8 @@ static func normalized(latitude: float, longitude: float, heading: float = 0.0, 
 static func decode(data: Variant) -> Dictionary:
 	if not data is Dictionary or data.size() != 7:
 		return {}
+	if not (data.get("content_revision") is int or data.get("content_revision") is float):
+		return {}
 	if data.get("world_id") != WORLD_ID or data.get("content_revision") != CONTENT_REVISION or data.get("frame") != FRAME:
 		return {}
 	for field: String in ["latitude_deg", "longitude_deg", "altitude_m", "heading_deg"]:

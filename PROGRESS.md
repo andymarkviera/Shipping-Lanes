@@ -484,3 +484,21 @@ STORAGE_PROOF.md records evidence, commands, packaging and remaining limits.
 Recovery: tag `private-storage-dependency-proof`; verified source checkpoint:
 `../output/checkpoints/private-storage-dependency-proof-2026-10-19.zip` plus SHA-256.
 Next: Step 11, save-and-protocol-contracts.
+
+## Step 11 — Save and protocol contracts
+
+Task ID: `save-and-protocol-contracts`  
+Status: complete — October 19, 2026.
+
+Added six versioned plain-data record fixtures and bounded JSON validation with
+clear field errors and no accepted partial output. SAVE_PROTOCOL_CONTRACTS.md
+specifies IDs, units, defaults, clocks, protocol/authority boundaries, retry and
+migration policy. This is not actual gameplay saving or networking.
+
+66 contract checks pass in editor and exported Release; 342 geographic checks
+pass after rejecting boolean content revisions. Native release startup passed.
+Export includes fixtures and a diagnostic route. No user playtest is needed.
+
+Recovery: tag `step-11-save-protocol-contracts`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-11-save-protocol-contracts-2026-10-19.zip`.
+Next: Step 12, units-and-time.

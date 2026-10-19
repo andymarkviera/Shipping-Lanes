@@ -46,6 +46,8 @@ separate from proposed implementation choices and append deliberate revisions.
 
 | D034 | Private SQLite binding proven | Pin godot-sqlite v4.9 Windows x64 (runtime SQLite 3.51.0). Use launcher pre-registration for fresh imports. Transaction/migration/backup/process-kill tests pass in editor and both exports; power-loss, production concurrency and public adapter remain unproven. |
 
+| D035 | Draft save/protocol contracts | Versioned plain JSON records validate before acceptance; no resource/script loading from saves. Integer minor credits, milliliter fuel and explicit cargo units are bounded. Migration policy fails closed and preserves prior saves. Actual persistence, authorization and replay handling remain later work. |
+
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another
 game and cannot override our requirements. The map guide adds selected visual

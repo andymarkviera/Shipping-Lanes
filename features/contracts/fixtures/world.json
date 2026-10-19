@@ -1,0 +1,15 @@
+{
+  "revision": 0,
+  "kind": "world",
+  "data": {
+    "authority": "private_host",
+    "content_revision": 1,
+    "content_world_id": "world_coordinate_fixture",
+    "clock_policy": "active_session_only",
+    "clock_ms": 0
+  },
+  "id": "world_test",
+  "protocol_version": 1,
+  "realm_id": "realm_test_private",
+  "schema_version": 1
+}

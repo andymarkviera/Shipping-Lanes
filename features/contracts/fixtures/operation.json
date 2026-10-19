@@ -1,0 +1,17 @@
+{
+  "revision": 0,
+  "kind": "operation",
+  "data": {
+    "action": "test_transfer",
+    "result_code": "none",
+    "status": "pending",
+    "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "actor_id": "player_test",
+    "expected_revision": 0,
+    "committed_world_ms": 0
+  },
+  "id": "operation_test",
+  "protocol_version": 1,
+  "realm_id": "realm_test_private",
+  "schema_version": 1
+}

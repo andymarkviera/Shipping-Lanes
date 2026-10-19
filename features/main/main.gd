@@ -12,6 +12,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if OS.get_cmdline_user_args().has("--contracts-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/contracts_probe.tscn")
+		return
 	if OS.get_cmdline_user_args().has("--storage-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/storage_probe.tscn")
 		return

@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -11,11 +11,13 @@ param(
     [string]$Configuration = 'Debug',
     [string]$TemplateSource,
     [switch]$GeographyProbe,
+    [switch]$ContractsProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
 if ($Scene -and $Mode -ne 'Run') { throw '-Scene requires Run.' }
+if ($ContractsProbe -and ($Mode -ne 'RunExport' -or $GeographyProbe)) { throw '-ContractsProbe requires RunExport without GeographyProbe.' }
 if ($GeographyProbe -and $Mode -ne 'RunExport') { throw '-GeographyProbe requires RunExport.' }
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $workspaceRoot = Split-Path -Parent $projectRoot
@@ -140,6 +142,9 @@ switch ($Mode) {
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
     }
+    'ContractsCheck' {
+        Invoke-ProjectGodot -LogName 'contracts-check.log' -Arguments @('--headless', '--scene', 'res://tools/contracts_probe.tscn')
+    }
     'GeographyCheck' {
         Invoke-ProjectGodot -LogName 'geography-check.log' -Arguments @('--headless', '--scene', 'res://tools/geography_probe.tscn')
     }
@@ -178,6 +183,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($ContractsProbe) { $launchArguments += @('--', '--contracts-check') }
         if ($GeographyProbe) { $launchArguments += @('--', '--geography-check') }
         Invoke-ProjectGodot -Exported -LogName ('export-run-' + $Configuration.ToLowerInvariant() + '.log') -Arguments $launchArguments
     }

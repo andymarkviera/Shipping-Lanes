@@ -41,10 +41,10 @@ user-confirmed product requirements:
   credentials. Keycloak's own records use a separate database/role.
 - **Private persistence:** one versioned SQLite database per world on the host,
   containing members, progression, fleet/cargo/jobs, local market/refinery state,
-  and operation receipts. The host is its only writer. Select/pin and validate a
-  compatible Godot binding at the save foundation step; it is not installed now.
-  SQLite transactions are selected to keep outcomes and receipts in one commit;
-  actual crash durability, backup/restore, and engine compatibility need tests.
+  and operation receipts. The host is its only writer. godot-sqlite v4.9 is pinned
+  and tested on Windows x64; STORAGE_PROOF.md records process-kill, migration,
+  backup/restore evidence and the cold-import workaround. Production concurrency,
+  authority and hardware durability still require their later proofs.
 - **Game transport:** Godot high-level multiplayer over ENet/UDP; a player host
   and a headless dedicated server use the same authoritative gameplay layer.
   Separate control requests, state updates, and receipts into suitable channels
