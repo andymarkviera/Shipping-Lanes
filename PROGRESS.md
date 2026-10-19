@@ -704,3 +704,27 @@ supported speed, masks, angular checks, clear-spawn requirement and limitations.
 Recovery: tag `step-21-hull-shore-collision`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-21-hull-shore-collision-2026-10-19.zip`.
 Next: Step 22, handling-feedback-pass.
+
+## Step 22 — Handling feedback pass
+
+Task ID: `handling-feedback-pass`  
+Status: playable implementation ready — October 19, 2026; Andy's playtest pending.
+
+Added engine/thruster tone feedback, mapped one-shot horn, and readable speed,
+heading, commanded/actual throttle, effective thruster and drift instruments.
+Fuel is displayed as unconnected, without inventing a simulation. Feedback is
+read-only and respects master volume and input focus/menu gating.
+
+Recorded a repeatable numerical acceleration/braking baseline and a prioritized
+playtest queue in HANDLING_FEEDBACK.md. Tuning was not changed or locked. This
+step's requirement for Andy to test feel/comfort remains outstanding; no player
+feedback or acceptance is claimed.
+
+FeedbackCheck passes 24 checks in editor and native Windows Release. Full passes
+16 stages / 50 compiled scripts; all earlier checks still pass. HUD capture
+inspected. Sound waveforms verified programmatically; player audition pending.
+
+Recovery: tag `step-22-handling-feedback-baseline`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-22-handling-feedback-baseline-2026-10-19.zip`.
+Next: Andy's short handling playtest and prioritized adjustments; then Step 23,
+depth-and-draft. Controller choice remains provisional until review.

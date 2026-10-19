@@ -76,3 +76,5 @@ Step 19 adds CameraCheck to Full (13 stages / 41 scripts). Twenty camera checks 
 Step 20 adds WaterCheck to Full (14 stages / 45 scripts). Thirty-five checks verify visual/physics separation, tiers, palettes and preference compatibility/save/cancel. Exported -WaterProbe without -Headless also exercises native shader rendering.
 
 Step 21 adds CollisionCheck to Full (15 stages / 48 scripts): 35 assertions, 16 contact/mask fixtures, 180 ticks. Release uses -Mode RunExport -Configuration Release -Headless -CollisionProbe.
+
+Step 22 adds FeedbackCheck to Full (16 stages / 50 scripts). Twenty-four checks validate instruments, synthesized audio state/PCM and the recorded handling baseline. Native Release uses -FeedbackProbe; the check mutes its own audio only.

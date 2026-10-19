@@ -109,3 +109,5 @@ U008 update (Step 19): orbit/zoom/recenter and two-size focus/pier checks comple
 U033 update (Step 20): initial water art is bold blue with flowing pale patterns; coastal palette retained for future regions. Three quality tiers and visual-only bobbing verified. Physical waves/current/wind remain unapproved; no networked sea state implemented.
 
 Step 21 collision checkpoint: current planar hull/shore contacts verified through 20 m/s. Real ship geometry, moving-body mass exchange, grounding, damage and network reconciliation still require their later implementation/checks.
+
+U008 update (Step 22): playable feedback baseline recorded and automatically verified. Andy's acceleration/braking/turning/camera/docking and sound review is pending; controller approach and tuning are not locked.

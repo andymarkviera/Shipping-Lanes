@@ -7,6 +7,7 @@ var controls: PlayerControls
 var camera: OrbitCameraRig
 var readout: Label
 var overlay: DeveloperOverlay
+var feedback: HandlingFeedback
 
 func box(parent: Node3D, size: Vector3, at: Vector3, color: Color) -> void:
 	var mesh: MeshInstance3D = MeshInstance3D.new()
@@ -26,6 +27,7 @@ func _ready() -> void:
 	controls.set_ship_context(true)
 	controls.command_requested.connect(func(action: StringName) -> void:
 		if action == &"ship_throttle_zero": ship.zero_throttle()
+		if action == &"horn": feedback.sound_horn(controls.input_allowed())
 		if action == &"pause": get_tree().change_scene_to_file("res://features/main/main.tscn"))
 	ship = Ship.new()
 	ship.name = "BoxShip"
@@ -100,6 +102,8 @@ func _ready() -> void:
 	readout = Label.new()
 	readout.add_theme_font_size_override("font_size", 18)
 	panel.add_child(readout)
+	feedback = HandlingFeedback.new()
+	add_child(feedback)
 	overlay = DeveloperOverlay.new()
 	add_child(overlay)
 
@@ -110,7 +114,8 @@ func _physics_process(delta: float) -> void:
 	else:
 		ship.adjust_command(controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	feedback.update(ship, controls.input_allowed(), delta)
 	var forward_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_up"])
 	var reverse_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_down"])
 	var left_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_steer_left"])
@@ -118,5 +123,9 @@ func _process(_delta: float) -> void:
 	var port_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_thruster_left"])
 	var starboard_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_thruster_right"])
 	var zero_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_zero"])
-	readout.text = "MANEUVERING TEST\n%s / %s: throttle  |  %s: zero  |  Escape: menu\n%s / %s: rudder  |  %s / %s: lateral thrusters\nRMB drag: orbit  |  Wheel: zoom  |  %s: recenter\n\nCommand %+.0f%%  |  Engine %+.0f%%\nAhead %+.2f m/s  |  Sideways %+.2f m/s\nTurn %+.1f°/s  |  Thrusters fade from 0 to 4 m/s" % [forward_key, reverse_key, zero_key, left_key, right_key, port_key, starboard_key, OS.get_keycode_string(controls.preferences.bindings["camera_recenter"]), ship.commanded_throttle * 100.0, ship.actual_throttle * 100.0, ship.forward_speed(), -ship.lateral_speed(), rad_to_deg(ship.yaw_rate)]
+	var data: Dictionary = feedback.snapshot
+	var thruster_text: String = "IDLE"
+	if absf(data.thruster) > 0.005: thruster_text = "%s %.0f%%" % ["STARBOARD" if data.thruster > 0.0 else "PORT", absf(data.thruster) * 100.0]
+	elif absf(ship.lateral_order) > 0.0: thruster_text = "TOO FAST"
+	readout.text = "HANDLING BASELINE\n%s / %s throttle  |  %s neutral  |  %s horn\n%s / %s rudder  |  %s / %s thrusters  |  Esc menu\nRMB orbit  |  Wheel zoom  |  %s recenter\n\nSpeed %.1f kn %s  |  Heading %03d°\nOrder %+.0f%%  |  Engine %+.0f%%  %s\nThruster %s  |  Fuel — not connected\nSide drift %+.1f kn  |  Turn %+.1f°/s" % [forward_key, reverse_key, zero_key, OS.get_keycode_string(controls.preferences.bindings["horn"]), left_key, right_key, port_key, starboard_key, OS.get_keycode_string(controls.preferences.bindings["camera_recenter"]), data.speed_knots, data.direction, int(round(data.heading_degrees)) % 360, data.command * 100.0, data.engine * 100.0, "HORN" if feedback.horn.playing else "", thruster_text, data.side_knots, data.turn_degrees]
 	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": "box_prototype", "speed_mps": ship.forward_speed(), "throttle": ship.actual_throttle, "position_m": ship.position})

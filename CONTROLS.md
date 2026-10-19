@@ -95,3 +95,5 @@ Step 19 camera: hold RMB and drag to orbit; wheel zooms; C recenters aft (saved 
 Water quality: choose Low, Medium or High in the main-menu Settings, save, then open Boat Handling Test. Low keeps the blue/pale pattern with a flat surface and reduced visual bobbing.
 
 Collision course: the thin head-on pier is 300 m ahead; angled pier and rock blocks are port-side, coastline beyond the gold course. Near-wall turns may be blocked; use lateral thrusters to gain clearance.
+
+H sounds the prototype horn once (1.2 seconds, no stacked repeats). Engine/thruster tones follow actual output and master volume. HUD shows knots, local test heading and explicit unconnected fuel.

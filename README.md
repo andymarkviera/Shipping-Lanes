@@ -154,3 +154,5 @@ Step 19: [Orbit camera](CAMERA.md) adds RMB orbit, wheel zoom, C recenter and pi
 Step 20: [Stylized water](WATER_PRESENTATION.md) adds bold-blue animated patterns, gentle visual bobbing and saved water quality settings. A muted coastal palette is ready for later regions.
 
 Step 21: [Hull and shore collision](COLLISION.md) adds coast/rock blockouts, thin/angled piers and guarded turning to Boat Handling Test.
+
+Step 22: [Handling feedback baseline](HANDLING_FEEDBACK.md) adds engine/thruster sounds, H horn and clearer instruments. Implementation is verified; Andy's short playtest remains pending before controller lock.
