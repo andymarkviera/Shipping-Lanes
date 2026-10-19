@@ -42,6 +42,8 @@ separate from proposed implementation choices and append deliberate revisions.
 
 | D032 | Definition ownership | Four prototype records use stable IDs; the starter ID is preserved. Registry owns defensive copies, validates references transactionally, and per-ship fuel/cargo live only in ShipState. No prototype amounts establish balance or save contracts. |
 
+| D033 | Draft geographic identity | Scalar latitude/longitude/altitude and explicit world revision/meridian heading frame survive projection and JSON tests. Exact pole retains a meridian hint. Unit-sphere math does not choose physical scale, local origin transport or final save schema. See GEOGRAPHIC_CONTRACT.md. |
+
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another
 game and cannot override our requirements. The map guide adds selected visual

@@ -445,3 +445,22 @@ Recovery: tag `step-10-definitions`; verified source archive and SHA-256 sidecar
 
 Next: geographic-contract-feasibility, then private-storage-dependency-proof,
 both required before Step 11 save-and-protocol-contracts (BUILD_DEPENDENCIES.md).
+
+## Supplemental — Geographic contract feasibility
+
+Task ID: `geographic-contract-feasibility`  
+Status: complete — October 19, 2026.
+
+- Added synthetic markers, canonical scalar addresses with explicit world/content
+  revision and tangent frame, unit-globe and flat projections, pole-safe basis.
+- Corrected approximate longitude snapping found in Godot wrapf by the seam test.
+- 342 assertions pass in both the pinned engine and exported Windows release.
+  Normal native release startup also passes. See GEOGRAPHIC_CONTRACT.md for
+  measured tolerances, commands, evidence limits and pending physical validation.
+- Globe vectors/tile IDs never replace canonical location identity. No actual
+  map, ship simulation, geographic save file or networking is implemented.
+- Saved tag `geographic-contract-feasibility` and verified source archive:
+  `../output/checkpoints/geographic-contract-feasibility-2026-10-19.zip`, with
+  SHA-256 sidecar.
+
+Next task: private-storage-dependency-proof, required before Step 11 contracts.

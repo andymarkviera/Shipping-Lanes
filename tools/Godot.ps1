@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -10,11 +10,13 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Debug',
     [string]$TemplateSource,
+    [switch]$GeographyProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
-if ($Scene -and $Mode -ne 'Run') { throw '-Scene is supported only with -Mode Run.' }
+if ($Scene -and $Mode -ne 'Run') { throw '-Scene requires Run.' }
+if ($GeographyProbe -and $Mode -ne 'RunExport') { throw '-GeographyProbe requires RunExport.' }
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $workspaceRoot = Split-Path -Parent $projectRoot
 $baseline = Get-Content -LiteralPath (Join-Path $projectRoot 'engine-baseline.json') -Raw | ConvertFrom-Json
@@ -122,6 +124,9 @@ switch ($Mode) {
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
     }
+    'GeographyCheck' {
+        Invoke-ProjectGodot -LogName 'geography-check.log' -Arguments @('--headless', '--scene', 'res://tools/geography_probe.tscn')
+    }
     'CatalogCheck' {
         Invoke-ProjectGodot -LogName 'catalog-check.log' -Arguments @('--headless', '--script', 'res://tools/check_catalog.gd')
     }
@@ -151,6 +156,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($GeographyProbe) { $launchArguments += @('--', '--geography-check') }
         Invoke-ProjectGodot -Exported -LogName ('export-run-' + $Configuration.ToLowerInvariant() + '.log') -Arguments $launchArguments
     }
     default {

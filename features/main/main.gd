@@ -12,6 +12,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if OS.get_cmdline_user_args().has("--geography-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/geography_probe.tscn")
+		return
 	var errors: PackedStringArray = catalog.load_definitions(PrototypeCatalog.RECORDS)
 	if not errors.is_empty():
 		push_error("Catalog validation failed: " + "; ".join(errors))

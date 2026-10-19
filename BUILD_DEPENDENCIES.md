@@ -3,7 +3,7 @@
 October 18, 2026 · Step 03 · `feature-and-uncertainty-inventory`
 
 The attached roadmap stays read-only. Original task IDs and numbers are stable.
-The following tasks are **planned, not implemented**; insert each before its
+The following tasks have individual status below; insert each before its
 dependent task. They address new map goals and the Step 02 selected providers.
 They do not advance the current task beyond documentation or renumber 01–142.
 
@@ -13,6 +13,7 @@ They do not advance the current task beyond documentation or renumber 01–142.
 
 Task ID: `geographic-contract-feasibility`  
 Placement: after 10, before 11. Owner: Agent. Uncertainties: U004, U031.
+Status: complete October 19, 2026; see GEOGRAPHIC_CONTRACT.md. Physical proof remains pending.
 
 Use a tiny world catalog and stand-in markers to prove coordinate normalization,
 globe/flat round trips, seam adjacency and pole-safe orientation/frame fields.

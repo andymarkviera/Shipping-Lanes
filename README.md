@@ -114,3 +114,7 @@ for Continue, pause, focus handling and the repeatable `-Mode FlowCheck` command
 [DEFINITIONS.md](DEFINITIONS.md) describes the four prototype definitions, stable
 IDs, independent ship state and `-Mode CatalogCheck`. Main validates the catalog
 on startup. These records do not yet create a playable ship, port or cargo job.
+
+Geographic feasibility checks and their exported diagnostic route are documented
+in [GEOGRAPHIC_CONTRACT.md](GEOGRAPHIC_CONTRACT.md). This prerequisite has no
+visible gameplay change and requires no manual playtest.

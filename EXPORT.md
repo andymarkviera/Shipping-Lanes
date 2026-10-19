@@ -84,3 +84,7 @@ Step 10 explicitly exports the prototype catalog scripts/records and the starter
 ship scene referenced by path. Catalog validation runs at exported startup. Typed
 Array[String] reference fields passed release validation after packed-string
 fields were observed empty in the first release attempt.
+
+The geographic probe is explicitly packaged. Run it with RunExport -Headless
+-GeographyProbe (application user argument); the release template does not permit
+--scene overrides. Normal RunExport remains the main menu startup path.
