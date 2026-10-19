@@ -103,3 +103,5 @@ U008 update (Step 16): initial planar CharacterBody3D and thrust/drag fixture se
 U008 update (Step 17): command/engine ramping and limits are implemented and checked; values remain provisional pending handling-feel approval.
 
 U008 update (Step 18): rudder/thruster fixture parameters and astern rule implemented; tuning and controlled-body lateral grip remain provisional pending handling-feel review.
+
+U008 update (Step 19): orbit/zoom/recenter and two-size focus/pier checks complete; camera distances and smoothing remain subject to feel review.

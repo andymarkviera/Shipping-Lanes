@@ -78,3 +78,5 @@ become approved formulas just because they appear in the inventory.
 | D041 | Throttle prototype | Retained command with independent bounded engine output; +100% / -60% limits, ramp through neutral on reversal, X zero preserves momentum. ShipDefinition owns validated provisional tuning. Input focus/menu loss orders neutral. |
 
 | D042 | Maneuvering prototype | Rudder yaw scales with signed forward speed, with bounded rate and acceleration; astern reverses yaw. Paired lateral thrust translates without yaw, fades with speed, and is bounded by lateral drag. ShipDefinition owns six validated tuning fields. Controlled local velocity rotates with hull; realistic sideslip/angular contact deferred. |
+
+| D043 | Camera rig | Explicit CameraFocus interface, hull-relative zoom, heading-relative orbit and exponential smoothing. Sphere sweep shortens the camera arm around solid geometry, excluding the target hull; recovery smooths. No fixed ship path. See CAMERA.md for target-switch and collision limits. |

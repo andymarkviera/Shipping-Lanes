@@ -148,3 +148,5 @@ Step 16: [Boat handling prototype](HANDLING_PROTOTYPE.md). Launch it from **Boat
 Step 17 updates the handling test: W/S adjust a retained throttle order; X orders zero. HUD separates command, engine output and speed.
 
 Step 18: A/D rudder, Q/E lateral thrusters, gold turning markers and a solid practice quay are available in Boat Handling Test.
+
+Step 19: [Orbit camera](CAMERA.md) adds RMB orbit, wheel zoom, C recenter and pier avoidance to Boat Handling Test.

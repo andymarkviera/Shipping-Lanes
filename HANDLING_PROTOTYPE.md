@@ -60,9 +60,8 @@ performance. The checks pass in editor and Windows Release. The full 12-stage
 suite passed, and the updated native HUD capture was inspected.
 
 The box hull has a gold bow marker and white aft block. Lane markers show motion
-across flat coastal water. The camera is a temporary follower. No persisted ship
-state or multiplayer movement yet. Production camera controls and waves
-remain steps 19–20. The starter model is preserved for later integration.
+across flat coastal water. The Step 19 orbit camera provides RMB orbit, wheel zoom and recenter; see CAMERA.md. No persisted ship
+state or multiplayer movement yet. Water presentation remains Step 20. The starter model is preserved for later integration.
 
 ## Step 18: maneuvering
 
@@ -97,7 +96,7 @@ For a sideways approach, start a fresh test, leave throttle at zero, and hold E
 toward the brown quay on the starboard side. Q pushes away. The quay has a solid
 collision shape and a pale edge strip. Contact is only a practice collision;
 there is no mooring or cargo transaction here. Return to title and reopen the
-test to reset. The temporary camera follows position with a fixed world offset.
+test to reset. The camera follows smoothly; RMB orbits, wheel zooms and C recenters.
 
 Added checks cover speed-sensitive yaw, bounded yaw acceleration/rate, neutral
 rudder at rest, forward and astern signs, gradual yaw release, finite lateral

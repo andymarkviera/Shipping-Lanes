@@ -641,3 +641,23 @@ network synchronization or collision-damage model yet.
 Recovery: tag `step-18-rudder-thrusters`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-18-rudder-thrusters-2026-10-19.zip`.
 Next: Step 19, camera.
+
+## Step 19 — Camera
+
+Task ID: `camera`  
+Status: complete — October 19, 2026.
+
+Added a reusable orbit rig and CameraFocus interface, independent of ship paths.
+RMB drag orbits, wheel zooms within hull-relative limits, C recenters. Saved
+sensitivity/inversion apply. Position/orientation/zoom and focus switches smooth;
+sphere sweeps avoid solid piers, with immediate obstruction pull-in and smooth
+recovery. Capture releases on mouse-up, blocked input, focus loss and scene exit.
+
+CameraCheck passes 20 checks in editor and Windows Release, including 16 m/80 m
+hulls, target switching, real mouse events and tall-pier avoidance. Full passes
+13 stages, 41 scripts compile, and 72 handling checks still pass. Native aft/orbit
+captures inspected. CAMERA.md records interface, limits and static-pier scope.
+
+Recovery: tag `step-19-camera`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-19-camera-2026-10-19.zip`.
+Next: Step 20, water presentation.

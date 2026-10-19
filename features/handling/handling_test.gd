@@ -2,7 +2,7 @@ extends Node3D
 const Ship = preload("res://features/handling/handling_ship.gd")
 var ship: HandlingShip
 var controls: PlayerControls
-var camera: Camera3D
+var camera: OrbitCameraRig
 var readout: Label
 var overlay: DeveloperOverlay
 
@@ -67,10 +67,15 @@ func _ready() -> void:
 	environment.environment.ambient_light_color = Color("dce5e5")
 	environment.environment.ambient_light_energy = 0.65
 	add_child(environment)
-	camera = Camera3D.new()
-	camera.far = 3000.0
+	var focus: CameraFocus = CameraFocus.new()
+	ship.add_child(focus)
+	focus.position = Vector3(0, 5, 0)
+	focus.hull_radius = 34.0
+	focus.collision_body = ship
+	camera = OrbitCameraRig.new()
 	add_child(camera)
-	camera.current = true
+	camera.set_focus(focus)
+	camera.bind_controls(controls)
 	var ui: CanvasLayer = CanvasLayer.new()
 	add_child(ui)
 	var panel: PanelContainer = PanelContainer.new()
@@ -98,8 +103,6 @@ func _physics_process(delta: float) -> void:
 		ship.adjust_command(controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta)
 
 func _process(_delta: float) -> void:
-	camera.position = ship.position + Vector3(85, 65, -110)
-	camera.look_at(ship.position + Vector3(0, 0, 12), Vector3.UP)
 	var forward_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_up"])
 	var reverse_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_down"])
 	var left_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_steer_left"])
@@ -107,5 +110,5 @@ func _process(_delta: float) -> void:
 	var port_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_thruster_left"])
 	var starboard_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_thruster_right"])
 	var zero_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_zero"])
-	readout.text = "MANEUVERING TEST\n%s / %s: throttle  |  %s: zero  |  Escape: menu\n%s / %s: rudder  |  %s / %s: lateral thrusters\nGold markers: turning course  |  Quay: sideways approach\n\nCommand %+.0f%%  |  Engine %+.0f%%\nAhead %+.2f m/s  |  Sideways %+.2f m/s\nTurn %+.1f°/s  |  Thrusters fade from 0 to 4 m/s" % [forward_key, reverse_key, zero_key, left_key, right_key, port_key, starboard_key, ship.commanded_throttle * 100.0, ship.actual_throttle * 100.0, ship.forward_speed(), -ship.lateral_speed(), rad_to_deg(ship.yaw_rate)]
+	readout.text = "MANEUVERING TEST\n%s / %s: throttle  |  %s: zero  |  Escape: menu\n%s / %s: rudder  |  %s / %s: lateral thrusters\nRMB drag: orbit  |  Wheel: zoom  |  %s: recenter\n\nCommand %+.0f%%  |  Engine %+.0f%%\nAhead %+.2f m/s  |  Sideways %+.2f m/s\nTurn %+.1f°/s  |  Thrusters fade from 0 to 4 m/s" % [forward_key, reverse_key, zero_key, left_key, right_key, port_key, starboard_key, OS.get_keycode_string(controls.preferences.bindings["camera_recenter"]), ship.commanded_throttle * 100.0, ship.actual_throttle * 100.0, ship.forward_speed(), -ship.lateral_speed(), rad_to_deg(ship.yaw_rate)]
 	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": "box_prototype", "speed_mps": ship.forward_speed(), "throttle": ship.actual_throttle, "position_m": ship.position})
