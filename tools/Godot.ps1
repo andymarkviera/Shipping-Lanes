@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -9,10 +9,12 @@ param(
     [string]$EngineSource,
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Debug',
-    [string]$TemplateSource
+    [string]$TemplateSource,
+    [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Scene -and $Mode -ne 'Run') { throw '-Scene is supported only with -Mode Run.' }
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $workspaceRoot = Split-Path -Parent $projectRoot
 $baseline = Get-Content -LiteralPath (Join-Path $projectRoot 'engine-baseline.json') -Raw | ConvertFrom-Json
@@ -117,6 +119,9 @@ switch ($Mode) {
     'Import' {
         Invoke-ProjectGodot -LogName 'environment-import.log' -Arguments @('--headless', '--editor', '--import')
     }
+    'AssetCheck' {
+        Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
+    }
     'Export' {
         Install-ExportTemplates
         [System.IO.Directory]::CreateDirectory($exportRoot) | Out-Null
@@ -142,6 +147,7 @@ switch ($Mode) {
     default {
         $launchArguments = @()
         if ($Mode -eq 'Editor') { $launchArguments += '--editor' }
+        if ($Scene) { $launchArguments += @('--scene', $Scene) }
         if ($Headless) {
             $launchArguments += '--headless'
         }

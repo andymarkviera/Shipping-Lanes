@@ -139,5 +139,6 @@ Windows APPDATA launch reached Main but could not write shader cache under the
 sandbox; normal-profile clean-machine behavior remains unverified. Use the
 saved launcher for the verified local workflow.
 
-Next original task: Step 07, model and asset conventions. The world is empty;
-the new coastal palette is prepared for later map implementation.
+Step 07 subsequently prepares the starter model and static inspection scene.
+Next original task: Step 08, input and settings. The gameplay world is empty;
+the coastal palette is prepared for later map implementation.

@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://features/ships/starter_container_01/starter_container_01.glb" id="1_model"]
+[ext_resource type="Shape3D" path="res://features/ships/starter_container_01/hull_collision.tres" id="2_hull"]
+
+[node name="StarterContainer" type="Node3D"]
+metadata/asset_id = "starter_container_01"
+metadata/ship_definition_id = "ship_starter_container_01"
+metadata/collision_shape = ExtResource("2_hull")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="Model" parent="VisualRoot" instance=ExtResource("1_model")]

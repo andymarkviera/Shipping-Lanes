@@ -317,4 +317,46 @@ contents and SHA-256 sidecar. Generated builds, large templates, engine,
 development data and external art sources are excluded. Follow `EXPORT.md`
 to rebuild from this source checkpoint.
 
-Next roadmap task: Step 07, `model-and-asset-conventions`.
+Step 06's next task was Step 07, `model-and-asset-conventions`, subsequently
+requested by Andy.
+
+## Step 07 — Model and asset conventions
+
+Task ID: `model-and-asset-conventions`  
+Status: complete — October 18, 2026 (asset preparation; gameplay acceptance later).
+
+- Inspected the supplied Blender file and rig guide. Preserved the Downloads
+  source and added a byte-identical editable source copy under `art_sources/`
+  with `.gdignore`. Earlier local ship output differs and was not substituted.
+- Added a pinned Blender 3.6.1 export script, explicit GLBs, import sidecars,
+  manifest, separate wrapper/convex hull reference, and static inspection scene.
+  Excluded preview cargo, extra scene objects, cameras/lights and old proxy boxes.
+  Fixed existing weighted-normal evaluation and sign orientations in memory only.
+- Adopted metre units and calibrated Blender -Y bow/+Z up to Godot +Z bow/+Y up.
+  Measured 64×13 m hull, 3.2 m reference keel depth; full visual bounds and all
+  12 sockets agree after import. Empty export: 79 meshes, 2,728 triangles,
+  seven material roles. Loaded draft and gameplay capacity remain undecided.
+- Added repeatable `-Mode AssetCheck` and optional `-Mode Run -Scene` to the
+  launcher. Checked no imported physics owners or baked cargo, stable IDs,
+  socket positions/normals, pivots, visual bounds and hull reference points.
+- Harmless exported metadata change produced a changed GLB; reimport retained
+  wrapper/collision hashes and passed all checks. Restoring the baseline produced
+  the same GLB hash. Original and source-copy SHA-256 remained identical.
+- Native 1152×648 static preview was inspected, using the coastal water swatch.
+  Preview: `../output/checks/step-07-preview-b00000007.png`. Full project
+  import/startup and saved preview launcher also passed without errors.
+- Conventions, exact commands, limits and remaining acceptance are in
+  `ASSET_CONVENTIONS.md`. Asset-check log: `.godot/asset-check.log`; export and
+  reimport evidence: `../output/checks/step-07-*.log`.
+
+This step does not select a movement body, implement collision response, cargo
+simulation, repainting or sailing. Those remain later tasks. Art/provenance
+review and full runtime acceptance are not marked complete by import checks.
+
+Recoverable baseline: tag `step-07-asset-conventions` and archive
+`../output/checkpoints/step-07-asset-conventions-2026-10-18.zip`, with verified
+contents and SHA-256 sidecar. This checkpoint includes the preserved project
+Blender source copy and GLBs; generated `.godot/`, exports and engine tools remain
+excluded. The external Downloads original remains unchanged.
+
+Next roadmap task: Step 08, `input-and-settings-foundation`.

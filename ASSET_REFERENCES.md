@@ -15,12 +15,11 @@
 - Provided by Andy as the starter ship for later integration.
 - Source: `C:/Users/andyv/Downloads/Shipping Lanes Files/starter_container_01.blend`.
 - File availability checked; size at receipt: 5,660,168 bytes.
-- External authoring source; not copied into the project or imported into Godot.
-- Geometry, scale, materials, collision, anchors, provenance, and export readiness
-  have not been inspected or approved by this reference entry.
-- At asset integration, inspect this supplied model first and follow
-  `Shipping_Game_Ship_Rig_Guide.md`; preserve the original Blender source.
-- This entry does not complete a roadmap asset task or assign gameplay capacity.
-- Step 03 tracking: feature F003; uncertainty U002; inspect at Step 07, with later
-  integration/reimport checks at Steps 27/123. The external Blender source is not
-  included in project checkpoint archives.
+- Step 07 preserves a byte-identical tracked copy under `art_sources/`, excluded
+  from automatic Godot import, and exports an empty-ship GLB for inspection.
+- Measured scale, axes, sockets, material roles and collision reference pass
+  import/reimport checks; see `ASSET_CONVENTIONS.md` for commands and limits.
+- Downloads source remains unchanged. Final art/provenance approval, movement,
+  cargo and gameplay collision checks remain later work. No capacity is assigned.
+- Feature F003 / uncertainty U002 are partially addressed. Later integration is
+  still assigned to Steps 27/123. Step 07 checkpoints include the project source copy.

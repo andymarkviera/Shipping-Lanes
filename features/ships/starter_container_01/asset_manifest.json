@@ -1,0 +1,540 @@
+{
+  "asset_id": "starter_container_01",
+  "ship_definition_id": "ship_starter_container_01",
+  "status": "prototype_asset_only",
+  "source_sha256": "C5113240F9149996F1F8B6452E57FC04890F8A9AAE79FED904AE6139B8B5FE06",
+  "blender_version": "3.6.1",
+  "meters_per_unit": 1.0,
+  "forward_godot": "+Z",
+  "up_godot": "+Y",
+  "origin": "Hull midpoint/centerline at reference empty waterline Y=0",
+  "hull_bounds": {
+    "min": [
+      -6.5,
+      -3.2,
+      -32.0
+    ],
+    "max": [
+      6.5,
+      2.6,
+      32.0
+    ]
+  },
+  "empty_visual_bounds": {
+    "min": [
+      -6.599999,
+      -3.2,
+      -32.019611
+    ],
+    "max": [
+      6.599999,
+      14.0,
+      32.064018
+    ]
+  },
+  "loaded_draft_m": null,
+  "gameplay_capacity": null,
+  "required_sockets": [
+    "SOCKET_camera_follow",
+    "SOCKET_helm_view",
+    "SOCKET_name_port",
+    "SOCKET_name_starboard",
+    "SOCKET_flag",
+    "SOCKET_service",
+    "SOCKET_engine_audio",
+    "SOCKET_horn_audio",
+    "SOCKET_wake_port",
+    "SOCKET_wake_starboard",
+    "SOCKET_exhaust_01",
+    "SOCKET_cargo_origin"
+  ],
+  "socket_positions": {
+    "SOCKET_camera_follow": [
+      0.0,
+      20.0,
+      -45.0
+    ],
+    "SOCKET_helm_view": [
+      0.0,
+      8.3,
+      -19.0
+    ],
+    "SOCKET_name_port": [
+      6.42,
+      1.3,
+      -8.0
+    ],
+    "SOCKET_name_starboard": [
+      -6.42,
+      1.3,
+      -8.0
+    ],
+    "SOCKET_flag": [
+      0.0,
+      13.7,
+      -23.0
+    ],
+    "SOCKET_service": [
+      6.5,
+      2.65,
+      -13.0
+    ],
+    "SOCKET_engine_audio": [
+      0.0,
+      1.0,
+      -25.0
+    ],
+    "SOCKET_horn_audio": [
+      0.0,
+      10.0,
+      -21.0
+    ],
+    "SOCKET_wake_port": [
+      3.8,
+      0.0,
+      -31.0
+    ],
+    "SOCKET_wake_starboard": [
+      -3.8,
+      0.0,
+      -31.0
+    ],
+    "SOCKET_exhaust_01": [
+      2.8,
+      11.3,
+      -27.0
+    ],
+    "SOCKET_cargo_origin": [
+      0.0,
+      2.65,
+      17.0
+    ]
+  },
+  "visual_slot_positions": {
+    "B01_L1_T1": [
+      -2.7,
+      3.945,
+      17.0
+    ],
+    "B01_L1_T2": [
+      -2.7,
+      6.635,
+      17.0
+    ],
+    "B01_L2_T1": [
+      0.0,
+      3.945,
+      17.0
+    ],
+    "B01_L2_T2": [
+      0.0,
+      6.635,
+      17.0
+    ],
+    "B01_L3_T1": [
+      2.7,
+      3.945,
+      17.0
+    ],
+    "B01_L3_T2": [
+      2.7,
+      6.635,
+      17.0
+    ],
+    "B02_L1_T1": [
+      -2.7,
+      3.945,
+      10.5
+    ],
+    "B02_L1_T2": [
+      -2.7,
+      6.635,
+      10.5
+    ],
+    "B02_L2_T1": [
+      0.0,
+      3.945,
+      10.5
+    ],
+    "B02_L2_T2": [
+      0.0,
+      6.635,
+      10.5
+    ],
+    "B02_L3_T1": [
+      2.7,
+      3.945,
+      10.5
+    ],
+    "B02_L3_T2": [
+      2.7,
+      6.635,
+      10.5
+    ],
+    "B03_L1_T1": [
+      -2.7,
+      3.945,
+      4.0
+    ],
+    "B03_L1_T2": [
+      -2.7,
+      6.635,
+      4.0
+    ],
+    "B03_L2_T1": [
+      0.0,
+      3.945,
+      4.0
+    ],
+    "B03_L2_T2": [
+      0.0,
+      6.635,
+      4.0
+    ],
+    "B03_L3_T1": [
+      2.7,
+      3.945,
+      4.0
+    ],
+    "B03_L3_T2": [
+      2.7,
+      6.635,
+      4.0
+    ],
+    "B04_L1_T1": [
+      -2.7,
+      3.945,
+      -2.5
+    ],
+    "B04_L1_T2": [
+      -2.7,
+      6.635,
+      -2.5
+    ],
+    "B04_L2_T1": [
+      0.0,
+      3.945,
+      -2.5
+    ],
+    "B04_L2_T2": [
+      0.0,
+      6.635,
+      -2.5
+    ],
+    "B04_L3_T1": [
+      2.7,
+      3.945,
+      -2.5
+    ],
+    "B04_L3_T2": [
+      2.7,
+      6.635,
+      -2.5
+    ]
+  },
+  "collision_hull_points": [
+    [
+      -0.15,
+      2.6,
+      32.0
+    ],
+    [
+      -0.147,
+      0.15,
+      32.0
+    ],
+    [
+      -0.108,
+      -0.65,
+      32.0
+    ],
+    [
+      0.0,
+      -1.1,
+      32.0
+    ],
+    [
+      0.108,
+      -0.65,
+      32.0
+    ],
+    [
+      0.147,
+      0.15,
+      32.0
+    ],
+    [
+      0.15,
+      2.6,
+      32.0
+    ],
+    [
+      -2.65,
+      2.6,
+      29.0
+    ],
+    [
+      -2.597,
+      0.15,
+      29.0
+    ],
+    [
+      -1.908,
+      -1.95,
+      29.0
+    ],
+    [
+      0.0,
+      -2.4,
+      29.0
+    ],
+    [
+      1.908,
+      -1.95,
+      29.0
+    ],
+    [
+      2.597,
+      0.15,
+      29.0
+    ],
+    [
+      2.65,
+      2.6,
+      29.0
+    ],
+    [
+      -5.15,
+      2.6,
+      24.0
+    ],
+    [
+      -5.047,
+      0.15,
+      24.0
+    ],
+    [
+      -3.708,
+      -2.55,
+      24.0
+    ],
+    [
+      0.0,
+      -3.0,
+      24.0
+    ],
+    [
+      3.708,
+      -2.55,
+      24.0
+    ],
+    [
+      5.047,
+      0.15,
+      24.0
+    ],
+    [
+      5.15,
+      2.6,
+      24.0
+    ],
+    [
+      -6.4,
+      2.6,
+      17.0
+    ],
+    [
+      -6.272,
+      0.15,
+      17.0
+    ],
+    [
+      -4.608,
+      -2.75,
+      17.0
+    ],
+    [
+      0.0,
+      -3.2,
+      17.0
+    ],
+    [
+      4.608,
+      -2.75,
+      17.0
+    ],
+    [
+      6.272,
+      0.15,
+      17.0
+    ],
+    [
+      6.4,
+      2.6,
+      17.0
+    ],
+    [
+      -6.5,
+      2.6,
+      -14.0
+    ],
+    [
+      -6.37,
+      0.15,
+      -14.0
+    ],
+    [
+      -4.68,
+      -2.75,
+      -14.0
+    ],
+    [
+      0.0,
+      -3.2,
+      -14.0
+    ],
+    [
+      4.68,
+      -2.75,
+      -14.0
+    ],
+    [
+      6.37,
+      0.15,
+      -14.0
+    ],
+    [
+      6.5,
+      2.6,
+      -14.0
+    ],
+    [
+      -5.9,
+      2.6,
+      -25.0
+    ],
+    [
+      -5.782,
+      0.15,
+      -25.0
+    ],
+    [
+      -4.248,
+      -2.45,
+      -25.0
+    ],
+    [
+      0.0,
+      -2.9,
+      -25.0
+    ],
+    [
+      4.248,
+      -2.45,
+      -25.0
+    ],
+    [
+      5.782,
+      0.15,
+      -25.0
+    ],
+    [
+      5.9,
+      2.6,
+      -25.0
+    ],
+    [
+      -4.6,
+      2.6,
+      -31.0
+    ],
+    [
+      -4.508,
+      0.15,
+      -31.0
+    ],
+    [
+      -3.312,
+      -1.35,
+      -31.0
+    ],
+    [
+      0.0,
+      -1.8,
+      -31.0
+    ],
+    [
+      3.312,
+      -1.35,
+      -31.0
+    ],
+    [
+      4.508,
+      0.15,
+      -31.0
+    ],
+    [
+      4.6,
+      2.6,
+      -31.0
+    ],
+    [
+      -4.4,
+      2.6,
+      -32.0
+    ],
+    [
+      -4.312,
+      0.15,
+      -32.0
+    ],
+    [
+      -3.168,
+      -1.15,
+      -32.0
+    ],
+    [
+      0.0,
+      -1.6,
+      -32.0
+    ],
+    [
+      3.168,
+      -1.15,
+      -32.0
+    ],
+    [
+      4.312,
+      0.15,
+      -32.0
+    ],
+    [
+      4.4,
+      2.6,
+      -32.0
+    ]
+  ],
+  "collision_status": "Convex hull authoring reference; physics ownership selected at Step16",
+  "mesh_objects": 79,
+  "evaluated_triangles": 2728,
+  "materials": [
+    "MAT_deck",
+    "MAT_hull_primary",
+    "MAT_hull_secondary",
+    "MAT_metal",
+    "MAT_superstructure",
+    "MAT_trim",
+    "MAT_windows"
+  ],
+  "export_fixes": [
+    "Enable Auto Smooth for existing weighted-normal modifiers in disposable scene",
+    "Correct name socket outward normals and preserve upright sign axes"
+  ],
+  "excluded": [
+    "Preview cargo and corrugation",
+    "Source collision proxies",
+    "Cameras/lights",
+    "Default scene objects"
+  ],
+  "provenance": "User-supplied Blender file; related local generation script claims original agent-assisted geometry. Source files differ; rights confirmation pending before distribution."
+}

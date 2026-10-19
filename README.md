@@ -3,7 +3,8 @@
 A Windows shipping game built with typed GDScript and Godot 4.7.2, using the
 Compatibility renderer. The project currently opens an empty Main scene with
 separate World and UI children and a readable “Shipping Lanes / Project ready”
-screen. Gameplay and ship import have not started.
+screen. The starter ship is imported in a separate inspection scene; gameplay
+has not started.
 
 ## Open, run and check
 
@@ -39,6 +40,8 @@ ShippingLanes/
     main/       Main scene and application entry script
     world/      World scene; future world presentation belongs here
     ui/         Startup interface scene
+    ships/      Starter model, wrapper, manifest and inspection scene
+  art_sources/  Preserved Blender sources, excluded from Godot auto-import
   tools/        Local engine launcher
   *.md          Scope, architecture, decisions, progress and references
 ```
@@ -49,8 +52,8 @@ actual second consumer before becoming a shared framework. Use snake_case
 filenames and descriptive node names. Track GDScript `.uid` sidecars so resource
 identities survive moves. Asset scale, rigging and import conventions are Step 07.
 
-The original supplied Blender ship is still outside the project. Its location
-and deferred inspection are recorded in [ASSET_REFERENCES.md](ASSET_REFERENCES.md).
+The original supplied Blender ship remains preserved outside the project, with
+a tracked source copy and explicit GLB export. See [ASSET_REFERENCES.md](ASSET_REFERENCES.md).
 The workspace's `sources/` and attached reference documents are read-only.
 
 ## Scope and progress
@@ -65,7 +68,9 @@ The workspace's `sources/` and attached reference documents are read-only.
 
 Step 06 adds tested Windows debug and release exports. See [EXPORT.md](EXPORT.md)
 for exact build/run commands and the sandbox's writable-data requirement.
-Next is Step 07, model and asset conventions.
+Step 07 prepares the starter model and a static inspection scene. See
+[ASSET_CONVENTIONS.md](ASSET_CONVENTIONS.md) for source/export/check/preview commands.
+Next is Step 08, input and settings.
 
 [ART_DIRECTION.md](ART_DIRECTION.md) records Andy's coastal photo palette:
 muted blue-green water, warm gray-brown rocks, pale foam and regional variation.

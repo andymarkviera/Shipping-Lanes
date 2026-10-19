@@ -33,6 +33,8 @@ separate from proposed implementation choices and append deliberate revisions.
 | D024 | Local recovery baseline | Git is rooted only in `ShippingLanes`, tracking source and `.uid` sidecars while ignoring generated caches/builds and local credentials. Local tags preserve Steps 04 and 05; commits identify the automation as Codex without changing user-wide identity. No remote is configured. |
 | D025 | Export smoke verified | Step 06 pins/stages matching Windows x86_64 templates and builds debug/release EXE + external PCK. Both launch outside the editor with writable child APPDATA. Normal-profile sandbox shader-cache writes remain restricted; see EXPORT.md. |
 | D026 | User-selected art direction | Andy's coastal photograph supplies muted blue-green/blue-gray ocean, warm brown-gray rocks and pale foam, with regional variation allowed. ART_DIRECTION.md and three material swatches preserve this direction for later terrain/water implementation. |
+| D027 | Import-verified asset conventions | Metres, Blender -Y bow/+Z up to Godot +Z bow/+Y up, reference empty waterline at Y=0. Explicit GLB export from preserved source using Blender 3.6.1; calibrated axes, sockets, outward name normals and measured envelopes. See ASSET_CONVENTIONS.md. |
+| D028 | Starter prototype separation | Empty ship visual exports separately from preview cargo and from its editable wrapper/convex hull reference. Stable asset and future ship-definition IDs survive reimport. Physics body choice remains Step 16; commercial capacity and loaded draft remain undecided. |
 
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another
