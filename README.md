@@ -146,3 +146,5 @@ overlay; motion fields will connect in the handling prototype.
 Step 16: [Boat handling prototype](HANDLING_PROTOTYPE.md). Launch it from **Boat Handling Test** in the main menu.
 
 Step 17 updates the handling test: W/S adjust a retained throttle order; X orders zero. HUD separates command, engine output and speed.
+
+Step 18: A/D rudder, Q/E lateral thrusters, gold turning markers and a solid practice quay are available in Boat Handling Test.

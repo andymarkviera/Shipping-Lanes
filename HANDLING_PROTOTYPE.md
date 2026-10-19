@@ -1,4 +1,4 @@
-# Boat handling prototype — current controls (Step 17)
+# Boat handling prototype — current controls (Step 18)
 
 Open **Boat Handling Test** on the main menu. Hold W to raise commanded throttle,
 S to lower it through neutral into reverse. Release either key to keep the order.
@@ -49,7 +49,7 @@ This clock is separate from the authority's 20 Hz operation clock.
 
 ## Verification and limits
 
-HandlingCheck now has 42 checks: forward/reverse command limits, invalid commands,
+HandlingCheck now has 72 checks: forward/reverse command limits, invalid commands,
 command retention, independent engine ramping, zero preserving momentum, reversal
 through neutral, 600 rapid reversal orders, copied tuning, catalog rejection and
 mapped input/focus behavior in the actual scene. Physics runs at loop caps
@@ -61,5 +61,48 @@ suite passed, and the updated native HUD capture was inspected.
 
 The box hull has a gold bow marker and white aft block. Lane markers show motion
 across flat coastal water. The camera is a temporary follower. No persisted ship
-state or multiplayer movement yet. Steering, production camera controls and waves
-remain steps 18–20. The starter model is preserved for later integration.
+state or multiplayer movement yet. Production camera controls and waves
+remain steps 19–20. The starter model is preserved for later integration.
+
+## Step 18: maneuvering
+
+Hold A/D for port/starboard rudder and Q/E for port/starboard lateral thrust.
+These are ship-relative directions, not screen-relative. Releasing the rudder
+winds yaw rate down; releasing a thruster leaves sideways momentum to decay.
+At zero forward speed the rudder has no authority. Authority rises linearly to
+full at 4 m/s; yaw is limited to 3 degrees/s and changes at 2 degrees/s².
+
+Reverse steering rule: rudder yaw reverses with signed forward speed. D swings
+the bow starboard while going ahead, port while going astern. Throttle command
+does not decide steering direction: actual travel does. Thrusters always push
+toward their labelled ship side in both ahead and astern travel and introduce no
+yaw. With +Z bow and +X port, starboard thrust is local -X.
+
+Editable ShipDefinition parameters: max_turn_rate_degrees (3),
+turn_acceleration_degrees (2), rudder_full_effect_speed_mps (4),
+thruster_acceleration_mps2 (0.4), lateral_drag_per_second (0.4),
+thruster_cutoff_speed_mps (4). All must be positive finite values.
+Thruster power fades linearly from full at rest to zero at 4 m/s ahead or astern.
+Linear lateral drag bounds steady sideways speed to 1 m/s at rest; it does not
+instantly erase drift. This controlled-body model turns the local velocity with
+the hull; it does not yet model realistic sideslip, prop wash, separate bow/stern
+thrusters, grounding, damage or angular collision response.
+
+### Practice course
+
+From the starting heading, sail toward the first gold marker 100 m ahead. Use D
+to make a broad starboard turn toward the next two gold markers, forming a U.
+The markers are visual guides, not scoring triggers or collision obstacles.
+For a sideways approach, start a fresh test, leave throttle at zero, and hold E
+toward the brown quay on the starboard side. Q pushes away. The quay has a solid
+collision shape and a pale edge strip. Contact is only a practice collision;
+there is no mooring or cargo transaction here. Return to title and reopen the
+test to reset. The temporary camera follows position with a fixed world offset.
+
+Added checks cover speed-sensitive yaw, bounded yaw acceleration/rate, neutral
+rudder at rest, forward and astern signs, gradual yaw release, finite lateral
+terminal speed after 60 seconds of simulated input, lateral coasting, high-speed
+thruster cutoff, invalid input/tuning and mapped controls/focus. A real physics
+approach uses the box collider and solid quay. A parallel turning body checks
+position/heading repeatability at 30/60/144 loop caps. All 72 checks pass in editor
+and Windows Release; Full remains 12 stages. Native course/HUD capture inspected.

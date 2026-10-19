@@ -42,6 +42,20 @@ func _ready() -> void:
 	for index: int in range(-20, 81):
 		for side: int in [-1, 1]:
 			box(self, Vector3(2, 3, 2), Vector3(side * 40, 0, index * 25), Color("76695b"))
+	# Starboard berth, solid quay with a pale approach strip; no mooring logic yet.
+	var quay: StaticBody3D = StaticBody3D.new()
+	quay.name = "PracticeBerth"
+	add_child(quay)
+	quay.position = Vector3(-32, 0, 0)
+	box(quay, Vector3(8, 4, 100), Vector3.ZERO, Color("76695b"))
+	box(quay, Vector3(0.5, 0.2, 90), Vector3(4.1, 2.1, 0), Color("e7ede7"))
+	var quay_collision: CollisionShape3D = CollisionShape3D.new()
+	var quay_shape: BoxShape3D = BoxShape3D.new()
+	quay_shape.size = Vector3(8, 4, 100)
+	quay_collision.shape = quay_shape
+	quay.add_child(quay_collision)
+	for waypoint: Vector3 in [Vector3(0, 0, 100), Vector3(-80, 0, 200), Vector3(-160, 0, 100)]:
+		box(self, Vector3(4, 6, 4), waypoint, Color("d5ac6c"))
 	var light: DirectionalLight3D = DirectionalLight3D.new()
 	light.rotation_degrees = Vector3(-55, -25, 0)
 	add_child(light)
@@ -77,6 +91,7 @@ func _ready() -> void:
 	add_child(overlay)
 
 func _physics_process(delta: float) -> void:
+	ship.maneuver(controls.steering_axis(), controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"))
 	if not controls.input_allowed() or controls.action_strength("ship_throttle_zero") > 0.0:
 		ship.zero_throttle()
 	else:
@@ -87,6 +102,10 @@ func _process(_delta: float) -> void:
 	camera.look_at(ship.position + Vector3(0, 0, 12), Vector3.UP)
 	var forward_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_up"])
 	var reverse_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_down"])
+	var left_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_steer_left"])
+	var right_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_steer_right"])
+	var port_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_thruster_left"])
+	var starboard_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_thruster_right"])
 	var zero_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_zero"])
-	readout.text = "BOAT HANDLING TEST\nHold %s / %s: raise / lower throttle\nRelease: hold setting  |  %s: zero throttle\nEscape: main menu  |  Steering comes in step 18\n\nCommand  %+.0f%%   |   Engine  %+.0f%%\nSpeed  %+.2f m/s   |   Distance  %.1f m" % [forward_key, reverse_key, zero_key, ship.commanded_throttle * 100.0, ship.actual_throttle * 100.0, ship.velocity.z, ship.distance_m]
-	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": "box_prototype", "speed_mps": ship.velocity.z, "throttle": ship.actual_throttle, "position_m": ship.position})
+	readout.text = "MANEUVERING TEST\n%s / %s: throttle  |  %s: zero  |  Escape: menu\n%s / %s: rudder  |  %s / %s: lateral thrusters\nGold markers: turning course  |  Quay: sideways approach\n\nCommand %+.0f%%  |  Engine %+.0f%%\nAhead %+.2f m/s  |  Sideways %+.2f m/s\nTurn %+.1f°/s  |  Thrusters fade from 0 to 4 m/s" % [forward_key, reverse_key, zero_key, left_key, right_key, port_key, starboard_key, ship.commanded_throttle * 100.0, ship.actual_throttle * 100.0, ship.forward_speed(), -ship.lateral_speed(), rad_to_deg(ship.yaw_rate)]
+	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": "box_prototype", "speed_mps": ship.forward_speed(), "throttle": ship.actual_throttle, "position_m": ship.position})

@@ -5,6 +5,19 @@ extends CharacterBody3D
 var commanded_throttle: float = 0.0
 var actual_throttle: float = 0.0
 var distance_m: float = 0.0
+var rudder: float = 0.0
+var lateral_order: float = 0.0
+var yaw_rate: float = 0.0
+
+func maneuver(steering: float, thruster: float) -> void:
+	rudder = clampf(steering, -1.0, 1.0) if is_finite(steering) else 0.0
+	lateral_order = clampf(thruster, -1.0, 1.0) if is_finite(thruster) else 0.0
+
+func forward_speed() -> float:
+	return velocity.dot(basis.z)
+
+func lateral_speed() -> float:
+	return velocity.dot(basis.x)
 
 func _ready() -> void:
 	definition = definition.duplicate(true)
@@ -31,13 +44,26 @@ func advance_engine(delta: float) -> void:
 	var rate: float = definition.engine_ramp_up_per_second if absf(target) > absf(actual_throttle) else definition.engine_ramp_down_per_second
 	actual_throttle = move_toward(actual_throttle, target, rate * delta)
 
-func _physics_process(delta: float) -> void:
+func advance_motion(delta: float) -> void:
 	advance_engine(delta)
+	var local_velocity: Vector3 = basis.inverse() * velocity
+	var effectiveness: float = clampf(absf(local_velocity.z) / definition.rudder_full_effect_speed_mps, 0.0, 1.0)
+	# D is starboard: negative yaw with +Z bow/+X port. Astern reverses yaw.
+	var target_yaw: float = -rudder * signf(local_velocity.z) * effectiveness * deg_to_rad(definition.max_turn_rate_degrees)
+	yaw_rate = move_toward(yaw_rate, target_yaw, deg_to_rad(definition.turn_acceleration_degrees) * delta)
+	rotate_y(yaw_rate * delta)
 	var acceleration: float = actual_throttle * (definition.forward_acceleration_mps2 if actual_throttle >= 0.0 else definition.reverse_acceleration_mps2)
 	var drag: float = definition.linear_drag_per_second
-	velocity.z = velocity.z * exp(-drag * delta) + acceleration / drag * (1.0 - exp(-drag * delta))
-	velocity.x = 0.0
-	velocity.y = 0.0
+	local_velocity.z = local_velocity.z * exp(-drag * delta) + acceleration / drag * (1.0 - exp(-drag * delta))
+	var lateral_drag: float = definition.lateral_drag_per_second
+	var thruster_effect: float = clampf(1.0 - absf(local_velocity.z) / definition.thruster_cutoff_speed_mps, 0.0, 1.0)
+	var side_acceleration: float = -lateral_order * definition.thruster_acceleration_mps2 * thruster_effect
+	local_velocity.x = local_velocity.x * exp(-lateral_drag * delta) + side_acceleration / lateral_drag * (1.0 - exp(-lateral_drag * delta))
+	local_velocity.y = 0.0
+	velocity = basis * local_velocity
+
+func _physics_process(delta: float) -> void:
+	advance_motion(delta)
 	var previous: Vector3 = position
 	move_and_slide()
 	distance_m += position.distance_to(previous)

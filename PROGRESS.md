@@ -619,3 +619,25 @@ fuel consumption or multiplayer movement introduced.
 Recovery: tag `step-17-throttle-reverse`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-17-throttle-reverse-2026-10-19.zip`.
 Next: Step 18, rudder-and-thrusters.
+
+## Step 18 — Rudder and thrusters
+
+Task ID: `rudder-and-thrusters`  
+Status: complete — October 19, 2026.
+
+Added A/D speed-sensitive rudder with bounded yaw rate/acceleration, explicit
+astern steering reversal, and Q/E lateral thrusters with low-speed authority and
+lateral drag. Six editable, validated ShipDefinition parameters control tuning.
+The test scene includes gold turning-course markers and a solid practice quay.
+HUD shows signed ahead/sideways speed and yaw rate. HANDLING_PROTOTYPE.md records
+ship-relative directions, course use and the simplified controlled-body model.
+
+All 72 handling checks pass in editor and Windows Release: repeatable turns at
+three loop caps, bounded sustained lateral motion, speed-sensitive rudder,
+reverse steering, input focus and a real sideways collision approach. Full
+passes all 12 stages. Native HUD/course inspected. No actual mooring, wave physics,
+network synchronization or collision-damage model yet.
+
+Recovery: tag `step-18-rudder-thrusters`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-18-rudder-thrusters-2026-10-19.zip`.
+Next: Step 19, camera.
