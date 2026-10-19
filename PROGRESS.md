@@ -464,3 +464,23 @@ Status: complete — October 19, 2026.
   SHA-256 sidecar.
 
 Next task: private-storage-dependency-proof, required before Step 11 contracts.
+
+## Supplemental — Private storage dependency proof
+
+Task ID: `private-storage-dependency-proof`  
+Status: complete — October 19, 2026, with documented cold-import workaround.
+
+Pinned godot-sqlite v4.9 Windows x64 binaries, source references and licenses.
+Editor, Debug export and Release export passed transaction commit/rollback,
+parameter binding, transactional migration/rollback, live database backup/restore,
+uncommitted-process-kill recovery and committed-process-kill durability checks.
+SQLite reports 3.51.0. No gameplay save or public storage code was implemented.
+
+Fresh scan-time extension discovery exposed a reproducible shutdown crash.
+Pre-registering the extension before import passes on a fresh fixture; Godot.ps1
+now performs this setup while preserving other entries and verifying hashes.
+STORAGE_PROOF.md records evidence, commands, packaging and remaining limits.
+
+Recovery: tag `private-storage-dependency-proof`; verified source checkpoint:
+`../output/checkpoints/private-storage-dependency-proof-2026-10-19.zip` plus SHA-256.
+Next: Step 11, save-and-protocol-contracts.

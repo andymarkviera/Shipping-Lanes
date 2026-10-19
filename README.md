@@ -118,3 +118,8 @@ on startup. These records do not yet create a playable ship, port or cargo job.
 Geographic feasibility checks and their exported diagnostic route are documented
 in [GEOGRAPHIC_CONTRACT.md](GEOGRAPHIC_CONTRACT.md). This prerequisite has no
 visible gameplay change and requires no manual playtest.
+
+Private storage dependency proof is complete with a cold-import workaround; see
+[STORAGE_PROOF.md](STORAGE_PROOF.md). On a fresh restore, run tools/Godot.ps1 -Mode
+Check before opening directly in Godot. Export distributions now require the
+matching SQLite DLL alongside EXE and PCK. No gameplay saves exist yet.

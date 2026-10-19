@@ -1,0 +1,28 @@
+{
+  "platform": "windows.x86_64",
+  "modifications": "GDExtension library list restricted to Windows x64; DLLs and license unmodified",
+  "files": [
+    {
+      "sha256": "96D3F185D4997D46486EAB078C04D145DF1E1B747B4A56E404F0BFE926AE4BA9",
+      "path": "addons/godot-sqlite/gdsqlite.gdextension"
+    },
+    {
+      "sha256": "24F129F1D5CE9913B4408E09BB74F50259DD10BB8B4B49478FF5A0D2C977FA60",
+      "path": "addons/godot-sqlite/LICENSE.md"
+    },
+    {
+      "sha256": "E3AE3B46B59EADCD513F8D7D6E7C0C15E173696E145594094D7F4F3CC96C7FE7",
+      "path": "addons/godot-sqlite/bin/libgdsqlite.windows.template_debug.x86_64.dll"
+    },
+    {
+      "sha256": "BA79B9BBF916C4ED2EB22AC719051C4A4258E460C4A354590B071BEB9A87FEDB",
+      "path": "addons/godot-sqlite/bin/libgdsqlite.windows.template_release.x86_64.dll"
+    }
+  ],
+  "license": "MIT",
+  "archive_sha256": "95E91B72FE32984A84EDAF6357A78753661F37A170CB362F5B948E0EDE7C2CB0",
+  "source": "https://github.com/2shady4u/godot-sqlite/releases/download/v4.9/addons.zip",
+  "version": "v4.9",
+  "source_commit": "9cbdb225823ee111342ce32fe451e066eb92cc6e",
+  "godot_cpp_commit": "5ffd70e34d0ab87009a9f0ffa3361bc8f4b09731"
+}

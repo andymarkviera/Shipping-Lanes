@@ -88,3 +88,8 @@ fields were observed empty in the first release attempt.
 The geographic probe is explicitly packaged. Run it with RunExport -Headless
 -GeographyProbe (application user argument); the release template does not permit
 --scene overrides. Normal RunExport remains the main menu startup path.
+
+SQLite packaging: keep the entire export folder, including the selected
+libgdsqlite.windows.template_debug.x86_64.dll or template_release DLL. The launcher
+verifies its hash. Licenses are packaged in the PCK. STORAGE_PROOF.md records
+successful tests in Debug and Release and the fresh-import pre-registration fix.

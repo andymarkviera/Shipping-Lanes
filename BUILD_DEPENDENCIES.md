@@ -28,6 +28,7 @@ network experiment. A rotating map alone does not pass circumnavigation.
 
 Task ID: `private-storage-dependency-proof`  
 Placement: after 06/10, before 11. Owner: Agent. Uncertainties: U006–U007.
+Status: complete October 19, 2026 with cold-import pre-registration; see STORAGE_PROOF.md.
 
 Select and pin a compatible SQLite binding for Godot 4.7.2 and Windows/headless
 exports, record its license/build requirements, and exercise a tiny non-gameplay

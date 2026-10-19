@@ -45,6 +45,22 @@ if ($Mode -ne 'RunExport' -and (Get-FileHash -LiteralPath $enginePath -Algorithm
     throw 'Cached Godot differs from the pinned build. Existing files have been preserved.'
 }
 [System.IO.File]::WriteAllText((Join-Path $portableRoot '_sc_'), '')
+# Pin native dependencies and preload before import; scan-time first discovery
+# crashes on shutdown with this engine/binding pair. Preserve other extensions.
+$dependency = Get-Content (Join-Path $projectRoot 'sqlite-dependency.json') -Raw | ConvertFrom-Json
+foreach ($entry in $dependency.files) {
+    if ((Get-FileHash -LiteralPath (Join-Path $projectRoot $entry.path)).Hash -ne $entry.sha256) {
+        throw "SQLite dependency hash mismatch: $($entry.path)"
+    }
+}
+if ($Mode -ne 'RunExport') {
+    $extensionList = Join-Path $logRoot 'extension_list.cfg'
+    $extensions = if (Test-Path $extensionList) { @(Get-Content $extensionList) } else { @() }
+    $sqliteExtension = 'res://addons/godot-sqlite/gdsqlite.gdextension'
+    if ($extensions -notcontains $sqliteExtension) {
+        [IO.File]::WriteAllLines($extensionList, [string[]]($extensions + $sqliteExtension))
+    }
+}
 
 function Invoke-ProjectGodot {
     param([string]$LogName, [string[]]$Arguments, [switch]$Exported)
@@ -147,9 +163,15 @@ switch ($Mode) {
                 throw "Export artifact missing or empty: $artifact"
             }
         }
-        Write-Host "Export ready: $exportPath (keep the .pck beside it)"
+        Write-Host "Export ready: $exportPath (keep the entire export folder together, including the SQLite DLL)"
     }
     'RunExport' {
+        $dllName = 'libgdsqlite.windows.template_' + $Configuration.ToLowerInvariant() + '.x86_64.dll'
+        $dllPin = $dependency.files | Where-Object { $_.path.EndsWith('/' + $dllName) }
+        $exportDll = Join-Path $exportRoot $dllName
+        if (-not (Test-Path $exportDll) -or (Get-FileHash $exportDll).Hash -ne $dllPin.sha256) {
+            throw 'Export SQLite DLL is missing or differs from the pin. Rebuild the export.'
+        }
         foreach ($artifact in @($exportPath, [System.IO.Path]::ChangeExtension($exportPath, '.pck'))) {
             if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) { throw "Build $Configuration first: missing $artifact" }
         }
