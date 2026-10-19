@@ -74,3 +74,5 @@ resolved before their dependent implementation; known evidence gaps do not
 become approved formulas just because they appear in the inventory.
 
 | D040 | Initial handling body | CharacterBody3D, floating mode, explicit 60 Hz physics; +Z bow and planar linear-drag motion. Force-driven body reconsidered only if contacts/buoyancy require it. See HANDLING_PROTOTYPE.md; tuning remains provisional. |
+
+| D041 | Throttle prototype | Retained command with independent bounded engine output; +100% / -60% limits, ramp through neutral on reversal, X zero preserves momentum. ShipDefinition owns validated provisional tuning. Input focus/menu loss orders neutral. |

@@ -25,6 +25,8 @@ func load_definitions(records: Array[ContentDefinition]) -> PackedStringArray:
 		candidate[record.id] = record.duplicate(true)
 	for record: ContentDefinition in candidate.values():
 		if record is ShipDefinition:
+			if not record.handling_error().is_empty():
+				errors.append(record.id + ": " + record.handling_error())
 			if record.scene_path.is_empty() or not ResourceLoader.exists(record.scene_path, "PackedScene"):
 				errors.append("Missing ship scene: " + record.id)
 			validate_refs(record.id, record.cargo_type_ids, candidate, "cargo", errors)

@@ -99,3 +99,5 @@ ask Andy for material remaining scope/play-policy choices only at their deadline
 Do not mark an uncertainty resolved solely because a task was scheduled.
 
 U008 update (Step 16): initial planar CharacterBody3D and thrust/drag fixture selected in HANDLING_PROTOTYPE.md. Loaded handling, steering, camera and Andy's approval of feel remain open.
+
+U008 update (Step 17): command/engine ramping and limits are implemented and checked; values remain provisional pending handling-feel approval.

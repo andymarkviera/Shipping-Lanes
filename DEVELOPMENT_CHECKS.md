@@ -66,3 +66,5 @@ handling. There is no new movement simulation in this step, and no manual user
 testing is required.
 
 Step 16 adds HandlingCheck to Full (12 stages). It checks 300 fixed physics ticks at each of three loop caps. Export verification: tools/Godot.ps1 -Mode RunExport -Configuration Release -Headless -HandlingProbe.
+
+Step 17 expands HandlingCheck to 42 checks, including throttle ramps, rapid reversals, definition validation, and mapped scene input/focus behavior. The same HandlingProbe verifies the Windows Release build.

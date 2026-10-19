@@ -88,4 +88,4 @@ sensitivity shows a numeric readout. Save/Cancel behavior is unchanged.
 Ctrl+F3 toggles the read-only developer overlay. This chord is separate from
 single-key rebindable gameplay actions; it does not take mouse/keyboard focus.
 
-Handling fixture: hold the throttle-up/down bindings (default W/S) for immediate thrust; release to coast. Escape returns to title. Steering and throttle ramps arrive in subsequent steps.
+Handling fixture (Step 17): hold W/S to raise/lower commanded throttle; release to retain the setting. X orders zero while engine output ramps down and momentum remains. Saved bindings apply. Escape returns to title; Space brake is reserved. Steering arrives in Step 18.

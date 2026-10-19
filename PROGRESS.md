@@ -599,3 +599,23 @@ capture inspected. No multiplayer, final ship tuning, rudder or waves yet.
 Recovery: tag `step-16-handling-prototype`; verified source ZIP and SHA-256:
 `../output/checkpoints/step-16-handling-prototype-2026-10-19.zip`.
 Next: Step 17, throttle-and-reverse.
+
+## Step 17 — Throttle and reverse
+
+Task ID: `throttle-and-reverse`  
+Status: complete — October 19, 2026.
+
+Added retained commanded throttle, independent actual engine output, bounded
+ramp rates, +100% / -60% limits and the explicit X zero order. W/S adjust the
+command; releasing keeps it. Opposite orders ramp through neutral. Zero preserves
+momentum. HUD shows command, engine and speed separately. Ship definitions expose
+validated tuning; focus/menu blocking orders neutral and waits for key release.
+
+HandlingCheck passes 42 checks in editor and Windows Release, including mapped
+input/focus, 600 rapid reversals and matching motion at three loop caps. Full
+12-stage suite passes; native HUD inspected. Values remain provisional; no steering,
+fuel consumption or multiplayer movement introduced.
+
+Recovery: tag `step-17-throttle-reverse`; verified source ZIP and SHA-256:
+`../output/checkpoints/step-17-throttle-reverse-2026-10-19.zip`.
+Next: Step 18, rudder-and-thrusters.

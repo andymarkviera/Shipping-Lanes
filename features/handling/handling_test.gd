@@ -23,6 +23,7 @@ func _ready() -> void:
 	add_child(controls)
 	controls.set_ship_context(true)
 	controls.command_requested.connect(func(action: StringName) -> void:
+		if action == &"ship_throttle_zero": ship.zero_throttle()
 		if action == &"pause": get_tree().change_scene_to_file("res://features/main/main.tscn"))
 	ship = Ship.new()
 	ship.name = "BoxShip"
@@ -75,13 +76,17 @@ func _ready() -> void:
 	overlay = DeveloperOverlay.new()
 	add_child(overlay)
 
-func _physics_process(_delta: float) -> void:
-	ship.thrust = controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down")
+func _physics_process(delta: float) -> void:
+	if not controls.input_allowed() or controls.action_strength("ship_throttle_zero") > 0.0:
+		ship.zero_throttle()
+	else:
+		ship.adjust_command(controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta)
 
 func _process(_delta: float) -> void:
 	camera.position = ship.position + Vector3(85, 65, -110)
 	camera.look_at(ship.position + Vector3(0, 0, 12), Vector3.UP)
 	var forward_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_up"])
 	var reverse_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_down"])
-	readout.text = "BOAT HANDLING TEST\nHold %s: forward  |  Hold %s: reverse / brake\nRelease: coast  |  Escape: main menu\nSteering comes in step 18.\n\nSpeed  %.2f m/s   |   Thrust  %+.0f%%\nDistance  %.1f m" % [forward_key, reverse_key, ship.velocity.z, ship.thrust * 100.0, ship.distance_m]
-	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": "box_prototype", "speed_mps": ship.velocity.z, "throttle": ship.thrust, "position_m": ship.position})
+	var zero_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_zero"])
+	readout.text = "BOAT HANDLING TEST\nHold %s / %s: raise / lower throttle\nRelease: hold setting  |  %s: zero throttle\nEscape: main menu  |  Steering comes in step 18\n\nCommand  %+.0f%%   |   Engine  %+.0f%%\nSpeed  %+.2f m/s   |   Distance  %.1f m" % [forward_key, reverse_key, zero_key, ship.commanded_throttle * 100.0, ship.actual_throttle * 100.0, ship.velocity.z, ship.distance_m]
+	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": "box_prototype", "speed_mps": ship.velocity.z, "throttle": ship.actual_throttle, "position_m": ship.position})
