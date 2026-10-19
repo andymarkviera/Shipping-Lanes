@@ -140,5 +140,6 @@ sandbox; normal-profile clean-machine behavior remains unverified. Use the
 saved launcher for the verified local workflow.
 
 Step 07 subsequently prepares the starter model and static inspection scene.
-Next original task: Step 08, input and settings. The gameplay world is empty;
+Step 08 subsequently adds controls and settings. Next is Step 09, application
+flow and focus. The gameplay world is empty;
 the coastal palette is prepared for later map implementation.

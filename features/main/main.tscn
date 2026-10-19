@@ -1,12 +1,21 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://features/main/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://features/world/world.tscn" id="2_world"]
 [ext_resource type="PackedScene" path="res://features/ui/startup_ui.tscn" id="3_ui"]
+[ext_resource type="Script" path="res://features/input/player_controls.gd" id="4_controls"]
+[ext_resource type="Script" path="res://features/settings/settings_panel.gd" id="5_settings"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
 
+[node name="Controls" type="Node" parent="."]
+script = ExtResource("4_controls")
+
 [node name="World" parent="." instance=ExtResource("2_world")]
 
 [node name="UI" parent="." instance=ExtResource("3_ui")]
+
+[node name="Settings" type="PanelContainer" parent="UI"]
+visible = false
+script = ExtResource("5_settings")

@@ -70,7 +70,9 @@ Step 06 adds tested Windows debug and release exports. See [EXPORT.md](EXPORT.md
 for exact build/run commands and the sandbox's writable-data requirement.
 Step 07 prepares the starter model and a static inspection scene. See
 [ASSET_CONVENTIONS.md](ASSET_CONVENTIONS.md) for source/export/check/preview commands.
-Next is Step 08, input and settings.
+Step 08 adds **Controls & settings** to the startup screen, with editable keys
+and persistent preferences. See [CONTROLS.md](CONTROLS.md).
+Next is Step 09, application flow and focus.
 
 [ART_DIRECTION.md](ART_DIRECTION.md) records Andy's coastal photo palette:
 muted blue-green water, warm gray-brown rocks, pale foam and regional variation.

@@ -35,6 +35,8 @@ separate from proposed implementation choices and append deliberate revisions.
 | D026 | User-selected art direction | Andy's coastal photograph supplies muted blue-green/blue-gray ocean, warm brown-gray rocks and pale foam, with regional variation allowed. ART_DIRECTION.md and three material swatches preserve this direction for later terrain/water implementation. |
 | D027 | Import-verified asset conventions | Metres, Blender -Y bow/+Z up to Godot +Z bow/+Y up, reference empty waterline at Y=0. Explicit GLB export from preserved source using Blender 3.6.1; calibrated axes, sockets, outward name normals and measured envelopes. See ASSET_CONVENTIONS.md. |
 | D028 | Starter prototype separation | Empty ship visual exports separately from preview cargo and from its editable wrapper/convex hull reference. Stable asset and future ship-definition IDs survive reimport. Physics body choice remains Step 16; commercial capacity and loaded draft remain undecided. |
+| D029 | Input foundation verified | Physical keyboard bindings, fixed mouse orbit/wheel actions and validated local JSON preferences are owned by Main's PlayerControls. Menus, GUI focus and window focus gate all vehicle requests; release controls before resuming. Walking stays deferred under helm-only scope. See CONTROLS.md. |
+| D030 | Preferences and export boundary | Settings drafts apply only after successful Save; invalid/future data uses defaults without automatic overwrite. Main and the script-loaded defaults Resource are explicit export roots. Session pause/title/continue behavior remains Step 09. |
 
 Source precedence: Andy's later explicit decisions, then confirmed choices in the
 supplied design documents; proposals remain proposals. Research describes another

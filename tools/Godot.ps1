@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -121,6 +121,9 @@ switch ($Mode) {
     }
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
+    }
+    'ControlsCheck' {
+        Invoke-ProjectGodot -LogName 'controls-check.log' -Arguments @('--headless', '--script', 'res://tools/check_controls.gd')
     }
     'Export' {
         Install-ExportTemplates

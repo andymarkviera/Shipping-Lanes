@@ -359,4 +359,38 @@ contents and SHA-256 sidecar. This checkpoint includes the preserved project
 Blender source copy and GLBs; generated `.godot/`, exports and engine tools remain
 excluded. The external Downloads original remains unchanged.
 
-Next roadmap task: Step 08, `input-and-settings-foundation`.
+Step 07's next task was Step 08, `input-and-settings-foundation`, subsequently
+requested by Andy.
+
+## Step 08 — Input and settings foundation
+
+Task ID: `input-and-settings-foundation`  
+Status: complete — October 18, 2026.
+
+- Added named throttle, steering, thruster, brake/zero, camera, interaction,
+  map, horn and pause actions. Keyboard bindings are editable without ship-code
+  changes. Walking remains deferred under the helm-only contract.
+- Added a defaults Resource, validated/versioned plain-JSON preferences, and a
+  settings panel with key-conflict checks, reset, save/cancel, volume, camera
+  sensitivity/inversion and fullscreen. Save stages writes before replacement;
+  errors preserve active settings. Malformed files are not silently overwritten.
+- Added a local input boundary: inactive ship contexts, menus, focused GUI and
+  window focus loss block vehicle commands/polling. Closing a menu or returning
+  focus requires release before fresh input. No global simulation pause is set.
+- Native 1152×648 settings capture was inspected. Automated checks pass for
+  persistence, replacement/failure/malformed data, conflicts, rebinding, UI drafts,
+  Escape, held keys, focus, audio volume and camera request scaling/inversion.
+  Test saves use unique temporary paths and are removed. `-Mode ControlsCheck`
+  is repeatable; logs: `.godot/controls-check.log`.
+- Project import/startup passed. Standalone release testing caught a missing
+  script-loaded defaults asset; explicit export roots now include it. Re-export
+  and native RunExport then passed with exit 0 and no engine/script errors.
+- User instructions and scope limits are in `CONTROLS.md`. Sailing, camera
+  movement, actual map/horn/interactions and session flow remain later tasks.
+
+Recoverable baseline: tag `step-08-input-settings` and source-only archive
+`../output/checkpoints/step-08-input-settings-2026-10-18.zip`, with verified
+contents and SHA-256 sidecar. Generated builds/cache and local preferences are
+excluded; preserved Blender source and game resources remain tracked.
+
+Next roadmap task: Step 09, `application-flow-and-focus`.

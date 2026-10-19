@@ -37,7 +37,9 @@ The Steam installation remains unchanged. If the source moved, pass
 build requires deliberate pin updates and validation. The engine source can
 likewise be supplied with `-EngineSource`; see `ENVIRONMENT.md`.
 
-The preset exports Main and its dependencies only. Future dynamically loaded
+The preset explicitly exports Main, default preferences and their dependencies.
+Step 08 added the script-loaded preferences Resource after a standalone test
+caught its omission from the original Main-only selection. Future dynamically loaded
 assets must be explicitly included or the resource selection revised. The
 unused coastal material swatches stay in source until a scene uses them.
 Scripts compile to bytecode; PCK encryption, signing, console wrappers and
