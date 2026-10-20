@@ -932,3 +932,12 @@ Full suite: 23 stages / 71 scripts.
 Recovery tag: `step-31-attached-payload-networking`.
 Source backup: `../output/checkpoints/step-31-attached-payload-networking-2026-10-20.zip`.
 Next: Step 32 — early dedicated capacity experiment.
+
+## Deferred player feedback — October 20, 2026
+
+Recorded three requested follow-ups in BUILD_DEPENDENCIES.md and
+HANDLING_FEEDBACK.md: reproduce and fix cargo pickup failure, improve neutral
+selection/full-stop recognition before docking/loading, and polish placeholder
+foam/wakes during fleet/world content work before the experience gate.
+These are scheduled work, not completed fixes. Gameplay is unchanged; Step 32
+has not started as part of this documentation update.

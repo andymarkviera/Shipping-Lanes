@@ -114,6 +114,18 @@ Pass before authoring detailed Panama art. Content selected at 99 must fit the
 proved envelope or reopen this test; do not assume the largest research ship is
 required or that a fixed suspension bridge needs the optional moving-lock task.
 
+## Playtest follow-ups — October 20, 2026
+
+Andy requested these be scheduled for later, without changing gameplay now.
+Original step numbers remain unchanged. Details and the original observations
+are recorded in `HANDLING_FEEDBACK.md`.
+
+| Supplemental task ID | Placement | Completion criteria | Status |
+| --- | --- | --- | --- |
+| `neutral-stop-usability` | Before Step 46 docking, and before retesting cargo pickup | Make neutral easy to select and show command, engine output and actual motion clearly. Review practical stopped thresholds and hysteresis so docking/loading can recognize a stable stop without flickering or accepting meaningful drift. Verify ahead/astern/lateral movement, coasting and loaded/unloaded ships while preserving the accepted handling feel. | Scheduled; player reported difficulty |
+| `cargo-pickup-playtest-repair` | After the neutral/stop review, before Step 50 loading operations | Reproduce the reported failure in the relevant test scene; identify the cause rather than assume it is stopping. Check alignment, deck state, stopped gate and action feedback. Make the next required action or blocking condition clear; verify a complete pickup/secure/raise/release cycle in solo and local multiplayer where applicable. | Scheduled; cause unverified |
+| `stylized-hull-foam-wake-polish` | Alongside Steps 99–100 fleet/world content, before Step 109 experience gate | Replace or refine placeholder hull foam, bow water, ripples and trailing wake around the settled hulls. Follow the bold-blue, broad-white-pattern Zelda-inspired direction, with muted coastal palettes where appropriate. Check transitions from rest to motion, turns, reversing and different hull sizes, plus quality-tier performance. Keep visual effects separate from handling forces. | Scheduled; current placeholders accepted |
+
 ## Required interpretations of existing tasks
 
 | Original task(s) | Local interpretation / dependency rule |

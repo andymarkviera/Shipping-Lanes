@@ -63,6 +63,28 @@ There is no need to test every prior build step.
 Andy approved continuing from this handling baseline. The queue above remains
 a reference for future regressions, not a requirement to repeat each step.
 
+## Player follow-ups — October 20, 2026
+
+Andy reported that the boat would not pick up cargo and that reaching a complete
+stop and getting to neutral felt difficult. The exact test scene and cause of
+the pickup failure have not been established. Passing automated fixture checks
+does not resolve this player report. Reproduce it before choosing a repair;
+stopping requirements are one possible dependency, not a confirmed cause.
+
+Review neutral selection, the distinction between a neutral command and residual
+motion, and practical full-stop detection before docking/loading integration.
+Preserve the previously accepted general handling feel. This is new feedback
+following the historical baseline acceptance above.
+
+Andy accepts the current foam and trailing wake as placeholders. Schedule a later
+visual pass for hull-contact foam, bow water, ripples and wake motion using the
+Zelda-inspired water direction: bright bold blue with expressive white patterns,
+and muted coastal colors in suitable regions.
+
+All three items are deferred at Andy's request. Their stable task IDs, placement
+and acceptance criteria are in `BUILD_DEPENDENCIES.md` under Playtest follow-ups.
+No gameplay change or new playtest completion is claimed by this entry.
+
 ## Verification
 
 FeedbackCheck passes 24 checks in editor and native Windows Release: unit/heading
