@@ -92,3 +92,5 @@ become approved formulas just because they appear in the inventory.
 | D049 | Water effects follow-up | After visual draft, add Step 23B for original Zelda-inspired bright-blue water, white bow/hull foam, speed-responsive ripples and fading wakes; preserve handling physics. |
 
 | D050 | Ship water effects | Original procedural pale ribbon crests driven by actual velocity; bounded world-space history fades over eight seconds. Hull/leading-end foam remains presentation only, matches water quality/palette, and preserves accepted handling. Prototype dimensions require fitting to final hull art. |
+
+| D051 | Simulation regression references | Fixed 60 Hz input segments replay production unobstructed motion with explicit recorded SI tolerances. Cover acceleration, braking, turning, coasting, thrusters and separate command/output telemetry. No bit-identical cross-machine physics promise or invented fuel consumption. Keep collision/render-cap checks alongside numerical playback. |

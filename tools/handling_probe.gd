@@ -1,5 +1,6 @@
 extends Node
 const Ship = preload("res://features/handling/handling_ship.gd")
+const Checkpoint = preload("res://tools/simulation_checkpoint.gd")
 var ship: HandlingShip
 var turning_ship: HandlingShip
 var turns: Array[Vector3] = []
@@ -17,9 +18,39 @@ func _ready() -> void:
 	set_physics_process(false)
 	check_throttle()
 	check_maneuvers()
+	check_checkpoints()
 	await check_input_scene()
 	start_run()
 	set_physics_process(true)
+
+func check_checkpoints() -> void:
+	var checkpoints: Dictionary = Checkpoint.run(self)
+	for fixture: String in checkpoints:
+		var result: Dictionary = checkpoints[fixture]
+		var errors: Array[String] = Checkpoint.deviations(fixture, result)
+		check(errors.is_empty(), "Recorded handling tolerance: " + "; ".join(errors))
+		var replayed: Dictionary = Checkpoint.replay(self, Checkpoint.FIXTURES[fixture])
+		check(Checkpoint.deviations(fixture, replayed).is_empty(), "Fresh playback remains within " + fixture + " baseline")
+		check(result.telemetry == replayed.telemetry, "Same-process fixed input playback repeats: " + fixture)
+		var telemetry_valid: bool = not result.telemetry.is_empty()
+		var prior_tick: int = 0
+		for sample: Dictionary in result.telemetry:
+			telemetry_valid = telemetry_valid and sample.tick > prior_tick and is_finite(sample.engine) \
+				and sample.engine >= -0.60001 and sample.engine <= 1.00001 \
+				and is_equal_approx(sample.seconds, sample.tick / 60.0)
+			prior_tick = sample.tick
+		check(telemetry_valid, "Fuel-ready timestamped actual output: " + fixture)
+	check(checkpoints.neutral.telemetry[7].command == 0.0 and checkpoints.neutral.telemetry[7].engine > 0.0, "Telemetry distinguishes neutral order from remaining engine output")
+	check(checkpoints.brake.astern_power_seconds > 0.0 and checkpoints.brake.ahead_power_seconds > 0.0, "Ahead/astern power exposure kept separate")
+	var changed: Dictionary = Checkpoint.replay(self, Checkpoint.FIXTURES.accelerate, 1.2)
+	check(not Checkpoint.deviations("accelerate", changed).is_empty(), "Tolerance guard catches a 20 percent thrust regression")
+	var within: Dictionary = checkpoints.accelerate.duplicate(true)
+	within.distance_m += 0.01
+	check(Checkpoint.deviations("accelerate", within).is_empty(), "Tolerance allows small floating-point drift")
+	var invalid: Dictionary = checkpoints.accelerate.duplicate(true)
+	invalid.speed_mps = NAN
+	check(not Checkpoint.deviations("accelerate", invalid).is_empty(), "Nonfinite telemetry fails comparison")
+	check(is_equal_approx((load("res://features/catalog/records/starter_ship.tres") as ShipDefinition).forward_acceleration_mps2, 0.8), "Regression fixture leaves shipped tuning unchanged")
 
 func start_run() -> void:
 	Engine.max_fps = CAPS[run_index]

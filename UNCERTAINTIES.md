@@ -117,3 +117,7 @@ U009 update (Step 23, supersedes depth/grounding requirement): Andy approved all
 open water navigable for all ships. No hidden shallows or grounding restrictions.
 Normalized visual load preview implemented; actual cargo mass/capacity connection
 and final hull-specific visual offsets remain pending. Keep visible solid boundaries.
+
+U008 update (Step 24): accepted handling now has fixed-input playback and numerical
+reference tolerances; deliberate thrust mutation proves the regression guard.
+Loaded/network behavior remains a later check, not inferred from these fixtures.

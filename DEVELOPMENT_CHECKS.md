@@ -78,3 +78,8 @@ Step 20 adds WaterCheck to Full (14 stages / 45 scripts). Thirty-five checks ver
 Step 21 adds CollisionCheck to Full (15 stages / 48 scripts): 35 assertions, 16 contact/mask fixtures, 180 ticks. Release uses -Mode RunExport -Configuration Release -Headless -CollisionProbe.
 
 Step 22 adds FeedbackCheck to Full (16 stages / 50 scripts). Twenty-four checks validate instruments, synthesized audio state/PCM and the recorded handling baseline. Native Release uses -FeedbackProbe; the check mutes its own audio only.
+
+Step 24 adds recorded fixed-input motion checkpoints inside HandlingCheck. See
+SIMULATION_CHECKPOINTS.md for playback inputs, SI tolerances, power telemetry,
+regression sensitivity checks and intentional-baseline-update policy. Full still
+runs 16 stages; the same HandlingProbe is packaged for Windows Release.

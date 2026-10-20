@@ -767,3 +767,24 @@ approval claimed. Recovery tag: `step-23b-ship-wake`.
 Verified source ZIP: `../output/checkpoints/step-23b-ship-wake-2026-10-19.zip`.
 Next: Step 24 — simulation checkpoints: repeatable handling input playback and
 numeric tolerances for acceleration, stopping, turning and throttle telemetry.
+
+## Step 24 — Simulation checkpoints
+
+Task ID: `simulation-checkpoints`.
+Added recorded 60 Hz input playback for acceleration, braking, turning, sideways
+thrust and neutral coasting. Named numerical tolerances protect the accepted
+handling; repeat runs and a deliberate private 20% thrust mutation verify the guard.
+Timestamped command/actual engine telemetry and ahead/astern power-seconds are
+available for future fuel work without inventing a consumption formula.
+
+SIMULATION_CHECKPOINTS.md records fixtures, values, tolerances, limits and the
+manual baseline-update policy. Gameplay code and player settings are unchanged.
+Collision and render-cap checks remain alongside the unobstructed numerical replays.
+
+Next: Step 25 — world-size experiment, measuring long-distance coordinate behavior
+before selecting the world-coordinate strategy.
+
+Status: complete — October 19, 2026. Full suite passes 16 stages; HandlingCheck
+passes 98 checks in editor and Windows Release, including the final stopping-distance
+guard. Recovery tag: `step-24-simulation-checkpoints`; verified source backup:
+`../output/checkpoints/step-24-simulation-checkpoints-2026-10-19.zip`.
