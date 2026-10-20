@@ -728,3 +728,27 @@ Recovery: tag `step-22-handling-feedback-baseline`; verified source ZIP and SHA-
 `../output/checkpoints/step-22-handling-feedback-baseline-2026-10-19.zip`.
 Next: Andy's short handling playtest and prioritized adjustments; then Step 23,
 depth-and-draft. Controller choice remains provisional until review.
+
+## Step 22 acceptance — October 19, 2026
+
+Andy reported: "i really love how it all feels" and approved continuing. This
+supersedes the pending overall-feel review above; preserve the current handling.
+No separate detailed sound audition or final network handling approval is claimed.
+
+## Step 23 — Visual cargo draft
+
+Task ID: `depth-and-draft` (user-approved replacement scope).
+Open water stays navigable for every ship; no hidden shallow zones or grounding.
+The handling test now previews empty/half/full loading with a smooth visual sink.
+Body, collider, camera focus and approved handling remain unchanged. The normalized
+load input is ready for future cargo integration; current loads are preview only.
+See VISUAL_DRAFT.md. Original synced roadmap remains untouched.
+
+Next: Step 23B — stylized wakes and hull foam, following Andy's Zelda reference.
+
+Verification: full project suite passes 16 stages / 50 scripts. WaterCheck now
+passes 46 checks in editor and native OpenGL Windows Release, including loading,
+unloading, invalid input and unchanged body/collider/focus. Loaded HUD capture
+inspected at 1152x648. Existing handling/collision/feedback checks remain passing.
+Status: complete, October 19, 2026. Recovery tag: `step-23-visual-draft`.
+Verified source archive: `../output/checkpoints/step-23-visual-draft-2026-10-19.zip`.

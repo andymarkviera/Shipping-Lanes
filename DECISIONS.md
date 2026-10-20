@@ -86,3 +86,7 @@ become approved formulas just because they appear in the inventory.
 | D045 | Prototype collision | Swept CharacterBody movement at 60 Hz, 20 m/s total cap, no bounce impulses; conservative angular overlap guard prevents hull turning into solids. Hull/shore are solid layers; triggers, cargo visuals and characters separate. Vertical shore proxies and clear spawns required. See COLLISION.md. |
 
 | D046 | Handling feedback baseline | Read-only instruments and original synthesized engine/thruster/horn cues; unconnected fuel labelled honestly. No handling retune or controller lock before Andy's required comfort/docking playtest. Baseline and prioritized pending review in HANDLING_FEEDBACK.md. |
+
+| D047 | Handling acceptance | Andy loves the current overall feel and approved continuation. Preserve the Step 22 baseline; later loaded/network behavior still requires verification. Supersedes D046 pending overall-feel review. |
+| D048 | Navigable water and visual draft | Andy approved no confusing shallow areas: all open water supports all ships. Cargo affects visual hull height only at this step; no grounding or depth restriction. Visible land/rocks/docks remain solid. Prototype preview sink is 0–0.85 m, not final ship specifications. |
+| D049 | Water effects follow-up | After visual draft, add Step 23B for original Zelda-inspired bright-blue water, white bow/hull foam, speed-responsive ripples and fading wakes; preserve handling physics. |

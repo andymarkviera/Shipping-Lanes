@@ -8,6 +8,8 @@ var camera: OrbitCameraRig
 var readout: Label
 var overlay: DeveloperOverlay
 var feedback: HandlingFeedback
+var load_preview: Button
+var load_preview_index: int = 0
 
 func box(parent: Node3D, size: Vector3, at: Vector3, color: Color) -> void:
 	var mesh: MeshInstance3D = MeshInstance3D.new()
@@ -99,13 +101,30 @@ func _ready() -> void:
 	style.content_margin_bottom = 14
 	panel.add_theme_stylebox_override("panel", style)
 	ui.add_child(panel)
+	var hud_stack: VBoxContainer = VBoxContainer.new()
+	panel.add_child(hud_stack)
 	readout = Label.new()
 	readout.add_theme_font_size_override("font_size", 18)
-	panel.add_child(readout)
+	hud_stack.add_child(readout)
+	load_preview = Button.new()
+	load_preview.text = "Cargo preview: Empty — click to change"
+	load_preview.pressed.connect(cycle_load_preview)
+	hud_stack.add_child(load_preview)
+	var water_notice: Label = Label.new()
+	water_notice.text = "All open water is navigable. Avoid visible land, rocks and docks."
+	water_notice.add_theme_font_size_override("font_size", 15)
+	hud_stack.add_child(water_notice)
 	feedback = HandlingFeedback.new()
 	add_child(feedback)
 	overlay = DeveloperOverlay.new()
 	add_child(overlay)
+
+func cycle_load_preview() -> void:
+	load_preview_index = (load_preview_index + 1) % 3
+	visual_root.set_visual_load(float(load_preview_index) * 0.5)
+	load_preview.text = "Cargo preview: %s — click to change" % ["Empty", "Half load", "Full load"][load_preview_index]
+	load_preview.release_focus()
+	controls.wait_for_release = true
 
 func _physics_process(delta: float) -> void:
 	ship.maneuver(controls.steering_axis(), controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"))

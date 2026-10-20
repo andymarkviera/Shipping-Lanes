@@ -1,8 +1,8 @@
 # Step 22 — Handling feedback baseline
 
-Status: implementation and automated verification ready; Andy's playtest pending.
-The controller approach and tuning remain provisional. No subjective approval,
-comfort assessment or player feedback has been inferred from automated checks.
+Status: accepted handling baseline, October 19, 2026. Andy reported that he really
+loves how it all feels. Preserve current tuning; revisit loaded/network behavior
+in their later steps. No separate detailed audio audition is claimed.
 
 ## Added feedback
 
@@ -34,7 +34,7 @@ distances integrate fixed-tick velocity in an unobstructed numerical fixture;
 they are regression references, not Andy's playtest results. Continuing S then
 accelerates astern. X orders neutral and coasts; it is not an instant brake.
 
-## Short playtest for Andy
+## Optional future regression playtest
 
 1. Open Boat Handling Test. Hold W until roughly 8 knots, then hold S until ahead
    motion stops. Judge acceleration, engine response and stopping distance.
@@ -50,15 +50,14 @@ There is no need to test every prior build step.
 
 | Priority | Review | Status |
 | --- | --- | --- |
-| P0 | Camera/bobbing discomfort or obscured docking view | Awaiting Andy |
-| P1 | Brake distance, throttle lag, turning and sideways docking controllability | Awaiting Andy |
-| P1 | Instrument readability and ahead/astern interpretation | Native HUD inspected; player feedback pending |
+| P0 | Camera/bobbing discomfort or obscured docking view | Overall feel accepted; revisit if an issue arises |
+| P1 | Brake distance, throttle lag, turning and sideways docking controllability | Overall feel accepted; revisit if an issue arises |
+| P1 | Instrument readability and ahead/astern interpretation | Native HUD inspected; overall feel accepted |
 | P2 | Engine/thruster/horn loudness and timbre | Signal checks pass; player audition pending |
 | Later dependency | Connect real fuel state when fuel simulation exists | Unconnected field labelled honestly |
 
-Do not lock the controller or add detailed hull art until discomfort/readability
-feedback is resolved. Continue unrelated roadmap work only with the pending review
-record kept explicit.
+Andy approved continuing from this handling baseline. The queue above remains
+a reference for future regressions, not a requirement to repeat each step.
 
 ## Verification
 

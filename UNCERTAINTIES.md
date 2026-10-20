@@ -111,3 +111,9 @@ U033 update (Step 20): initial water art is bold blue with flowing pale patterns
 Step 21 collision checkpoint: current planar hull/shore contacts verified through 20 m/s. Real ship geometry, moving-body mass exchange, grounding, damage and network reconciliation still require their later implementation/checks.
 
 U008 update (Step 22): playable feedback baseline recorded and automatically verified. Andy's acceleration/braking/turning/camera/docking and sound review is pending; controller approach and tuning are not locked.
+
+U008 update (Step 23): Andy accepted the overall handling feel; preserve baseline.
+U009 update (Step 23, supersedes depth/grounding requirement): Andy approved all
+open water navigable for all ships. No hidden shallows or grounding restrictions.
+Normalized visual load preview implemented; actual cargo mass/capacity connection
+and final hull-specific visual offsets remain pending. Keep visible solid boundaries.
