@@ -2,7 +2,8 @@ class_name LocalShipSession
 extends Node
 ## Development-only loopback transport. No credentials or persistent identity.
 signal changed
-const PROTOCOL: int = 2
+const PROTOCOL: int = 3
+var ship_definition_id: String = "ship_starter_container_01"
 const DEFAULT_PORT: int = 28429
 var roster: Dictionary = {}
 var revision: int = 0
@@ -97,7 +98,7 @@ func _add_member(peer_id: int) -> void:
 	serial += 1
 	var entity_id: String = "ship_" + epoch + "_" + str(serial)
 	roster[entity_id] = {"entity_id": entity_id, "peer_id": peer_id,
-		"definition_id": "ship_starter_container_01", "authority": 1,
+		"definition_id": ship_definition_id, "authority": 1,
 		"slot": 0 if peer_id == 1 else 1}
 	revision += 1
 	changed.emit()
@@ -132,7 +133,7 @@ func receive_roster(session_epoch: String, sequence: int, records: Array) -> voi
 		var id: String = entry.entity_id
 		var peer: int = entry.peer_id
 		if not id.begins_with("ship_" + session_epoch + "_") or next.has(id) or peers.has(peer) or peer <= 0: return
-		if entry.get("authority") != 1 or entry.get("definition_id") != "ship_starter_container_01": return
+		if entry.get("authority") != 1 or entry.get("definition_id") not in ["ship_starter_container_01", "ship_heavy_lifter_01"]: return
 		if entry.get("slot") != (0 if peer == 1 else 1): return
 		next[id] = entry.duplicate(true)
 		peers.append(peer)

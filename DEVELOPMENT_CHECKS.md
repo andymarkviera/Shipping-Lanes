@@ -115,3 +115,9 @@ Step 30 adds ReplicationCheck (22 stages / 69 scripts). It runs two-process
 normal and impaired movement profiles with host/client assertions and latency
 metrics. Release uses CheckNetwork.ps1 -Runtime Release -Replication, with
 -Profile impaired for the delayed/lossy profile. See SHIP_REPLICATION.md.
+
+Step 31 adds CargoNetworkCheck (23 stages / 71 scripts). Both two-process
+profiles check loaded motion, reconnect, command ownership/order, release and
+carried collision (15 host + 17 client assertions per profile). Windows build:
+CheckNetwork.ps1 -Runtime Release -Cargo, optionally -Profile impaired.
+See ATTACHED_PAYLOAD_NETWORKING.md.

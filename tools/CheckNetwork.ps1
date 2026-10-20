@@ -1,6 +1,6 @@
 #requires -Version 7.4
 [CmdletBinding()]
-param([ValidateSet('Editor','Release')][string]$Runtime='Editor', [switch]$Replication, [ValidateSet('normal','impaired')][string]$Profile='normal')
+param([ValidateSet('Editor','Release')][string]$Runtime='Editor', [switch]$Replication, [switch]$Cargo, [ValidateSet('normal','impaired')][string]$Profile='normal')
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path -Parent $PSScriptRoot
 $workspaceRoot=Split-Path -Parent $projectRoot
@@ -25,7 +25,7 @@ try {
   $start.Environment['APPDATA']=Join-Path $portableRoot 'user_data'
   $arguments=@('--headless','--log-file',(Join-Path $runRoot "$role.log"))
   if($Runtime -eq 'Editor'){$arguments+=@('--path',$projectRoot)}
-  $checkFlag=if($Replication){'--replication-check'}else{'--network-check'}
+  $checkFlag=if($Cargo){'--cargo-network-check'}elseif($Replication){'--replication-check'}else{'--network-check'}
   $arguments+=@('--',$checkFlag,"--network-profile=$Profile","--network-role=$role","--network-port=$port","--network-results=$runRoot")
   foreach($argument in $arguments){$start.ArgumentList.Add($argument)}
   $process=[Diagnostics.Process]::Start($start)
@@ -44,7 +44,7 @@ try {
  }
  $hostResult=Get-Content (Join-Path $runRoot 'host.json') -Raw | ConvertFrom-Json
  $clientResult=Get-Content (Join-Path $runRoot 'client.json') -Raw | ConvertFrom-Json
- if(-not $Replication){
+ if(-not $Replication -and -not $Cargo){
  if($hostResult.rounds.Count -ne 3 -or $clientResult.rounds.Count -ne 3){throw 'Missing reconnect rounds'}
  for($round=0;$round -lt 3;$round++){
   if(($hostResult.rounds[$round] -join ',') -ne ($clientResult.rounds[$round] -join ',')){throw "Ship identity mismatch in round $round"}

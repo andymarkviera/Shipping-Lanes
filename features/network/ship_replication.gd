@@ -25,6 +25,7 @@ var impairment: bool = false
 var packets: int = 0
 var dropped: int = 0
 var pending: Array[Dictionary] = []
+var last_cargo_due: int = 0
 
 func configure(owner_world: Node3D, source: LocalShipSession) -> void:
 	world = owner_world
@@ -42,6 +43,7 @@ func reconcile() -> void:
 			latest.erase(id)
 	if session.roster.is_empty():
 		pending.clear()
+		last_cargo_due = 0
 		sequence = 0
 		state_sequence = 0
 		received_sequence = -1
@@ -67,23 +69,28 @@ func submit(throttle: float, rudder: float, lateral: float) -> void:
 
 func queue_packet(kind: String, arguments: Array) -> void:
 	packets += 1
-	if impairment and packets % 10 == 0:
+	if impairment and kind != "cargo" and packets % 10 == 0:
 		dropped += 1
 		return
 	if pending.size() >= 128: return
 	var delay: int = 100 + [-20, 0, 20, 0][packets % 4] if impairment else 0
-	pending.append({"due": Time.get_ticks_msec() + delay, "kind": kind, "args": arguments})
+	var due: int = Time.get_ticks_msec() + delay
+	if kind == "cargo":
+		due = maxi(due, last_cargo_due + 1)
+		last_cargo_due = due
+	pending.append({"due": due, "kind": kind, "args": arguments})
 
 func _process(_delta: float) -> void:
 	var now: int = Time.get_ticks_msec()
-	for index: int in range(pending.size() - 1, -1, -1):
-		if pending[index].due > now: continue
-		var packet: Dictionary = pending[index]
-		pending.remove_at(index)
+	pending.sort_custom(func(a: Dictionary, b: Dictionary): return a.due < b.due)
+	while not pending.is_empty() and pending[0].due <= now:
+		var packet: Dictionary = pending.pop_front()
 		if session.transport == null: continue
 		var args: Array = packet.args
 		if packet.kind == "input" and not session.connecting:
 			request_input.rpc_id(1, args[0], args[1], args[2], args[3], args[4], args[5], args[6])
+		elif packet.kind == "cargo" and not session.connecting:
+			world.cargo_sync.request_action.rpc_id(1, args[0], args[1], args[2], args[3])
 		elif packet.kind == "state" and session.hosting:
 			for peer: int in multiplayer.get_peers():
 				receive_state.rpc_id(peer, args[0], args[1], args[2], args[3], args[4])
@@ -137,7 +144,7 @@ func _physics_process(delta: float) -> void:
 		var ship: HandlingShip = world.ships[id]
 		records.append({"id": id, "position": ship.position, "yaw": ship.rotation.y, "velocity": ship.velocity,
 			"command": ship.commanded_throttle, "engine": ship.actual_throttle, "fuel": ship.state.fuel_liters,
-			"rudder": ship.rudder, "lateral": ship.lateral_order, "ack": orders.get(id, {}).get("sent", 0)})
+			"cargo": world.cargo_sync.snapshot(id, ship), "rudder": ship.rudder, "lateral": ship.lateral_order, "ack": orders.get(id, {}).get("sent", 0)})
 	queue_packet("state", [session.epoch, session.revision, state_sequence, elapsed, records])
 
 @rpc("authority", "call_remote", "unreliable_ordered", 2)
@@ -151,6 +158,7 @@ func receive_state(session_epoch: String, roster_revision: int, seq: int, stamp:
 		for key: String in ["yaw", "command", "engine", "fuel", "rudder", "lateral"]:
 			if not record.get(key) is float or not is_finite(record[key]): return
 		if not record.get("ack") is int or record.fuel < 0 or record.fuel > world.ships[record.id].definition.fuel_capacity_liters: return
+		if not CargoReplication.valid(record.id, world.ships[record.id], record.get("cargo")): return
 		seen[record.id] = true
 	received_sequence = seq
 	snapshot_count += 1
@@ -187,3 +195,4 @@ func interpolate() -> void:
 		ship.state.fuel_liters = b.record.fuel
 		ship.rudder = b.record.rudder
 		ship.lateral_order = b.record.lateral
+		CargoReplication.present(ship, a.record.cargo, b.record.cargo, weight)

@@ -912,3 +912,23 @@ Full suite: 22 stages / 69 scripts, including lifecycle and both motion profiles
 Recovery tag: `step-30-ship-replication`.
 Source backup: `../output/checkpoints/step-30-ship-replication-2026-10-20.zip`.
 Next: Step 31 — attached-payload networking feasibility.
+
+## Step 31 — Attached-payload networking feasibility
+
+Task ID: `attached-payload-networking-feasibility`.
+Status: complete — October 20, 2026.
+Added Host heavy locally and owner-validated deck/load controls. Full cargo
+state travels with ship motion; client attachment and deck transforms share
+the interpolation timeline. The host alone owns carried/floating collision.
+Reliable cargo commands preserve submission order through the delay shim.
+
+Two-process normal and impaired profiles pass 32 assertions each in editor
+and Windows Release. Loaded turns, late join/reconnect, foreign/duplicate
+command rejection, release/reattachment and actual high-rail collision pass.
+Recorded cargo-anchor positional error is 0.0 m across attached samples.
+Native loaded client scene and controls inspected. Guest persistence remains
+later work; no walking controller was added. See ATTACHED_PAYLOAD_NETWORKING.md.
+Full suite: 23 stages / 71 scripts.
+Recovery tag: `step-31-attached-payload-networking`.
+Source backup: `../output/checkpoints/step-31-attached-payload-networking-2026-10-20.zip`.
+Next: Step 32 — early dedicated capacity experiment.

@@ -1,5 +1,9 @@
 # Ship replication — Step 30
 
+Step 31 update: protocol 3 extends these snapshots with attached-cargo state
+and adds reliable cargo actions. See ATTACHED_PAYLOAD_NETWORKING.md. The
+Step 30 motion profiles remain regression checks.
+
 Local Multiplayer Test now lets both players sail, turn and use lateral thrust.
 Open two game windows on this computer, host in one and join in the other.
 Each window follows its own boat with the existing orbit/zoom camera. Saved

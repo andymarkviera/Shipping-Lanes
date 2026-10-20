@@ -1,5 +1,8 @@
 extends Node3D
 const SHIP = preload("res://features/ships/starter_container_01/starter_runtime.tscn")
+const HEAVY_SHIP = preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn")
+var cargo_sync: CargoReplication
+var cargo_buttons: HBoxContainer
 var session: LocalShipSession
 var ships: Dictionary = {}
 var readout: Label
@@ -21,6 +24,10 @@ func _ready() -> void:
 	replication.name = "Replication"
 	add_child(replication)
 	replication.configure(self, session)
+	cargo_sync = CargoReplication.new()
+	cargo_sync.name = "CargoSync"
+	add_child(cargo_sync)
+	cargo_sync.configure(self, session)
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.set_ship_context(true)
@@ -60,21 +67,41 @@ func _ready() -> void:
 	var stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(stack)
 	readout = Label.new()
+	readout.custom_minimum_size.x = 400
+	readout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	readout.add_theme_font_size_override("font_size", 17)
 	stack.add_child(readout)
 	var row: HBoxContainer = HBoxContainer.new()
 	stack.add_child(row)
-	for caption: String in ["Host locally", "Join locally", "Disconnect", "Main menu"]:
+	for caption: String in ["Host locally", "Host heavy locally", "Join locally", "Disconnect", "Main menu"]:
+		if caption == "Disconnect":
+			row = HBoxContainer.new()
+			stack.add_child(row)
 		var button: Button = Button.new()
 		button.text = caption
 		row.add_child(button)
 		button.pressed.connect(func():
 			match caption:
-				"Host locally": session.host_session()
+				"Host locally":
+					session.ship_definition_id = "ship_starter_container_01"
+					session.host_session()
+				"Host heavy locally":
+					session.ship_definition_id = "ship_heavy_lifter_01"
+					session.host_session()
 				"Join locally": session.join_session()
 				"Disconnect": session.stop()
 				"Main menu": get_tree().change_scene_to_file("res://features/main/main.tscn")
 			button.release_focus())
+	cargo_buttons = HBoxContainer.new()
+	stack.add_child(cargo_buttons)
+	for action: String in ["lower", "align", "secure", "raise", "release"]:
+		var button: Button = Button.new()
+		button.text = action.capitalize() + (" (test)" if action == "align" else "")
+		button.pressed.connect(func():
+			cargo_sync.submit(action)
+			button.release_focus()
+			controls.wait_for_release = true)
+		cargo_buttons.add_child(button)
 	refresh()
 
 func refresh() -> void:
@@ -91,9 +118,9 @@ func refresh() -> void:
 	for id: String in session.roster:
 		if ships.has(id): continue
 		var record: Dictionary = session.roster[id]
-		var ship: HandlingShip = SHIP.instantiate()
+		var ship: HandlingShip = (HEAVY_SHIP if record.definition_id == "ship_heavy_lifter_01" else SHIP).instantiate()
 		ship.name = id
-		ship.position.x = record.slot * 75
+		ship.position.x = record.slot * (110 if record.definition_id == "ship_heavy_lifter_01" else 75)
 		ship.set_multiplayer_authority(1)
 		add_child(ship)
 		ship.state.instance_id = id
@@ -102,6 +129,8 @@ func refresh() -> void:
 		if not session.hosting:
 			ship.collision_layer = 0
 			ship.collision_mask = 0
+			if ship is CargoReplication.Heavy:
+				ship.payload_body.collision_layer = 0
 		ships[id] = ship
 		wakes[id] = ship.assembly.create_wake(ocean)
 		if record.peer_id == multiplayer.get_unique_id():
@@ -112,7 +141,7 @@ func refresh() -> void:
 
 func update_readout() -> void:
 	if readout == null: return
-	var text: String = "LOCAL MULTIPLAYER TEST · STEP 30\nSaved boat controls · RMB orbit · Wheel zoom\nTwo windows on this computer only · Esc menu\n\n%s\nShips: %d / 2" % [session.notice, ships.size()]
+	var text: String = "LOCAL MULTIPLAYER TEST · STEP 31\nSaved boat controls · RMB orbit · Wheel zoom\nTwo windows on this computer only · Esc menu\n\n%s\nShips: %d / 2" % [session.notice, ships.size()]
 	for id: String in session.roster:
 		var record: Dictionary = session.roster[id]
 		text += "\n%s · %s" % [id, "YOU" if record.peer_id == multiplayer.get_unique_id() else "OTHER PLAYER"]
@@ -120,6 +149,9 @@ func update_readout() -> void:
 	if ships.has(mine):
 		var ship: HandlingShip = ships[mine]
 		text += "\nSpeed %.1f kn · Fuel %.1f L\nOrder %+.0f%% · Engine %+.0f%%" % [ship.velocity.length() * 3600 / 1852, ship.state.fuel_liters, throttle_order * 100, ship.actual_throttle * 100]
+	if cargo_buttons != null:
+		cargo_buttons.visible = ships.has(mine) and ships[mine] is CargoReplication.Heavy
+		if cargo_buttons.visible: text += "\nDeck %.1f m · Payload %s\n%s" % [ships[mine].deck_height, "SECURED" if ships[mine].attached else "FLOATING", ships[mine].notice]
 	readout.text = text
 
 func _physics_process(delta: float) -> void:
