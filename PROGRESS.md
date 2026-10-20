@@ -812,3 +812,26 @@ Release. Details, measured table and scope: WORLD_SIZE_EXPERIMENT.md.
 Recovery tag: `step-25-world-size-experiment`; verified source backup:
 `../output/checkpoints/step-25-world-size-experiment-2026-10-20.zip`.
 Next: Step 26 — isolated heavy-lifter deck/payload feasibility prototype.
+
+## Step 26 — Special cargo feasibility prototype
+
+Task ID: `special-cargo-feasibility-prototype`.
+Status: complete — October 20, 2026.
+Created a new heavy-lifter and industrial payload in Blender 3.6.1, matching the
+starter's low-poly geometry language and exact material roles. Preserved editable
+source and three GLBs; the original starter source remains hash-identical.
+
+Heavy-Lifter Test is available in the menu: lower, align the test payload, secure,
+raise, sail/turn, lower and release. Compound collision ownership avoids unstable
+stacked bodies. Stopped/alignment gates, swept lift clearance, cargo-height
+obstacles, release/reload and visible buttons are verified. Starter handling is
+unchanged; wake dimensions now support the wider prototype while keeping defaults.
+
+Full checks pass 18 stages / 57 scripts. HeavyLifterCheck passes 32 checks in editor
+and native Windows Release. A missing explicit export entry was caught and fixed;
+standalone packaging now includes the heavy script and all model GLBs. Blender
+preview and loaded/turning native Godot captures inspected. Final art preference,
+rated mass/capacity, buoyancy and production job/networking remain later work.
+See HEAVY_LIFTER.md. Recovery tag: `step-26-heavy-lifter`.
+Verified source backup: `../output/checkpoints/step-26-heavy-lifter-2026-10-20.zip`.
+Next: Step 27 — reusable ship composition.

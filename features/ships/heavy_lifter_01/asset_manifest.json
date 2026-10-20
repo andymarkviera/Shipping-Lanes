@@ -1,0 +1,36 @@
+{
+  "asset_id": "heavy_lifter_01",
+  "status": "step26_feasibility_art",
+  "blender_version": "3.6.1",
+  "meters_per_unit": 1,
+  "forward_godot": "+Z",
+  "up_godot": "+Y",
+  "hull_length_m": 90,
+  "beam_m": 24,
+  "deck_size_m": [
+    18,
+    48
+  ],
+  "deck_raised_top_m": 2.6,
+  "deck_lowered_top_m": -1,
+  "payload_envelope_m": [
+    14,
+    8,
+    32
+  ],
+  "mesh_objects": 96,
+  "triangles": 1176,
+  "materials": [
+    "MAT_deck",
+    "MAT_hull_primary",
+    "MAT_hull_secondary",
+    "MAT_metal",
+    "MAT_superstructure",
+    "MAT_trim",
+    "MAT_windows"
+  ],
+  "source": "art_sources/heavy_lifter_01/heavy_lifter_01.blend",
+  "style": "Original faceted geometry; material datablocks read from user starter without modifying it",
+  "gameplay_capacity": null,
+  "actual_mass_tonnes": null
+}

@@ -88,3 +88,8 @@ Step 25 adds WorldSizeCheck to Full. It measures distant float32 controls versus
 local patches, scalar spherical navigation/seam/poles/circuits, marker precision,
 shared hull contact and coherent camera/velocity/visual frame mapping. Release
 uses -WorldSizeProbe. Scope and measured travel budgets: WORLD_SIZE_EXPERIMENT.md.
+
+Step 26 adds HeavyLifterCheck to Full (18 stages). The heavy carrier's imported
+Blender assets, deck endpoints/clearance, alignment/ownership, real turning,
+payload collision envelope, release/reload and visible buttons are checked.
+Exported check uses -HeavyLifterProbe. See HEAVY_LIFTER.md for scope and usage.

@@ -40,6 +40,7 @@ func _ready() -> void:
 	var home: VBoxContainer = page("title")
 	button(home, "PLAY", "play")
 	button(home, "BOAT HANDLING TEST", "handling")
+	button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
 	continue_button = button(home, "CONTINUE TEST SESSION", "continue")
 	button(home, "SERVERS", "servers")
 	button(home, "SETTINGS", "settings")

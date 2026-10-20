@@ -6,6 +6,8 @@ const LIFETIME: float = 8.0
 const MAX_SAMPLES: int = 40
 var ship: CharacterBody3D
 var ocean: OceanPresentation
+var half_length: float = 30.0
+var half_width: float = 6.5
 var samples: Array[Dictionary] = []
 var clock: float = 0.0
 var last_position: Vector3
@@ -45,7 +47,7 @@ func advance(delta: float) -> void:
 		var direction: Vector3 = ship.velocity.normalized()
 		var bow: Vector3 = ship.global_basis.z
 		var across: Vector3 = ship.global_basis.x
-		var trailing_extent: float = 1.0 / maxf(absf(direction.dot(bow)) / 30.0, absf(direction.dot(across)) / 6.5)
+		var trailing_extent: float = 1.0 / maxf(absf(direction.dot(bow)) / half_length, absf(direction.dot(across)) / half_width)
 		var stern: Vector3 = position_now - direction * trailing_extent
 		samples.append({"center": stern, "direction": direction, "age": 0.0, "power": strength})
 		if samples.size() > MAX_SAMPLES: samples.pop_front()
@@ -64,7 +66,7 @@ func draw_foam() -> void:
 		var across: Vector3 = Vector3(direction.z, 0, -direction.x)
 		var center: Vector3 = sample.center - direction * age * 0.6
 		# Short curved crests spread out and remain behind in world space.
-		var radius: float = 6.5 + age * (1.2 + sample.power)
+		var radius: float = half_width + age * (1.2 + sample.power)
 		for side: float in [-1.0, 1.0]:
 			for part: int in range(4):
 				var t0: float = float(part) / 4.0
@@ -79,15 +81,15 @@ func draw_foam() -> void:
 		var travel_sign: float = 1.0 if ship.velocity.dot(bow) >= 0.0 else -1.0
 		for side: float in [-1.0, 1.0]:
 			for part: int in range(12):
-				var z0: float = -30.0 + part * 5.0
-				var z1: float = z0 + 4.5
+				var z0: float = -half_length + part * (half_length / 6.0)
+				var z1: float = z0 + half_length / 6.0 * 0.9
 				var pulse: float = 0.85 + 0.15 * sin(ocean.elapsed * 4.0 + part)
-				ribbon(center + bow * z0 + across * side * 7.0, center + bow * z1 + across * side * 7.0, (0.25 + strength * 1.5) * pulse, 0.25 + strength * 0.65)
+				ribbon(center + bow * z0 + across * side * (half_width + 0.5), center + bow * z1 + across * side * (half_width + 0.5), (0.25 + strength * 1.5) * pulse, 0.25 + strength * 0.65)
 		for part: int in range(12):
 			var angle0: float = PI * float(part) / 12.0
 			var angle1: float = PI * float(part + 1) / 12.0
-			var a: Vector3 = center + across * cos(angle0) * 7.0 + bow * travel_sign * (29.5 + sin(angle0) * 4.5)
-			var b: Vector3 = center + across * cos(angle1) * 7.0 + bow * travel_sign * (29.5 + sin(angle1) * 4.5)
+			var a: Vector3 = center + across * cos(angle0) * (half_width + 0.5) + bow * travel_sign * (half_length - 0.5 + sin(angle0) * 4.5)
+			var b: Vector3 = center + across * cos(angle1) * (half_width + 0.5) + bow * travel_sign * (half_length - 0.5 + sin(angle1) * 4.5)
 			ribbon(a, b, 0.4 + strength * 2.0, 0.3 + strength * 0.65)
 	surface.surface_end()
 

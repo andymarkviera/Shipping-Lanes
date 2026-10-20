@@ -61,3 +61,6 @@ Use tools/Godot.ps1 -Mode WaterCheck. To exercise exported rendering, use
 Step 23B update: ship wakes, hull foam and gentle low-speed ripples are implemented
 in the handling test; see SHIP_WAKE.md. This supersedes the earlier pending-wake
 note. Shoreline foam, spray, final hull fitting and multiplayer budgets remain later work.
+
+Step 26: SHIP_WAKE.md default dimensions remain unchanged. ShipWake now accepts
+half_length/half_width for the wider heavy-lifter fixture (41/12 m).

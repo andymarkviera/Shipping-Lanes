@@ -97,3 +97,7 @@ Water quality: choose Low, Medium or High in the main-menu Settings, save, then 
 Collision course: the thin head-on pier is 300 m ahead; angled pier and rock blocks are port-side, coastline beyond the gold course. Near-wall turns may be blocked; use lateral thrusters to gain clearance.
 
 H sounds the prototype horn once (1.2 seconds, no stacked repeats). Engine/thruster tones follow actual output and master volume. HUD shows knots, local test heading and explicit unconnected fuel.
+
+Step 26: HEAVY-LIFTER TEST is now available on the main menu. Use the numbered
+loading buttons while stopped, then your saved ship controls. Align test payload
+stages only the experimental module. Lower again to release; Esc returns to menu.
