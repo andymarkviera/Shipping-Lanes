@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck', 'FuelCheck', 'NetworkCheck', 'ReplicationCheck', 'CargoNetworkCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck', 'FuelCheck', 'NetworkCheck', 'ReplicationCheck', 'CargoNetworkCheck', 'ConnectedWorldCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -174,6 +174,10 @@ switch ($Mode) {
     }
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
+    }
+    'ConnectedWorldCheck' {
+        & (Join-Path $PSScriptRoot 'CheckNetwork.ps1') -Runtime Editor -ConnectedWorld
+        & (Join-Path $PSScriptRoot 'CheckNetwork.ps1') -Runtime Editor -ConnectedWorld -Profile impaired
     }
     'CargoNetworkCheck' {
         & (Join-Path $PSScriptRoot 'CheckNetwork.ps1') -Runtime Editor -Cargo

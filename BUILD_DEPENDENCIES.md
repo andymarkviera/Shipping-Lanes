@@ -41,6 +41,8 @@ do not quietly fall back to unverified live-file replacement.
 
 Task ID: `connected-world-network-feasibility`  
 Placement: after 25, 26, 29–31; before 35–36/41. Owner: Agent. U004, U016, U031.
+Status: complete October 20, 2026 for the bounded two-process experiment; see
+CONNECTED_WORLD_NETWORK.md for the spatial contract, evidence and integration limits.
 
 Extend the physical experiment with two peers, seam/polar/chart transitions,
 camera/velocity/orientation and one attached heavy payload. Use disposable save

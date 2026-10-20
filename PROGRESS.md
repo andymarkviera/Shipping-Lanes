@@ -941,3 +941,21 @@ selection/full-stop recognition before docking/loading, and polish placeholder
 foam/wakes during fleet/world content work before the experience gate.
 These are scheduled work, not completed fixes. Gameplay is unchanged; Step 32
 has not started as part of this documentation update.
+
+## Supplemental step — Connected-world network feasibility
+
+Task ID: `connected-world-network-feasibility`.
+Status: complete — October 20, 2026.
+Completed the prerequisite scheduled after Step 31: two-process seam and polar
+chart transitions with a loaded heavy ship, preserved camera/velocity/heading,
+solid payload collision, nearby marker coherence, disposable spatial JSON reload
+and observer reconnect preserving the host ship and cargo identity.
+
+Normal and delayed profiles pass 75 assertions each in editor and Windows Release.
+Spatial identity/atomic transition contract and explicit integration limits are
+recorded in CONNECTED_WORLD_NETWORK.md. The playable scene and reported cargo/
+neutral issues are unchanged. Windows release startup passes.
+Full suite: 24 stages / 73 scripts.
+Recovery tag: `connected-world-network-feasibility`.
+Source backup: `../output/checkpoints/connected-world-network-2026-10-20.zip`.
+Next: Step 32 — early dedicated capacity experiment.

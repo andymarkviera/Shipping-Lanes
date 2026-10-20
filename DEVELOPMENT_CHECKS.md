@@ -121,3 +121,11 @@ profiles check loaded motion, reconnect, command ownership/order, release and
 carried collision (15 host + 17 client assertions per profile). Windows build:
 CheckNetwork.ps1 -Runtime Release -Cargo, optionally -Profile impaired.
 See ATTACHED_PAYLOAD_NETWORKING.md.
+
+The connected-world prerequisite adds ConnectedWorldCheck (24 stages / 73 scripts).
+Two-process normal/delayed profiles each have 75 assertions: geographic chart
+transitions, camera/velocity/heading, attached collision, retained marker, JSON
+reload, reconnect and invalid spatial envelopes. Windows Release uses
+CheckNetwork.ps1 -Runtime Release -ConnectedWorld, optionally -Profile impaired.
+This profile uses reliable delayed transitions, not the motion loss simulation.
+See CONNECTED_WORLD_NETWORK.md for exact scope and remaining integration gates.
