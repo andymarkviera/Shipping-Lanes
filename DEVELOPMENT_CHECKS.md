@@ -93,3 +93,9 @@ Step 26 adds HeavyLifterCheck to Full (18 stages). The heavy carrier's imported
 Blender assets, deck endpoints/clearance, alignment/ownership, real turning,
 payload collision envelope, release/reload and visible buttons are checked.
 Exported check uses -HeavyLifterProbe. See HEAVY_LIFTER.md for scope and usage.
+
+Step 27 adds CompositionCheck to Full (19 stages / 61 scripts). Sixty checks
+exercise both runtime ships in independent transformed parents, component and
+definition isolation, forward/reverse/side contacts, turning and payload cleanup.
+Native Windows Release uses -CompositionProbe; HeavyLifterProbe also passes
+after the refactor. See SHIP_COMPOSITION.md.

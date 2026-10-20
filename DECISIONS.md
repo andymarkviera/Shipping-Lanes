@@ -100,3 +100,5 @@ become approved formulas just because they appear in the inventory.
 
 | D054 | Heavy-lifter visual prototype | Andy requested Blender authoring matching the starter boat. Original 90 x 24 m faceted heavy carrier, separate moving deck and industrial payload reuse the starter material palette. Preserve editable .blend and GLBs; dimensions are feasibility values, not fleet ratings. |
 | D055 | Secured large payload | Extend the existing kinematic controller with a moving deck and one compound cargo collider. Switch collision ownership at attach/release; no stacked dynamic bodies. Check alignment, neutral/stopped state and swept lift clearance. Prototype fixture alignment helper is not a production cargo job. |
+
+| D056 | Reusable ships | One HandlingShip controller, shared ShipHelm and ShipAssembly, self-contained runtime scenes and definition-driven hull/camera/wake/cargo geometry. Heavy special deck behavior extends the shared body. Preserve starter tuning; heavy uses gentler provisional acceleration and turning. See SHIP_COMPOSITION.md. |

@@ -30,6 +30,8 @@ func load_definitions(records: Array[ContentDefinition]) -> PackedStringArray:
 			if record.scene_path.is_empty() or not ResourceLoader.exists(record.scene_path, "PackedScene"):
 				errors.append("Missing ship scene: " + record.id)
 			validate_refs(record.id, record.cargo_type_ids, candidate, "cargo", errors)
+			if record.runtime_scene_path.is_empty() or not ResourceLoader.exists(record.runtime_scene_path, "PackedScene"):
+				errors.append("Missing runtime ship scene: " + record.id)
 		elif record is CargoDefinition:
 			if record.unit_label.strip_edges().is_empty():
 				errors.append("Missing cargo unit: " + record.id)

@@ -2,6 +2,15 @@ class_name ShipDefinition
 extends ContentDefinition
 @export_file("*.tscn") var scene_path: String = ""
 @export var cargo_type_ids: Array[String] = []
+@export_file("*.tscn") var runtime_scene_path: String = ""
+@export_group("Composition")
+@export var hull_size_m: Vector3 = Vector3(13, 4, 64)
+@export var camera_radius_m: float = 34.0
+@export var camera_distance_m: float = 115.0
+@export var wake_half_length_m: float = 30.0
+@export var wake_half_width_m: float = 6.5
+@export var cargo_anchor_m: Vector3 = Vector3(0, 2.65, 17)
+@export var visual_bobbing: bool = true
 @export_group("Prototype handling (SI units)")
 @export var forward_acceleration_mps2: float = 0.8
 @export var reverse_acceleration_mps2: float = 0.5
@@ -20,6 +29,11 @@ extends ContentDefinition
 @export var thruster_cutoff_speed_mps: float = 4.0
 
 func handling_error() -> String:
+	if not hull_size_m.is_finite() or minf(hull_size_m.x, minf(hull_size_m.y, hull_size_m.z)) <= 0 or not cargo_anchor_m.is_finite():
+		return "Invalid composition dimensions or anchor"
+	for field: String in ["camera_radius_m", "camera_distance_m", "wake_half_length_m", "wake_half_width_m"]:
+		var value: float = get(field)
+		if not is_finite(value) or value <= 0: return "Invalid composition value: " + field
 	for field: String in ["forward_acceleration_mps2", "reverse_acceleration_mps2", "linear_drag_per_second", "forward_throttle_limit", "reverse_throttle_limit", "command_rate_per_second", "engine_ramp_up_per_second", "engine_ramp_down_per_second", "max_turn_rate_degrees", "turn_acceleration_degrees", "rudder_full_effect_speed_mps", "thruster_acceleration_mps2", "lateral_drag_per_second", "thruster_cutoff_speed_mps"]:
 		var value: float = get(field)
 		if not is_finite(value) or value <= 0.0:

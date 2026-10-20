@@ -835,3 +835,22 @@ rated mass/capacity, buoyancy and production job/networking remain later work.
 See HEAVY_LIFTER.md. Recovery tag: `step-26-heavy-lifter`.
 Verified source backup: `../output/checkpoints/step-26-heavy-lifter-2026-10-20.zip`.
 Next: Step 27 — reusable ship composition.
+
+## Step 27 — Reusable ship composition
+
+Task ID: `reusable-ship-composition`.
+Status: complete — October 20, 2026.
+Starter and heavy-lifter runtime scenes share propulsion, helm input, visual
+assembly, collision construction, cargo anchors, camera and wake setup.
+Ship definitions own dimensions and handling; the heavy carrier has gentler
+acceleration/turning while the starter's accepted baseline stays unchanged.
+Boat Handling Test now displays the preserved Blender starter model.
+
+Both hulls pass a separate handling course under translated/rotated parents,
+including forward/reverse/side contacts, turning and instance independence.
+Full suite passes 19 stages / 61 scripts. Native Windows Release passes
+CompositionProbe (60 checks) and HeavyLifterProbe (32 checks). Starter scene
+capture inspected. See SHIP_COMPOSITION.md for composition and remaining scope.
+Recovery tag: `step-27-ship-composition`.
+Source backup: `../output/checkpoints/step-27-ship-composition-2026-10-20.zip`.
+Next: Step 28 — fuel simulation.

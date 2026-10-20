@@ -1,5 +1,5 @@
 extends HandlingShip
-const HULL = preload("res://features/ships/heavy_lifter_01/heavy_lifter_01.glb")
+const DEFINITION = preload("res://features/catalog/records/heavy_lifter.tres")
 const DECK = preload("res://features/ships/heavy_lifter_01/lift_deck.glb")
 const PAYLOAD = preload("res://features/ships/heavy_lifter_01/industrial_payload.glb")
 const RAISED: float = 2.6
@@ -13,20 +13,23 @@ var payload_body: StaticBody3D
 var payload_visual: Node3D
 var payload_shape: CollisionShape3D
 var attached: bool = false
+var assembly: ShipAssembly
 var notice: String = "Stop, lower the deck, then align the test payload."
 
 func shape(size: Vector3, at: Vector3) -> CollisionShape3D:
-	var node: CollisionShape3D = CollisionShape3D.new()
-	var box: BoxShape3D = BoxShape3D.new()
-	box.size = size
-	node.shape = box
-	node.position = at
-	add_child(node)
-	return node
+	return ShipAssembly.box_collision(self, size, at)
+
+func _init() -> void:
+	definition = DEFINITION
+
+func helm_available() -> bool:
+	return not operating() and (not attached or absf(deck_height - RAISED) <= 0.001)
 
 func _ready() -> void:
 	super._ready()
-	add_child(HULL.instantiate())
+	assembly = ShipAssembly.new()
+	add_child(assembly)
+	assembly.configure(self)
 	deck_visual = DECK.instantiate()
 	add_child(deck_visual)
 	shape(Vector3(24, 2.5, 90), Vector3(0, -3.25, 0))
@@ -35,11 +38,10 @@ func _ready() -> void:
 	deck_shape = shape(Vector3(18, 0.6, 48), Vector3(0, 2.3, -8))
 	payload_shape = shape(Vector3(14, 8, 32), Vector3(0, RAISED + 4, -8))
 	payload_shape.disabled = true
-	cargo_mount = Node3D.new()
-	cargo_mount.position = Vector3(0, RAISED, -8)
-	add_child(cargo_mount)
+	cargo_mount = assembly.cargo_anchor
 	payload_body = StaticBody3D.new()
-	payload_body.position = global_position + Vector3(35, LOWERED, -8)
+	# Position in the same parent frame, even inside a translated/rotated scene.
+	payload_body.transform = transform * Transform3D(Basis.IDENTITY, Vector3(35, LOWERED, -8))
 	payload_body.collision_layer = CollisionRules.HULL
 	payload_body.collision_mask = 0
 	payload_visual = PAYLOAD.instantiate()
@@ -49,6 +51,9 @@ func _ready() -> void:
 	collider.position.y = 4
 	payload_body.add_child(collider)
 	get_parent().add_child.call_deferred(payload_body)
+
+func _exit_tree() -> void:
+	if is_instance_valid(payload_body): payload_body.queue_free()
 
 func stopped() -> bool:
 	return velocity.length() < 0.05 and absf(actual_throttle) < 0.01 and absf(commanded_throttle) < 0.01
@@ -149,7 +154,7 @@ func advance_deck(delta: float) -> void:
 	if not operating(): notice = "Deck raised — ready to sail." if deck_height == RAISED else "Deck lowered — ready for loading."
 
 func _physics_process(delta: float) -> void:
-	if operating() or (attached and absf(deck_height - RAISED) > 0.001):
+	if not helm_available():
 		zero_throttle()
 		maneuver(0, 0)
 	advance_deck(delta)

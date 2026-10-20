@@ -13,6 +13,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--composition-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/composition_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--heavy-lifter-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/heavy_lifter_probe.tscn")
 		return

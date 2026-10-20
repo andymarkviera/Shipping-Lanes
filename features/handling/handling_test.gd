@@ -1,6 +1,7 @@
 extends Node3D
-const Ship = preload("res://features/handling/handling_ship.gd")
+const SHIP_SCENE = preload("res://features/ships/starter_container_01/starter_runtime.tscn")
 var ship: HandlingShip
+var helm: ShipHelm
 var ocean: OceanPresentation
 var wake: ShipWake
 var visual_root: ShipVisualMotion
@@ -28,29 +29,19 @@ func _ready() -> void:
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.set_ship_context(true)
-	controls.command_requested.connect(func(action: StringName) -> void:
-		if action == &"ship_throttle_zero": ship.zero_throttle()
-		if action == &"horn": feedback.sound_horn(controls.input_allowed())
-		if action == &"pause": get_tree().change_scene_to_file("res://features/main/main.tscn"))
-	ship = Ship.new()
-	ship.name = "BoxShip"
+	ship = SHIP_SCENE.instantiate()
 	add_child(ship)
-	visual_root = ShipVisualMotion.new()
-	visual_root.name = "VisualRoot"
-	ship.add_child(visual_root)
+	visual_root = ship.assembly.visual
 	visual_root.quality = controls.preferences.water_quality
-	box(visual_root, Vector3(13, 4, 64), Vector3(0, 1, 0), Color("435762"))
-	box(visual_root, Vector3(10, 5, 8), Vector3(0, 5, -22), Color("e7ede7"))
-	box(visual_root, Vector3(4, 0.2, 6), Vector3(0, 3.1, 25), Color("d5ac6c"))
-	CollisionRules.add_box_hull(ship)
+	feedback = ship.assembly.feedback
+	helm = ShipHelm.new()
+	add_child(helm)
+	helm.configure(ship, controls, feedback)
+	helm.menu_requested.connect(func(): get_tree().change_scene_to_file("res://features/main/main.tscn"))
 	ocean = OceanPresentation.new()
 	ocean.quality = controls.preferences.water_quality
 	add_child(ocean)
-	ocean.position.y = -1.0
-	wake = ShipWake.new()
-	wake.ship = ship
-	wake.ocean = ocean
-	add_child(wake)
+	wake = ship.assembly.create_wake(ocean)
 	# Stationary lane markers make coasting visible without animated water.
 	for index: int in range(-20, 81):
 		for side: int in [-1, 1]:
@@ -84,15 +75,7 @@ func _ready() -> void:
 	environment.environment.ambient_light_color = Color("dce5e5")
 	environment.environment.ambient_light_energy = 0.65
 	add_child(environment)
-	var focus: CameraFocus = CameraFocus.new()
-	ship.add_child(focus)
-	focus.position = Vector3(0, 5, 0)
-	focus.hull_radius = 34.0
-	focus.collision_body = ship
-	camera = OrbitCameraRig.new()
-	add_child(camera)
-	camera.set_focus(focus)
-	camera.bind_controls(controls)
+	camera = ship.assembly.create_camera(self, controls)
 	var ui: CanvasLayer = CanvasLayer.new()
 	add_child(ui)
 	var panel: PanelContainer = PanelContainer.new()
@@ -119,8 +102,6 @@ func _ready() -> void:
 	water_notice.text = "All open water is navigable. Avoid visible land, rocks and docks."
 	water_notice.add_theme_font_size_override("font_size", 15)
 	hud_stack.add_child(water_notice)
-	feedback = HandlingFeedback.new()
-	add_child(feedback)
 	overlay = DeveloperOverlay.new()
 	add_child(overlay)
 
@@ -131,15 +112,7 @@ func cycle_load_preview() -> void:
 	load_preview.release_focus()
 	controls.wait_for_release = true
 
-func _physics_process(delta: float) -> void:
-	ship.maneuver(controls.steering_axis(), controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"))
-	if not controls.input_allowed() or controls.action_strength("ship_throttle_zero") > 0.0:
-		ship.zero_throttle()
-	else:
-		ship.adjust_command(controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta)
-
-func _process(delta: float) -> void:
-	feedback.update(ship, controls.input_allowed(), delta)
+func _process(_delta: float) -> void:
 	var forward_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_up"])
 	var reverse_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_down"])
 	var left_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_steer_left"])
@@ -152,4 +125,4 @@ func _process(delta: float) -> void:
 	if absf(data.thruster) > 0.005: thruster_text = "%s %.0f%%" % ["STARBOARD" if data.thruster > 0.0 else "PORT", absf(data.thruster) * 100.0]
 	elif absf(ship.lateral_order) > 0.0: thruster_text = "TOO FAST"
 	readout.text = "HANDLING BASELINE\n%s / %s throttle  |  %s neutral  |  %s horn\n%s / %s rudder  |  %s / %s thrusters  |  Esc menu\nRMB orbit  |  Wheel zoom  |  %s recenter\n\nSpeed %.1f kn %s  |  Heading %03d°\nOrder %+.0f%%  |  Engine %+.0f%%  %s\nThruster %s  |  Fuel — not connected\nSide drift %+.1f kn  |  Turn %+.1f°/s" % [forward_key, reverse_key, zero_key, OS.get_keycode_string(controls.preferences.bindings["horn"]), left_key, right_key, port_key, starboard_key, OS.get_keycode_string(controls.preferences.bindings["camera_recenter"]), data.speed_knots, data.direction, int(round(data.heading_degrees)) % 360, data.command * 100.0, data.engine * 100.0, "HORN" if feedback.horn.playing else "", thruster_text, data.side_knots, data.turn_degrees]
-	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": "box_prototype", "speed_mps": ship.forward_speed(), "throttle": ship.actual_throttle, "position_m": ship.position})
+	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": ship.definition.id, "speed_mps": ship.forward_speed(), "throttle": ship.actual_throttle, "position_m": ship.position})

@@ -9,6 +9,9 @@ var rudder: float = 0.0
 var lateral_order: float = 0.0
 var yaw_rate: float = 0.0
 
+func helm_available() -> bool:
+	return true
+
 func maneuver(steering: float, thruster: float) -> void:
 	rudder = clampf(steering, -1.0, 1.0) if is_finite(steering) else 0.0
 	lateral_order = clampf(thruster, -1.0, 1.0) if is_finite(thruster) else 0.0
