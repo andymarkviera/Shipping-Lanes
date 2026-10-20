@@ -1,0 +1,100 @@
+class_name ShipWake
+extends MeshInstance3D
+## World-space presentation; never writes to the navigation body.
+const FOAM_SHADER = preload("res://features/water/ship_foam.gdshader")
+const LIFETIME: float = 8.0
+const MAX_SAMPLES: int = 40
+var ship: CharacterBody3D
+var ocean: OceanPresentation
+var samples: Array[Dictionary] = []
+var clock: float = 0.0
+var last_position: Vector3
+var has_position: bool = false
+var strength: float = 0.0
+var surface: ImmediateMesh = ImmediateMesh.new()
+var foam: ShaderMaterial
+
+func _ready() -> void:
+	mesh = surface
+	foam = ShaderMaterial.new()
+	foam.shader = FOAM_SHADER
+	material_override = foam
+	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	extra_cull_margin = 1.0
+
+func _process(delta: float) -> void:
+	if not is_instance_valid(ship) or not is_instance_valid(ocean): return
+	advance(delta)
+	draw_foam()
+
+func advance(delta: float) -> void:
+	var position_now: Vector3 = ship.global_position
+	if has_position and position_now.distance_to(last_position) > 50.0:
+		samples.clear()
+		clock = 0.0
+	last_position = position_now
+	has_position = true
+	for sample: Dictionary in samples: sample.age += delta
+	while not samples.is_empty() and samples[0].age >= LIFETIME: samples.pop_front()
+	var speed: float = Vector2(ship.velocity.x, ship.velocity.z).length()
+	strength = clampf(speed / 8.0, 0.0, 1.0)
+	clock += delta
+	var interval: float = 0.55 if ocean.quality == 0 else 0.35
+	if speed > 0.15 and clock >= interval:
+		clock = 0.0
+		var direction: Vector3 = ship.velocity.normalized()
+		var bow: Vector3 = ship.global_basis.z
+		var across: Vector3 = ship.global_basis.x
+		var trailing_extent: float = 1.0 / maxf(absf(direction.dot(bow)) / 30.0, absf(direction.dot(across)) / 6.5)
+		var stern: Vector3 = position_now - direction * trailing_extent
+		samples.append({"center": stern, "direction": direction, "age": 0.0, "power": strength})
+		if samples.size() > MAX_SAMPLES: samples.pop_front()
+
+func draw_foam() -> void:
+	surface.clear_surfaces()
+	foam.set_shader_parameter("water_time", ocean.elapsed)
+	foam.set_shader_parameter("quality", ocean.quality)
+	foam.set_shader_parameter("foam_color", ocean.palette.foam_color)
+	if samples.is_empty() and strength < 0.01: return
+	surface.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for sample: Dictionary in samples:
+		var age: float = sample.age
+		var opacity: float = pow(1.0 - age / LIFETIME, 2.0) * (0.25 + sample.power * 0.65)
+		var direction: Vector3 = sample.direction
+		var across: Vector3 = Vector3(direction.z, 0, -direction.x)
+		var center: Vector3 = sample.center - direction * age * 0.6
+		# Short curved crests spread out and remain behind in world space.
+		var radius: float = 6.5 + age * (1.2 + sample.power)
+		for side: float in [-1.0, 1.0]:
+			for part: int in range(4):
+				var t0: float = float(part) / 4.0
+				var t1: float = float(part + 1) / 4.0
+				var a: Vector3 = center + across * side * radius * (0.4 + t0 * 0.6) - direction * radius * t0 * t0 * 0.45
+				var b: Vector3 = center + across * side * radius * (0.4 + t1 * 0.6) - direction * radius * t1 * t1 * 0.45
+				ribbon(a, b, 0.3 + sample.power * 1.5, opacity)
+	if strength > 0.01:
+		var bow: Vector3 = ship.global_basis.z
+		var across: Vector3 = ship.global_basis.x
+		var center: Vector3 = ship.global_position
+		var travel_sign: float = 1.0 if ship.velocity.dot(bow) >= 0.0 else -1.0
+		for side: float in [-1.0, 1.0]:
+			for part: int in range(12):
+				var z0: float = -30.0 + part * 5.0
+				var z1: float = z0 + 4.5
+				var pulse: float = 0.85 + 0.15 * sin(ocean.elapsed * 4.0 + part)
+				ribbon(center + bow * z0 + across * side * 7.0, center + bow * z1 + across * side * 7.0, (0.25 + strength * 1.5) * pulse, 0.25 + strength * 0.65)
+		for part: int in range(12):
+			var angle0: float = PI * float(part) / 12.0
+			var angle1: float = PI * float(part + 1) / 12.0
+			var a: Vector3 = center + across * cos(angle0) * 7.0 + bow * travel_sign * (29.5 + sin(angle0) * 4.5)
+			var b: Vector3 = center + across * cos(angle1) * 7.0 + bow * travel_sign * (29.5 + sin(angle1) * 4.5)
+			ribbon(a, b, 0.4 + strength * 2.0, 0.3 + strength * 0.65)
+	surface.surface_end()
+
+func ribbon(a: Vector3, b: Vector3, width: float, opacity: float) -> void:
+	var direction: Vector3 = (b - a).normalized()
+	var offset: Vector3 = Vector3(direction.z, 0, -direction.x) * width * 0.5
+	for point: Vector3 in [a - offset, a + offset, b + offset, a - offset, b + offset, b - offset]:
+		surface.surface_set_color(Color(1, 1, 1, opacity))
+		point.y = ocean.global_position.y + 0.08
+		surface.surface_add_vertex(to_local(point))

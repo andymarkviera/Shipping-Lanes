@@ -2,6 +2,7 @@ extends Node3D
 const Ship = preload("res://features/handling/handling_ship.gd")
 var ship: HandlingShip
 var ocean: OceanPresentation
+var wake: ShipWake
 var visual_root: ShipVisualMotion
 var controls: PlayerControls
 var camera: OrbitCameraRig
@@ -46,6 +47,10 @@ func _ready() -> void:
 	ocean.quality = controls.preferences.water_quality
 	add_child(ocean)
 	ocean.position.y = -1.0
+	wake = ShipWake.new()
+	wake.ship = ship
+	wake.ocean = ocean
+	add_child(wake)
 	# Stationary lane markers make coasting visible without animated water.
 	for index: int in range(-20, 81):
 		for side: int in [-1, 1]:

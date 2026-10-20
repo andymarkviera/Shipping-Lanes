@@ -90,3 +90,5 @@ become approved formulas just because they appear in the inventory.
 | D047 | Handling acceptance | Andy loves the current overall feel and approved continuation. Preserve the Step 22 baseline; later loaded/network behavior still requires verification. Supersedes D046 pending overall-feel review. |
 | D048 | Navigable water and visual draft | Andy approved no confusing shallow areas: all open water supports all ships. Cargo affects visual hull height only at this step; no grounding or depth restriction. Visible land/rocks/docks remain solid. Prototype preview sink is 0–0.85 m, not final ship specifications. |
 | D049 | Water effects follow-up | After visual draft, add Step 23B for original Zelda-inspired bright-blue water, white bow/hull foam, speed-responsive ripples and fading wakes; preserve handling physics. |
+
+| D050 | Ship water effects | Original procedural pale ribbon crests driven by actual velocity; bounded world-space history fades over eight seconds. Hull/leading-end foam remains presentation only, matches water quality/palette, and preserves accepted handling. Prototype dimensions require fitting to final hull art. |

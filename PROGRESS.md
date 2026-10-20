@@ -752,3 +752,18 @@ unloading, invalid input and unchanged body/collider/focus. Loaded HUD capture
 inspected at 1152x648. Existing handling/collision/feedback checks remain passing.
 Status: complete, October 19, 2026. Recovery tag: `step-23-visual-draft`.
 Verified source archive: `../output/checkpoints/step-23-visual-draft-2026-10-19.zip`.
+
+## Step 23B — Stylized wakes and hull foam
+
+Status: complete — October 19, 2026. User-requested water-effects follow-up.
+Boat Handling Test now shows speed-responsive pale hull/bow foam and spreading,
+fading world-space wake crests. Reverse and lateral movement use actual velocity;
+all water quality tiers and both palette resources apply. Handling is unchanged.
+See SHIP_WAKE.md for limits and later real-hull calibration.
+
+Full suite: 16 stages / 51 scripts. WaterCheck: 59 checks in editor and native
+Windows Release. Native moving wake capture inspected. No separate human style
+approval claimed. Recovery tag: `step-23b-ship-wake`.
+Verified source ZIP: `../output/checkpoints/step-23b-ship-wake-2026-10-19.zip`.
+Next: Step 24 — simulation checkpoints: repeatable handling input playback and
+numeric tolerances for acceleration, stopping, turning and throttle telemetry.

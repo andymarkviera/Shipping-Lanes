@@ -57,3 +57,7 @@ settings captures were inspected; no GPU render errors were reported.
 
 Use tools/Godot.ps1 -Mode WaterCheck. To exercise exported rendering, use
 -Mode RunExport -Configuration Release -WaterProbe after Export.
+
+Step 23B update: ship wakes, hull foam and gentle low-speed ripples are implemented
+in the handling test; see SHIP_WAKE.md. This supersedes the earlier pending-wake
+note. Shoreline foam, spray, final hull fitting and multiplayer budgets remain later work.

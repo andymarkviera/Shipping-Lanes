@@ -69,6 +69,45 @@ func run() -> void:
 	scene.ocean.apply_palette(load("res://features/water/coastal_ocean.tres"))
 	check(scene.ocean.ocean_material.get_shader_parameter("surface_color") == scene.ocean.palette.surface_color, "Coastal palette applies without changing shader")
 	check(scene.ship.transform == body_transform, "Palette change cannot move ship")
+	scene.wake.set_process(false)
+	scene.ship.set_physics_process(false)
+	scene.set_physics_process(false)
+	scene.ship.velocity = Vector3(0, 0, 8)
+	for tick: int in range(120):
+		scene.ship.position.z += 8.0 / 60.0
+		scene.wake.advance(1.0 / 60.0)
+	check(scene.wake.samples.size() > 4, "Motion emits a lingering wake")
+	var old_center: Vector3 = scene.wake.samples[0].center
+	var wake_body: Transform3D = scene.ship.transform
+	scene.wake.advance(0.01)
+	check(scene.wake.samples[0].center == old_center, "Trail anchors stay in world space")
+	check(scene.ship.transform == wake_body and scene.ship.velocity == Vector3(0, 0, 8), "Wake cannot change navigation")
+	check(scene.wake.strength == 1.0, "Cruising motion produces full foam strength")
+	scene.ship.velocity = Vector3(0, 0, 0.5)
+	scene.wake.advance(0.3)
+	check(scene.wake.strength < 0.1, "Slow movement produces gentle ripples")
+	scene.ship.velocity = Vector3(0, 0, -4)
+	scene.wake.advance(0.4)
+	check(scene.wake.samples.back().center.z > scene.ship.position.z, "Reverse wake starts at opposite end")
+	scene.ship.velocity = Vector3(1, 0, 0)
+	scene.wake.advance(0.4)
+	check(scene.wake.samples.back().direction.x == 1.0, "Lateral movement uses actual velocity")
+	scene.ship.position.x += 100
+	scene.ship.velocity = Vector3.ZERO
+	scene.wake.advance(0.1)
+	check(scene.wake.samples.is_empty(), "Teleport clears stale trails")
+	scene.ship.velocity = Vector3(0, 0, 8)
+	for tick: int in range(100): scene.wake.advance(0.22)
+	check(scene.wake.samples.size() <= ShipWake.MAX_SAMPLES, "Wake history stays bounded")
+	for tier: int in range(3):
+		scene.ocean.set_quality(tier)
+		scene.wake.draw_foam()
+		check(scene.wake.surface.get_surface_count() == 1 and scene.wake.foam.get_shader_parameter("quality") == tier, "Foam renders with matching water quality")
+	scene.ship.velocity = Vector3.ZERO
+	for tick: int in range(90): scene.wake.advance(0.1)
+	scene.wake.draw_foam()
+	check(scene.wake.samples.is_empty() and scene.wake.surface.get_surface_count() == 0, "Stopped boat leaves no permanent trail")
+	scene.ship.transform = body_transform
 	var service: PlayerControls = scene.controls
 	var original_path: String = service.preferences_path
 	service.preferences_path = "user://water-check-%s.json" % Time.get_ticks_usec()
