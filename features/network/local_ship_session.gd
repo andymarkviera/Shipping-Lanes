@@ -2,7 +2,7 @@ class_name LocalShipSession
 extends Node
 ## Development-only loopback transport. No credentials or persistent identity.
 signal changed
-const PROTOCOL: int = 1
+const PROTOCOL: int = 2
 const DEFAULT_PORT: int = 28429
 var roster: Dictionary = {}
 var revision: int = 0
@@ -25,7 +25,7 @@ func host_session(port: int = DEFAULT_PORT) -> Error:
 	stop()
 	transport = ENetMultiplayerPeer.new()
 	transport.set_bind_ip("127.0.0.1")
-	var error: Error = transport.create_server(port, 1)
+	var error: Error = transport.create_server(port, 1, 3)
 	if error != OK:
 		stop("Cannot host: local port unavailable")
 		return error
@@ -40,7 +40,7 @@ func host_session(port: int = DEFAULT_PORT) -> Error:
 func join_session(port: int = DEFAULT_PORT) -> Error:
 	stop()
 	transport = ENetMultiplayerPeer.new()
-	var error: Error = transport.create_client("127.0.0.1", port)
+	var error: Error = transport.create_client("127.0.0.1", port, 3)
 	if error != OK:
 		stop("Could not start local connection")
 		return error

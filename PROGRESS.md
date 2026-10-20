@@ -892,3 +892,23 @@ See LOCAL_NETWORK_SESSION.md for use, evidence and authority boundaries.
 Recovery tag: `step-29-local-network-session`.
 Source backup: `../output/checkpoints/step-29-local-network-session-2026-10-20.zip`.
 Next: Step 30 — ship movement replication. Internet play remains later work.
+
+## Step 30 — Ship replication
+
+Task ID: `ship-replication`.
+Status: complete — October 20, 2026.
+Local Multiplayer Test now supports both players sailing with saved helm
+bindings, follow cameras, wakes and live fuel. Host physics owns both ships;
+client input is ownership/bounds/sequence validated. Missing input orders
+neutral; client hulls interpolate bounded authoritative snapshots.
+
+Two-process normal and simulated 100 ms each-way / jitter / 10% message-loss
+profiles pass in editor and Windows Release (24 and 26 assertions respectively).
+Release input-ack means: 19.3 ms local, 228.3 ms impaired; interpolation adds
+150 ms. Prediction deferred pending steering-feel review and later internet
+measurements. See SHIP_REPLICATION.md for exact metrics and limits.
+Native two-boat sailing capture inspected; disconnect wake cleanup fixed.
+Full suite: 22 stages / 69 scripts, including lifecycle and both motion profiles.
+Recovery tag: `step-30-ship-replication`.
+Source backup: `../output/checkpoints/step-30-ship-replication-2026-10-20.zip`.
+Next: Step 31 — attached-payload networking feasibility.

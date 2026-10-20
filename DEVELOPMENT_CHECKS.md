@@ -110,3 +110,8 @@ CheckNetwork.ps1 -Runtime Release verifies the exported binary. Host/client
 assertions and cross-process roster comparisons cover three join rounds,
 duplicate hello, cleanup and host failure. Localhost traffic must be permitted
 by the execution environment. Evidence: LOCAL_NETWORK_SESSION.md.
+
+Step 30 adds ReplicationCheck (22 stages / 69 scripts). It runs two-process
+normal and impaired movement profiles with host/client assertions and latency
+metrics. Release uses CheckNetwork.ps1 -Runtime Release -Replication, with
+-Profile impaired for the delayed/lossy profile. See SHIP_REPLICATION.md.

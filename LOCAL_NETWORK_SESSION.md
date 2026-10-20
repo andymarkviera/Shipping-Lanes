@@ -1,5 +1,9 @@
 # Local network session — Step 29
 
+Step 30 update: this scene now supports authoritative sailing and buffered
+client motion on protocol 2. See SHIP_REPLICATION.md. Stationary-scene notes
+below record the Step 29 checkpoint; its lifecycle checks remain in the suite.
+
 The main menu's Local Multiplayer Test opens an isolated two-player loopback
 fixture. Open two game instances; choose Host locally in one, Join locally in
 the other. Both show the same two starter hulls and entity IDs. Disconnect

@@ -1,12 +1,12 @@
 #requires -Version 7.4
 [CmdletBinding()]
-param([ValidateSet('Editor','Release')][string]$Runtime='Editor')
+param([ValidateSet('Editor','Release')][string]$Runtime='Editor', [switch]$Replication, [ValidateSet('normal','impaired')][string]$Profile='normal')
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path -Parent $PSScriptRoot
 $workspaceRoot=Split-Path -Parent $projectRoot
 $portableRoot=Join-Path $workspaceRoot 'output/tools/godot-4.7.2'
 $binary=if($Runtime -eq 'Editor'){Join-Path $portableRoot 'godot.windows.opt.tools.64.exe'}else{Join-Path $projectRoot 'exports/windows-x86_64/release/ShippingLanes.exe'}
-$runRoot=Join-Path $workspaceRoot ('output/network-checks/'+$Runtime+'-'+[Guid]::NewGuid().ToString('N'))
+$runRoot=Join-Path $workspaceRoot ('output/network-checks/'+$Runtime+'-'+$Profile+'-'+[Guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($runRoot)
 # Select a free loopback UDP port. Host binding still handles the small race.
 $socket=[Net.Sockets.UdpClient]::new([Net.IPEndPoint]::new([Net.IPAddress]::Loopback,0))
@@ -25,7 +25,8 @@ try {
   $start.Environment['APPDATA']=Join-Path $portableRoot 'user_data'
   $arguments=@('--headless','--log-file',(Join-Path $runRoot "$role.log"))
   if($Runtime -eq 'Editor'){$arguments+=@('--path',$projectRoot)}
-  $arguments+=@('--','--network-check',"--network-role=$role","--network-port=$port","--network-results=$runRoot")
+  $checkFlag=if($Replication){'--replication-check'}else{'--network-check'}
+  $arguments+=@('--',$checkFlag,"--network-profile=$Profile","--network-role=$role","--network-port=$port","--network-results=$runRoot")
   foreach($argument in $arguments){$start.ArgumentList.Add($argument)}
   $process=[Diagnostics.Process]::Start($start)
   $children+=@{Process=$process;Out=$process.StandardOutput.ReadToEndAsync();Err=$process.StandardError.ReadToEndAsync();Role=$role}
@@ -43,11 +44,13 @@ try {
  }
  $hostResult=Get-Content (Join-Path $runRoot 'host.json') -Raw | ConvertFrom-Json
  $clientResult=Get-Content (Join-Path $runRoot 'client.json') -Raw | ConvertFrom-Json
+ if(-not $Replication){
  if($hostResult.rounds.Count -ne 3 -or $clientResult.rounds.Count -ne 3){throw 'Missing reconnect rounds'}
  for($round=0;$round -lt 3;$round++){
   if(($hostResult.rounds[$round] -join ',') -ne ($clientResult.rounds[$round] -join ',')){throw "Ship identity mismatch in round $round"}
  }
- Write-Host "NETWORK_CHECK_PASS $Runtime -- two processes, three identical rosters; evidence: $runRoot"
+ }
+ Write-Host "NETWORK_CHECK_PASS $Runtime -- two processes verified; evidence: $runRoot"
 } finally {
  foreach($child in $children){if(-not $child.Process.HasExited){$child.Process.Kill();$child.Process.WaitForExit()};$child.Process.Dispose()}
 }
