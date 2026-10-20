@@ -873,3 +873,22 @@ render caps. Starter handling regressions pass; native HUD inspected.
 Recovery tag: `step-28-fuel-simulation`.
 Source backup: `../output/checkpoints/step-28-fuel-simulation-2026-10-20.zip`.
 Next: Step 29 — local network session, verified with two processes.
+
+## Step 29 — Local network session
+
+Task ID: `local-network-session`.
+Status: complete — October 20, 2026.
+Added Local Multiplayer Test with loopback host/join/disconnect controls and
+actual runtime hulls. Host-authoritative, revisioned lifecycle snapshots give
+both instances the same stable session entity IDs. Repeated joins do not
+duplicate ships; disconnect and host loss clean up their entities.
+
+Two independent processes pass 21 host and 26 client checks plus identity-list
+comparisons over three rounds, in both editor and Windows Release.
+The network-restricted sandbox blocked local traffic; normal localhost execution
+passed without changing firewall or system networking settings.
+Full suite: 21 stages / 67 scripts. Native menu/host UI inspected.
+See LOCAL_NETWORK_SESSION.md for use, evidence and authority boundaries.
+Recovery tag: `step-29-local-network-session`.
+Source backup: `../output/checkpoints/step-29-local-network-session-2026-10-20.zip`.
+Next: Step 30 — ship movement replication. Internet play remains later work.

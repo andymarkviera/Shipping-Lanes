@@ -13,6 +13,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--network-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/network_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--fuel-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/fuel_probe.tscn")
 		return
@@ -81,6 +84,7 @@ func _ready() -> void:
 
 func navigate(action: String) -> void:
 	match action:
+		"local_network": get_tree().change_scene_to_file("res://features/network/local_network_test.tscn")
 		"play": start_session()
 		"handling": get_tree().change_scene_to_file("res://features/handling/handling_test.tscn")
 		"heavy_lifter": get_tree().change_scene_to_file("res://features/handling/heavy_lifter_test.tscn")

@@ -38,9 +38,12 @@ func _ready() -> void:
 	footer.position = Vector2(64, -40)
 	add_child(footer)
 	var home: VBoxContainer = page("title")
+	home.position.y = 130
+	home.add_theme_constant_override("separation", 4)
 	button(home, "PLAY", "play")
 	button(home, "BOAT HANDLING TEST", "handling")
 	button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
+	button(home, "LOCAL MULTIPLAYER TEST", "local_network")
 	continue_button = button(home, "CONTINUE TEST SESSION", "continue")
 	button(home, "SERVERS", "servers")
 	button(home, "SETTINGS", "settings")

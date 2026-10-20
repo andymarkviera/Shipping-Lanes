@@ -104,3 +104,9 @@ Step 28 adds FuelCheck to Full (20 stages / 64 scripts). Forty-two assertions
 cover consumption, policies, frame-rate independence, empty behavior, bounded
 recovery and both ships' test controls. Native Release uses -FuelProbe.
 See FUEL_SIMULATION.md. FeedbackCheck now verifies connected fuel.
+
+Step 29 adds NetworkCheck (21 stages / 67 scripts), using two real processes.
+CheckNetwork.ps1 -Runtime Release verifies the exported binary. Host/client
+assertions and cross-process roster comparisons cover three join rounds,
+duplicate hello, cleanup and host failure. Localhost traffic must be permitted
+by the execution environment. Evidence: LOCAL_NETWORK_SESSION.md.
