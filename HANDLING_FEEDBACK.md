@@ -1,5 +1,9 @@
 # Step 22 — Handling feedback baseline
 
+Step 28 update: fuel is now connected to per-ship state in both handling scenes.
+The original unconnected-fuel descriptions below record Step 22 history.
+See FUEL_SIMULATION.md for current rules, recovery and validation.
+
 Status: accepted handling baseline, October 19, 2026. Andy reported that he really
 loves how it all feels. Preserve current tuning; revisit loaded/network behavior
 in their later steps. No separate detailed audio audition is claimed.

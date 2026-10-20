@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck', 'FuelCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -24,10 +24,12 @@ param(
     [switch]$WorldSizeProbe,
     [switch]$HeavyLifterProbe,
     [switch]$CompositionProbe,
+    [switch]$FuelProbe,
     [string]$Scene
 )
 
 $ErrorActionPreference = 'Stop'
+if ($FuelProbe -and ($Mode -ne 'RunExport' -or $CompositionProbe -or $HeavyLifterProbe -or $WorldSizeProbe -or $FeedbackProbe -or $CollisionProbe -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-FuelProbe requires RunExport without other probes.' }
 if ($CompositionProbe -and ($Mode -ne 'RunExport' -or $HeavyLifterProbe -or $WorldSizeProbe -or $FeedbackProbe -or $CollisionProbe -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-CompositionProbe requires RunExport without other probes.' }
 if ($HeavyLifterProbe -and ($Mode -ne 'RunExport' -or $WorldSizeProbe -or $FeedbackProbe -or $CollisionProbe -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-HeavyLifterProbe requires RunExport without other probes.' }
 if ($WorldSizeProbe -and ($Mode -ne 'RunExport' -or $FeedbackProbe -or $CollisionProbe -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe)) { throw '-WorldSizeProbe requires RunExport without other probes.' }
@@ -111,7 +113,7 @@ function Invoke-ProjectGodot {
     try {
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if ($LogName.EndsWith('-check.log') -or ($Exported -and ($CompositionProbe -or $HeavyLifterProbe -or $WorldSizeProbe -or $FeedbackProbe -or $CollisionProbe -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe))) {
+        if ($LogName.EndsWith('-check.log') -or ($Exported -and ($FuelProbe -or $CompositionProbe -or $HeavyLifterProbe -or $WorldSizeProbe -or $FeedbackProbe -or $CollisionProbe -or $WaterProbe -or $CameraProbe -or $HandlingProbe -or $DiagnosticsProbe -or $ClocksProbe -or $SessionProbe -or $UnitsProbe -or $ContractsProbe -or $GeographyProbe))) {
             if (-not $process.WaitForExit(30000)) {
                 $process.Kill()
                 $process.WaitForExit()
@@ -172,6 +174,9 @@ switch ($Mode) {
     }
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
+    }
+    'FuelCheck' {
+        Invoke-ProjectGodot -LogName 'fuel-check.log' -Arguments @('--headless', '--scene', 'res://tools/fuel_probe.tscn')
     }
     'CompositionCheck' {
         Invoke-ProjectGodot -LogName 'composition-check.log' -Arguments @('--headless', '--scene', 'res://tools/composition_probe.tscn')
@@ -250,6 +255,7 @@ switch ($Mode) {
         $launchArguments = @()
         if ($Headless) { $launchArguments += '--headless' }
         if ($QuitAfter -gt 0) { $launchArguments += @('--quit-after', [string]$QuitAfter) }
+        if ($FuelProbe) { $launchArguments += @('--', '--fuel-check') }
         if ($CompositionProbe) { $launchArguments += @('--', '--composition-check') }
         if ($HeavyLifterProbe) { $launchArguments += @('--', '--heavy-lifter-check') }
         if ($WorldSizeProbe) { $launchArguments += @('--', '--world-size-check') }

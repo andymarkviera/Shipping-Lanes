@@ -27,8 +27,20 @@ extends ContentDefinition
 @export var thruster_acceleration_mps2: float = 0.4
 @export var lateral_drag_per_second: float = 0.4
 @export var thruster_cutoff_speed_mps: float = 4.0
+@export_group("Prototype propulsion fuel (liters, seconds)")
+@export var fuel_capacity_liters: float = 1000.0
+@export var fuel_full_output_lps: float = 0.5
+@export var fuel_idle_lps: float = 0.01
+@export var fuel_reverse_multiplier: float = 1.0
+@export var fuel_thruster_lps: float = 0.05
+@export var fuel_burn_when_docked: bool = false
 
 func handling_error() -> String:
+	if not is_finite(fuel_capacity_liters) or fuel_capacity_liters <= 0:
+		return "Invalid fuel capacity"
+	for field: String in ["fuel_full_output_lps", "fuel_idle_lps", "fuel_reverse_multiplier", "fuel_thruster_lps"]:
+		var value: float = get(field)
+		if not is_finite(value) or value < 0: return "Invalid fuel rule: " + field
 	if not hull_size_m.is_finite() or minf(hull_size_m.x, minf(hull_size_m.y, hull_size_m.z)) <= 0 or not cargo_anchor_m.is_finite():
 		return "Invalid composition dimensions or anchor"
 	for field: String in ["camera_radius_m", "camera_distance_m", "wake_half_length_m", "wake_half_width_m"]:

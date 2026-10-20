@@ -99,3 +99,8 @@ exercise both runtime ships in independent transformed parents, component and
 definition isolation, forward/reverse/side contacts, turning and payload cleanup.
 Native Windows Release uses -CompositionProbe; HeavyLifterProbe also passes
 after the refactor. See SHIP_COMPOSITION.md.
+
+Step 28 adds FuelCheck to Full (20 stages / 64 scripts). Forty-two assertions
+cover consumption, policies, frame-rate independence, empty behavior, bounded
+recovery and both ships' test controls. Native Release uses -FuelProbe.
+See FUEL_SIMULATION.md. FeedbackCheck now verifies connected fuel.

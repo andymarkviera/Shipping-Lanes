@@ -34,7 +34,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	if is_instance_valid(ship) and is_instance_valid(controls):
-		feedback.update(ship, controls.input_allowed(), delta)
+		feedback.update(ship, controls.input_allowed() and not ship.simulation_paused, delta)
 
 func _exit_tree() -> void:
 	if is_instance_valid(controls) and controls.command_requested.is_connected(command):

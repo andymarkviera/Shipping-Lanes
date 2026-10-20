@@ -54,6 +54,9 @@ func _ready() -> void:
 	readout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	readout.add_theme_font_size_override("font_size", 17)
 	stack.add_child(readout)
+	var fuel_tools: FuelTestControls = FuelTestControls.new()
+	stack.add_child(fuel_tools)
+	fuel_tools.configure(ship, controls)
 	for entry: Array in [["1. Lower deck", func(): ship.request_height(Heavy.LOWERED)], ["2. Align test payload", func(): ship.align_test_payload()], ["3. Secure payload", func(): ship.attach_payload()], ["4. Raise deck", func(): ship.request_height(Heavy.RAISED)], ["Release payload (deck lowered)", func(): ship.detach_payload()]]:
 		var button: Button = Button.new()
 		button.text = entry[0]
@@ -65,4 +68,4 @@ func _ready() -> void:
 		buttons.append(button)
 
 func _process(_delta: float) -> void:
-	readout.text = "HEAVY-LIFTER TEST\nUse your saved boat controls to sail.\nRMB orbit · Wheel zoom · Esc menu\n\nSpeed %.1f kn · Deck %.1f m\nPayload: %s\n\n%s" % [ship.velocity.length() * 3600 / 1852, ship.deck_height, "SECURED" if ship.attached else "FLOATING", ship.notice]
+	readout.text = "HEAVY-LIFTER TEST\nUse your saved boat controls to sail.\nRMB orbit · Wheel zoom · Esc menu\n\nSpeed %.1f kn · Deck %.1f m\nPayload: %s\n%s\n\n%s" % [ship.velocity.length() * 3600 / 1852, ship.deck_height, "SECURED" if ship.attached else "FLOATING", FuelTestControls.readout(ship), ship.notice]

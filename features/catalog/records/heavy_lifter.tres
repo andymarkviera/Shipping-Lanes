@@ -19,3 +19,7 @@ reverse_acceleration_mps2 = 0.35
 max_turn_rate_degrees = 2.0
 turn_acceleration_degrees = 1.4
 thruster_acceleration_mps2 = 0.3
+fuel_capacity_liters = 2000.0
+fuel_full_output_lps = 1.0
+fuel_idle_lps = 0.02
+fuel_thruster_lps = 0.1

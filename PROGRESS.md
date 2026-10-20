@@ -854,3 +854,22 @@ capture inspected. See SHIP_COMPOSITION.md for composition and remaining scope.
 Recovery tag: `step-27-ship-composition`.
 Source backup: `../output/checkpoints/step-27-ship-composition-2026-10-20.zip`.
 Next: Step 28 — fuel simulation.
+
+## Step 28 — Fuel simulation
+
+Task ID: `fuel-simulation`.
+Status: complete — October 20, 2026.
+Both ships consume per-instance propulsion fuel from actual engine output,
+with configurable idle, reverse, thruster and docked rules. Simulation pause
+stops burn. Empty tanks cut power and preserve coasting; stopped/neutral test
+refueling recovers both hulls without automatic refilling.
+Live fuel displays and labelled test controls are in both handling scenes.
+Rates/capacities are provisional; paid services, durable fuel and authority
+remain later steps. See FUEL_SIMULATION.md.
+
+Full suite passes 20 stages / 64 scripts. FuelCheck passes 42 assertions in
+editor and native Windows Release, with identical consumption at 30/60/144
+render caps. Starter handling regressions pass; native HUD inspected.
+Recovery tag: `step-28-fuel-simulation`.
+Source backup: `../output/checkpoints/step-28-fuel-simulation-2026-10-20.zip`.
+Next: Step 29 — local network session, verified with two processes.

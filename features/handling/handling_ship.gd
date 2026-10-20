@@ -8,13 +8,23 @@ var distance_m: float = 0.0
 var rudder: float = 0.0
 var lateral_order: float = 0.0
 var yaw_rate: float = 0.0
+var state: ShipState
+var fuel: PropulsionFuel
+var simulation_paused: bool = false
+var docked: bool = false
 
 func helm_available() -> bool:
-	return true
+	return not simulation_paused and not docked
+
+func refuel(amount_liters: float) -> float:
+	if velocity.length() > 0.05 or absf(commanded_throttle) > 0.001 or absf(actual_throttle) > 0.001 or absf(lateral_order) > 0.001:
+		return 0.0
+	return fuel.add_liters(amount_liters)
 
 func maneuver(steering: float, thruster: float) -> void:
 	rudder = clampf(steering, -1.0, 1.0) if is_finite(steering) else 0.0
 	lateral_order = clampf(thruster, -1.0, 1.0) if is_finite(thruster) else 0.0
+	if state != null and state.fuel_liters <= 0: lateral_order = 0
 
 func forward_speed() -> float:
 	return velocity.dot(basis.z)
@@ -24,6 +34,8 @@ func lateral_speed() -> float:
 
 func _ready() -> void:
 	definition = definition.duplicate(true)
+	state = ShipState.new(str(get_instance_id()), definition.id, definition.fuel_capacity_liters)
+	fuel = PropulsionFuel.new(state, definition)
 	if not definition.handling_error().is_empty():
 		push_error(definition.handling_error())
 		set_physics_process(false)
@@ -36,6 +48,9 @@ func _ready() -> void:
 	platform_wall_layers = 0
 
 func command_throttle(value: float) -> void:
+	if state != null and state.fuel_liters <= 0:
+		commanded_throttle = 0
+		return
 	if is_finite(value):
 		commanded_throttle = clampf(value, -definition.reverse_throttle_limit, definition.forward_throttle_limit)
 
@@ -54,24 +69,36 @@ func advance_engine(delta: float) -> void:
 	actual_throttle = move_toward(actual_throttle, target, rate * delta)
 
 func advance_motion(delta: float) -> void:
+	if simulation_paused or not is_finite(delta) or delta <= 0: return
+	if docked or state.fuel_liters <= 0:
+		zero_throttle()
+		actual_throttle = 0
+		lateral_order = 0
 	advance_engine(delta)
 	var local_velocity: Vector3 = basis.inverse() * velocity
+	var requested_side: float = lateral_order * clampf(1.0 - absf(local_velocity.z) / definition.thruster_cutoff_speed_mps, 0.0, 1.0)
+	var fuel_fraction: float = fuel.consume(delta, actual_throttle, requested_side, false, docked)
 	var effectiveness: float = clampf(absf(local_velocity.z) / definition.rudder_full_effect_speed_mps, 0.0, 1.0)
 	# D is starboard: negative yaw with +Z bow/+X port. Astern reverses yaw.
 	var target_yaw: float = -rudder * signf(local_velocity.z) * effectiveness * deg_to_rad(definition.max_turn_rate_degrees)
 	yaw_rate = move_toward(yaw_rate, target_yaw, deg_to_rad(definition.turn_acceleration_degrees) * delta)
 	turn_without_overlap(yaw_rate * delta)
-	var acceleration: float = actual_throttle * (definition.forward_acceleration_mps2 if actual_throttle >= 0.0 else definition.reverse_acceleration_mps2)
+	var acceleration: float = actual_throttle * fuel_fraction * (definition.forward_acceleration_mps2 if actual_throttle >= 0.0 else definition.reverse_acceleration_mps2)
 	var drag: float = definition.linear_drag_per_second
 	local_velocity.z = local_velocity.z * exp(-drag * delta) + acceleration / drag * (1.0 - exp(-drag * delta))
 	var lateral_drag: float = definition.lateral_drag_per_second
 	var thruster_effect: float = clampf(1.0 - absf(local_velocity.z) / definition.thruster_cutoff_speed_mps, 0.0, 1.0)
-	var side_acceleration: float = -lateral_order * definition.thruster_acceleration_mps2 * thruster_effect
+	var side_acceleration: float = -lateral_order * definition.thruster_acceleration_mps2 * thruster_effect * fuel_fraction
 	local_velocity.x = local_velocity.x * exp(-lateral_drag * delta) + side_acceleration / lateral_drag * (1.0 - exp(-lateral_drag * delta))
 	local_velocity.y = 0.0
 	velocity = (basis * local_velocity).limit_length(CollisionRules.SUPPORTED_SPEED_MPS)
+	if state.fuel_liters <= 0:
+		zero_throttle()
+		actual_throttle = 0
+		lateral_order = 0
 
 func _physics_process(delta: float) -> void:
+	if simulation_paused: return
 	advance_motion(delta)
 	var previous: Vector3 = position
 	var speed_before: float = velocity.length()

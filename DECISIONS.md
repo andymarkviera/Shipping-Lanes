@@ -102,3 +102,5 @@ become approved formulas just because they appear in the inventory.
 | D055 | Secured large payload | Extend the existing kinematic controller with a moving deck and one compound cargo collider. Switch collision ownership at attach/release; no stacked dynamic bodies. Check alignment, neutral/stopped state and swept lift clearance. Prototype fixture alignment helper is not a production cargo job. |
 
 | D056 | Reusable ships | One HandlingShip controller, shared ShipHelm and ShipAssembly, self-contained runtime scenes and definition-driven hull/camera/wake/cargo geometry. Heavy special deck behavior extends the shared body. Preserve starter tuning; heavy uses gentler provisional acceleration and turning. See SHIP_COMPOSITION.md. |
+
+| D057 | Prototype fuel policy | Actual engine output plus configurable idle/reverse/lateral burn; no paused burn, default zero docked burn. Empty cuts powered output but preserves coasting/rudder. Stopped/neutral test refill proves recovery, not production free fuel. Rates/capacities await Andy's pacing review. Paid services and authority follow later. See FUEL_SIMULATION.md. |

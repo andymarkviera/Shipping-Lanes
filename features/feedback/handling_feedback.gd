@@ -51,6 +51,7 @@ static func instruments(ship: HandlingShip) -> Dictionary:
 	var ahead: float = ship.forward_speed()
 	var side: float = -ship.lateral_speed()
 	var power: float = ship.lateral_order * clampf(1.0 - absf(ahead) / ship.definition.thruster_cutoff_speed_mps, 0.0, 1.0)
+	if ship.state.fuel_liters <= 0 or ship.docked or ship.simulation_paused: power = 0
 	var direction: String = "STOPPED"
 	if ahead > 0.03: direction = "AHEAD"
 	elif ahead < -0.03: direction = "ASTERN"
@@ -59,7 +60,7 @@ static func instruments(ship: HandlingShip) -> Dictionary:
 		"heading_degrees": fposmod(-rad_to_deg(ship.rotation.y), 360.0),
 		"command": ship.commanded_throttle, "engine": ship.actual_throttle,
 		"thruster": power, "side_knots": side * 3600.0 / 1852.0,
-		"turn_degrees": -rad_to_deg(ship.yaw_rate), "fuel_liters": null}
+		"turn_degrees": -rad_to_deg(ship.yaw_rate), "fuel_liters": ship.state.fuel_liters}
 
 func sound_horn(allowed: bool) -> void:
 	if allowed and not horn.playing: horn.play()

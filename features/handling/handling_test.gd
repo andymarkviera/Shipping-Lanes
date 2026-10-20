@@ -98,6 +98,9 @@ func _ready() -> void:
 	load_preview.text = "Cargo preview: Empty — click to change"
 	load_preview.pressed.connect(cycle_load_preview)
 	hud_stack.add_child(load_preview)
+	var fuel_tools: FuelTestControls = FuelTestControls.new()
+	hud_stack.add_child(fuel_tools)
+	fuel_tools.configure(ship, controls)
 	var water_notice: Label = Label.new()
 	water_notice.text = "All open water is navigable. Avoid visible land, rocks and docks."
 	water_notice.add_theme_font_size_override("font_size", 15)
@@ -124,5 +127,5 @@ func _process(_delta: float) -> void:
 	var thruster_text: String = "IDLE"
 	if absf(data.thruster) > 0.005: thruster_text = "%s %.0f%%" % ["STARBOARD" if data.thruster > 0.0 else "PORT", absf(data.thruster) * 100.0]
 	elif absf(ship.lateral_order) > 0.0: thruster_text = "TOO FAST"
-	readout.text = "HANDLING BASELINE\n%s / %s throttle  |  %s neutral  |  %s horn\n%s / %s rudder  |  %s / %s thrusters  |  Esc menu\nRMB orbit  |  Wheel zoom  |  %s recenter\n\nSpeed %.1f kn %s  |  Heading %03d°\nOrder %+.0f%%  |  Engine %+.0f%%  %s\nThruster %s  |  Fuel — not connected\nSide drift %+.1f kn  |  Turn %+.1f°/s" % [forward_key, reverse_key, zero_key, OS.get_keycode_string(controls.preferences.bindings["horn"]), left_key, right_key, port_key, starboard_key, OS.get_keycode_string(controls.preferences.bindings["camera_recenter"]), data.speed_knots, data.direction, int(round(data.heading_degrees)) % 360, data.command * 100.0, data.engine * 100.0, "HORN" if feedback.horn.playing else "", thruster_text, data.side_knots, data.turn_degrees]
-	overlay.set_snapshot({"role": "Local handling fixture", "ship_id": ship.definition.id, "speed_mps": ship.forward_speed(), "throttle": ship.actual_throttle, "position_m": ship.position})
+	readout.text = "HANDLING BASELINE\n%s / %s throttle  |  %s neutral  |  %s horn\n%s / %s rudder  |  %s / %s thrusters  |  Esc menu\nRMB orbit  |  Wheel zoom  |  %s recenter\n\nSpeed %.1f kn %s  |  Heading %03d°\nOrder %+.0f%%  |  Engine %+.0f%%  %s\nThruster %s  |  %s\nSide drift %+.1f kn  |  Turn %+.1f°/s" % [forward_key, reverse_key, zero_key, OS.get_keycode_string(controls.preferences.bindings["horn"]), left_key, right_key, port_key, starboard_key, OS.get_keycode_string(controls.preferences.bindings["camera_recenter"]), data.speed_knots, data.direction, int(round(data.heading_degrees)) % 360, data.command * 100.0, data.engine * 100.0, "HORN" if feedback.horn.playing else "", thruster_text, FuelTestControls.readout(ship), data.side_knots, data.turn_degrees]
+	overlay.set_snapshot({"fuel_ml": ship.state.fuel_liters * 1000.0, "role": "Local handling fixture", "ship_id": ship.definition.id, "speed_mps": ship.forward_speed(), "throttle": ship.actual_throttle, "position_m": ship.position})

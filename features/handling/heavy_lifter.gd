@@ -23,7 +23,7 @@ func _init() -> void:
 	definition = DEFINITION
 
 func helm_available() -> bool:
-	return not operating() and (not attached or absf(deck_height - RAISED) <= 0.001)
+	return super.helm_available() and not operating() and (not attached or absf(deck_height - RAISED) <= 0.001)
 
 func _ready() -> void:
 	super._ready()
@@ -154,6 +154,7 @@ func advance_deck(delta: float) -> void:
 	if not operating(): notice = "Deck raised — ready to sail." if deck_height == RAISED else "Deck lowered — ready for loading."
 
 func _physics_process(delta: float) -> void:
+	if simulation_paused: return
 	if not helm_available():
 		zero_throttle()
 		maneuver(0, 0)

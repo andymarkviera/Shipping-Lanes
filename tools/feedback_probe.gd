@@ -22,7 +22,7 @@ func run() -> void:
 	ship.velocity = -ship.basis.z
 	state = HandlingFeedback.instruments(ship)
 	check(is_equal_approx(state.heading_degrees, 90.0) and state.direction == "ASTERN", "Starboard heading and reverse direction")
-	check(state.fuel_liters == null, "Unconnected fuel is not fabricated")
+	check(state.fuel_liters == ship.state.fuel_liters, "Fuel reflects instance state")
 	ship.velocity = Vector3.ZERO
 	ship.command_throttle(0.8)
 	ship.advance_engine(0.2)
@@ -71,7 +71,7 @@ func run() -> void:
 	Input.parse_input_event(event)
 	await get_tree().create_timer(1.4).timeout
 	check(not scene.feedback.horn.playing, "Horn finishes without a held loop")
-	check(scene.readout.text.contains("Heading") and scene.readout.text.contains("Fuel — not connected"), "Visible heading/fuel instruments")
+	check(scene.readout.text.contains("Heading") and scene.readout.text.contains("Fuel "), "Visible heading/fuel instruments")
 	remove_child(scene)
 	scene.queue_free()
 	print("FEEDBACK_CHECK_%s (%d checks)" % ["PASS" if failures == 0 else "FAIL", checks])

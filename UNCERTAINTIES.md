@@ -129,3 +129,5 @@ velocity/attached-visual mapping verified in the isolated experiment. 100 km rad
 is the provisional measurement profile; final authored travel pacing remains open.
 Production streaming/rebase integration and network/payload/reload proofs remain
 the connected-world-network-feasibility gate. See WORLD_SIZE_EXPERIMENT.md.
+
+Step 28 update for U010: configurable simulation and explicit empty/test-recovery rules implemented and checked (D057, FUEL_SIMULATION.md). Rates and tank sizes remain provisional pending Andy's pacing review; paid refueling/recovery and authority are still later gates.

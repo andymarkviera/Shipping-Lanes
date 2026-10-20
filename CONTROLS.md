@@ -101,3 +101,5 @@ H sounds the prototype horn once (1.2 seconds, no stacked repeats). Engine/thrus
 Step 26: HEAVY-LIFTER TEST is now available on the main menu. Use the numbered
 loading buttons while stopped, then your saved ship controls. Align test payload
 stages only the experimental module. Lower again to release; Esc returns to menu.
+
+Step 28: both handling scenes show live fuel. Labelled fuel-test buttons let you empty/refill a stopped neutral boat, pause/resume the simulation and toggle a stopped docked fixture. Empty fuel disables engine/thrusters while retaining coasting rudder control. See FUEL_SIMULATION.md.
