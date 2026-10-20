@@ -71,6 +71,19 @@ the pickup failure have not been established. Passing automated fixture checks
 does not resolve this player report. Reproduce it before choosing a repair;
 stopping requirements are one possible dependency, not a confirmed cause.
 
+Additional reproduction detail from Andy: reversing into the cargo to pick it
+up felt like the boat became stuck. Later, positioning the boat directly under
+the cargo and attempting to lift it did not pick it up. Driving forward past the
+cargo afterward did not get the boat stuck. Deck height, attachment state and
+exact controls at each point are not yet established. This is an observed
+sequence, not proof that collision depends on travel direction.
+
+Include both stern-first and bow-first approaches in the scheduled cargo repair,
+checking hull/deck/payload collision and clearance at each loading state, plus
+whether a failed lift changes any state. Record the blocking reason and verify
+that a failed pickup leaves collision and attachment state consistent. Test
+manual positioning as well as the fixture's alignment helper.
+
 Review neutral selection, the distinction between a neutral command and residual
 motion, and practical full-stop detection before docking/loading integration.
 Preserve the previously accepted general handling feel. This is new feedback
