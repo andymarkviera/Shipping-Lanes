@@ -121,3 +121,11 @@ and final hull-specific visual offsets remain pending. Keep visible solid bounda
 U008 update (Step 24): accepted handling now has fixed-input playback and numerical
 reference tolerances; deliberate thrust mutation proves the regression guard.
 Loaded/network behavior remains a later check, not inferred from these fixtures.
+
+U004/U031 update (Step 25): selected scalar-double global addresses with shared
+local-meter patches and coordinated frame mapping after measured precision loss
+in distant float32 controls. Seam/poles, circuits, shared hull contacts and camera/
+velocity/attached-visual mapping verified in the isolated experiment. 100 km radius
+is the provisional measurement profile; final authored travel pacing remains open.
+Production streaming/rebase integration and network/payload/reload proofs remain
+the connected-world-network-feasibility gate. See WORLD_SIZE_EXPERIMENT.md.

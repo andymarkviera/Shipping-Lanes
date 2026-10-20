@@ -83,3 +83,8 @@ Step 24 adds recorded fixed-input motion checkpoints inside HandlingCheck. See
 SIMULATION_CHECKPOINTS.md for playback inputs, SI tolerances, power telemetry,
 regression sensitivity checks and intentional-baseline-update policy. Full still
 runs 16 stages; the same HandlingProbe is packaged for Windows Release.
+
+Step 25 adds WorldSizeCheck to Full. It measures distant float32 controls versus
+local patches, scalar spherical navigation/seam/poles/circuits, marker precision,
+shared hull contact and coherent camera/velocity/visual frame mapping. Release
+uses -WorldSizeProbe. Scope and measured travel budgets: WORLD_SIZE_EXPERIMENT.md.

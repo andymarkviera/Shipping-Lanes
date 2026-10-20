@@ -788,3 +788,27 @@ Status: complete — October 19, 2026. Full suite passes 16 stages; HandlingChec
 passes 98 checks in editor and Windows Release, including the final stopping-distance
 guard. Recovery tag: `step-24-simulation-checkpoints`; verified source backup:
 `../output/checkpoints/step-24-simulation-checkpoints-2026-10-19.zip`.
+
+## Step 25 — World-size experiment
+
+Task ID: `world-size-experiment`.
+Status: complete as an isolated technical experiment — October 20, 2026.
+Measured slow motion, thin-pier collision and camera behavior from origin through
+10 million meter controls. Unbounded scene coordinates lose motion/contact;
++/-1 km local patches pass. Selected scalar-double global geographic identity
+with shared local-meter physics and coordinated frame mapping, preserving the
+continuous-world goal. No speculative custom double engine build is required.
+
+Seam/pole travel, full equatorial/meridian circuits, local marker agreement,
+two-hull contacts across geographic boundaries and coherent camera/velocity/
+attached-visual frame changes pass. Native Windows Release reproduces the result.
+A 100 km navigation radius is the experiment profile, with 50/250 km timing
+comparisons documented. Final authored voyage pacing, world streaming, multiplayer
+frame ownership and production spatial schema remain explicit later gates.
+No hidden shallows were added and the playable handling scene is unchanged.
+
+Full suite: 17 stages. WorldSizeCheck: 2,042 assertions in editor and native Windows
+Release. Details, measured table and scope: WORLD_SIZE_EXPERIMENT.md.
+Recovery tag: `step-25-world-size-experiment`; verified source backup:
+`../output/checkpoints/step-25-world-size-experiment-2026-10-20.zip`.
+Next: Step 26 — isolated heavy-lifter deck/payload feasibility prototype.

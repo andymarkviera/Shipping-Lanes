@@ -70,3 +70,7 @@ still opens the menu. The route instantiates the packaged test scene and exits
 with a failure code on any failed assertion. No settings or player saves change.
 The standard native release startup also passed. No user playtest is needed for
 this mathematical prerequisite.
+
+Step 25 update: WORLD_SIZE_EXPERIMENT.md now records the isolated physical precision,
+shared-collision and frame-transport proof, with a provisional 100 km radius.
+Final authored travel pacing, streaming and network/payload/reload gates remain open.
