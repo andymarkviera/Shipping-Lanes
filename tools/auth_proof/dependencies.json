@@ -1,0 +1,15 @@
+{
+  "keycloak": {
+    "version": "26.8.1",
+    "url": "https://github.com/keycloak/keycloak/releases/download/26.8.1/keycloak-26.8.1.zip",
+    "digest": "sha256:4cd312c889af358a819a74a6c6f068f9ea159a6959e49924607cec95cfd4c1a4",
+    "sha1": "616f35b37fb9ce12f07487bd7fe52ecc3684bdd4"
+  },
+  "java": {
+    "version": "VPN_IP+1-LTS",
+    "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-VPN_IP%2B1/OpenJDK25U-jdk_x64_windows_hotspot_VPN_IP_1.zip",
+    "sha256": "00c847d804f4a78e9f04f2683faf14fed898535b177b7fc704486cb0284e9283",
+    "runtime_directory": "jdk-VPN_IP+1"
+  },
+  "cryptography": "50.0.2"
+}

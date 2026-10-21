@@ -198,3 +198,12 @@ policy, with 49 and 34 assertions respectively. Run `CheckNetwork.ps1 -Runtime
 Release` (optionally `-Actions` or `-Cargo`) after export. Local UDP test processes
 need loopback network access. Full remains 31 stages / 87 scripts. See
 RECONNECT_LIFECYCLE.md for evidence and remaining authentication/identity gates.
+
+## Authenticated admission prerequisite — October 21, 2026
+
+`tools/CheckAuth.ps1 -Python <python.exe> -Runtime both` runs the opt-in provider,
+database and transport proof. Use `-Install` for pinned Java/Keycloak archives on
+first setup; requires existing public-storage dependencies and cryptography 50.0.2.
+See AUTHENTICATED_ADMISSION_PROOF.md for boundaries and evidence. Full remains
+31 stages; compilation now covers 88 scripts. Requires local TCP/UDP subprocess
+access and never configures public accounts.

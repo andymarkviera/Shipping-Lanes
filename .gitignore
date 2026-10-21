@@ -9,3 +9,7 @@
 .env.*
 !.env.example
 /secrets/
+
+# Python proof-runner caches.
+__pycache__/
+*.pyc

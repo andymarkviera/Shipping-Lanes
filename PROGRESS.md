@@ -1181,3 +1181,25 @@ automatic host-world restoration remain identity work; internet play is not enab
 Recovery tag: `step-39-reconnect-lifecycle`.
 Source backup: `../output/checkpoints/step-39-reconnect-lifecycle-2026-10-21.zip`.
 Next: authenticated-admission feasibility, required before Step 40 identity/control.
+
+## Supplemental prerequisite — Authenticated admission feasibility
+
+Task ID: `authenticated-admission-feasibility`.
+Status: component proof complete — October 21, 2026.
+
+Real Keycloak HTTPS/PKCE, validated token identity, single-use PostgreSQL tickets
+and scoped SQLite private guest reconnect generations are proven. Godot DTLS
+accepts the trusted server and rejects wrong names, wrong certificates and
+plaintext in editor and Release. No public login or internet gameplay is enabled.
+The HTTP test browser and direct registry calls are limited fixtures; integration
+must connect them to the game and enforce ownership on gameplay writes.
+
+39 authentication/registry assertions plus three PostgreSQL setup checks and
+eight paired DTLS cases pass. All 88 GDScripts compile; Release export and normal
+startup pass. Full remains 31 stages; the provider proof is opt-in.
+See AUTHENTICATED_ADMISSION_PROOF.md for pins, evidence and remaining boundaries.
+
+Recovery tag: `authenticated-admission-proof`.
+Source backup: `../output/checkpoints/authenticated-admission-proof-2026-10-21.zip`.
+Next: Step 40 — durable identity/control integration, then Step 41 ownership leases
+and handoff. Public authority and replication/pacing gates still precede Step 42.

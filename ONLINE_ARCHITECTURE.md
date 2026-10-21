@@ -290,3 +290,9 @@ failure rules above are our design and still need implementation verification.
 - [RFC 8252: OAuth for native apps](https://www.rfc-editor.org/rfc/rfc8252.html): external browser, PKCE, and loopback redirect pattern.
 - [PostgreSQL transaction isolation](https://www.postgresql.org/docs/current/transaction-iso.html) and [row locking](https://www.postgresql.org/docs/17/explicit-locking.html): transactional concurrency primitives; our application must enforce its invariants.
 - [SQLite atomic commit](https://www.sqlite.org/atomiccommit.html): local transaction durability model and platform assumptions to verify.
+
+## Authentication feasibility evidence — October 21, 2026
+
+AUTHENTICATED_ADMISSION_PROOF.md documents the completed component gate and D072
+transport adapter. Player-facing browser login and integrated admission/gameplay
+ownership remain Steps 40–41; the pre-42 two-server acceptance gate still applies.

@@ -109,6 +109,11 @@ policy. Pass valid/replayed/expired/wrong-server tests without logging secrets.
 No custom password scheme, real account enrollment or production deployment is
 needed. Earlier loopback fixtures cannot bypass this prerequisite for public use.
 
+Completed as a bounded component proof October 21, 2026; see
+AUTHENTICATED_ADMISSION_PROOF.md. Provider PKCE, ticket transactions, private guest
+generations and Godot DTLS are tested separately. System-browser UI and connected
+admission/gameplay integration remain required, including the gate below.
+
 ### Public authority integration gate
 
 Task ID: `public-authority-integration-gate`  
