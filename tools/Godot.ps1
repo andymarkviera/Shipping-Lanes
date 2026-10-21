@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck', 'FuelCheck', 'NetworkCheck', 'ReplicationCheck', 'CargoNetworkCheck', 'ConnectedWorldCheck', 'CapacityCheck', 'ActionCheck', 'EconomyCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck', 'FuelCheck', 'NetworkCheck', 'ReplicationCheck', 'CargoNetworkCheck', 'ConnectedWorldCheck', 'CapacityCheck', 'ActionCheck', 'EconomyCheck', 'RecoveryCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -176,6 +176,9 @@ switch ($Mode) {
     }
     'AssetCheck' {
         Invoke-ProjectGodot -LogName 'asset-check.log' -Arguments @('--headless', '--script', 'res://tools/check_starter.gd')
+    }
+    'RecoveryCheck' {
+        & (Join-Path $PSScriptRoot 'CheckRecovery.ps1') -Runtime Editor
     }
     'EconomyCheck' {
         Invoke-ProjectGodot -LogName 'economy-check.log' -Arguments @('--headless', '--scene', 'res://tools/economy_probe.tscn')

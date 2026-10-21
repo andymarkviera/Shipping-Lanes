@@ -161,3 +161,11 @@ those test processes. 98 harness checks pass per runtime, including four nested
 Godot HTTP assertions. See PUBLIC_STORAGE_PROOF.md for scope, reproduction and
 retained evidence. This separate dependency test is not part of ordinary Full
 (still 27 stages; the added HTTP probe brings compilation to 80 scripts).
+
+Step 35 adds RecoveryCheck as stage 28 (82 scripts). The eight-phase harness
+terminates three owned game processes around the economy commit and restarts
+against the same isolated private store. 107 assertions in completed phases
+check all-or-none state, retained receipts/retry, second-writer revision checks,
+session restoration and refusal of incompatible/damaged records. Run exported
+coverage with `tools/CheckRecovery.ps1 -Runtime Release`; see
+DURABLE_ACTION_RECOVERY.md for retention, evidence and integration limits.

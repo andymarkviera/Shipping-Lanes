@@ -1,6 +1,6 @@
 class_name SessionAuthority
 extends RefCounted
-## In-memory fixture authority. Only this class changes player/ship/wallet/cargo.
+## Fixture authority; optionally backed by the private durable economy store.
 ## The actor argument comes from a trusted session adapter, never request payload.
 const PLAYER_ID: String = "player_test"
 const SHIP_ID: String = "ship_test"
@@ -15,6 +15,18 @@ var _state: Dictionary = {
 	"ship":{"id":SHIP_ID,"owner_id":PLAYER_ID,"definition_id":"ship_starter_container_01","fuel_ml":40000,"inventory_id":"inventory_test"},
 	"inventory":{"id":"inventory_test","owner_id":SHIP_ID,"cargo":{"cargo_test_container":0}}
 }
+
+func open_economy_recovery(path: String, private_realm: String) -> bool:
+	var durable: DurableEconomy = DurableEconomy.new()
+	if _ledger is DurableEconomy: (_ledger as DurableEconomy).close_store()
+	_ledger = durable
+	if not durable.open_store(path, private_realm):
+		durable.close_store()
+		return false
+	return true
+
+func close_economy_recovery() -> void:
+	if _ledger is DurableEconomy: (_ledger as DurableEconomy).close_store()
 
 func view() -> Dictionary:
 	var snapshot: Dictionary = _state.duplicate(true)

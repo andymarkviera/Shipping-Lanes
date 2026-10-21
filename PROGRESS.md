@@ -1060,3 +1060,30 @@ previously scheduled handling/cargo/water follow-ups remain unchanged.
 Recovery tag: `public-storage-adapter-proof`.
 Source backup: `../output/checkpoints/public-storage-adapter-proof-2026-10-21.zip`.
 Next: Step 35 — durable action recovery.
+
+## Step 35 — Durable action recovery
+
+Task ID: `durable-action-recovery`.
+Status: complete for bounded private authority economy — October 21, 2026.
+
+Added a SQLite-backed EconomyLedger with one transaction for the authoritative
+wallet/inventory snapshot and retained terminal receipt. SessionAuthority can
+explicitly bind a private recovery store, using its existing transaction flow.
+Startup replays validated receipts and compares the recovered snapshot; wrong
+realms, future schemas and inconsistent records disable writes without resetting
+money. Cross-connection requests read current state under the database write lock.
+
+107 completed-phase assertions plus three forced-termination boundaries pass in
+editor and Windows Release. Compile (82 scripts), session (21), economy (82),
+clock (22), application flow, Release export/startup and Release economy pass.
+Full now has 28 stages; unchanged physics/network stages were not rerun.
+
+See DURABLE_ACTION_RECOVERY.md for exact retention/retry policy, evidence and
+limits. Receipts never expire; the prototype stops new intents at 1,024 outcomes.
+Play remains disposable until the full-world save identity/startup integration
+at Step 36. Physical ship/cargo state, fuel and timers are not saved here.
+Previously scheduled pickup/neutral/water follow-ups remain unchanged.
+
+Recovery tag: `step-35-durable-action-recovery`.
+Source backup: `../output/checkpoints/step-35-durable-action-recovery-2026-10-21.zip`.
+Next: Step 36 — versioned local persistence.
