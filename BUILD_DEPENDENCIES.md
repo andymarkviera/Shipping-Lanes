@@ -52,6 +52,22 @@ transitions and payload/markers/collision/interest remain coherent at measured
 precision limits. Then approve the production spatial schema; fixtures do not
 claim durable economic recovery. Record the world revision and chosen method.
 
+### Bounded replication and client pacing
+
+Task ID: `bounded-replication-and-client-pacing`  
+Placement: after 32, before 42 or production multiplayer expansion, whichever
+comes first. Owner: Agent. Status: scheduled from measured capacity evidence.
+
+Step 32 measured 71.154 Mbps of application egress and 6,124-byte snapshots at
+100 crowded connections. The rendered client's acknowledgement p95 was 227 ms.
+Implement changed-state/keyframe updates, separate slow metadata, bounded compact
+packets (provisional maximum 1,200 bytes), safe revision/chunk recovery and
+measured client polling/queue deadlines. Preserve collision-near relevance.
+Repeat 100-crowded with bounded queues, loss recovery, p99 authority work below
+12 ms and a local rendered acknowledgement p95 target below 150 ms; record any
+remaining gap. See CAPACITY_EXPERIMENT.md for the concrete architecture decision,
+measurement limits and hosting/network budget gate. This does not block Step 33.
+
 ### Public storage adapter proof
 
 Task ID: `public-storage-adapter-proof`  

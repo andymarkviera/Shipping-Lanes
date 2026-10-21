@@ -959,3 +959,29 @@ Full suite: 24 stages / 73 scripts.
 Recovery tag: `connected-world-network-feasibility`.
 Source backup: `../output/checkpoints/connected-world-network-2026-10-20.zip`.
 Next: Step 32 — early dedicated capacity experiment.
+
+## Step 32 — Early dedicated capacity experiment
+
+Task ID: `early-dedicated-capacity-experiment`.
+Status: complete as an early measurement/architecture experiment — October 20, 2026.
+
+Added a repeatable three-process load harness with 2/10/25/50/100 real loopback
+connections, dispersed and non-overlapping port layouts, actual hull/fuel physics,
+quay contact, input/actions, reconnects and a separate interpolating observer.
+Added a tested 350 m relevance grid. All ten corrected Windows Release cases pass;
+75 scripts compile, editor capacity smoke and Windows startup pass. A rendered
+100-crowded repeat also passes the fixture's stated assertions.
+
+At 100 crowded, authority work p95 is 6.28 ms, memory 83.4 MiB, and application
+egress 71.154 Mbps. Rendered acknowledgement p95 is 227 ms. These short local
+measurements do not approve a production player limit. D062 and the supplemental
+`bounded-replication-and-client-pacing` gate require packet/queue and responsiveness
+work before Step 42 or production multiplayer expansion. Detailed measurements,
+scope and retained machine-readable results: CAPACITY_EXPERIMENT.md.
+
+Playable handling, water and cargo behavior remain unchanged; Andy's reports
+remain scheduled. Full now offers 25 stages; unchanged older stages were not
+rerun for this isolated diagnostic addition.
+Recovery tag: `step-32-early-dedicated-capacity`.
+Source backup: `../output/checkpoints/step-32-early-dedicated-capacity-2026-10-20.zip`.
+Next: Step 33 — action validation.

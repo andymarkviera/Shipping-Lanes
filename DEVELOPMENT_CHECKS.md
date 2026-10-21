@@ -129,3 +129,12 @@ reload, reconnect and invalid spatial envelopes. Windows Release uses
 CheckNetwork.ps1 -Runtime Release -ConnectedWorld, optionally -Profile impaired.
 This profile uses reliable delayed transitions, not the motion loss simulation.
 See CONNECTED_WORLD_NETWORK.md for exact scope and remaining integration gates.
+
+Step 32 adds CapacityCheck (Full now has 25 stages / 75 scripts). This is a short
+two-client crowded editor smoke test; it does not rerun the entire capacity matrix.
+Use CheckCapacity.ps1 -Runtime Release for all ten 2/10/25/50/100 layout cases,
+or add -Counts 100 -Layouts crowded -VisibleObserver for a rendered repeat.
+Raw process/timing/bandwidth/motion results are retained per run; the accepted
+Step 32 summaries are also tracked in tools/baselines/capacity-step32.json.
+CPU and packet sizes are measurements, not hardware-independent pass thresholds.
+See CAPACITY_EXPERIMENT.md for the measured limits and mandatory follow-up gate.

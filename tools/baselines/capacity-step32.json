@@ -1,0 +1,1308 @@
+{
+  "source_rendered": "Release-2ad42afe0afa4073a23fc691e8dac2aa",
+  "scope": "Short local feasibility measurements, not a supported-player rating.",
+  "matrix": [
+    {
+      "visible_observer": false,
+      "layout": "dispersed",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.203125,
+          "cpu_core_percent": 19.3596695049669
+        },
+        "server": {
+          "peak_working_set_mib": 82.49609375,
+          "cpu_core_percent": 19.69345691022495
+        },
+        "observer": {
+          "peak_working_set_mib": 82.03515625,
+          "cpu_core_percent": 18.247044820773397
+        }
+      },
+      "count": 2,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.927,
+          "mean": 6.89703055692455,
+          "p95": 6.9,
+          "p99": 6.901,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 56.0,
+          "mean": 45.175,
+          "p95": 49.0,
+          "p99": 55.0,
+          "samples": 280
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 2,
+        "layout": "dispersed",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 4.60957081906342,
+        "measurement_seconds": 14,
+        "received_bytes": 57492,
+        "requested_clients": 2,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 56.0,
+          "mean": 50.025,
+          "p95": 56.0,
+          "p99": 56.0,
+          "samples": 280
+        },
+        "snapshots": 280,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 71,
+        "active_clients": {
+          "max": 2.0,
+          "mean": 1.96305125148987,
+          "p95": 2.0,
+          "p99": 2.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 0,
+        "departures": 3,
+        "engine_physics_ms": {
+          "max": 0.44,
+          "mean": 0.274958283671037,
+          "p95": 0.44,
+          "p99": 0.44,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 710,
+        "joins": 3,
+        "largest_application_packet_bytes": 208,
+        "last_relevant_count": 0,
+        "layout": "dispersed",
+        "max_clients": 2,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 41416,
+        "requested_clients": 2,
+        "role": "server",
+        "sent_bytes": 113444,
+        "sent_records": 1087,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 0.403,
+          "mean": 0.110338498212158,
+          "p95": 0.173,
+          "p99": 0.211,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.88,
+          "mean": 16.6783885578068,
+          "p95": 20.711,
+          "p99": 20.725,
+          "samples": 839
+        },
+        "unfiltered_records": 1087
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "crowded",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.55859375,
+          "cpu_core_percent": 20.912428885461296
+        },
+        "server": {
+          "peak_working_set_mib": 82.98046875,
+          "cpu_core_percent": 21.023665209320132
+        },
+        "observer": {
+          "peak_working_set_mib": 82.515625,
+          "cpu_core_percent": 19.35512035143758
+        }
+      },
+      "count": 2,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.89703203548542,
+          "p95": 6.901,
+          "p99": 6.901,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 62.0,
+          "mean": 11.0392857142857,
+          "p95": 14.0,
+          "p99": 14.0,
+          "samples": 280
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 2,
+        "layout": "crowded",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 2.92331351965597,
+        "measurement_seconds": 14,
+        "received_bytes": 57492,
+        "requested_clients": 2,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 56.0,
+          "mean": 50.025,
+          "p95": 56.0,
+          "p99": 56.0,
+          "samples": 280
+        },
+        "snapshots": 280,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 70,
+        "active_clients": {
+          "max": 2.0,
+          "mean": 1.96185935637664,
+          "p95": 2.0,
+          "p99": 2.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 558,
+        "departures": 3,
+        "engine_physics_ms": {
+          "max": 0.509,
+          "mean": 0.369407628128729,
+          "p95": 0.509,
+          "p99": 0.509,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 709,
+        "joins": 3,
+        "largest_application_packet_bytes": 208,
+        "last_relevant_count": 0,
+        "layout": "crowded",
+        "max_clients": 2,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 41344,
+        "requested_clients": 2,
+        "role": "server",
+        "sent_bytes": 113444,
+        "sent_records": 1087,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 0.292,
+          "mean": 0.111162097735399,
+          "p95": 0.184,
+          "p99": 0.22,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.743,
+          "mean": 16.6784171632896,
+          "p95": 20.708,
+          "p99": 20.713,
+          "samples": 839
+        },
+        "unfiltered_records": 1087
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "dispersed",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.0625,
+          "cpu_core_percent": 19.8111742402266
+        },
+        "server": {
+          "peak_working_set_mib": 82.6015625,
+          "cpu_core_percent": 20.812862825406597
+        },
+        "observer": {
+          "peak_working_set_mib": 82.359375,
+          "cpu_core_percent": 19.588576776853266
+        }
+      },
+      "count": 10,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.8970315426318,
+          "p95": 6.901,
+          "p99": 6.902,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 62.0,
+          "mean": 12.1071428571429,
+          "p95": 14.0,
+          "p99": 14.0,
+          "samples": 280
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 2,
+        "layout": "dispersed",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 5.10452122896426,
+        "measurement_seconds": 14,
+        "received_bytes": 57560,
+        "requested_clients": 10,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 56.0,
+          "mean": 50.0,
+          "p95": 55.0,
+          "p99": 56.0,
+          "samples": 280
+        },
+        "snapshots": 280,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 358,
+        "active_clients": {
+          "max": 10.0,
+          "mean": 9.92491060786651,
+          "p95": 10.0,
+          "p99": 10.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 0,
+        "departures": 12,
+        "engine_physics_ms": {
+          "max": 0.762,
+          "mean": 0.576939213349224,
+          "p95": 0.666,
+          "p99": 0.666,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 3580,
+        "joins": 12,
+        "largest_application_packet_bytes": 344,
+        "last_relevant_count": 0,
+        "layout": "dispersed",
+        "max_clients": 10,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 209168,
+        "requested_clients": 10,
+        "role": "server",
+        "sent_bytes": 750548,
+        "sent_records": 8095,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 0.731,
+          "mean": 0.220317044100119,
+          "p95": 0.431,
+          "p99": 0.516,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.837,
+          "mean": 16.6784290822407,
+          "p95": 20.712,
+          "p99": 20.722,
+          "samples": 839
+        },
+        "unfiltered_records": 27621
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "crowded",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.4140625,
+          "cpu_core_percent": 19.745520834131337
+        },
+        "server": {
+          "peak_working_set_mib": 83.1328125,
+          "cpu_core_percent": 21.530426672244904
+        },
+        "observer": {
+          "peak_working_set_mib": 82.4375,
+          "cpu_core_percent": 20.63797375318812
+        }
+      },
+      "count": 10,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.89703055692455,
+          "p95": 6.9,
+          "p99": 6.901,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 55.0,
+          "mean": 11.8785714285714,
+          "p95": 14.0,
+          "p99": 14.0,
+          "samples": 280
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 10,
+        "layout": "crowded",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 2.9004647843799,
+        "measurement_seconds": 14,
+        "received_bytes": 209132,
+        "requested_clients": 10,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 56.0,
+          "mean": 50.025,
+          "p95": 56.0,
+          "p99": 56.0,
+          "samples": 280
+        },
+        "snapshots": 280,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 358,
+        "active_clients": {
+          "max": 10.0,
+          "mean": 9.92491060786651,
+          "p95": 10.0,
+          "p99": 10.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 4121,
+        "departures": 12,
+        "engine_physics_ms": {
+          "max": 1.826,
+          "mean": 0.753856972586413,
+          "p95": 1.826,
+          "p99": 1.826,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 3580,
+        "joins": 12,
+        "largest_application_packet_bytes": 752,
+        "last_relevant_count": 0,
+        "layout": "crowded",
+        "max_clients": 10,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 209168,
+        "requested_clients": 10,
+        "role": "server",
+        "sent_bytes": 2078316,
+        "sent_records": 27621,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 0.833,
+          "mean": 0.246308700834326,
+          "p95": 0.471,
+          "p99": 0.542,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.745,
+          "mean": 16.6783969010727,
+          "p95": 20.711,
+          "p99": 20.723,
+          "samples": 839
+        },
+        "unfiltered_records": 27621
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "dispersed",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.4765625,
+          "cpu_core_percent": 20.723883596101125
+        },
+        "server": {
+          "peak_working_set_mib": 82.69140625,
+          "cpu_core_percent": 21.39600955056927
+        },
+        "observer": {
+          "peak_working_set_mib": 82.375,
+          "cpu_core_percent": 19.26761069475348
+        }
+      },
+      "count": 25,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.89703006407093,
+          "p95": 6.901,
+          "p99": 6.902,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 111.0,
+          "mean": 16.2571428571429,
+          "p95": 56.0,
+          "p99": 56.0,
+          "samples": 280
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 5,
+        "layout": "dispersed",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 5.18452529546971,
+        "measurement_seconds": 14,
+        "received_bytes": 107404,
+        "requested_clients": 25,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 56.0,
+          "mean": 50.0,
+          "p95": 55.0,
+          "p99": 56.0,
+          "samples": 280
+        },
+        "snapshots": 280,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 890,
+        "active_clients": {
+          "max": 25.0,
+          "mean": 24.7973778307509,
+          "p95": 25.0,
+          "p99": 25.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 0,
+        "departures": 30,
+        "engine_physics_ms": {
+          "max": 1.422,
+          "mean": 1.04013945172825,
+          "p95": 1.422,
+          "p99": 1.422,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 8945,
+        "joins": 30,
+        "largest_application_packet_bytes": 820,
+        "last_relevant_count": 0,
+        "layout": "dispersed",
+        "max_clients": 25,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 522560,
+        "requested_clients": 25,
+        "role": "server",
+        "sent_bytes": 3496860,
+        "sent_records": 44073,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 1.361,
+          "mean": 0.415512514898689,
+          "p95": 0.827,
+          "p99": 0.982,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.856,
+          "mean": 16.6784302741358,
+          "p95": 20.709,
+          "p99": 20.716,
+          "samples": 839
+        },
+        "unfiltered_records": 172429
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "crowded",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.5625,
+          "cpu_core_percent": 20.86353987131629
+        },
+        "server": {
+          "peak_working_set_mib": 83.09375,
+          "cpu_core_percent": 21.086679335180637
+        },
+        "observer": {
+          "peak_working_set_mib": 82.8125,
+          "cpu_core_percent": 20.194121479723258
+        }
+      },
+      "count": 25,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.8970315426318,
+          "p95": 6.901,
+          "p99": 6.902,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 111.0,
+          "mean": 11.3714285714286,
+          "p95": 14.0,
+          "p99": 14.0,
+          "samples": 280
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 25,
+        "layout": "crowded",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 4.57140604107535,
+        "measurement_seconds": 14,
+        "received_bytes": 492284,
+        "requested_clients": 25,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 56.0,
+          "mean": 50.025,
+          "p95": 56.0,
+          "p99": 56.0,
+          "samples": 280
+        },
+        "snapshots": 280,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 880,
+        "active_clients": {
+          "max": 25.0,
+          "mean": 24.7973778307509,
+          "p95": 25.0,
+          "p99": 25.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 2779,
+        "departures": 30,
+        "engine_physics_ms": {
+          "max": 2.54,
+          "mean": 1.50554946364719,
+          "p95": 2.54,
+          "p99": 2.54,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 8933,
+        "joins": 30,
+        "largest_application_packet_bytes": 1772,
+        "last_relevant_count": 0,
+        "layout": "crowded",
+        "max_clients": 25,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 522560,
+        "requested_clients": 25,
+        "role": "server",
+        "sent_bytes": 12225068,
+        "sent_records": 172429,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 2.428,
+          "mean": 0.529041716328963,
+          "p95": 1.076,
+          "p99": 1.252,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.83,
+          "mean": 16.6784374255065,
+          "p95": 20.708,
+          "p99": 20.717,
+          "samples": 839
+        },
+        "unfiltered_records": 172429
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "dispersed",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.32421875,
+          "cpu_core_percent": 19.188357263065253
+        },
+        "server": {
+          "peak_working_set_mib": 82.43359375,
+          "cpu_core_percent": 21.08488094604263
+        },
+        "observer": {
+          "peak_working_set_mib": 82.40234375,
+          "cpu_core_percent": 20.63864007945972
+        }
+      },
+      "count": 50,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.89703055692455,
+          "p95": 6.901,
+          "p99": 6.901,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 172.0,
+          "mean": 19.9677419354839,
+          "p95": 21.0,
+          "p99": 117.0,
+          "samples": 279
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 5,
+        "layout": "dispersed",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 4.53790922037687,
+        "measurement_seconds": 14,
+        "received_bytes": 106584,
+        "requested_clients": 50,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 104.0,
+          "mean": 50.2043010752688,
+          "p95": 56.0,
+          "p99": 56.0,
+          "samples": 279
+        },
+        "snapshots": 279,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 1749,
+        "active_clients": {
+          "max": 50.0,
+          "mean": 49.564958283671,
+          "p95": 50.0,
+          "p99": 50.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 0,
+        "departures": 60,
+        "engine_physics_ms": {
+          "max": 2.91,
+          "mean": 1.8393861740167,
+          "p95": 2.91,
+          "p99": 2.91,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 16961,
+        "joins": 60,
+        "largest_application_packet_bytes": 820,
+        "last_relevant_count": 0,
+        "layout": "dispersed",
+        "max_clients": 50,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 1008904,
+        "requested_clients": 50,
+        "role": "server",
+        "sent_bytes": 8055728,
+        "sent_records": 103768,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 2.833,
+          "mean": 0.760977353992849,
+          "p95": 1.523,
+          "p99": 1.747,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 21.804,
+          "mean": 16.6784374255065,
+          "p95": 20.713,
+          "p99": 20.777,
+          "samples": 839
+        },
+        "unfiltered_records": 689326
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "crowded",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.79296875,
+          "cpu_core_percent": 21.775242944353174
+        },
+        "server": {
+          "peak_working_set_mib": 82.8125,
+          "cpu_core_percent": 23.67359745745063
+        },
+        "observer": {
+          "peak_working_set_mib": 82.52734375,
+          "cpu_core_percent": 20.99356755660716
+        }
+      },
+      "count": 50,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.89703104977817,
+          "p95": 6.901,
+          "p99": 6.901,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 193.0,
+          "mean": 43.258064516129,
+          "p95": 42.0,
+          "p99": 97.0,
+          "samples": 279
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 46,
+        "layout": "crowded",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 4.55802989358692,
+        "measurement_seconds": 14,
+        "received_bytes": 849348,
+        "requested_clients": 50,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 103.0,
+          "mean": 50.3763440860215,
+          "p95": 55.0,
+          "p99": 56.0,
+          "samples": 279
+        },
+        "snapshots": 279,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 1756,
+        "active_clients": {
+          "max": 50.0,
+          "mean": 49.564958283671,
+          "p95": 50.0,
+          "p99": 50.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 5041,
+        "departures": 60,
+        "engine_physics_ms": {
+          "max": 8.149,
+          "mean": 3.28590464839095,
+          "p95": 8.149,
+          "p99": 8.149,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 16900,
+        "joins": 60,
+        "largest_application_packet_bytes": 3472,
+        "last_relevant_count": 0,
+        "layout": "crowded",
+        "max_clients": 50,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 1006672,
+        "requested_clients": 50,
+        "role": "server",
+        "sent_bytes": 46480052,
+        "sent_records": 668839,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 3.391,
+          "mean": 1.14695113230036,
+          "p95": 2.438,
+          "p99": 2.734,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.996,
+          "mean": 16.6784290822407,
+          "p95": 20.709,
+          "p99": 20.718,
+          "samples": 839
+        },
+        "unfiltered_records": 688693
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "dispersed",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 82.68359375,
+          "cpu_core_percent": 20.23602476427916
+        },
+        "server": {
+          "peak_working_set_mib": 82.7265625,
+          "cpu_core_percent": 26.04968933744223
+        },
+        "observer": {
+          "peak_working_set_mib": 82.3359375,
+          "cpu_core_percent": 18.111801170238806
+        }
+      },
+      "count": 100,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.8970315426318,
+          "p95": 6.901,
+          "p99": 6.902,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 366.0,
+          "mean": 25.3768115942029,
+          "p95": 62.0,
+          "p99": 311.0,
+          "samples": 276
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 5,
+        "layout": "dispersed",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 5.46617312421655,
+        "measurement_seconds": 14,
+        "received_bytes": 105144,
+        "requested_clients": 100,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 103.0,
+          "mean": 50.7246376811594,
+          "p95": 56.0,
+          "p99": 96.0,
+          "samples": 276
+        },
+        "snapshots": 276,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 3513,
+        "active_clients": {
+          "max": 100.0,
+          "mean": 99.0357142857143,
+          "p95": 100.0,
+          "p99": 100.0,
+          "samples": 840
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 0,
+        "departures": 120,
+        "engine_physics_ms": {
+          "max": 6.612,
+          "mean": 3.60969761904759,
+          "p95": 6.612,
+          "p99": 6.612,
+          "samples": 840
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 31224,
+        "joins": 120,
+        "largest_application_packet_bytes": 820,
+        "last_relevant_count": 0,
+        "layout": "dispersed",
+        "max_clients": 100,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 2001888,
+        "requested_clients": 100,
+        "role": "server",
+        "sent_bytes": 17101264,
+        "sent_records": 222128,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 6.465,
+          "mean": 1.49032380952381,
+          "p95": 3.111,
+          "p99": 3.523,
+          "samples": 840
+        },
+        "tick_period_ms": {
+          "max": 20.983,
+          "mean": 16.6667892857142,
+          "p95": 20.712,
+          "p99": 20.722,
+          "samples": 840
+        },
+        "unfiltered_records": 2750952
+      }
+    },
+    {
+      "visible_observer": false,
+      "layout": "crowded",
+      "runtime": "Release",
+      "processes": {
+        "bots": {
+          "peak_working_set_mib": 83.5546875,
+          "cpu_core_percent": 24.179621098674556
+        },
+        "server": {
+          "peak_working_set_mib": 83.38671875,
+          "cpu_core_percent": 33.80669246203572
+        },
+        "observer": {
+          "peak_working_set_mib": 82.578125,
+          "cpu_core_percent": 19.81385617808054
+        }
+      },
+      "count": 100,
+      "observer": {
+        "actions": 0,
+        "active_clients": {},
+        "client_frame_ms": {
+          "max": 6.94444444444444,
+          "mean": 6.89703104977818,
+          "p95": 6.901,
+          "p99": 6.901,
+          "samples": 2029
+        },
+        "collision_contacts": 0,
+        "departures": 0,
+        "engine_physics_ms": {},
+        "failures": 0,
+        "input_ack_ms": {
+          "max": 366.0,
+          "mean": 22.1376811594203,
+          "p95": 62.0,
+          "p99": 269.0,
+          "samples": 276
+        },
+        "inputs": 0,
+        "joins": 0,
+        "largest_application_packet_bytes": 72,
+        "last_relevant_count": 43,
+        "layout": "crowded",
+        "max_clients": 0,
+        "max_presentation_speed_mps": 4.36819323798827,
+        "measurement_seconds": 14,
+        "received_bytes": 819756,
+        "requested_clients": 100,
+        "role": "observer",
+        "sent_bytes": 21056,
+        "sent_records": 0,
+        "snapshot_gap_ms": {
+          "max": 104.0,
+          "mean": 50.7246376811594,
+          "p95": 56.0,
+          "p99": 96.0,
+          "samples": 276
+        },
+        "snapshots": 276,
+        "tick_ms": {},
+        "tick_period_ms": {},
+        "unfiltered_records": 0
+      },
+      "server": {
+        "actions": 3481,
+        "active_clients": {
+          "max": 100.0,
+          "mean": 99.0345649582837,
+          "p95": 100.0,
+          "p99": 100.0,
+          "samples": 839
+        },
+        "client_frame_ms": {},
+        "collision_contacts": 4216,
+        "departures": 120,
+        "engine_physics_ms": {
+          "max": 7.963,
+          "mean": 6.79614421930873,
+          "p95": 7.963,
+          "p99": 7.963,
+          "samples": 839
+        },
+        "failures": 0,
+        "input_ack_ms": {},
+        "inputs": 31089,
+        "joins": 120,
+        "largest_application_packet_bytes": 6124,
+        "last_relevant_count": 0,
+        "layout": "crowded",
+        "max_clients": 100,
+        "max_presentation_speed_mps": 0.0,
+        "measurement_seconds": 14,
+        "received_bytes": 2000392,
+        "requested_clients": 100,
+        "role": "server",
+        "sent_bytes": 124519096,
+        "sent_records": 1801802,
+        "snapshot_gap_ms": {},
+        "snapshots": 0,
+        "tick_ms": {
+          "max": 7.764,
+          "mean": 2.48632061978546,
+          "p95": 6.277,
+          "p99": 6.582,
+          "samples": 839
+        },
+        "tick_period_ms": {
+          "max": 20.908,
+          "mean": 16.6784278903456,
+          "p95": 20.713,
+          "p99": 20.723,
+          "samples": 839
+        },
+        "unfiltered_records": 2750952
+      }
+    }
+  ],
+  "engine": "4.7.2.stable.ed1daf0bf",
+  "rendered": {
+    "visible_observer": true,
+    "processes": {
+      "bots": {
+        "peak_working_set_mib": 83.234375,
+        "cpu_core_percent": 25.05131852067956
+      },
+      "server": {
+        "peak_working_set_mib": 83.3671875,
+        "cpu_core_percent": 35.45208915649741
+      },
+      "observer": {
+        "peak_working_set_mib": 176.9453125,
+        "cpu_core_percent": 5.815484656586326
+      }
+    },
+    "server": {
+      "actions": 3526,
+      "active_clients": {
+        "max": 100.0,
+        "mean": 99.0107270560191,
+        "p95": 100.0,
+        "p99": 100.0,
+        "samples": 839
+      },
+      "client_frame_ms": {},
+      "collision_contacts": 4294,
+      "departures": 120,
+      "engine_physics_ms": {
+        "max": 8.194,
+        "mean": 6.71027056019069,
+        "p95": 8.194,
+        "p99": 8.194,
+        "samples": 839
+      },
+      "failures": 0,
+      "input_ack_ms": {},
+      "inputs": 30992,
+      "joins": 120,
+      "largest_application_packet_bytes": 6056,
+      "last_relevant_count": 0,
+      "layout": "crowded",
+      "max_clients": 100,
+      "max_presentation_speed_mps": 0.0,
+      "measurement_seconds": 14,
+      "received_bytes": 1985872,
+      "requested_clients": 100,
+      "role": "server",
+      "sent_bytes": 124418812,
+      "sent_records": 1800341,
+      "snapshot_gap_ms": {},
+      "snapshots": 0,
+      "tick_ms": {
+        "max": 8.007,
+        "mean": 2.6006030989273,
+        "p95": 6.034,
+        "p99": 6.351,
+        "samples": 839
+      },
+      "tick_period_ms": {
+        "max": 20.849,
+        "mean": 16.6784171632896,
+        "p95": 20.713,
+        "p99": 20.724,
+        "samples": 839
+      },
+      "unfiltered_records": 2748619
+    },
+    "runtime": "Release",
+    "count": 100,
+    "observer": {
+      "actions": 0,
+      "active_clients": {},
+      "client_frame_ms": {
+        "max": 127.111,
+        "mean": 13.4389089165869,
+        "p95": 13.3333333333333,
+        "p99": 13.3333333333333,
+        "samples": 1043
+      },
+      "collision_contacts": 0,
+      "departures": 0,
+      "engine_physics_ms": {},
+      "failures": 0,
+      "input_ack_ms": {
+        "max": 414.0,
+        "mean": 64.636690647482,
+        "p95": 227.0,
+        "p99": 333.0,
+        "samples": 278
+      },
+      "inputs": 0,
+      "joins": 0,
+      "largest_application_packet_bytes": 72,
+      "last_relevant_count": 1,
+      "layout": "crowded",
+      "max_clients": 0,
+      "max_presentation_speed_mps": 4.49477545917034,
+      "measurement_seconds": 14,
+      "received_bytes": 823300,
+      "requested_clients": 100,
+      "role": "observer",
+      "sent_bytes": 20984,
+      "sent_records": 0,
+      "snapshot_gap_ms": {
+        "max": 163.0,
+        "mean": 50.363309352518,
+        "p95": 67.0,
+        "p99": 67.0,
+        "samples": 278
+      },
+      "snapshots": 278,
+      "tick_ms": {},
+      "tick_period_ms": {},
+      "unfiltered_records": 0
+    },
+    "layout": "crowded"
+  },
+  "source_matrix": "Release-286c50b2c01147879734083a7fb2b26b",
+  "date": "2026-10-20",
+  "host_cpu": "Intel Core i7-12700KF"
+}
