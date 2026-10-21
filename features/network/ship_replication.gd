@@ -102,26 +102,17 @@ func request_input(session_epoch: String, id: String, seq: int, throttle: float,
 	accept_input(multiplayer.get_remote_sender_id(), [session_epoch, id, seq, throttle, rudder, lateral, sent_ms])
 
 func accept_input(sender: int, args: Array) -> bool:
-	var id: String = args[1]
-	if not session.hosting or args[0] != session.epoch or not session.roster.has(id) or session.roster[id].peer_id != sender or not world.ships.has(id):
+	if args.size() != 7 or not args[0] is String or not args[1] is String or not args[2] is int or not args[6] is int:
 		rejected_inputs += 1
 		return false
-	var ship: HandlingShip = world.ships[id]
-	var now: int = Time.get_ticks_msec()
-	var previous: Dictionary = orders.get(id, {})
-	if args[2] <= previous.get("seq", -1) or args[2] < 0 or args[6] < 0 or (not previous.is_empty() and now - previous.at < 10):
-		rejected_inputs += 1
-		return false
-	for value: float in [args[3], args[4], args[5]]:
-		if not is_finite(value):
-			rejected_inputs += 1
-			return false
-	if args[3] < -ship.definition.reverse_throttle_limit or args[3] > ship.definition.forward_throttle_limit or absf(args[4]) > 1 or absf(args[5]) > 1:
-		rejected_inputs += 1
-		return false
-	orders[id] = {"seq": args[2], "throttle": args[3], "rudder": args[4], "lateral": args[5], "sent": args[6], "at": now}
-	accepted_inputs += 1
-	return true
+	var request: Dictionary = ShipActions.make_request(args[0], sender, args[1], "helm", args[2],
+		{"throttle": args[3], "rudder": args[4], "lateral": args[5], "sent_ms": args[6]})
+	var response: Dictionary = world.actions.execute(sender, request)
+	if response.applied:
+		accepted_inputs += 1
+		return true
+	rejected_inputs += 1
+	return false
 
 func _physics_process(delta: float) -> void:
 	if session == null or not session.hosting: return

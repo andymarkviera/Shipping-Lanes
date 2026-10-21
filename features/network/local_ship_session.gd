@@ -2,7 +2,7 @@ class_name LocalShipSession
 extends Node
 ## Development-only loopback transport. No credentials or persistent identity.
 signal changed
-const PROTOCOL: int = 3
+const PROTOCOL: int = 4
 var ship_definition_id: String = "ship_starter_container_01"
 const DEFAULT_PORT: int = 28429
 var roster: Dictionary = {}

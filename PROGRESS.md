@@ -985,3 +985,25 @@ rerun for this isolated diagnostic addition.
 Recovery tag: `step-32-early-dedicated-capacity`.
 Source backup: `../output/checkpoints/step-32-early-dedicated-capacity-2026-10-20.zip`.
 Next: Step 33 — action validation.
+
+## Step 33 — Action validation
+
+Task ID: `action-validation`.
+Status: complete — October 20, 2026.
+
+Added one fixed typed request/result authority path for helm and a harmless test
+pulse. Transport sender, current session epoch and live roster control ownership.
+Canonical action IDs, bounded receipts and retained sequence high-water marks
+prevent repeated effects, including after cache eviction. Payload conflicts,
+invalid types/ranges and rate limits return explicit errors. A retry cannot
+refresh helm timeout or turn a previously failed command into a new effect.
+
+Live helm requests now use this authority path; session protocol is 4. Public
+identity and durable economic receipts remain later prerequisites. Cargo pickup,
+stopping usability and water follow-ups are unchanged. See ACTION_VALIDATION.md.
+
+49 action assertions pass in editor and Windows Release; full suite passes
+26 stages / 77 scripts. Exported impaired movement and normal startup pass.
+Recovery tag: `step-33-action-validation`.
+Source backup: `../output/checkpoints/step-33-action-validation-2026-10-20.zip`.
+Next: Step 34 — money and transfer rules.

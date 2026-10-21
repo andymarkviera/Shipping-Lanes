@@ -138,3 +138,10 @@ Raw process/timing/bandwidth/motion results are retained per run; the accepted
 Step 32 summaries are also tracked in tools/baselines/capacity-step32.json.
 CPU and packet sizes are measurements, not hardware-independent pass thresholds.
 See CAPACITY_EXPERIMENT.md for the measured limits and mandatory follow-up gate.
+
+Step 33 adds ActionCheck (Full now has 26 stages / 77 scripts). It uses two real
+local processes to verify typed errors, owner/sender identity, retries with and
+without retained receipts, payload conflicts, failed-result retention, timeout
+behavior and reconnect isolation. Release uses CheckNetwork.ps1 -Runtime Release
+-Actions. Existing motion/cargo checks exercise the integrated live helm path.
+See ACTION_VALIDATION.md; its receipts are deliberately session-scoped.

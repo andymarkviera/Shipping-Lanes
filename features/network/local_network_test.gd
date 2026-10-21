@@ -2,6 +2,7 @@ extends Node3D
 const SHIP = preload("res://features/ships/starter_container_01/starter_runtime.tscn")
 const HEAVY_SHIP = preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn")
 var cargo_sync: CargoReplication
+var actions: ShipActions
 var cargo_buttons: HBoxContainer
 var session: LocalShipSession
 var ships: Dictionary = {}
@@ -24,6 +25,10 @@ func _ready() -> void:
 	replication.name = "Replication"
 	add_child(replication)
 	replication.configure(self, session)
+	actions = ShipActions.new()
+	actions.name = "Actions"
+	add_child(actions)
+	actions.configure(self, session)
 	cargo_sync = CargoReplication.new()
 	cargo_sync.name = "CargoSync"
 	add_child(cargo_sync)
