@@ -1159,3 +1159,25 @@ Full offers 31 stages. See SAVE_SLOTS.md for evidence and bounded prototype limi
 Recovery tag: `step-38-save-slots`.
 Source backup: `../output/checkpoints/step-38-save-slots-2026-10-21.zip`.
 Next: Step 39 — reconnect and lifecycle. Multiplayer remains the priority.
+
+## Step 39 — Reconnect and lifecycle
+
+Task ID: `reconnect-and-lifecycle`.
+Status: complete for the running two-player local host — October 21, 2026.
+
+Guest reconnect reclaims the same authoritative ship, pose, fuel and attached
+payload. Disconnected hulls park neutral with simulation/collision/presentation
+disabled. Private fixture economic ledgers retain payment receipts through drops
+and close durably on host shutdown. Wrong credentials cannot replace ownership;
+old transport senders cannot regain control. Main-menu departure ends that peer's
+connection; host departure ends the session. Host migration is unsupported.
+
+72 lifecycle assertions pass in editor and Windows Release. Action ownership,
+guest attached-cargo recovery, impaired motion and connected-world regressions
+pass; all 87 scripts compile and export/startup pass. Full remains 31 stages.
+See RECONNECT_LIFECYCLE.md for evidence and scope. Client application restart and
+automatic host-world restoration remain identity work; internet play is not enabled.
+
+Recovery tag: `step-39-reconnect-lifecycle`.
+Source backup: `../output/checkpoints/step-39-reconnect-lifecycle-2026-10-21.zip`.
+Next: authenticated-admission feasibility, required before Step 40 identity/control.

@@ -13,6 +13,7 @@ func argument(prefix: String) -> String:
 
 func _ready() -> void:
 	super._ready()
+	automated_input = true
 	role = argument("--network-role=")
 	port = int(argument("--network-port="))
 	result_dir = argument("--network-results=")
@@ -48,22 +49,57 @@ func run() -> void:
 		marker.store_string("ready")
 		marker.close()
 		var host_id: String = session.roster.keys()[0]
+		var guest_instance: int = 0
+		var guest_path: String = ""
+		var private_realm: String = "private_" + session.epoch
 		for round_index: int in range(3):
 			if not await until_count(2):
 				check(false, "Client did not join")
 				break
 			record_round(round_index)
+			var guest: String = session.guest_record.entity_id
+			var ledger: DurableEconomy = session.economies[guest]
+			var request: Dictionary = EconomyLedger.request("reconnect_purchase", "purchase_container", 1, 0)
+			if round_index == 0:
+				guest_instance = ships[guest].get_instance_id()
+				guest_path = "user://n/" + session.epoch + "/g.db"
+				ships[guest].position = Vector3(80, 0, 65)
+				ships[guest].state.fuel_liters = 543.0
+				check(ledger.execute("player_test", request).ok, "Commit guest purchase before disconnect")
+			else:
+				check(ships[guest].get_instance_id() == guest_instance, "Same authoritative hull object restored")
+				check(ships[guest].position.distance_to(Vector3(80, 0, 65)) < 0.01, "Position survives despawn/reconnect")
+				check(ships[guest].state.fuel_liters <= 543.0 and ships[guest].state.fuel_liters > 540.0, "Fuel not reset or rewarded")
+				check(ships[guest].commanded_throttle == 0 and ships[guest].velocity == Vector3.ZERO, "Returning hull is neutral/stationary")
+				check(ledger.execute("player_test", request).duplicate, "Reconnected purchase retry retains original receipt")
+			check(ledger.view().player_minor == 10000, "No new wallet on reconnect")
+			check(session.economies.size() == 2, "Exactly one ledger per authority record")
 			check(session.roster.has(host_id), "Host identity survives joins")
 			if round_index < 2:
 				check(await until_count(1), "Disconnect removes remote ship")
 				check(ships.size() == 1 and ships.has(host_id), "No orphan remote hull")
+				check(parked.size() == 1 and parked[guest].process_mode == Node.PROCESS_MODE_DISABLED and parked[guest].collision_layer == 0 and not parked[guest].visible, "Disconnected hull has no simulation, collision, or presentation")
+				check(session.economies.has(guest), "Disconnect retains authoritative economy")
 			else:
 				await get_tree().create_timer(0.7).timeout
 		session.stop("Host test complete")
-		check(ships.is_empty(), "Host shutdown removes all hulls")
+		check(ships.is_empty() and parked.is_empty() and session.economies.is_empty(), "Host shutdown removes hulls and closes ledgers")
+		var restored: DurableEconomy = DurableEconomy.new()
+		check(restored.open_store(guest_path, private_realm), "Committed guest economy opens after host shutdown")
+		check(restored.execute("player_test", EconomyLedger.request("reconnect_purchase", "purchase_container", 1, 0)).duplicate, "Shutdown cannot duplicate committed purchase")
+		restored.close_store()
 	else:
 		var previous_remote_id: String = ""
 		for round_index: int in range(3):
+			if round_index == 1:
+				var credential: String = session.reconnect_token()
+				check(credential.length() == 64, "Reconnect credential retained across local disconnect")
+				get_tree().set_meta("local_reconnect_" + str(port), "0".repeat(64))
+				session.join_session(port)
+				var rejected_deadline: int = Time.get_ticks_msec() + 4000
+				while session.connecting and Time.get_ticks_msec() < rejected_deadline: await get_tree().process_frame
+				check(not session.connecting and session.roster.is_empty(), "Wrong credential cannot claim or replace parked record")
+				get_tree().set_meta("local_reconnect_" + str(port), credential)
 			check(session.join_session(port) == OK, "Client transport starts")
 			if not await until_count(2):
 				check(false, "Client did not receive roster")
@@ -73,7 +109,7 @@ func run() -> void:
 			var local_id: String = ""
 			for id: String in initial:
 				if initial[id].peer_id == multiplayer.get_unique_id(): local_id = id
-			check(not local_id.is_empty() and local_id != previous_remote_id, "New guest connection receives fresh entity")
+			check(not local_id.is_empty() and (previous_remote_id.is_empty() or local_id == previous_remote_id), "Returning guest reclaims the same entity")
 			previous_remote_id = local_id
 			for index: int in range(4): session.hello.rpc_id(1, LocalShipSession.PROTOCOL)
 			# A local/client-authored snapshot must never create or replace entities.

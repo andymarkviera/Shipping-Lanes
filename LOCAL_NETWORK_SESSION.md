@@ -1,5 +1,10 @@
 # Local network session — Step 29
 
+Step 39 supersedes the original reconnect policy: protocol 5 reclaims the same
+host-owned ship using a session credential and parks disconnected guests. See
+RECONNECT_LIFECYCLE.md for current controls, durable fixture ledgers and limits.
+Earlier notes below remain historical evidence.
+
 Step 30 update: this scene now supports authoritative sailing and buffered
 client motion on protocol 2. See SHIP_REPLICATION.md. Stationary-scene notes
 below record the Step 29 checkpoint; its lifecycle checks remain in the suite.

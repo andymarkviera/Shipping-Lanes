@@ -2,6 +2,11 @@
 
 Status: complete — October 20, 2026.
 
+Step 39 keeps transient helm/test-pulse streams connection-scoped while reconnect
+reclaims the same ship. Old sender requests fail ownership checks; durable economy
+receipts remain separate and survive reconnect. Protocol is now 5. See
+RECONNECT_LIFECYCLE.md; fresh-entity reconnect assumptions below are historical.
+
 `ShipActions` is a fixed, session-scoped authority path for `helm` and the harmless
 `test_pulse` action. The latter increments only an in-memory test counter. It is
 not money, a cargo operation, a reward or a generic scripting dispatcher.

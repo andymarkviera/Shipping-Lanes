@@ -171,6 +171,8 @@ func client_test() -> void:
 	check(ships.is_empty(), "Disconnect removes cargo-bearing hulls")
 	session.join_session(port)
 	check(await wait_for(func(): return ships.has(host_entity) and ships[host_entity].attached), "Reconnect reconstructs same host and carried payload")
+	check(await wait_for(func(): return ships.has(mine) and ships[mine].attached), "Returning guest retains its own secured load")
+	check(replication.local_entity() == mine, "Guest ship identity survives reconnect")
 	ship = ships[host_entity]
 	check(replication.latest[host_entity].cargo.id == host_entity + "_payload", "Payload identity stable across reconnect")
 	advance_stage.rpc_id(1, 1)

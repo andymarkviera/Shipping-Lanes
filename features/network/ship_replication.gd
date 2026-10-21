@@ -92,8 +92,10 @@ func _process(_delta: float) -> void:
 		elif packet.kind == "cargo" and not session.connecting:
 			world.cargo_sync.request_action.rpc_id(1, args[0], args[1], args[2], args[3])
 		elif packet.kind == "state" and session.hosting:
-			for peer: int in multiplayer.get_peers():
-				receive_state.rpc_id(peer, args[0], args[1], args[2], args[3], args[4])
+			for member: Dictionary in session.roster.values():
+				var peer: int = member.peer_id
+				if peer != 1 and multiplayer.get_peers().has(peer):
+					receive_state.rpc_id(peer, args[0], args[1], args[2], args[3], args[4])
 	if not session.hosting: interpolate()
 
 @rpc("any_peer", "call_remote", "unreliable_ordered", 1)

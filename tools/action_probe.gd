@@ -57,7 +57,7 @@ func run() -> void:
 		file.store_string("ready")
 		file.close()
 		check(await wait_for(func(): return done, 18), "Client finishes forged/retried/reconnect actions")
-		check(not actions.receipts.has(old_guest) and not actions.pulses.has(old_guest), "Departed entity receipts and test state removed")
+		check(session.roster.has(old_guest) and actions.pulses.get(old_guest, 0) == 1, "Same ship has a new connection-scoped harmless action stream")
 		check(actions.pulses.get(replication.local_entity(), 0) == 140, "Client could not mutate host action state")
 		await get_tree().create_timer(0.3).timeout
 	else:
@@ -144,9 +144,8 @@ func client_checks() -> void:
 	await get_tree().create_timer(0.3).timeout
 	check(session.join_session(port) == OK, "Reconnect action client")
 	check(await wait_for(func(): return session.roster.size() == 2), "New controller roster arrives")
-	pulse.player = multiplayer.get_unique_id()
-	check((await ask(pulse)).code == "UNKNOWN_ENTITY", "Reconnected client cannot revive old ship action")
+	check((await ask(pulse)).code == "NOT_OWNER", "Previous transport sender cannot revive its old action")
 	response = await ask(make("test_pulse", 1))
-	check(response.code == "OK" and response.value == 1 and not response.duplicate, "New entity has isolated sequence and receipt state")
+	check(response.code == "OK" and response.value == 1 and not response.duplicate, "New connection has isolated transient sequence state")
 	finish_client.rpc_id(1, old)
 	await get_tree().create_timer(0.2).timeout

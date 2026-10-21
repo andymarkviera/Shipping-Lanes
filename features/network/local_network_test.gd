@@ -6,6 +6,7 @@ var actions: ShipActions
 var cargo_buttons: HBoxContainer
 var session: LocalShipSession
 var ships: Dictionary = {}
+var parked: Dictionary = {}
 var readout: Label
 var replication: ShipReplication
 var controls: PlayerControls
@@ -76,9 +77,16 @@ func _ready() -> void:
 	readout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	readout.add_theme_font_size_override("font_size", 17)
 	stack.add_child(readout)
+	var fresh_join: ConfirmationDialog = ConfirmationDialog.new()
+	fresh_join.title = "Join a new local test session?"
+	fresh_join.dialog_text = "Use this only after the host starts a new session.\nYour old reconnect credential will be forgotten.\nExisting host progress is not deleted or transferred."
+	fresh_join.confirmed.connect(func():
+		get_tree().remove_meta("local_reconnect_" + str(LocalShipSession.DEFAULT_PORT))
+		session.join_session())
+	layer.add_child(fresh_join)
 	var row: HBoxContainer = HBoxContainer.new()
 	stack.add_child(row)
-	for caption: String in ["Host locally", "Host heavy locally", "Join locally", "Disconnect", "Main menu"]:
+	for caption: String in ["Host new locally", "Host new heavy", "Join / Reconnect", "Disconnect", "Join new session", "Main menu"]:
 		if caption == "Disconnect":
 			row = HBoxContainer.new()
 			stack.add_child(row)
@@ -87,13 +95,14 @@ func _ready() -> void:
 		row.add_child(button)
 		button.pressed.connect(func():
 			match caption:
-				"Host locally":
+				"Host new locally":
 					session.ship_definition_id = "ship_starter_container_01"
 					session.host_session()
-				"Host heavy locally":
+				"Host new heavy":
 					session.ship_definition_id = "ship_heavy_lifter_01"
 					session.host_session()
-				"Join locally": session.join_session()
+				"Join / Reconnect": session.join_session()
+				"Join new session": fresh_join.popup_centered(Vector2i(600, 180))
 				"Disconnect": session.stop()
 				"Main menu": get_tree().change_scene_to_file("res://features/main/main.tscn")
 			button.release_focus())
@@ -110,11 +119,32 @@ func _ready() -> void:
 	refresh()
 
 func refresh() -> void:
+	if not session.hosting:
+		for body: HandlingShip in parked.values(): body.queue_free()
+		parked.clear()
 	for id: String in ships.keys():
 		if not session.roster.has(id):
 			var old: Node = ships[id]
-			remove_child(old)
-			old.queue_free()
+			if session.retained(id):
+				old.set_meta("park_layer", old.collision_layer)
+				old.set_meta("park_mask", old.collision_mask)
+				old.collision_layer = 0
+				old.collision_mask = 0
+				old.hide()
+				old.process_mode = Node.PROCESS_MODE_DISABLED
+				if old is CargoReplication.Heavy:
+					old.payload_body.set_meta("park_layer", old.payload_body.collision_layer)
+					old.payload_body.collision_layer = 0
+					old.payload_body.hide()
+				old.set_physics_process(false)
+				old.simulation_paused = true
+				old.velocity = Vector3.ZERO
+				old.commanded_throttle = 0
+				old.actual_throttle = 0
+				old.yaw_rate = 0
+				old.maneuver(0, 0)
+				parked[id] = old
+			else: old.queue_free()
 			ships.erase(id)
 			if wakes.has(id):
 				wakes[id].set_process(false)
@@ -123,11 +153,21 @@ func refresh() -> void:
 	for id: String in session.roster:
 		if ships.has(id): continue
 		var record: Dictionary = session.roster[id]
-		var ship: HandlingShip = (HEAVY_SHIP if record.definition_id == "ship_heavy_lifter_01" else SHIP).instantiate()
+		var returning: bool = parked.has(id)
+		var ship: HandlingShip = parked[id] if returning else (HEAVY_SHIP if record.definition_id == "ship_heavy_lifter_01" else SHIP).instantiate()
+		parked.erase(id)
 		ship.name = id
-		ship.position.x = record.slot * (110 if record.definition_id == "ship_heavy_lifter_01" else 75)
+		if not returning: ship.position.x = record.slot * (110 if record.definition_id == "ship_heavy_lifter_01" else 75)
 		ship.set_multiplayer_authority(1)
-		add_child(ship)
+		if returning:
+			ship.process_mode = Node.PROCESS_MODE_INHERIT
+			ship.show()
+			ship.collision_layer = ship.get_meta("park_layer")
+			ship.collision_mask = ship.get_meta("park_mask")
+			if ship is CargoReplication.Heavy:
+				ship.payload_body.collision_layer = ship.payload_body.get_meta("park_layer")
+				ship.payload_body.show()
+		else: add_child(ship)
 		ship.state.instance_id = id
 		ship.simulation_paused = not session.hosting
 		ship.set_physics_process(session.hosting)
@@ -146,7 +186,7 @@ func refresh() -> void:
 
 func update_readout() -> void:
 	if readout == null: return
-	var text: String = "LOCAL MULTIPLAYER TEST · STEP 31\nSaved boat controls · RMB orbit · Wheel zoom\nTwo windows on this computer only · Esc menu\n\n%s\nShips: %d / 2" % [session.notice, ships.size()]
+	var text: String = "LOCAL MULTIPLAYER TEST · STEP 39\nSaved boat controls · RMB orbit · Wheel zoom\nTwo windows on this computer only · Esc menu\nGuest reconnect: same running host only · No host migration\n\n%s\nShips: %d / 2" % [session.notice, ships.size()]
 	for id: String in session.roster:
 		var record: Dictionary = session.roster[id]
 		text += "\n%s · %s" % [id, "YOU" if record.peer_id == multiplayer.get_unique_id() else "OTHER PLAYER"]

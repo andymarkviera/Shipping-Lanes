@@ -22,7 +22,7 @@ try {
   $start.CreateNoWindow=$true
   $start.RedirectStandardOutput=$true
   $start.RedirectStandardError=$true
-  $start.Environment['APPDATA']=Join-Path $portableRoot 'user_data'
+  $start.Environment['APPDATA']=Join-Path $runRoot ('a/'+$role)
   $arguments=@('--headless','--log-file',(Join-Path $runRoot "$role.log"))
   if($Runtime -eq 'Editor'){$arguments+=@('--path',$projectRoot)}
   $checkFlag=if($Actions){'--action-check'}elseif($ConnectedWorld){'--connected-world-check'}elseif($Cargo){'--cargo-network-check'}elseif($Replication){'--replication-check'}else{'--network-check'}

@@ -191,3 +191,10 @@ isolated APPDATA for 38 slot/confirmation/recovery/failure/selection checks.
 Run `tools/CheckSlots.ps1 -Runtime Release` for the packaged build. It uses a
 bounded owned process and rejects runtime errors or missing completion markers.
 See SAVE_SLOTS.md for precise failure fixtures and recovery limitations.
+
+Step 39 expands NetworkCheck to 72 lifecycle assertions with isolated host/client
+APPDATA. Existing Actions and Cargo modes now check the same-entity reconnect
+policy, with 49 and 34 assertions respectively. Run `CheckNetwork.ps1 -Runtime
+Release` (optionally `-Actions` or `-Cargo`) after export. Local UDP test processes
+need loopback network access. Full remains 31 stages / 87 scripts. See
+RECONNECT_LIFECYCLE.md for evidence and remaining authentication/identity gates.
