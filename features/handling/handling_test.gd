@@ -118,7 +118,7 @@ func _ready() -> void:
 		save_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		hud_stack.add_child(save_notice)
 		local_save = LocalWorldSave.new()
-		if local_save.open_world() and local_save.restore_ship(ship):
+		if local_save.open_world(str(get_tree().get_meta("local_save_folder", LocalWorldSave.DEFAULT_ROOT))) and local_save.restore_ship(ship):
 			save_notice.text = local_save.message
 			camera.initialized = false
 			camera.set_focus(ship.assembly.focus)

@@ -12,6 +12,11 @@ var session_result: Label
 var test_load_button: Button
 var continue_button: Button
 var save_notice: Label
+var slot_picker: OptionButton
+var slot_status: Label
+var slot_result: Label
+var recovery_confirmation: ConfirmationDialog
+var play_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -41,16 +46,14 @@ func _ready() -> void:
 	var home: VBoxContainer = page("title")
 	home.position.y = 130
 	home.add_theme_constant_override("separation", 4)
-	button(home, "PLAY", "play")
+	play_button = button(home, "PLAY", "play")
 	button(home, "BOAT HANDLING TEST", "handling")
 	button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
 	button(home, "LOCAL MULTIPLAYER TEST", "local_network")
 	continue_button = button(home, "CONTINUE TEST SESSION", "continue")
 	button(home, "SERVERS", "servers")
 	button(home, "SETTINGS", "settings")
-	var fleet: Button = button(home, "FLEET", "fleet")
-	fleet.disabled = true
-	fleet.tooltip_text = "Fleet management will arrive in a later step."
+	button(home, "LOCAL SAVES", "saves")
 	button(home, "EXIT", "exit")
 	save_notice = Label.new()
 	save_notice.add_theme_font_size_override("font_size", 15)
@@ -59,6 +62,33 @@ func _ready() -> void:
 	save_notice.position = Vector2(420, 160)
 	save_notice.size = Vector2(440, 180)
 	add_child(save_notice)
+	var saves: VBoxContainer = page("saves")
+	saves.position.y = 135
+	saves.add_theme_constant_override("separation", 6)
+	label(saves, "LOCAL SAVES", 26)
+	label(saves, "Private development progress only. Online accounts come later.", 16)
+	slot_picker = OptionButton.new()
+	for index: int in range(3): slot_picker.add_item("Local slot %d" % (index + 1))
+	slot_picker.custom_minimum_size = Vector2(600, 42)
+	saves.add_child(slot_picker)
+	slot_picker.item_selected.connect(func(_index: int) -> void: selected.emit("select_slot"))
+	slot_status = Label.new()
+	slot_status.custom_minimum_size = Vector2(600, 74)
+	slot_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	saves.add_child(slot_status)
+	button(saves, "USE SELECTED SLOT", "use_slot")
+	button(saves, "NEW GAME IN EMPTY SLOT", "new_slot")
+	button(saves, "RECOVER BACKUP TO EMPTY SLOT", "recover_slot")
+	button(saves, "BACK", "title")
+	slot_result = Label.new()
+	slot_result.custom_minimum_size.x = 600
+	slot_result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	saves.add_child(slot_result)
+	recovery_confirmation = ConfirmationDialog.new()
+	recovery_confirmation.title = "Recover local backup?"
+	recovery_confirmation.ok_button_text = "Recover into empty slot"
+	recovery_confirmation.confirmed.connect(func() -> void: selected.emit("confirm_recovery"))
+	add_child(recovery_confirmation)
 	var servers: VBoxContainer = page("servers")
 	label(servers, "SERVERS", 26)
 	label(servers, "Online servers are not connected yet.\nUse the local session to test the menus.", 18)
@@ -121,6 +151,7 @@ func button(parent: Control, text: String, action: String) -> Button:
 	return item
 
 func show_page(id: String, can_continue: bool) -> void:
+	save_notice.visible = id == "title"
 	continue_button.visible = can_continue
 	for key: String in pages:
 		pages[key].visible = key == id

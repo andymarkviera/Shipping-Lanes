@@ -13,6 +13,7 @@ var current: Dictionary = {}
 var generation: int = 0
 var message: String = ""
 var usable: bool = false
+var validating_recovery: bool = false # Trusted slot manager only; never network/save input.
 var root_path: String
 var realm: String
 var fault_hook: Callable
@@ -27,6 +28,8 @@ func open_world(folder: String = DEFAULT_ROOT, world: String = DEFAULT_REALM) ->
 	incompatible = false
 	incompatibility = ""
 	usable = false
+	if FileAccess.file_exists(folder + "/recovery.pending") and not validating_recovery:
+		return reject("Recovery was interrupted. This copy is unavailable; original progress is preserved.")
 	root_path = folder
 	realm = world
 	if not folder.begins_with("user://") or folder.contains(".."):

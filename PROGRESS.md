@@ -1139,3 +1139,23 @@ No art or extra content was added. This is still local saving, not online accoun
 Recovery tag: `step-37-save-migration`.
 Source backup: `../output/checkpoints/step-37-save-migration-2026-10-21.zip`.
 Next: Step 38 — save and recovery feedback, kept focused on the multiplayer path.
+
+## Step 38 — Save slots and recovery interface
+
+Task ID: `save-slots-and-recovery-interface`.
+Status: complete for local development worlds — October 21, 2026.
+
+Local Saves provides three slots, explicit empty-slot creation, save compatibility
+status, and confirmed backup recovery into a separate empty slot. No existing
+progression is overwritten. Selection applies to Play and starter handling;
+switching clears the previous session continuation. Failed/interrupted recovery
+copies remain blocked. Unwritable folder failures are visible and preferences
+remain separate. Slot 1 preserves the original development save location.
+
+38 checks pass in Godot and Windows Release. All 87 scripts compile; application
+flow, editor persistence/migration regressions, export and Release startup pass.
+Full offers 31 stages. See SAVE_SLOTS.md for evidence and bounded prototype limits.
+
+Recovery tag: `step-38-save-slots`.
+Source backup: `../output/checkpoints/step-38-save-slots-2026-10-21.zip`.
+Next: Step 39 — reconnect and lifecycle. Multiplayer remains the priority.

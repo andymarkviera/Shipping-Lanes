@@ -185,3 +185,9 @@ missing content/future versions and actual menu failure presentation are covered
 Run `tools/CheckMigration.ps1 -Runtime Release` for the packaged game. See
 SAVE_MIGRATION.md. Full now includes these owned-process crash fixtures; it still
 does not rebuild exports or run the separate PostgreSQL dependency harness.
+
+Step 38 adds SlotsCheck as stage 31 (87 scripts). The actual menu runs against
+isolated APPDATA for 38 slot/confirmation/recovery/failure/selection checks.
+Run `tools/CheckSlots.ps1 -Runtime Release` for the packaged build. It uses a
+bounded owned process and rejects runtime errors or missing completion markers.
+See SAVE_SLOTS.md for precise failure fixtures and recovery limitations.
