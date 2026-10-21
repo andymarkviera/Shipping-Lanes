@@ -60,7 +60,8 @@ func request_economy(actor_id: String, ship_id: String, request: Variant) -> Dic
 	var message: String = "Transaction rejected: " + receipt.code
 	if receipt.ok:
 		message = "Test container loaded." if request.operation == "purchase_container" else "Test cargo delivery paid." if request.operation == "deliver_container" else "Test service fee paid."
-	elif receipt.code == "insufficient_funds": message = "Not enough test credits. Start a new test session to reset."
+	elif receipt.code == "insufficient_funds":
+		message = "Not enough credits in this local save." if _ledger is DurableEconomy else "Not enough test credits. Start a new test session to reset."
 	var result: Dictionary = response(receipt.ok, receipt.code, message)
 	result.receipt = receipt
 	return result

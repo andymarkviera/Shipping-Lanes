@@ -11,6 +11,7 @@ var session_details: Label
 var session_result: Label
 var test_load_button: Button
 var continue_button: Button
+var save_notice: Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -51,6 +52,13 @@ func _ready() -> void:
 	fleet.disabled = true
 	fleet.tooltip_text = "Fleet management will arrive in a later step."
 	button(home, "EXIT", "exit")
+	save_notice = Label.new()
+	save_notice.add_theme_font_size_override("font_size", 15)
+	save_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	save_notice.custom_minimum_size.x = 440
+	save_notice.position = Vector2(420, 160)
+	save_notice.size = Vector2(440, 180)
+	add_child(save_notice)
 	var servers: VBoxContainer = page("servers")
 	label(servers, "SERVERS", 26)
 	label(servers, "Online servers are not connected yet.\nUse the local session to test the menus.", 18)
@@ -58,7 +66,7 @@ func _ready() -> void:
 	button(servers, "BACK", "title")
 	var playing: VBoxContainer = page("playing")
 	label(playing, "LOCAL TEST SESSION", 26)
-	label(playing, "Session ready. Boat controls and the world\nwill arrive in later build steps.\n\nEscape opens the session menu.", 18)
+	label(playing, "Local development save. Use Boat Handling Test\nto sail your saved starter ship.\n\nEscape opens the session menu.", 18)
 	button(playing, "SESSION MENU", "pause")
 	session_details = Label.new()
 	session_details.add_theme_font_size_override("font_size", 18)
@@ -75,7 +83,7 @@ func _ready() -> void:
 	label(paused, "Your controls are released. Hosted sessions\nkeep running while this menu is open.", 18)
 	button(paused, "RESUME", "resume")
 	button(paused, "SETTINGS", "settings")
-	button(paused, "NEW TEST SESSION", "play")
+	button(paused, "REOPEN LOCAL SAVE", "play")
 	button(paused, "RETURN TO MENU", "title")
 
 func page(id: String) -> VBoxContainer:

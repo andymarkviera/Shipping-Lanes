@@ -7,12 +7,16 @@ var state: State = State.BOOT
 var settings_return: State = State.TITLE
 var session: TestSession
 var continuation: Dictionary = {}
+var persistent_world: LocalWorldSave
 var orbit_captured: bool = false
 var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var controls: PlayerControls = $Controls
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--persistence-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/persistence_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--recovery-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/recovery_probe.tscn")
 		return
@@ -109,8 +113,10 @@ func _ready() -> void:
 func navigate(action: String) -> void:
 	match action:
 		"local_network": get_tree().change_scene_to_file("res://features/network/local_network_test.tscn")
-		"play": start_session()
-		"handling": get_tree().change_scene_to_file("res://features/handling/handling_test.tscn")
+		"play": start_saved_session()
+		"handling":
+			get_tree().set_meta("local_save_requested", true)
+			get_tree().change_scene_to_file("res://features/handling/handling_test.tscn")
 		"heavy_lifter": get_tree().change_scene_to_file("res://features/handling/heavy_lifter_test.tscn")
 		"test_load": request_test_load()
 		"test_timer": request_test_timer()
@@ -123,6 +129,9 @@ func navigate(action: String) -> void:
 		"exit": get_tree().quit()
 
 func start_session(hosted: bool = true, snapshot: Dictionary = {}) -> void:
+	if persistent_world != null and snapshot.get("authority") != persistent_world.authority:
+		persistent_world.close_world()
+		persistent_world = null
 	if snapshot.is_empty() and continuation.has("authority"):
 		continuation.authority.detach_clock(true)
 	destroy_session()
@@ -134,6 +143,20 @@ func start_session(hosted: bool = true, snapshot: Dictionary = {}) -> void:
 	continuation = {}
 	transition(State.PLAYING)
 	menu.show_session_state(session.state_view(), "Disposable test credits and cargo only.")
+	if persistent_world != null: menu.show_session_state(session.state_view(), persistent_world.message)
+
+func start_saved_session() -> void:
+	var saved: LocalWorldSave = LocalWorldSave.new()
+	if not saved.open_world():
+		menu.save_notice.text = saved.message
+		saved.close_world()
+		return
+	if persistent_world != null: persistent_world.close_world()
+	persistent_world = saved
+	start_session(false, {"authority":saved.authority})
+	var recovered_notice: String = saved.message if saved.message.begins_with("Recovered") else ""
+	saved.save(saved.current.location, saved.current.fuel_ml)
+	menu.show_session_state(session.state_view(), recovered_notice + ("\n" if not recovered_notice.is_empty() else "") + saved.message)
 
 func destroy_session(preserve_for_continue: bool = false) -> void:
 	if is_instance_valid(session):
@@ -223,5 +246,6 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(session):
 		menu.show_timer(session.timer_view())
 func _exit_tree() -> void:
+	if persistent_world != null: persistent_world.close_world()
 	if continuation.has("authority"):
 		continuation.authority.detach_clock(true)

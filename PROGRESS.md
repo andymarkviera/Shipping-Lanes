@@ -1087,3 +1087,30 @@ Previously scheduled pickup/neutral/water follow-ups remain unchanged.
 Recovery tag: `step-35-durable-action-recovery`.
 Source backup: `../output/checkpoints/step-35-durable-action-recovery-2026-10-21.zip`.
 Next: Step 36 — versioned local persistence.
+
+## Step 36 — Versioned local persistence
+
+Task ID: `versioned-local-persistence`.
+Status: complete for the starter private development world — October 21, 2026.
+
+Play now restores a durable local authority. Boat Handling Test entered through
+the main menu saves/restores the starter ship's geographic pose and fuel, every
+ten seconds and on normal departure. Stable player/ship/owner/inventory IDs and
+versioned current/previous checkpoints share the database with the receipt ledger.
+The restored ship is stationary/neutral. Preview cargo remains visual; heavy and
+local-network fixtures remain independent. Settings remain separate.
+
+SQLite transactions replace generic live-file replacement. Native backup creates
+a separate last-successful-checkpoint database. Malformed spatial data can recover
+the previous checkpoint without reverting newer payments/cargo. Unsupported or
+unrecoverable saves fail closed and preserve files instead of resetting progress.
+
+79 assertions plus two forced-termination boundaries pass in editor and Release,
+including actual menu/handling integration. All 84 scripts compile; application
+flow, 21 session checks, 22 clock checks and Step 35 recovery pass. Export and
+normal startup pass. Full now has 29 stages; old physics/network suites were not
+rerun. See LOCAL_PERSISTENCE.md for evidence, fixed-slot limits and recovery policy.
+
+Recovery tag: `step-36-versioned-local-persistence`.
+Source backup: `../output/checkpoints/step-36-versioned-local-persistence-2026-10-21.zip`.
+Next: Step 37 — migration and missing content.

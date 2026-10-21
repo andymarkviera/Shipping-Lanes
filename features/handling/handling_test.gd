@@ -12,6 +12,9 @@ var overlay: DeveloperOverlay
 var feedback: HandlingFeedback
 var load_preview: Button
 var load_preview_index: int = 0
+var local_save: LocalWorldSave
+var save_notice: Label
+var save_elapsed: float = 0.0
 
 func box(parent: Node3D, size: Vector3, at: Vector3, color: Color) -> void:
 	var mesh: MeshInstance3D = MeshInstance3D.new()
@@ -37,7 +40,7 @@ func _ready() -> void:
 	helm = ShipHelm.new()
 	add_child(helm)
 	helm.configure(ship, controls, feedback)
-	helm.menu_requested.connect(func(): get_tree().change_scene_to_file("res://features/main/main.tscn"))
+	helm.menu_requested.connect(leave_for_menu)
 	ocean = OceanPresentation.new()
 	ocean.quality = controls.preferences.water_quality
 	add_child(ocean)
@@ -107,6 +110,45 @@ func _ready() -> void:
 	hud_stack.add_child(water_notice)
 	overlay = DeveloperOverlay.new()
 	add_child(overlay)
+	if get_tree().get_meta("local_save_requested", false):
+		get_tree().remove_meta("local_save_requested")
+		save_notice = Label.new()
+		save_notice.add_theme_font_size_override("font_size", 15)
+		save_notice.custom_minimum_size.x = 480
+		save_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hud_stack.add_child(save_notice)
+		local_save = LocalWorldSave.new()
+		if local_save.open_world() and local_save.restore_ship(ship):
+			save_notice.text = local_save.message
+			camera.initialized = false
+			camera.set_focus(ship.assembly.focus)
+		else:
+			ship.simulation_paused = true
+			save_notice.text = local_save.message
+		get_tree().auto_accept_quit = false
+
+func save_progress() -> bool:
+	if local_save == null: return true
+	if not local_save.usable:
+		save_notice.text = local_save.message
+		return false
+	var saved: bool = local_save.save_ship(ship)
+	save_notice.text = local_save.message
+	return saved
+
+func leave_for_menu() -> void:
+	# A failed-open session is frozen and may safely leave without creating a new save.
+	if local_save != null and local_save.usable and not save_progress(): return
+	get_tree().change_scene_to_file("res://features/main/main.tscn")
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and local_save != null:
+		if not local_save.usable or save_progress(): get_tree().quit()
+
+func _exit_tree() -> void:
+	if local_save != null:
+		local_save.close_world()
+		get_tree().auto_accept_quit = true
 
 func cycle_load_preview() -> void:
 	load_preview_index = (load_preview_index + 1) % 3
@@ -116,6 +158,11 @@ func cycle_load_preview() -> void:
 	controls.wait_for_release = true
 
 func _process(_delta: float) -> void:
+	if local_save != null and local_save.usable:
+		save_elapsed += _delta
+		if save_elapsed >= 10.0:
+			save_elapsed = 0
+			save_progress()
 	var forward_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_up"])
 	var reverse_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_throttle_down"])
 	var left_key: String = OS.get_keycode_string(controls.preferences.bindings["ship_steer_left"])

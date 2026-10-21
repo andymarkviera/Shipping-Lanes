@@ -169,3 +169,11 @@ check all-or-none state, retained receipts/retry, second-writer revision checks,
 session restoration and refusal of incompatible/damaged records. Run exported
 coverage with `tools/CheckRecovery.ps1 -Runtime Release`; see
 DURABLE_ACTION_RECOVERY.md for retention, evidence and integration limits.
+
+Step 36 adds PersistenceCheck as stage 29 (84 scripts). Seven isolated-process
+phases include two forced terminations, fresh state restoration, malformed spatial
+fallback without economic rollback, backup/schema guards, and real Play/handling
+scene integration. 79 completed-phase assertions pass in editor and Release.
+Run `tools/CheckPersistence.ps1 -Runtime Release` for the packaged build. The
+harness shortens its APPDATA subfolder to avoid Windows SQLite journal path limits.
+See LOCAL_PERSISTENCE.md; the actual user's default save is never opened by tests.
