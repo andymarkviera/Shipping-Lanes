@@ -9,6 +9,19 @@ They do not advance the current task beyond documentation or renumber 01–142.
 
 ## Supplemental tasks
 
+### Current multiplayer priority — October 21, 2026
+
+Andy asked to keep development efficient toward multiplayer that works well.
+Keep Step 38 limited to necessary save/recovery feedback, then prioritize Step 39
+reconnect/lifecycle, the authentication proof, Step 40 durable identity/control,
+and Step 41 single-server authority/handoff. Complete the public adapter
+integration and `bounded-replication-and-client-pacing` before the Step 42
+foundation gate. The measured packet size/bandwidth and acknowledgement latency
+need correction and retesting; existing loopback checks are not internet readiness.
+Avoid extra art/content/polish detours along this path. Previously scheduled
+neutral, pickup, and water follow-ups remain recorded at their existing gates.
+Actual public deployment/operations still require the later rollout work.
+
 ### Geographic contract feasibility
 
 Task ID: `geographic-contract-feasibility`  

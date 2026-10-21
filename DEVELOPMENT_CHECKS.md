@@ -177,3 +177,11 @@ scene integration. 79 completed-phase assertions pass in editor and Release.
 Run `tools/CheckPersistence.ps1 -Runtime Release` for the packaged build. The
 harness shortens its APPDATA subfolder to avoid Windows SQLite journal path limits.
 See LOCAL_PERSISTENCE.md; the actual user's default save is never opened by tests.
+
+Step 37 adds MigrationCheck as stage 30 (85 scripts). Eight isolated-process
+phases provide 190 assertions and three forced terminations around the schema
+upgrade. Literal legacy data, retained economy receipts, unchanged preferences,
+missing content/future versions and actual menu failure presentation are covered.
+Run `tools/CheckMigration.ps1 -Runtime Release` for the packaged game. See
+SAVE_MIGRATION.md. Full now includes these owned-process crash fixtures; it still
+does not rebuild exports or run the separate PostgreSQL dependency harness.

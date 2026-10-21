@@ -104,7 +104,7 @@ func _ready() -> void:
 			expect(backup.open_world(backup_folder, REALM), "Backup copy restores")
 			expect(backup.authority.view().player.wallet_minor == 10000, "Backup includes wallet")
 			backup.close_world()
-			guard_copy("v", "UPDATE world_meta SET version=2", "unsupported")
+			guard_copy("v", "UPDATE world_meta SET version=99", "unsupported")
 			guard_copy("c", "UPDATE world_checkpoints SET payload='broken'", "No valid")
 			var missing: String = root_path + "/m"
 			DirAccess.make_dir_recursive_absolute(missing)

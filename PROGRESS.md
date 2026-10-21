@@ -1114,3 +1114,28 @@ rerun. See LOCAL_PERSISTENCE.md for evidence, fixed-slot limits and recovery pol
 Recovery tag: `step-36-versioned-local-persistence`.
 Source backup: `../output/checkpoints/step-36-versioned-local-persistence-2026-10-21.zip`.
 Next: Step 37 — migration and missing content.
+
+## Step 37 — Migration and missing content
+
+Task ID: `migration-and-missing-content`.
+Status: complete for the private starter world — October 21, 2026.
+
+World schema 1 upgrades atomically to schema 2, making cargo identity and neutral
+restart policy explicit. A native pre-upgrade backup is retained. Pose/fuel,
+ownership, money/cargo and successful/failed payment receipts are preserved.
+Missing ship/cargo content and unsupported versions stop safely with a visible
+menu explanation; no replacement wallet/session is created. Settings are untouched.
+
+190 migration checks and three process-kill boundaries pass in Godot and Windows
+Release. The 79-check/two-crash persistence regression also passes in both. All
+85 scripts compile; application flow, Release export/startup pass. Full now offers
+30 stages. See SAVE_MIGRATION.md for evidence and limits.
+
+The multiplayer priority is recorded in BUILD_DEPENDENCIES.md: minimal recovery
+feedback, reconnects, authentication/ownership, safe handoff, public storage
+integration, and correction of the measured bandwidth/client-pacing issues.
+No art or extra content was added. This is still local saving, not online accounts.
+
+Recovery tag: `step-37-save-migration`.
+Source backup: `../output/checkpoints/step-37-save-migration-2026-10-21.zip`.
+Next: Step 38 — save and recovery feedback, kept focused on the multiplayer path.

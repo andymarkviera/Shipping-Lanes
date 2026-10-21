@@ -3,6 +3,10 @@
 Task ID: `versioned-local-persistence`. Completed October 21, 2026 for the
 starter private development world. This is local saving, not online account saves.
 
+Step 37 now upgrades this original world schema 1 to schema 2. See
+SAVE_MIGRATION.md for the current compatibility/upgrade behavior; the original
+Step 36 schema description below is retained as migration reference.
+
 ## Player-facing behavior
 
 Play now opens the same private local save instead of resetting test money on

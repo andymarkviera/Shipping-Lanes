@@ -5,6 +5,8 @@ const Nav = preload("res://features/geography/navigation_experiment.gd")
 const DEFINITION = preload("res://features/catalog/records/starter_ship.tres")
 const DEFAULT_ROOT: String = "user://worlds/private_development"
 const DEFAULT_REALM: String = "private_development"
+const VERSION: int = 2
+const CARGO_ID: String = "cargo_test_container"
 var authority: SessionAuthority = SessionAuthority.new()
 var economy: DurableEconomy
 var current: Dictionary = {}
@@ -15,8 +17,16 @@ var root_path: String
 var realm: String
 var fault_hook: Callable
 var incompatible: bool = false
+var incompatibility: String = ""
+var catalog: DefinitionRegistry = DefinitionRegistry.new()
+
+func _init() -> void:
+	catalog.load_definitions(PrototypeCatalog.RECORDS)
 
 func open_world(folder: String = DEFAULT_ROOT, world: String = DEFAULT_REALM) -> bool:
+	incompatible = false
+	incompatibility = ""
+	usable = false
 	root_path = folder
 	realm = world
 	if not folder.begins_with("user://") or folder.contains(".."):
@@ -31,7 +41,7 @@ func open_world(folder: String = DEFAULT_ROOT, world: String = DEFAULT_REALM) ->
 	if not economy.run("SELECT name FROM sqlite_master WHERE type='table' AND name='world_meta'"):
 		return rollback("Cannot read save schema.")
 	if economy.db.query_result.is_empty():
-		if not economy.run("CREATE TABLE world_meta(id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, generation INTEGER NOT NULL)") or not economy.run("INSERT INTO world_meta VALUES(1,1,1)"):
+		if not economy.run("CREATE TABLE world_meta(id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, generation INTEGER NOT NULL)") or not economy.run("INSERT INTO world_meta VALUES(1,2,1)"):
 			return rollback("Cannot initialize world schema.")
 		if not economy.run("CREATE TABLE world_checkpoints(slot INTEGER PRIMARY KEY CHECK(slot IN (1,2)), payload TEXT NOT NULL, digest TEXT NOT NULL)"):
 			return rollback("Cannot initialize checkpoints.")
@@ -40,37 +50,50 @@ func open_world(folder: String = DEFAULT_ROOT, world: String = DEFAULT_REALM) ->
 	if not economy.run("SELECT version,generation FROM world_meta WHERE id=1") or economy.db.query_result.size() != 1:
 		return rollback("Invalid world header. Progress preserved.")
 	var header: Dictionary = economy.db.query_result[0].duplicate()
-	if header.version != 1: return rollback("This save version is unsupported. Progress preserved.")
+	var upgrading: bool = header.version == 1
+	if header.version == 1:
+		# End the read/write transaction before the native online backup API.
+		if not economy.run("ROLLBACK") or not economy.db.backup_to(root_path + "/pre1.db"):
+			return reject("Cannot back up this older save. Upgrade postponed; progress preserved.")
+		if not economy.run("BEGIN IMMEDIATE"): return reject("Save is busy. Upgrade postponed.")
+		if not migrate_v1(): return false
+		if not economy.run("SELECT version,generation FROM world_meta WHERE id=1") or economy.db.query_result.size() != 1:
+			return rollback("Cannot read upgraded header.")
+		header = economy.db.query_result[0].duplicate()
+	if header.version != VERSION: return rollback("This save version is unsupported. Use a compatible build; progress preserved.")
 	if not GameUnits.valid_integer(header.generation) or header.generation < 1: return rollback("Invalid checkpoint generation.")
 	generation = header.generation
 	var primary: Dictionary = read_slot(1)
-	if incompatible: return rollback("This checkpoint needs a different content or save version. Progress preserved.")
+	if incompatible: return rollback(incompatibility)
 	if not primary.is_empty() and primary.generation == generation:
 		current = primary
 		message = "Local progress loaded."
 	else:
 		current = read_slot(2)
-		if incompatible: return rollback("The backup checkpoint requires a different version. Progress preserved.")
+		if incompatible: return rollback(incompatibility)
 		if current.is_empty() or current.generation > generation: return rollback("No valid ship checkpoint. Progress preserved; recovery required.")
 		message = "Recovered the previous ship checkpoint. Latest payments and cargo are preserved."
 	if not economy.run("COMMIT"): return rollback("Save read could not finish.")
+	if upgrading and fault_hook.is_valid(): fault_hook.call("migration_committed")
 	apply_metadata()
 	usable = true
 	return true
 
 func record(address: Dictionary, fuel_ml: int, revision: int) -> Dictionary:
-	return {"version":1, "generation":revision, "realm":realm,
+	return {"version":VERSION, "generation":revision, "realm":realm,
 		"player_id":SessionAuthority.PLAYER_ID, "ship_id":SessionAuthority.SHIP_ID,
 		"owner_id":SessionAuthority.PLAYER_ID, "definition_id":DEFINITION.id,
-		"inventory_id":"inventory_test", "fuel_ml":fuel_ml, "location":address.duplicate(true)}
+		"inventory_id":"inventory_test", "fuel_ml":fuel_ml, "location":address.duplicate(true),
+		"cargo_definition_id":CARGO_ID, "restart_policy":"neutral_v1"}
 
-func valid(data: Variant) -> bool:
-	if not data is Dictionary or data.size() != 10: return false
+func valid(data: Variant, version: int = VERSION) -> bool:
+	if not data is Dictionary or data.size() != (10 if version == 1 else 12): return false
 	for key: String in ["version", "generation", "realm", "player_id", "ship_id", "owner_id", "definition_id", "inventory_id", "fuel_ml", "location"]:
 		if not data.has(key): return false
 	for key: String in ["version", "generation", "fuel_ml"]:
 		if not GameUnits.valid_integer(data.get(key)): return false
-	if data.version != 1 or data.generation < 1 or data.realm != realm: return false
+	if data.version != version or data.generation < 1 or data.realm != realm: return false
+	if version == VERSION and (data.get("cargo_definition_id") != CARGO_ID or data.get("restart_policy") != "neutral_v1"): return false
 	if data.player_id != SessionAuthority.PLAYER_ID or data.ship_id != SessionAuthority.SHIP_ID or data.owner_id != data.player_id: return false
 	if data.definition_id != DEFINITION.id or data.inventory_id != "inventory_test" or data.fuel_ml > int(DEFINITION.fuel_capacity_liters * 1000): return false
 	var address: Dictionary = GeographicAddress.decode(data.location)
@@ -78,24 +101,71 @@ func valid(data: Variant) -> bool:
 	var position: Vector3 = Nav.local_position(GeographicAddress.normalized(0, 0), address)
 	return position.is_finite() and Vector2(position.x, position.z).length() <= 100000.0
 
-func read_slot(slot: int) -> Dictionary:
+func read_slot(slot: int, version: int = VERSION) -> Dictionary:
 	if not economy.bound("SELECT payload,digest FROM world_checkpoints WHERE slot=?", [slot]) or economy.db.query_result.size() != 1: return {}
 	var row: Dictionary = economy.db.query_result[0]
 	if not row.payload is String or row.payload.length() > 8192 or row.payload.sha256_text() != row.digest: return {}
 	var data: Variant = JSON.parse_string(row.payload)
 	if not data is Dictionary: return {}
-	if (data.has("version") and data.version != 1) or (data.has("definition_id") and data.definition_id != DEFINITION.id):
-		incompatible = true
+	if data.has("version") and data.version != version:
+		content_error("Unsupported checkpoint version. Use a compatible build; progress preserved.")
+		return {}
+	if not data.get("definition_id") is String: return {}
+	var ship_definition: ContentDefinition = catalog.get_definition(data.definition_id)
+	if not ship_definition is ShipDefinition or not ResourceLoader.exists(ship_definition.runtime_scene_path, "PackedScene"):
+		content_error("Missing ship content: %s. Restore compatible content; your save is preserved." % data.definition_id)
+		return {}
+	if data.definition_id != DEFINITION.id:
+		content_error("Unsupported saved ship: %s. Use a compatible build; your save is preserved." % data.definition_id)
+		return {}
+	var cargo_id: Variant = CARGO_ID if version == 1 else data.get("cargo_definition_id")
+	if not cargo_id is String: return {}
+	if not catalog.get_definition(cargo_id) is CargoDefinition:
+		content_error("Missing cargo content: %s. Restore compatible content; your save is preserved." % cargo_id)
+		return {}
+	if cargo_id != CARGO_ID:
+		content_error("Unsupported saved cargo: %s. Use a compatible build; your save is preserved." % cargo_id)
 		return {}
 	if data.get("location") is Dictionary:
 		if data.location.get("world_id") != GeographicAddress.WORLD_ID or data.location.get("content_revision") != GeographicAddress.CONTENT_REVISION:
-			incompatible = true
+			content_error("Missing or incompatible map content. Use the matching world revision; progress preserved.")
 			return {}
 	for key: String in ["version", "generation", "fuel_ml"]:
 		var value: Variant = data.get(key)
 		if not (value is int or value is float) or not is_finite(value) or value < 0 or value > GameUnits.MAX_INTEGER or value != floor(value): return {}
 		data[key] = int(value)
-	return data if valid(data) else {}
+	return data if valid(data, version) else {}
+
+func content_error(reason: String) -> void:
+	incompatible = true
+	incompatibility = reason
+
+func migrate_v1() -> bool:
+	# Recheck under the lock: another opener may have migrated while backup ran.
+	if not economy.run("SELECT version,generation FROM world_meta WHERE id=1") or economy.db.query_result.size() != 1:
+		return rollback("Invalid migration header. Progress preserved.")
+	var header: Dictionary = economy.db.query_result[0].duplicate()
+	if header.version == VERSION: return true
+	if header.version != 1 or not GameUnits.valid_integer(header.generation) or header.generation < 1 or header.generation >= GameUnits.MAX_INTEGER:
+		return rollback("Unsupported migration source. Progress preserved.")
+	var primary: Dictionary = read_slot(1, 1)
+	var previous: Dictionary = read_slot(2, 1)
+	if incompatible: return rollback(incompatibility)
+	if primary.is_empty() or previous.is_empty() or primary.generation != header.generation or previous.generation > header.generation:
+		return rollback("Older save checkpoints need recovery before upgrade. Progress preserved.")
+	for data: Dictionary in [primary, previous]:
+		data.version = VERSION
+		data.cargo_definition_id = CARGO_ID
+		data.restart_policy = "neutral_v1"
+		if not valid(data): return rollback("Migration validation failed. Progress preserved.")
+	# Fence an already-open v1 host by advancing generation, never economic revision.
+	primary.generation = header.generation + 1
+	if not write_slot(1, primary): return rollback("Migration write failed.")
+	if fault_hook.is_valid(): fault_hook.call("migration_partial")
+	if not write_slot(2, previous) or not economy.bound("UPDATE world_meta SET version=?,generation=? WHERE id=1", [VERSION, primary.generation]):
+		return rollback("Migration write failed.")
+	if fault_hook.is_valid(): fault_hook.call("migration_prepared")
+	return true # Caller validates the upgraded records and commits the same transaction.
 
 func write_slot(slot: int, data: Dictionary) -> bool:
 	var payload: String = JSON.stringify(data)
@@ -111,7 +181,7 @@ func save(address: Dictionary, fuel_ml: int) -> bool:
 	if not economy.run("BEGIN IMMEDIATE"):
 		message = "Save is busy. Try again."
 		return false
-	if not economy.run("SELECT generation FROM world_meta WHERE id=1") or economy.db.query_result.size() != 1 or economy.db.query_result[0].generation != generation:
+	if not economy.run("SELECT version,generation FROM world_meta WHERE id=1") or economy.db.query_result.size() != 1 or economy.db.query_result[0].version != VERSION or economy.db.query_result[0].generation != generation:
 		return rollback("Another host changed this save. Reopen it before saving.")
 	if not write_slot(2, current) or not write_slot(1, next): return rollback("Checkpoint write failed. Previous save preserved.")
 	if not economy.bound("UPDATE world_meta SET generation=? WHERE id=1", [next.generation]): return rollback("Checkpoint header write failed.")
