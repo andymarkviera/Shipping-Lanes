@@ -5,6 +5,7 @@ extends RefCounted
 const PLAYER_ID: String = "player_test"
 const SHIP_ID: String = "ship_test"
 const TEST_COST_MINOR: int = 10000
+var _ledger: EconomyLedger = EconomyLedger.new()
 var _clock: SimulationClock = SimulationClock.new()
 var _attached: bool = false
 var _operation: Dictionary = {"status":"idle","started_world_ms":0,"due_world_ms":0,"completed_world_ms":0,"completion_count":0}
@@ -16,7 +17,12 @@ var _state: Dictionary = {
 }
 
 func view() -> Dictionary:
-	return _state.duplicate(true)
+	var snapshot: Dictionary = _state.duplicate(true)
+	var economy: Dictionary = _ledger.view()
+	snapshot.revision = economy.revision
+	snapshot.player.wallet_minor = economy.player_minor
+	snapshot.inventory.cargo.cargo_test_container = economy.player_quantity
+	return snapshot
 
 func request_test_load(actor_id: String, ship_id: String, expected_revision: Variant) -> Dictionary:
 	if actor_id != _state.player.id:
@@ -27,19 +33,25 @@ func request_test_load(actor_id: String, ship_id: String, expected_revision: Var
 		return response(false,"not_owner","You do not own this ship.")
 	if not GameUnits.valid_integer(expected_revision):
 		return response(false,"invalid_revision","The request has an invalid revision.")
-	if expected_revision != _state.revision:
+	if expected_revision != view().revision:
 		return response(false,"stale_revision","The session changed. Review it and try again.")
-	if _state.player.wallet_minor < TEST_COST_MINOR:
-		return response(false,"insufficient_funds","Not enough test credits. Start a new test session to reset.")
-	if _state.revision >= GameUnits.MAX_INTEGER or _state.inventory.cargo.cargo_test_container >= GameUnits.MAX_INTEGER:
-		return response(false,"limit_reached","The test state has reached its limit.")
-	# Prepare the entire change, then publish once. No awaits/callbacks mid-action.
-	var next: Dictionary = _state.duplicate(true)
-	next.player.wallet_minor -= TEST_COST_MINOR
-	next.inventory.cargo.cargo_test_container += 1
-	next.revision += 1
-	_state = next
-	return response(true,"ok","Test container loaded.")
+	return request_economy(actor_id, ship_id, EconomyLedger.request("test_load:" + str(expected_revision), "purchase_container", 1, expected_revision))
+
+func economy_audit() -> Dictionary:
+	return _ledger.audit()
+
+func request_economy(actor_id: String, ship_id: String, request: Variant) -> Dictionary:
+	if actor_id != _state.player.id: return response(false, "unknown_actor", "This player is not in the session.")
+	if ship_id != _state.ship.id: return response(false, "unknown_ship", "This ship is not in the session.")
+	if _state.ship.owner_id != actor_id: return response(false, "not_owner", "You do not own this ship.")
+	var receipt: Dictionary = _ledger.execute(actor_id, request)
+	var message: String = "Transaction rejected: " + receipt.code
+	if receipt.ok:
+		message = "Test container loaded." if request.operation == "purchase_container" else "Test cargo delivery paid." if request.operation == "deliver_container" else "Test service fee paid."
+	elif receipt.code == "insufficient_funds": message = "Not enough test credits. Start a new test session to reset."
+	var result: Dictionary = response(receipt.ok, receipt.code, message)
+	result.receipt = receipt
+	return result
 
 func response(ok: bool, code: String, message: String) -> Dictionary:
 	return {"ok":ok,"code":code,"message":message,"state":view()}

@@ -145,3 +145,10 @@ without retained receipts, payload conflicts, failed-result retention, timeout
 behavior and reconnect isolation. Release uses CheckNetwork.ps1 -Runtime Release
 -Actions. Existing motion/cargo checks exercise the integrated live helm path.
 See ACTION_VALIDATION.md; its receipts are deliberately session-scoped.
+
+Step 34 adds EconomyCheck (Full now offers 27 stages / 79 scripts). It covers
+82 atomic wallet/inventory, audit, retry, failure, overflow and no-peer-transfer
+assertions. SessionCheck verifies the existing menu test uses this ledger;
+ClocksCheck and FlowCheck cover session lifecycle. Native Release uses
+Godot.ps1 -Mode RunExport -Configuration Release -EconomyProbe.
+This is an in-memory proof, not the Step 35 crash/restart durability test.

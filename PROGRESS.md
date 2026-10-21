@@ -1007,3 +1007,29 @@ stopping usability and water follow-ups are unchanged. See ACTION_VALIDATION.md.
 Recovery tag: `step-33-action-validation`.
 Source backup: `../output/checkpoints/step-33-action-validation-2026-10-20.zip`.
 Next: Step 34 — money and transfer rules.
+
+## Step 34 — Money and transfer rules
+
+Task ID: `money-and-transfer-rules`.
+Status: complete as an in-memory authority/atomicity proof — October 20, 2026.
+
+Andy excluded player-to-player economic transfers/gifts/trading. D064, GAME_SPEC,
+F047/U037 and BUILD_DEPENDENCIES record that scope; Steps 103–105 are not applicable.
+Game-owned purchases/resale, service fees and earned cargo/job payments remain core.
+
+Added an integer wallet/inventory ledger with game-owned endpoints, fixed test
+prices, atomic prepare/publish, balanced journal entries and retained outcomes.
+No caller-selected peer recipient or price is accepted. Retries do not duplicate
+charges/payments/cargo; failures preserve all economic state. Overflow, stock,
+funds, stale revisions and receipt capacity are checked before committing.
+The existing menu test purchase now uses this ledger; continue retains its state.
+
+82 economy assertions, 21 session checks and 22 clock checks pass in editor and
+native Windows Release. Application flow, 79-script compilation, export and
+startup pass. Full now offers 27 stages; unchanged network/physics suites were
+not rerun. See ECONOMY_RULES.md for fixture-only limits and test prices.
+
+Recovery tag: `step-34-money-and-transfer-rules`.
+Source backup: `../output/checkpoints/step-34-money-and-transfer-rules-2026-10-20.zip`.
+Next: supplemental public-storage adapter proof, required before Step 35 durable
+action recovery. The no-peer-economy decision does not remove this storage gate.

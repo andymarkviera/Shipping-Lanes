@@ -163,7 +163,7 @@ are recorded in `HANDLING_FEEDBACK.md`.
 | 88–93 world/map | Expand the selected connected world and early distance/coordinate service; do not replace it with isolated compact levels or independently authored globe/flat positions. |
 | 94–95 channels/infrastructure | Fixed open Panama and safe hull clearance are core. Moving locks/gates are conditional. No war/level barriers; optional reservations or moving geometry need explicit scope. |
 | 99–100 content | Select launch fleet/ports/services explicitly and validate against all hull/service/passage constraints; concept seed coordinates and source fleet counts are not runtime data. |
-| 103–106 trading/achievements | Conditional pending U037/U038. If declined, record explicit exclusion and apply 109 to selected scope. Core reward/receipt audit 107 still applies. |
+| 103–106 trading/achievements | Andy excluded player-to-player economic transfers/trading on October 20, 2026: 103–105 are not applicable, U037 resolved. Achievements (106/U038) remain conditional. Apply 109 to selected scope; core reward/receipt audit 107 still applies. |
 | 110–118 public rollout | Deployment budget, operator, identity/trust, connection path and services must be ready. Steps 113–114 harden/extend earlier verified identity/transactions; they cannot first establish authority after handoff, markets or refinery code. |
 | 124–128 release | All applicable core inventory rows and due uncertainties are audited in exported builds. Public services cannot be silently dropped to declare a local milestone version 1. |
 | 129–142 and optional later module | Post-core expansion; no car driving, rockets, walking, aircraft, or historical systems are needed to finish core tasks. |

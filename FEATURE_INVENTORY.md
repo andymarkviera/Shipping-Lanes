@@ -87,7 +87,7 @@ inventory's completion.
 
 | ID | Feature and disposition | Reserved placement / decision |
 | --- | --- | --- |
-| F047 | Conditional: player-to-player ship/cash trading | 103–105, primary `trade-offers-and-locking`; U037 before 103. If omitted, 109 checks the selected scope; shop purchase/resale remain core. |
+| F047 | Excluded by Andy: player-to-player money, ship and cargo trades/gifts/transfers | 103–105 not applicable by scope decision (October 20, 2026); U037 resolved. Game shop purchase/resale, payments and fees remain core. |
 | F048 | Conditional: earned achievements/reward milestones | 106 `achievements-and-progression-rewards`; U038 before 106. No source badge/event catalog is adopted. Step 107's core reward audit still runs if omitted. |
 | F049 | Conditional: freecam, extra camera modes, companies/crew/chat/parties or shared income | Camera subset at 19 `camera`; social/crew module has no committed implementation slot. U039 before adding scope; no gameplay/shared-income assumption from visible peer ships. |
 | F050 | Conditional: physical waves/wind/currents and moving locks/gates/bridges | 95 `moving-infrastructure`, 96 `environment`; U033–U034 before dependent work. Fixed Panama bridge/open passage does not require moving infrastructure. |

@@ -17,6 +17,11 @@ design records explicitly and update the decision record before dependent work.
 
 ## Confirmed scope
 
+October 20, 2026 clarification: no player-to-player economic transfers, gifts
+or trades of money, ships or cargo. Purchases/resale through game-owned shops,
+game service fees and earned cargo/job payments remain in scope. Multiplayer
+sailing is unchanged. Roadmap Steps 103–105 are not applicable by this decision.
+
 | Area | Requirement |
 | --- | --- |
 | Platform and engine | Windows PC; Godot 4.7, with installed build `4.7.2.stable.steam.ed1daf0bf` as the current baseline; typed GDScript. |
@@ -118,7 +123,7 @@ not silently redefine the agreed version 1 release.
 | Starting funds, capacities, rewards, fuel/maintenance formulas, recovery fees/repayment and supplied fuel/condition | First playable economy and recovery acceptance tests. |
 | Refinery yield/rates/queues, withdrawal charges, market ticks/rounding, cargo cancellation/expiry rules | Their authoritative transaction implementations. Research figures are not automatically adopted. |
 | Offshore heavy-job scope across sessions | Heavy-job persistence and reservation design. |
-| Final launch fleet/ports/services, approved art sample, and whether player-to-player ship trading is essential | Asset production/content selection and feature freeze. |
+| Final launch fleet/ports/services and approved art sample | Asset production/content selection and feature freeze. |
 
 None of these requires a new answer to complete Step 01. Resolve architecture
 choices at their dependent steps using the existing requirements; ask Andy when a
