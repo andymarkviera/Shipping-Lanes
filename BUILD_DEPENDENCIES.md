@@ -72,6 +72,8 @@ measurement limits and hosting/network budget gate. This does not block Step 33.
 
 Task ID: `public-storage-adapter-proof`  
 Placement: after 33–34; before 35. Owner: Agent. Uncertainties: U006, U017.
+Status: complete October 21, 2026 for isolated synthetic accounts; see
+PUBLIC_STORAGE_PROOF.md. Production authentication/leases remain later gates.
 
 Use the selected local service/PostgreSQL path with synthetic test accounts to
 prove a small atomic resource transfer and operation receipt, payload mismatch,

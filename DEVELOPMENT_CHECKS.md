@@ -152,3 +152,12 @@ assertions. SessionCheck verifies the existing menu test uses this ledger;
 ClocksCheck and FlowCheck cover session lifecycle. Native Release uses
 Godot.ps1 -Mode RunExport -Configuration Release -EconomyProbe.
 This is an in-memory proof, not the Step 35 crash/restart durability test.
+
+The supplemental public-storage proof uses `tools/CheckPublicStorage.ps1` with
+an explicit `-Python` 3.12 executable and `-Runtime editor` or `release`.
+Use `-Install` once to fetch the pinned portable PostgreSQL and hashed wheels.
+It creates only isolated synthetic databases/services and deliberately crashes
+those test processes. 98 harness checks pass per runtime, including four nested
+Godot HTTP assertions. See PUBLIC_STORAGE_PROOF.md for scope, reproduction and
+retained evidence. This separate dependency test is not part of ordinary Full
+(still 27 stages; the added HTTP probe brings compilation to 80 scripts).

@@ -1033,3 +1033,30 @@ Recovery tag: `step-34-money-and-transfer-rules`.
 Source backup: `../output/checkpoints/step-34-money-and-transfer-rules-2026-10-20.zip`.
 Next: supplemental public-storage adapter proof, required before Step 35 durable
 action recovery. The no-peer-economy decision does not remove this storage gate.
+
+## Supplemental — Public storage adapter proof
+
+Task ID: `public-storage-adapter-proof`.
+Status: complete for isolated synthetic accounts — October 21, 2026.
+
+Added a separate loopback Python service backed by real pinned PostgreSQL, with
+strict game-owned transaction requests, actor-scoped durable receipts, ordered
+row locks and an atomic resource/journal/receipt commit. No peer transfers are
+accepted. Godot receives service credentials only; no database credentials.
+
+Proved duplicate and competing concurrent requests, payload conflicts, retained
+failures, private/public isolation, service death before/after commit, database
+crash with a partial write, WAL recovery, outage and retry. The committed audit
+reconstructs every wallet and inventory with conserved total resources.
+
+98 harness checks pass with both editor and Windows Release; each includes four
+Godot HTTP assertions. All 80 GDScripts compile, export and normal startup pass.
+The older physics/network suites were not rerun for this isolated adapter proof.
+Accepted reports: tools/baselines/public-storage-proof.json. Full limitations,
+dependencies and commands: PUBLIC_STORAGE_PROOF.md. Production identity, TLS,
+leases, scalability and playable game persistence are not claimed. The game and
+previously scheduled handling/cargo/water follow-ups remain unchanged.
+
+Recovery tag: `public-storage-adapter-proof`.
+Source backup: `../output/checkpoints/public-storage-adapter-proof-2026-10-21.zip`.
+Next: Step 35 — durable action recovery.

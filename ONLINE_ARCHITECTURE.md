@@ -7,6 +7,11 @@ document defines requirements for later code. No network service, account system
 database, or multiplayer gameplay has been implemented or deployed in this step.
 Confirmed product scope remains in `GAME_SPEC.md`.
 
+Implementation update, October 21, 2026: PUBLIC_STORAGE_PROOF.md completes the
+isolated pre-Step-35 PostgreSQL/service dependency proof with synthetic accounts,
+concurrent requests and real process-crash recovery. This does not implement
+public identity, leased server trust, internet hosting or gameplay persistence.
+
 ## Modes and trust boundaries
 
 | Mode | Simulation authority | Durable state | Identity |

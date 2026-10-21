@@ -137,3 +137,14 @@ passes. Run:
 ```
 
 No manual playtest is required; no visible gameplay has changed.
+
+## Public adapter follow-up — October 21, 2026
+
+PUBLIC_STORAGE_PROOF.md now proves the resource/receipt atomicity boundary in
+real PostgreSQL through a separate synthetic service. Its strict decoder,
+canonical request hash, ordered locks, retained success/failure receipts and
+process-crash/retry behavior are implemented in tools/public_storage. The SQL is
+a disposable test schema, not a production migration of the records above.
+Real account admission, lease fencing, durable family actions and game save
+integration remain later work. Private records still cannot enter the public
+namespace. Player-to-player trading is excluded by D064.
