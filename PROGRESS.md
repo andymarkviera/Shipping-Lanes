@@ -1311,3 +1311,28 @@ client pacing still follows before Step 42. Keep the full authority gate open.
 
 Recovery tag: `public-peer-admission`.
 Source backup: `../output/checkpoints/public-peer-admission-2026-10-22.zip`.
+
+## Public nearby boat presentation checkpoint
+
+October 22, 2026: authenticated peers now receive complete nearby boat rosters
+and materialize inert, smoothed hull replicas in recipient-relative geographic
+coordinates. Departure removes the hull; disconnect clears the view. Saves and
+observer snapshots share one canonical address calculation. See PUBLIC_NEARBY_BOATS.md.
+
+Validation: 52 integrated editor checks plus 16 provider checks passed in
+`../output/handoff/bd1a0d33/peer-summary.json`. The added distinct-anchor spacing
+assertion also passed in the 43-check editor adapter-only run at
+`../output/handoff/dc93438a/peer-summary.json`. All 53 integrated Release checks
+plus 16 provider checks passed at `../output/handoff/9fd21a01/peer-summary.json`.
+All 99 scripts compile, Release exports, and normal exported startup passes.
+These are headless transport/scene-node checks, not visual acceptance testing.
+
+Next: safe shared server placement/collision physics and player-facing public
+camera/control scene, followed by sign-in/server selection. Public cargo/actions,
+periodic saves and bounded replication/client pacing remain required. The full
+public authority integration gate and Step 42 are not marked complete. Main-menu
+Play remains unchanged; this checkpoint is infrastructure for the public flow.
+
+Recovery tag: `public-nearby-boats`.
+Source backup: `../output/checkpoints/public-nearby-boats-2026-10-22.zip`.
+Existing project.godot customization stays outside this checkpoint.

@@ -62,14 +62,18 @@ func begin_transfer(data: Dictionary) -> Dictionary:
 	if not result.get("ok", false): authority.quiesce()
 	return result
 
-func checkpoint_current() -> Dictionary:
-	# Freeze input/physics first, then commit final pose/fuel before sealing.
-	# The selected 100 km test world uses the existing scalar geographic mapping.
+func current_address() -> Dictionary:
+	# One mapping for both observer snapshots and durable checkpoints.
 	var origin: Dictionary = Geo.normalized(geographic_anchor.latitude, geographic_anchor.longitude)
 	var directed: Dictionary = origin.duplicate()
 	directed.heading_deg = Geo.wrap_scalar(rad_to_deg(atan2(-ship.position.x, ship.position.z)), 0, 360)
 	var address: Dictionary = Nav.travel(directed, Vector2(ship.position.x, ship.position.z).length())
 	address.heading_deg = Geo.wrap_scalar(-rad_to_deg(ship.rotation.y + Nav.transport_rotation(origin, address)), 0, 360)
+	return address
+
+func checkpoint_current() -> Dictionary:
+	# Caller freezes input/physics before committing final pose/fuel.
+	var address: Dictionary = current_address()
 	var current: Dictionary = await authority.request(authority.owned("inspect"))
 	if not current.get("ok", false):
 		authority.quiesce()

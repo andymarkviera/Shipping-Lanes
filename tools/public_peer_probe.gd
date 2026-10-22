@@ -38,7 +38,10 @@ func _process(_delta: float) -> void:
 		"helm": session.send_helm(int(data.sequence), data.throttle, data.get("rudder", 0.0), data.get("candidate", {}))
 		"disconnect": session.close_client()
 		"status":
-			result = {"nonce": session.nonce, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": []}
+			result = {"nonce": session.nonce, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
+			for id: String in session.world_view.replicas:
+				var replica: Dictionary = session.world_view.replicas[id]
+				result.replicas.append({"ship": id, "x": replica.node.position.x, "z": replica.node.position.z, "inert": replica.node.process_mode == Node.PROCESS_MODE_DISABLED and replica.node.collision_layer == 0 and replica.node.collision_mask == 0})
 			for record: Dictionary in session.members.values():
 				result.ships.append({"ship": record.ship, "generation": record.generation, "active": record.hull.authority.active, "distance": record.hull.ship.position.length(), "speed": record.hull.ship.velocity.length(), "throttle": record.hull.ship.commanded_throttle})
 	write_result("reply-" + str(sequence), result)

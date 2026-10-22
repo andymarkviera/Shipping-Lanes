@@ -230,3 +230,7 @@ editor and Release, including two accounts, disconnect saving and the normal
 headless configuration entry point. Keep the authority gate open for shared
 world/cargo/actions, rendered client integration and player login/server selection.
 The eight-connection bounded fixture is not the capacity/pacing gate or public rollout.
+
+Public nearby presentation adds no external dependencies. The exported resource
+list explicitly includes public_world_view.gd; verification reuses the pinned
+Godot/PostgreSQL/HTTPS/OIDC peer fixture. See PUBLIC_NEARBY_BOATS.md.
