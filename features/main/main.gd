@@ -18,6 +18,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--identity-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/identity_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--auth-transport-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/auth_transport_probe.tscn")
 		return
@@ -127,7 +130,7 @@ func _ready() -> void:
 
 func navigate(action: String) -> void:
 	match action:
-		"local_network": get_tree().change_scene_to_file("res://features/network/local_network_test.tscn")
+		"local_network": get_tree().change_scene_to_file("res://features/network/private_network_test.tscn")
 		"saves":
 			menu.slot_picker.select(active_slot)
 			refresh_save_status()

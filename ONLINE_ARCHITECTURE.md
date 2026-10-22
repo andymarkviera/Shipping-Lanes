@@ -296,3 +296,11 @@ failure rules above are our design and still need implementation verification.
 AUTHENTICATED_ADMISSION_PROOF.md documents the completed component gate and D072
 transport adapter. Player-facing browser login and integrated admission/gameplay
 ownership remain Steps 40–41; the pre-42 two-server acceptance gate still applies.
+
+## Step 40 implementation — October 21, 2026
+
+PRIVATE_SESSION_IDENTITY.md records the integrated private-world path: stable
+membership, verified DTLS invitations, generation-fenced helm/cargo control and
+fresh-process host recovery. Client credentials are memory-only. Public OIDC
+service admission and durable leases/handoff remain Step 41 and the pre-42
+integration gate; no private-world progress can be imported as public state.

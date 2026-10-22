@@ -156,3 +156,12 @@ Step 20: [Stylized water](WATER_PRESENTATION.md) adds bold-blue animated pattern
 Step 21: [Hull and shore collision](COLLISION.md) adds coast/rock blockouts, thin/angled piers and guarded turning to Boat Handling Test.
 
 Step 22: [Handling feedback baseline](HANDLING_FEEDBACK.md) adds engine/thruster sounds, H horn and clearer instruments. Implementation is verified; Andy's short playtest remains pending before controller lock.
+
+## Private multiplayer test — Step 40
+
+Choose LOCAL MULTIPLAYER TEST on the main menu. In the host window, choose
+Host / resume starter (or heavy), then Copy invitation. In a second window,
+choose Join invitation, paste it and confirm trust. Reconnect restores the same
+ship while the client window retains its credential. Host worlds persist across
+host restarts; closing a client window currently loses its reconnect credential.
+This remains two players on one computer. See PRIVATE_SESSION_IDENTITY.md.

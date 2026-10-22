@@ -1203,3 +1203,28 @@ Recovery tag: `authenticated-admission-proof`.
 Source backup: `../output/checkpoints/authenticated-admission-proof-2026-10-21.zip`.
 Next: Step 40 — durable identity/control integration, then Step 41 ownership leases
 and handoff. Public authority and replication/pacing gates still precede Step 42.
+
+## Step 40 — Session identity and control handoff
+
+Task ID: `session-identity-and-control-handoff`.
+Status: complete for the selected private-world path — October 21, 2026.
+
+The menu's local multiplayer scene now uses verified DTLS and explicit host
+invitations. Stable world/player/ship IDs, hashed reconnect credentials and durable
+connection generations replace connection numbers as ownership. Reconnect replaces
+one helm, neutralizes the hull and rejects old-peer/old-generation commands.
+Host worlds reopen with pose, fuel, attached cargo and existing payment receipts.
+Client credentials remain memory-only; closing a client window loses its reconnect
+credential until OS-secured persistence is implemented. No public login is enabled.
+
+70 starter and 74 heavy-lifter assertions pass in editor and Release (288 total),
+including real fresh-process recovery and missing-ledger refusal. Action/cargo
+regressions pass in both; lifecycle and impaired replication pass in editor.
+All 92 scripts compile; Release export and ordinary startup pass. Full remains
+31 stages plus the explicit CheckIdentity runner. See PRIVATE_SESSION_IDENTITY.md.
+
+Recovery tag: `step-40-private-identity-control`.
+Source backup: `../output/checkpoints/step-40-private-identity-control-2026-10-21.zip`.
+Next: Step 41 — public profile and server-switch handoff. Connect public authenticated
+admission to server ownership leases; complete the two-server authority integration
+and bounded replication/client-pacing gates before Step 42.

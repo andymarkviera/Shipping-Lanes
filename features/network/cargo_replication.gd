@@ -24,15 +24,15 @@ func submit(action: String) -> void:
 	var id: String = world.replication.local_entity()
 	if id.is_empty(): return
 	sequence += 1
-	if session.hosting: accept(1, session.epoch, id, sequence, action)
-	else: world.replication.queue_packet("cargo", [session.epoch, id, sequence, action])
+	if session.hosting: accept(1, session.epoch, id, sequence, action, session.generation(id))
+	else: world.replication.queue_packet("cargo", [session.epoch, id, sequence, action, session.generation(id)])
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func request_action(session_epoch: String, id: String, seq: int, action: String) -> void:
-	if session.hosting: accept(multiplayer.get_remote_sender_id(), session_epoch, id, seq, action)
+func request_action(session_epoch: String, id: String, seq: int, action: String, binding: int = 0) -> void:
+	if session.hosting: accept(multiplayer.get_remote_sender_id(), session_epoch, id, seq, action, binding)
 
-func accept(sender: int, session_epoch: String, id: String, seq: int, action: String) -> bool:
-	if not session.hosting or session_epoch != session.epoch or not session.roster.has(id) or session.roster[id].peer_id != sender or not world.ships.has(id) or not world.ships[id] is Heavy:
+func accept(sender: int, session_epoch: String, id: String, seq: int, action: String, binding: int = 0) -> bool:
+	if not session.hosting or session_epoch != session.epoch or not session.roster.has(id) or not session.permitted(sender, id, binding) or not world.ships.has(id) or not world.ships[id] is Heavy:
 		rejected += 1
 		return false
 	if seq <= commands.get(id, -1) or seq < 0 or action not in ["lower", "align", "secure", "raise", "release"]:
