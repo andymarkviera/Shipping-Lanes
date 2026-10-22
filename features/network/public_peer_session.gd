@@ -1,6 +1,8 @@
 extends Node
 ## Protocol 7 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
+const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
+var physics_world: Node
 const View = preload("res://features/network/public_world_view.gd")
 const Geo = preload("res://features/geography/geographic_address.gd")
 const Nav = preload("res://features/geography/navigation_experiment.gd")
@@ -28,11 +30,22 @@ var rejected_commands: int = 0
 var ticket_sent: bool = false
 
 func _ready() -> void:
+	physics_world = PhysicsWorld.new()
+	add_child(physics_world)
+	process_physics_priority = -100
 	world_view = View.new()
 	add_child(world_view)
 	multiplayer.server_relay = false
 	multiplayer.peer_connected.connect(connected)
 	multiplayer.peer_disconnected.connect(disconnected)
+
+func live_owners() -> Array:
+	var result: Array = []
+	for record: Dictionary in members.values(): result.append(record.hull)
+	return result
+
+func _physics_process(_delta: float) -> void:
+	if hosting: physics_world.sync(live_owners())
 
 func start_server(settings: Dictionary) -> Error:
 	config = settings.duplicate(true)
@@ -140,22 +153,18 @@ func join_public(version: int, ticket: String) -> void:
 		return
 	joining = true
 	pending[sender].busy = true
-	# Separate World3D per owner until canonical shared-world placement is integrated.
-	var world: SubViewport = SubViewport.new()
-	world.own_world_3d = true
-	add_child(world)
 	var hull: Node3D = OwnerScene.new()
-	world.add_child(hull)
+	add_child(hull)
 	if not hull.authority.configure(config):
 		joining = false
-		world.queue_free()
+		hull.queue_free()
 		transport.disconnect_peer(sender)
 		return
 	var result: Dictionary = await hull.authority.request({"realm": "public", "op": "admit", "ticket": ticket, "nonce": pending[sender].nonce, "fingerprint": config.fingerprint})
-	joining = false
 	if not result.get("ok", false) or not hull.authority.active or not pending.has(sender) or not multiplayer.get_peers().has(sender):
+		joining = false
 		hull.authority.quiesce()
-		world.queue_free()
+		hull.queue_free()
 		pending.erase(sender)
 		if multiplayer.get_peers().has(sender): transport.disconnect_peer(sender)
 		return
@@ -167,10 +176,25 @@ func join_public(version: int, ticket: String) -> void:
 			var old: Dictionary = members[previous]
 			old.hull.authority.quiesce()
 			members.erase(previous)
-			old.world.queue_free()
+			old.hull.reparent(self, false)
+			old.hull.queue_free()
 			transport.disconnect_peer(previous)
-	hull.restore_grant(result)
-	members[sender] = {"hull": hull, "world": world, "account": account, "ship": hull.ship.state.instance_id, "epoch": int(result.epoch), "generation": int(result.generation), "sequence": -1, "input_at": Time.get_ticks_msec(), "rate_at": 0}
+	hull.restore_grant(result, false)
+	if not physics_world.can_place(hull, live_owners()):
+		# Do not teleport or checkpoint a blocked saved spawn.
+		hull.park()
+		await hull.authority.request(hull.authority.owned("release"))
+		hull.authority.quiesce()
+		hull.queue_free()
+		pending.erase(sender)
+		accounts.erase(account)
+		joining = false
+		if multiplayer.get_peers().has(sender): transport.disconnect_peer(sender)
+		return
+	members[sender] = {"hull": hull, "account": account, "ship": hull.ship.state.instance_id, "epoch": int(result.epoch), "generation": int(result.generation), "sequence": -1, "input_at": Time.get_ticks_msec(), "rate_at": 0}
+	physics_world.sync(live_owners())
+	hull.ship.simulation_paused = false
+	joining = false
 	accounts[account] = sender
 	pending.erase(sender)
 	join_accepted.rpc_id(sender, hull.ship.state.instance_id, int(result.epoch), int(result.generation))
@@ -223,6 +247,7 @@ func disconnected(id: int) -> void:
 	var record: Dictionary = members[id]
 	members.erase(id)
 	if accounts.get(record.account) == id: accounts.erase(record.account)
+	record.hull.reparent(self, false)
 	record.hull.departing = true
 	record.hull.park()
 	record.hull.authority.set_process(false)
@@ -234,11 +259,12 @@ func disconnected(id: int) -> void:
 		var saved: Dictionary = await record.hull.checkpoint_current()
 		if saved.get("ok", false): await record.hull.authority.request(record.hull.authority.owned("release"))
 	record.hull.authority.quiesce()
-	record.world.queue_free()
+	record.hull.queue_free()
 
 func close_client() -> void:
+	# Once attached, the multiplayer peer owns and closes the ENet host.
 	if transport != null: transport.close()
-	if connection != null: connection.destroy()
+	elif connection != null: connection.destroy()
 	transport = null
 	connection = null
 	if world_view != null: world_view.clear()

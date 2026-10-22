@@ -155,3 +155,5 @@ October 22 nearby presentation update: authenticated clients now materialize nea
 hulls in recipient-relative geographic charts. Shared collision/spawn placement,
 player-facing camera/login flow, periodic saves and capacity remain unresolved.
 Headless node checks do not establish final visual quality. See PUBLIC_NEARBY_BOATS.md.
+
+October 22 shared physics follow-through: nearby public hulls now collide in shared local spaces and blocked saved spawns are refused without save mutation. Starting-berth allocation, blocked-spawn UI, group-threshold performance/capacity and visual validation remain open; this is the existing kinematic collision model. See PUBLIC_SHARED_PHYSICS.md.

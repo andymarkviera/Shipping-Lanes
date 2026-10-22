@@ -234,3 +234,5 @@ The eight-connection bounded fixture is not the capacity/pacing gate or public r
 Public nearby presentation adds no external dependencies. The exported resource
 list explicitly includes public_world_view.gd; verification reuses the pinned
 Godot/PostgreSQL/HTTPS/OIDC peer fixture. See PUBLIC_NEARBY_BOATS.md.
+
+Public shared physics adds no external dependencies. Export explicitly includes public_physics_world.gd and public_physics_probe.tscn. Run `tools/public_handoff/physics_probe.py --runtime editor` or `--runtime release` with the existing Python runtime after export.

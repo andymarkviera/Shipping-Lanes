@@ -43,6 +43,6 @@ func _process(_delta: float) -> void:
 				var replica: Dictionary = session.world_view.replicas[id]
 				result.replicas.append({"ship": id, "x": replica.node.position.x, "z": replica.node.position.z, "inert": replica.node.process_mode == Node.PROCESS_MODE_DISABLED and replica.node.collision_layer == 0 and replica.node.collision_mask == 0})
 			for record: Dictionary in session.members.values():
-				result.ships.append({"ship": record.ship, "generation": record.generation, "active": record.hull.authority.active, "distance": record.hull.ship.position.length(), "speed": record.hull.ship.velocity.length(), "throttle": record.hull.ship.commanded_throttle})
+				result.ships.append({"ship": record.ship, "generation": record.generation, "active": record.hull.authority.active, "space": record.hull.ship.get_world_3d().get_instance_id(), "distance": record.hull.ship.position.length(), "speed": record.hull.ship.velocity.length(), "throttle": record.hull.ship.commanded_throttle})
 	write_result("reply-" + str(sequence), result)
 	sequence += 1
