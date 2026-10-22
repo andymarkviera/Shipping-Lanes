@@ -231,7 +231,7 @@ func helm_order(ship: String, epoch: int, generation: int, sequence: int, thrott
 func state_update(ship: String, epoch: int, generation: int, position_: Vector3, yaw: float, velocity_: Vector3, fuel: float, sequence: int) -> void:
 	if hosting or multiplayer.get_remote_sender_id() != 1 or binding != {"ship": ship, "epoch": epoch, "generation": generation}: return
 	if not position_.is_finite() or not velocity_.is_finite() or not is_finite(yaw) or not is_finite(fuel): return
-	last_snapshot = {"ship": ship, "distance": position_.length(), "speed": velocity_.length(), "fuel": fuel, "sequence": sequence}
+	last_snapshot = {"ship": ship, "distance": position_.length(), "speed": velocity_.length(), "fuel": fuel, "sequence": sequence, "received_at": Time.get_ticks_msec()}
 
 @rpc("authority", "call_remote", "unreliable_ordered", 2)
 func world_update(ship: String, epoch: int, generation: int, tick: int, rows: Array) -> void:

@@ -1,6 +1,4 @@
-extends Node
-const Session = preload("res://features/network/public_peer_session.gd")
-var session: Node
+extends "res://features/network/public_client.gd"
 var folder: String
 var sequence: int = 0
 var started: int
@@ -10,9 +8,13 @@ func _ready() -> void:
 		if arg.begins_with("--peer-folder="): folder = arg.trim_prefix("--peer-folder=")
 	if folder.is_empty(): get_tree().quit(1); return
 	var config: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(folder + "/config.json"))
-	session = Session.new()
-	session.name = "Session"
-	add_child(session)
+	if config.role == "client":
+		super._ready()
+		presentation.controls_enabled = false
+	else:
+		session = Session.new()
+		session.name = "Session"
+		add_child(session)
 	var error: Error = session.start_server(config) if config.role == "server" else session.start_client(config)
 	started = Time.get_ticks_msec()
 	var cert: X509Certificate = X509Certificate.new()
@@ -36,9 +38,25 @@ func _process(_delta: float) -> void:
 	match data.get("op"):
 		"ticket": session.submit_ticket(data.ticket)
 		"helm": session.send_helm(int(data.sequence), data.throttle, data.get("rudder", 0.0), data.get("candidate", {}))
+		"drive":
+			presentation.controls_enabled = true
+			presentation.controls.wait_for_release = false
+			Input.action_press("ship_throttle_up")
+		"menu":
+			Input.action_release("ship_throttle_up")
+			presentation.set_menu(data.get("open", true))
+		"stale":
+			session.last_snapshot.received_at = Time.get_ticks_msec() - 2000
+			presentation._process(0)
+			presentation._physics_process(0.1)
+			result = {"ready": presentation.ready_to_drive, "order": presentation.throttle_order}
+		"focus_loss": presentation.controls.window_focused = false
+		"zoom": presentation.camera_rig.zoom(-1)
 		"disconnect": session.close_client()
 		"status":
 			result = {"nonce": session.nonce, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
+			if presentation != null:
+				result.presentation = {"ready": presentation.ready_to_drive, "camera": is_instance_valid(presentation.camera_rig.focus), "zoom": presentation.camera_rig.distance_order, "order": presentation.throttle_order, "hud": presentation.readout.text, "menu": presentation.controls.menu_open}
 			for id: String in session.world_view.replicas:
 				var replica: Dictionary = session.world_view.replicas[id]
 				result.replicas.append({"ship": id, "x": replica.node.position.x, "z": replica.node.position.z, "inert": replica.node.process_mode == Node.PROCESS_MODE_DISABLED and replica.node.collision_layer == 0 and replica.node.collision_mask == 0})

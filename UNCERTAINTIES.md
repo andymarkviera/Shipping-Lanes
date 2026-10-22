@@ -157,3 +157,5 @@ player-facing camera/login flow, periodic saves and capacity remain unresolved.
 Headless node checks do not establish final visual quality. See PUBLIC_NEARBY_BOATS.md.
 
 October 22 shared physics follow-through: nearby public hulls now collide in shared local spaces and blocked saved spawns are refused without save mutation. Starting-berth allocation, blocked-spawn UI, group-threshold performance/capacity and visual validation remain open; this is the existing kinematic collision model. See PUBLIC_SHARED_PHYSICS.md.
+
+Public client follow-through: camera/helm/HUD now connect to authenticated snapshots. Browser login/enrollment and server-selection entry, public water movement/wakes and visual/latency evaluation remain open. Tests are headless. See PUBLIC_CLIENT_SCENE.md.
