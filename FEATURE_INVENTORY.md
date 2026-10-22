@@ -144,3 +144,9 @@ Public authority adapter follow-through (October 22): real OIDC-to-HTTPS tickets
 and live Godot ownership/fencing/checkpoint/handoff are implemented in
 PUBLIC_GODOT_OWNERSHIP.md. This is not completion of public player transport,
 world/cargo integration or the pre-42 authority gate; retain those dependencies.
+
+October 22 public peer update: authenticated transport/control and the normal
+headless configuration entry are implemented and verified in PUBLIC_PEER_ADMISSION.md.
+This does not close shared public world/cargo/action integration, player-facing
+sign-in/server browsing, periodic saves, graceful operator shutdown or deployment.
+The original pre-42 authority and replication/pacing gates remain open.

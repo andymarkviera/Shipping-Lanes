@@ -134,6 +134,8 @@ class Authority:
                 db.execute("SET LOCAL lock_timeout='3s'")
                 db.execute("SET LOCAL statement_timeout='4s'")
                 server_row = self._server(db, server, credential)
+                if 'fingerprint' in request:
+                    require(hmac.compare_digest(server_row['fingerprint'], request['fingerprint']), 'SERVER_CERTIFICATE_MISMATCH')
                 account = self._ticket_account(db, request) if request['op'] in ('admit', 'claim') else request['account']
                 lease = self._lease(db, account)
                 require(server_row['expires'] > self._now(db), 'UNTRUSTED_SERVER')
@@ -159,6 +161,9 @@ class Authority:
                   'begin': owned | {'transfer_id', 'destination'}, 'seal': owned | {'transfer_id'},
                   'cancel': owned | {'transfer_id'}}
         op = request.get('op')
+        if op == 'admit' and 'fingerprint' in request:
+            base.add('fingerprint')
+            require(type(request['fingerprint']) is str and re.fullmatch(r'[a-f0-9]{64}', request['fingerprint']) is not None, 'BAD_FINGERPRINT')
         require(type(op) is str and op in fields and set(request) == base | fields[op], 'BAD_REQUEST')
         for name in ['epoch', 'generation', 'expected_revision']:
             if name in request: require(type(request[name]) is int and 0 <= request[name] <= MAX_INTEGER, 'BAD_INTEGER')

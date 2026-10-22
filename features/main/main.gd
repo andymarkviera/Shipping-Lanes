@@ -18,6 +18,13 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	for argument: String in OS.get_cmdline_user_args():
+		if get_tree().current_scene == self and argument.begins_with("--public-server-config="):
+			get_tree().change_scene_to_file.call_deferred("res://features/network/public_server.tscn")
+			return
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--public-peer-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/public_peer_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--public-owner-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/public_owner_probe.tscn")
 		return

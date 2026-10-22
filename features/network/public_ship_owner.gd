@@ -31,29 +31,38 @@ func park() -> void:
 func acquire(request: Dictionary) -> Dictionary:
 	var result: Dictionary = await authority.request(request)
 	if result.get("ok", false) and authority.active:
-		if ship != null:
-			remove_child(ship)
-			ship.queue_free()
-		ship = Hull.instantiate()
-		ship.simulation_paused = true
-		add_child(ship)
-		ship.state.instance_id = result.profile.ship.id
-		ship.state.fuel_liters = result.profile.ship.fuel_liters
-		geographic_anchor = result.profile.ship.position.duplicate(true)
-		# This integration scene's local origin is the canonical geographic anchor.
-		# World placement/streaming must consume the anchor before public gameplay.
-		ship.position = Vector3.ZERO
-		ship.rotation.y = -deg_to_rad(geographic_anchor.heading)
-		cargo_records = result.profile.cargo.duplicate(true)
-		ship.simulation_paused = false
-		departing = false
+		restore_grant(result)
 	return result
+
+func restore_grant(result: Dictionary) -> void:
+	if ship != null:
+		remove_child(ship)
+		ship.queue_free()
+	ship = Hull.instantiate()
+	ship.simulation_paused = true
+	add_child(ship)
+	ship.state.instance_id = result.profile.ship.id
+	ship.state.fuel_liters = result.profile.ship.fuel_liters
+	geographic_anchor = result.profile.ship.position.duplicate(true)
+	# Each owner currently has an isolated local chart. Shared world integration follows.
+	ship.position = Vector3.ZERO
+	ship.rotation.y = -deg_to_rad(geographic_anchor.heading)
+	cargo_records = result.profile.cargo.duplicate(true)
+	ship.simulation_paused = false
+	departing = false
 
 func begin_transfer(data: Dictionary) -> Dictionary:
 	if departing or ship == null or not authority.permits({"account": data.get("account"), "epoch": data.get("epoch"), "generation": data.get("generation")}):
 		return {"ok": false, "code": "LOCAL_QUIESCED"}
 	departing = true
 	park()
+	var saved: Dictionary = await checkpoint_current()
+	if not saved.get("ok", false): return saved
+	var result: Dictionary = await authority.request(data)
+	if not result.get("ok", false): authority.quiesce()
+	return result
+
+func checkpoint_current() -> Dictionary:
 	# Freeze input/physics first, then commit final pose/fuel before sealing.
 	# The selected 100 km test world uses the existing scalar geographic mapping.
 	var origin: Dictionary = Geo.normalized(geographic_anchor.latitude, geographic_anchor.longitude)
@@ -70,9 +79,7 @@ func begin_transfer(data: Dictionary) -> Dictionary:
 	if not saved.get("ok", false):
 		authority.quiesce()
 		return saved
-	var result: Dictionary = await authority.request(data)
-	if not result.get("ok", false): authority.quiesce()
-	return result
+	return saved
 
 func helm(candidate: Dictionary, throttle: float, rudder: float) -> bool:
 	if departing or not authority.permits(candidate) or ship == null: return false
