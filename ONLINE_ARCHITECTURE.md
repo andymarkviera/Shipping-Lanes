@@ -320,3 +320,10 @@ renewal, departure pose/fuel checkpoints and fresh-process recovery. See
 PUBLIC_GODOT_OWNERSHIP.md. Public player transport, browser sign-in UX, shared world
 placement, periodic spatial checkpoints, cargo bodies/actions and operator launch
 configuration remain explicit integration work; do not infer internet readiness.
+
+October 22 public transport update: tickets now reach the server through verified
+DTLS with server-side nonce/certificate checks and peer-bound helm authority.
+Replacement, disconnect persistence, renewal failure and the headless launch path
+are integrated. See PUBLIC_PEER_ADMISSION.md. Clients currently receive only their
+own ship state; per-owner charts deliberately await shared-world placement.
+Public sign-in/server selection UI and deployment/enrollment remain unimplemented.

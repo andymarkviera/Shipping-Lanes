@@ -79,7 +79,7 @@ class GodotProof(Proof):
         self.start_service()
         access = tokens['access_token']
         def ticket(server, op='admit', **extra):
-            nonce = secrets.token_hex(16)
+            nonce = extra.pop('nonce', None) or secrets.token_hex(16)
             status, response = self.ticket_call(access, {'server': server, 'nonce': nonce})
             check(status == 200 and response['ok'], 'validated OIDC issues scoped ' + server + ' ticket')
             return {'realm': 'public', 'op': op, 'ticket': response['ticket'], 'nonce': nonce, **extra}

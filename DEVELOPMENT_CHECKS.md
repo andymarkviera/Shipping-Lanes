@@ -233,3 +233,12 @@ checks automatic renewal, wrong TLS trust, motion, departure checkpointing,
 quiesce/seal/claim, destination death, database outage, and stale generations.
 Use an exported Release build for the Release run. See PUBLIC_GODOT_OWNERSHIP.md.
 All 95 scripts compile. This remains opt-in; Full still has 31 stages.
+
+## Public peer/dedicated checks
+
+`tools/CheckPublicPeer.ps1 -Python <python.exe> -Runtime Editor|Release` runs the
+real provider -> HTTPS ticket -> DTLS peer -> server hull path. 48 integration and
+16 provider assertions pass per runtime; the normal dedicated entry point also
+admits a client. Build Release first. See PUBLIC_PEER_ADMISSION.md. The actual
+StartDedicatedServer wrapper is additionally smoke-tested. Full stays 31 stages;
+compilation covers 98 scripts. Diagnostic --adapter-only runs do not prove sign-in.

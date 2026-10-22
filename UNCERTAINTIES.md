@@ -143,3 +143,10 @@ fencing, automatic renewal and canonical departure checkpoints connected to
 OIDC-protected HTTPS tickets. See PUBLIC_GODOT_OWNERSHIP.md. Public DTLS peer
 admission, provider key-rotation operations, player sign-in/recovery UX, periodic
 spatial saves and production timeout/capacity tuning remain open. U019 is unchanged.
+
+October 22 U017/U020 follow-through: real authenticated peers now control only
+their installed hull; disconnect persistence, automatic authority-loss fencing,
+two-account isolation and headless startup pass editor/Release. Pending work:
+shared geographic placement, periodic spatial saves, operator registration/key
+rotation, graceful shutdown, player sign-in/browser UX and congestion/capacity
+measurement. See PUBLIC_PEER_ADMISSION.md. No production availability is inferred.

@@ -83,3 +83,8 @@ All 95 scripts compile, Release exports, and ordinary game startup passes.
 
 Recovery tag: `public-godot-ownership-adapter`.
 Backup: `../output/checkpoints/public-godot-ownership-adapter-2026-10-22.zip`.
+
+Follow-through: public DTLS peer admission and a normal headless configuration
+entry point are now tested in PUBLIC_PEER_ADMISSION.md. That later checkpoint
+supersedes the transport portion of the remaining-work list above. Shared
+world/cargo/action integration, browser UI, provisioning and pacing remain open.

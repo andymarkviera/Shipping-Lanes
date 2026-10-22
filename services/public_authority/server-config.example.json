@@ -1,0 +1,11 @@
+{
+  "server": "REGISTERED_SERVER_ID",
+  "credential": "SCOPED_SERVER_SECRET",
+  "endpoint": "https://AUTHORITY_HOST:PORT",
+  "ca": "C:/absolute/private/path/authority-ca.pem",
+  "certificate": "C:/absolute/private/path/game-server.pem",
+  "key": "C:/absolute/private/path/game-server-key.pem",
+  "fingerprint": "SHA256_OF_EXACT_GAME_CERTIFICATE_FILE",
+  "bind_ip": "127.0.0.1",
+  "port": 24570
+}

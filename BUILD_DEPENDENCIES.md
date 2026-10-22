@@ -223,3 +223,10 @@ PUBLIC_GODOT_OWNERSHIP.md. This proves the live simulation/identity adapter port
 keep the public-authority gate open for authenticated DTLS player admission and
 public world/cargo/action integration. The file courier is not player transport.
 Bounded replication/client pacing still precedes Step 42.
+
+October 22 transport follow-through: PUBLIC_PEER_ADMISSION.md now proves real
+OIDC-issued tickets through pinned DTLS and peer-bound helm/snapshot traffic in
+editor and Release, including two accounts, disconnect saving and the normal
+headless configuration entry point. Keep the authority gate open for shared
+world/cargo/actions, rendered client integration and player login/server selection.
+The eight-connection bounded fixture is not the capacity/pacing gate or public rollout.

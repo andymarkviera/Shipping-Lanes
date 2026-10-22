@@ -1279,3 +1279,35 @@ working-tree customization is preserved outside this source checkpoint.
 
 Recovery tag: `public-godot-ownership-adapter`.
 Source backup: `../output/checkpoints/public-godot-ownership-adapter-2026-10-22.zip`.
+
+## Public peer admission and dedicated runtime checkpoint
+
+Task ID: `public-authority-integration-gate` (authenticated player transport).
+Status: transport checkpoint complete — October 22, 2026; shared gameplay/UI gate open.
+
+Real sign-in tickets now cross verified DTLS into a separate Godot server. The
+server binds each transport to its canonical ship/epoch/generation, rejects
+cross-account and stale controls, and sends owner movement snapshots. Two distinct
+accounts can hold separate helms; replacement removes the previous helm before
+activating another. Disconnect checkpoints pose/fuel and releases ownership;
+automatic renewal failure disconnects the player and parks the hull.
+
+A normal headless server configuration entry point and StartDedicatedServer.ps1
+launcher now exist. The launcher reports process/log paths. Persistent authority
+provisioning/enrollment is not packaged; the placeholder configuration is not a
+working public server. No hosting purchase or network/router changes were made.
+
+48 integration checks plus 16 provider checks pass in both editor and Release:
+`../output/handoff/ccbaecb9/peer-summary.json` and
+`../output/handoff/c8a6a644/peer-summary.json`. Backend regressions pass all 86
+checks (`../output/handoff/d67d8ef7/summary.json`). All 98 scripts compile;
+Release export, ordinary startup and the actual PowerShell launcher smoke test pass.
+See PUBLIC_PEER_ADMISSION.md for the precise tested boundary.
+
+Next: public world/client integration and player-facing sign-in/server selection.
+Hulls still use separate local charts; shared placement/collisions, cargo actions,
+periodic saves and the server-switch player flow remain open. Bounded replication/
+client pacing still follows before Step 42. Keep the full authority gate open.
+
+Recovery tag: `public-peer-admission`.
+Source backup: `../output/checkpoints/public-peer-admission-2026-10-22.zip`.
