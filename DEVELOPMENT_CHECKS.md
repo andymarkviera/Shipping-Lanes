@@ -215,3 +215,12 @@ Godot processes per hull/runtime, including fresh-process recovery. It uses only
 Python's standard library. Build Release first. 70 starter and 74 heavy checks
 pass in each runtime; see PRIVATE_SESSION_IDENTITY.md. Full remains 31 stages,
 with this explicit additional runner; compilation now covers 92 scripts.
+
+## Step 41 public handoff checks
+
+`tools/CheckHandoff.ps1 -Python <python.exe>` reuses the pinned PostgreSQL/psycopg
+and cryptography dependencies, runs a real disposable HTTPS backend and separate
+Python server adapters, then cleans up its owned processes. 86 assertions plus
+three PostgreSQL setup checks pass. See PUBLIC_PROFILE_HANDOFF.md for evidence,
+fault coverage and the remaining OIDC/Godot integration boundary. No game source
+changed; Full remains 31 stages and the prior export remains valid.

@@ -1228,3 +1228,27 @@ Source backup: `../output/checkpoints/step-40-private-identity-control-2026-10-2
 Next: Step 41 — public profile and server-switch handoff. Connect public authenticated
 admission to server ownership leases; complete the two-server authority integration
 and bounded replication/client-pacing gates before Step 42.
+
+## Step 41 — Public profile and server-switch handoff
+
+Task ID: `public-profile-and-server-switch-handoff`.
+Status: complete through the selected-storage integration fixture — October 22, 2026.
+
+PostgreSQL now owns portable public profiles, expiring server leases, connection
+generations, durable quiesce/seal/claim transfers and payment receipts. Real HTTPS
+server-adapter processes cannot concurrently spend one account or revive an old
+owner. Transfers preserve canonical ship/cargo/job IDs, fuel, position and money;
+private imports and peer economic transfers have no accepted operation.
+
+86 assertions plus three PostgreSQL setup checks pass, including concurrent
+claims/payments, five real service crashes, two database stops, lost replies,
+expiry races, destination-process death, stale-owner rejection and late claim
+retries returning current state. See PUBLIC_PROFILE_HANDOFF.md and evidence
+`../output/handoff/020fddf3/summary.json`. Game code/export remains Step 40.
+
+Recovery tag: `step-41-public-profile-handoff`.
+Source backup: `../output/checkpoints/step-41-public-profile-handoff-2026-10-22.zip`.
+Next: public authority integration with validated OIDC admission and two headless
+Godot instances, followed by bounded replication/client pacing, before Step 42.
+The Python adapter-worker proof is not a playable dedicated server or public launch.
+Keep the eventual dedicated-server launch and player join flow straightforward.

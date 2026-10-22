@@ -131,3 +131,9 @@ Production streaming/rebase integration and network/payload/reload proofs remain
 the connected-world-network-feasibility gate. See WORLD_SIZE_EXPERIMENT.md.
 
 Step 28 update for U010: configurable simulation and explicit empty/test-recovery rules implemented and checked (D057, FUEL_SIMULATION.md). Rates and tank sizes remain provisional pending Andy's pacing review; paid refueling/recovery and authority are still later gates.
+
+October 22 update: U017/U020 now have real PostgreSQL/HTTPS lease, receipt and
+transfer proofs in PUBLIC_PROFILE_HANDOFF.md, including separate adapter processes
+and crash recovery. Integrated OIDC admission, Godot simulation fencing, renewal
+cadence and production timeout tuning remain open until the pre-42 gate and later
+rollout measurements. U019's OS credential persistence/recovery UX remains open.

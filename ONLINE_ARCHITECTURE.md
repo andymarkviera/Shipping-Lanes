@@ -304,3 +304,12 @@ membership, verified DTLS invitations, generation-fenced helm/cargo control and
 fresh-process host recovery. Client credentials are memory-only. Public OIDC
 service admission and durable leases/handoff remain Step 41 and the pre-42
 integration gate; no private-world progress can be imported as public state.
+
+## Step 41 adapter evidence — October 22, 2026
+
+PUBLIC_PROFILE_HANDOFF.md records transactional public profiles, lease/connection
+fencing, scoped ticket admission and durable transfer recovery through PostgreSQL
+and HTTPS. The fixture uses synthetic account enrollment and separate Python
+server-adapter processes. Validated OIDC ticket issuance and live Godot server
+quiescing/spawn integration remain the next pre-42 gate; no public deployment or
+playable dedicated-server launcher is claimed. D074 records the lease decisions.
