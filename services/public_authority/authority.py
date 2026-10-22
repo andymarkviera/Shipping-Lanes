@@ -75,6 +75,17 @@ class Authority:
             db.execute("INSERT INTO public_authority.tickets VALUES(%s,%s,%s,%s,%s,7,clock_timestamp()+interval '30 seconds',false)", (digest(ticket), account, server, row['fingerprint'], nonce))
         return ticket
 
+    def identity_ticket(self, claims, request):
+        # claims must come exclusively from the service's signature validator.
+        require(type(request) is dict and set(request) == {'server', 'nonce'}, 'BAD_REQUEST')
+        for field in ('server', 'nonce'):
+            require(type(request[field]) is str and re.fullmatch(r'[A-Za-z0-9_-]{1,128}', request[field]) is not None, 'BAD_REQUEST')
+        with self.connect() as db:
+            row = db.execute('SELECT account FROM public_authority.profiles WHERE issuer=%s AND subject=%s', (claims['iss'], claims['sub'])).fetchone()
+        require(row is not None, 'ACCOUNT_NOT_ENROLLED')
+        ticket = self.issue_ticket(row['account'], request['server'], request['nonce'])
+        return {'ok': True, 'code': 'TICKET', 'ticket': ticket, 'protocol': PROTOCOL, 'expires_in': 30}
+
     def _server(self, db, server, credential):
         row = db.execute('SELECT * FROM public_authority.servers WHERE id=%s FOR SHARE', (server,)).fetchone()
         now = db.execute('SELECT clock_timestamp() AS now').fetchone()['now']

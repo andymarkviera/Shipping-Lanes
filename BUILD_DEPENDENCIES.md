@@ -215,3 +215,11 @@ and two headless Godot instances, including stopping live physics/collisions whe
 authority is uncertain. Complete that and bounded replication/client pacing before
 42. Dedicated-server launch/join usability is an explicit implementation target;
 production rollout and capacity validation remain later work.
+
+October 22 Godot integration follow-through: validated OIDC access tokens now
+issue scoped tickets through HTTPS, and real Godot hull owners renew, checkpoint
+on departure, quiesce, transfer, and recover against the public backend. See
+PUBLIC_GODOT_OWNERSHIP.md. This proves the live simulation/identity adapter portion;
+keep the public-authority gate open for authenticated DTLS player admission and
+public world/cargo/action integration. The file courier is not player transport.
+Bounded replication/client pacing still precedes Step 42.

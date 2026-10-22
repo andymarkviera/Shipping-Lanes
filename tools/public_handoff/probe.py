@@ -1,4 +1,4 @@
-"""Real disposable PostgreSQL + HTTPS authority + headless Godot worker tests."""
+"""Real disposable PostgreSQL + HTTPS authority + Python adapter worker tests."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import http.client
@@ -73,6 +73,7 @@ class Proof:
         config = {'database': self.database, 'port': self.port, 'certificate': str(self.run / 'server.pem'),
                   'key': str(self.run / 'server-key.pem'), 'ready': str(ready), 'fault': fault,
                   'fault_marker': str(self.run / 'fault-marker')}
+        if getattr(self, 'identity', None): config['identity'] = self.identity
         path = self.run / 'service-config.json'
         path.write_text(json.dumps(config))
         env = os.environ.copy(); env['PYTHONPATH'] = str(PACKAGES)

@@ -224,3 +224,12 @@ Python server adapters, then cleans up its owned processes. 86 assertions plus
 three PostgreSQL setup checks pass. See PUBLIC_PROFILE_HANDOFF.md for evidence,
 fault coverage and the remaining OIDC/Godot integration boundary. No game source
 changed; Full remains 31 stages and the prior export remains valid.
+
+## Public Godot ownership checks
+
+`tools/CheckPublicOwner.ps1 -Python <python.exe> -Runtime Editor|Release` adds
+real OIDC-to-ticket HTTPS admission and separate live Godot hull owners. It
+checks automatic renewal, wrong TLS trust, motion, departure checkpointing,
+quiesce/seal/claim, destination death, database outage, and stale generations.
+Use an exported Release build for the Release run. See PUBLIC_GODOT_OWNERSHIP.md.
+All 95 scripts compile. This remains opt-in; Full still has 31 stages.
