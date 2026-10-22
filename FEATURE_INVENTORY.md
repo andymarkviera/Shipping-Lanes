@@ -154,3 +154,5 @@ The original pre-42 authority and replication/pacing gates remain open.
 Public nearby observers: `features/network/public_world_view.gd` creates inert hull replicas from authenticated complete nearby rosters. See PUBLIC_NEARBY_BOATS.md; public shared physics and player-facing scene integration remain open.
 
 Public shared physics: public_physics_world.gd owns nearby collision spaces; public_physics_probe and its Python runner verify editor/Release mapping and collision behavior. See PUBLIC_SHARED_PHYSICS.md.
+
+Public player scene: public_client.tscn plus public_client_presentation.gd provide camera, ocean, authoritative HUD and guarded helm input. Real peer fixtures inherit this scene. See PUBLIC_CLIENT_SCENE.md.

@@ -1368,3 +1368,33 @@ integration gate and Step 42 remain open. Main-menu Play is unchanged.
 Recovery tag: `public-shared-physics`.
 Source backup: `../output/checkpoints/public-shared-physics-2026-10-22.zip`.
 Existing project.godot customization remains outside the checkpoint.
+
+## Public camera and helm scene checkpoint
+
+October 22, 2026: the actual public player scene now composes authenticated boats
+with the existing bright-blue ocean, follow/orbit camera, opaque speed/fuel HUD,
+saved throttle/steering input and an unpaused connection menu. Input is sequenced
+at 10 Hz; menu, focus loss, stale owner/roster updates and disconnect neutralize
+orders. Visual replicas remain inert and speed/fuel come from server snapshots.
+The scene exposes a verified connection challenge/ticket boundary for the upcoming
+browser sign-in flow; it does not implement login or store passwords.
+See PUBLIC_CLIENT_SCENE.md and D079.
+
+Validation: editor adapter-only checks passed 54 assertions at
+`../output/handoff/0caa648d/peer-summary.json`; the final Release integration passed
+65 assertions plus 16 provider assertions, including the added stale-update check,
+at `../output/handoff/0238235c/peer-summary.json`. Fixtures inherit the actual player
+scene and drive a normal dedicated server. All 103 scripts compile, Release
+exports, normal title startup passes, and the disconnected player-scene preview
+opens/exits cleanly (`../output/public-client-preview/smoke.log`). These are headless
+checks; final visual quality and network-latency feel have not been established.
+
+Next: wire the player-facing system-browser sign-in and server-selection flow.
+Approved enrollment, starting positions/occupied-spawn feedback, public cargo and
+thrusters, water-motion/wakes, periodic saves and capacity/pacing remain open.
+Main-menu Play is unchanged until public admission UI is connected. The full
+integration gate and Step 42 remain open.
+
+Recovery tag: `public-client-scene`.
+Source backup: `../output/checkpoints/public-client-scene-2026-10-22.zip`.
+The preexisting project.godot customization remains outside this checkpoint.

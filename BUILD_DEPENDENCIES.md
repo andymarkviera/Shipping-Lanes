@@ -236,3 +236,5 @@ list explicitly includes public_world_view.gd; verification reuses the pinned
 Godot/PostgreSQL/HTTPS/OIDC peer fixture. See PUBLIC_NEARBY_BOATS.md.
 
 Public shared physics adds no external dependencies. Export explicitly includes public_physics_world.gd and public_physics_probe.tscn. Run `tools/public_handoff/physics_probe.py --runtime editor` or `--runtime release` with the existing Python runtime after export.
+
+Public player presentation reuses existing Godot water, camera, input and ship assets. Export explicitly includes public_client.gd, public_client.tscn and public_client_presentation.gd. No new external dependency.
