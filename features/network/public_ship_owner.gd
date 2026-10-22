@@ -34,22 +34,33 @@ func acquire(request: Dictionary) -> Dictionary:
 		restore_grant(result)
 	return result
 
-func restore_grant(result: Dictionary) -> void:
+func restore_grant(result: Dictionary, activate: bool = true) -> void:
 	if ship != null:
 		remove_child(ship)
 		ship.queue_free()
 	ship = Hull.instantiate()
 	ship.simulation_paused = true
 	add_child(ship)
+	# Public surface-navigation hulls must not slide above/below another hull.
+	ship.axis_lock_linear_y = true
 	ship.state.instance_id = result.profile.ship.id
 	ship.state.fuel_liters = result.profile.ship.fuel_liters
 	geographic_anchor = result.profile.ship.position.duplicate(true)
-	# Each owner currently has an isolated local chart. Shared world integration follows.
+	# Admission starts paused until safe placement in a server physics group.
 	ship.position = Vector3.ZERO
 	ship.rotation.y = -deg_to_rad(geographic_anchor.heading)
 	cargo_records = result.profile.cargo.duplicate(true)
-	ship.simulation_paused = false
+	ship.simulation_paused = not activate
 	departing = false
+
+func reframe(origin: Dictionary, address: Dictionary) -> void:
+	var old_origin: Dictionary = Geo.normalized(geographic_anchor.latitude, geographic_anchor.longitude)
+	var old_transport: float = Nav.transport_rotation(old_origin, address)
+	var new_transport: float = Nav.transport_rotation(origin, address)
+	ship.velocity = ship.velocity.rotated(Vector3.UP, old_transport - new_transport)
+	ship.position = Nav.local_position(origin, address)
+	ship.rotation.y = -deg_to_rad(address.heading_deg) - new_transport
+	geographic_anchor = {"latitude": origin.latitude_deg, "longitude": origin.longitude_deg, "heading": origin.heading_deg}
 
 func begin_transfer(data: Dictionary) -> Dictionary:
 	if departing or ship == null or not authority.permits({"account": data.get("account"), "epoch": data.get("epoch"), "generation": data.get("generation")}):

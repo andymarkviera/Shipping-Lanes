@@ -140,6 +140,17 @@ class PeerProof(GodotProof):
         self.worker_call(second, {'op': 'ticket', 'ticket': self.authority.issue_ticket(second_account, 'server-a', second_nonce)})
         second_join = self.until(second, lambda s: bool(s['binding']))
         check(self.status(server)['members'] == 2 and second_join['binding']['ship'] != binding['ship'], 'two enrolled accounts receive distinct concurrent helms')
+        check(len({s['space'] for s in self.status(server)['ships']}) == 1, 'two nearby authenticated hulls share server physics space')
+        blocked_account = self.authority.create_fixture_account('https://fixture.invalid', 'blocked-spawn-account')
+        blocked = self.peer_worker('client', port)
+        blocked_nonce = self.until(blocked, lambda s: bool(s['nonce']))['nonce']
+        self.worker_call(blocked, {'op': 'ticket', 'ticket': self.authority.issue_ticket(blocked_account, 'server-a', blocked_nonce)})
+        self.until(blocked, lambda s: s['notice'] == 'Disconnected')
+        check(self.status(server)['members'] == 2, 'occupied saved spawn adds no overlapping hull')
+        with psycopg.connect(**self.fixture.admin) as db:
+            row = db.execute('SELECT l.phase,p.revision,p.profile FROM public_authority.leases l JOIN public_authority.profiles p USING(account) WHERE account=%s', (blocked_account,)).fetchone()
+        check(row[0] == 'VACANT' and row[1] == 0 and row[2]['ship']['position']['longitude'] == 0, 'blocked spawn releases lease without overwriting canonical save')
+        blocked['child'].terminate(); blocked['child'].wait()
         visible = self.until(first, lambda s: len(s['visible_ships']) == 2)
         check(set(visible['visible_ships']) == {binding['ship'], second_join['binding']['ship']}, 'authenticated observer materializes both canonical hulls')
         check(len(self.until(second, lambda s: len(s['visible_ships']) == 2)['visible_ships']) == 2, 'both clients receive the shared nearby roster')
@@ -155,6 +166,13 @@ class PeerProof(GodotProof):
         self.until(server, lambda s: s['members'] == 1)
         check(self.until(first, lambda s: len(s['visible_ships']) == 1)['visible_ships'] == [binding['ship']], 'departed hull removed by complete roster snapshot')
         check(not self.status(second)['visible_ships'], 'disconnect clears all presentation replicas')
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            with psycopg.connect(**self.fixture.admin) as db:
+                saved = db.execute('SELECT l.phase,p.profile FROM public_authority.leases l JOIN public_authority.profiles p USING(account) WHERE account=%s', (second_account,)).fetchone()
+            if saved[0] == 'VACANT': break
+            time.sleep(.1)
+        check(saved[0] == 'VACANT' and abs(saved[1]['ship']['position']['longitude'] - .1) < .001, 'departure from shared chart preserves the second hull geographic save')
         neutral = self.until(server, lambda s: s['ships'] and s['ships'][0]['throttle'] == 0)
         check(neutral['ships'][0]['active'], 'missing input neutralizes throttle without revoking healthy lease')
         replacement = self.peer_worker('client', port)

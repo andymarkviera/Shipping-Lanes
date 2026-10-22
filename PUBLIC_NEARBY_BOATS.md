@@ -31,3 +31,5 @@ packet budgeting and client pacing remain required before Step 42.
 Validation extends the real DTLS/OIDC peer suite with two-client roster creation,
 geographic spacing, inert replicas, departure removal and disconnect cleanup.
 Headless tests verify scene nodes and transport, not visual appearance on screen.
+
+Follow-up: PUBLIC_SHARED_PHYSICS.md supersedes the isolated-server-physics limitation above. Player-facing scene/login integration remains open.

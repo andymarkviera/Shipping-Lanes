@@ -1336,3 +1336,35 @@ Play remains unchanged; this checkpoint is infrastructure for the public flow.
 Recovery tag: `public-nearby-boats`.
 Source backup: `../output/checkpoints/public-nearby-boats-2026-10-22.zip`.
 Existing project.godot customization stays outside this checkpoint.
+
+## Public shared boat physics checkpoint
+
+October 22, 2026: nearby authenticated hulls now share real collision spaces.
+Groups merge/split and rebase before physics while preserving geographic pose,
+heading, velocity and fuel. Public hull vertical translation is locked to prevent
+collision recovery pushing one boat beneath another. Occupied saved spawns are
+refused and their leases released without overwriting saved position/fuel.
+Departing hulls detach safely while asynchronous save/release completes.
+Also corrected an existing double-close warning during client disconnect.
+See PUBLIC_SHARED_PHYSICS.md and decision D078.
+
+Validation: 26 focused physics checks pass in both editor and Release at
+`../output/shared-physics/3dd8d8a9/summary.json` and
+`../output/shared-physics/7edf5758/summary.json`. The integrated peer suite passes
+58 checks plus 16 provider checks in editor (`../output/handoff/1284bccc/peer-summary.json`)
+and final Release (`../output/handoff/848b50af/peer-summary.json`). A 48-check final
+Release adapter-only run additionally verifies transport cleanup at
+`../output/handoff/f4cbbbb9/peer-summary.json`. All 101 scripts compile; Release
+export and ordinary startup pass. An earlier Release run was invalidated by
+rebuilding its resource pack while active; it was replaced by the complete final
+run against the finished export. Final logs have no script/resource parse or
+double-close errors; deliberate wrong-hostname fixtures still log TLS rejection.
+
+Next: playable public camera/control scene and sign-in/server selection.
+Starting-berth allocation and occupied-spawn messaging, public cargo/actions,
+periodic saves and bounded replication/client pacing remain open. The full public
+integration gate and Step 42 remain open. Main-menu Play is unchanged.
+
+Recovery tag: `public-shared-physics`.
+Source backup: `../output/checkpoints/public-shared-physics-2026-10-22.zip`.
+Existing project.godot customization remains outside the checkpoint.
