@@ -24,9 +24,13 @@ func reconcile() -> void:
 			high_water.erase(id)
 			pulses.erase(id)
 
-static func make_request(epoch: String, player: int, entity: String, kind: String, sequence: int, payload: Dictionary) -> Dictionary:
-	return {"version": 1, "epoch": epoch, "player": player, "entity": entity,
+static func make_request(epoch: String, player: int, entity: String, kind: String, sequence: int, payload: Dictionary, binding: int = 0) -> Dictionary:
+	var request: Dictionary = {"version": 1, "epoch": epoch, "player": player, "entity": entity,
 		"kind": kind, "sequence": sequence, "action_id": kind + ":" + str(sequence), "payload": payload}
+	if binding != 0:
+		request.version = 2
+		request.generation = binding
+	return request
 
 func result(id: String, code: String, value: int = 0, applied: bool = false) -> Dictionary:
 	return {"version": 1, "epoch": session.epoch, "action_id": id, "code": code,
@@ -34,16 +38,18 @@ func result(id: String, code: String, value: int = 0, applied: bool = false) -> 
 
 func execute(sender: int, data: Variant) -> Dictionary:
 	if not session.hosting: return result("", "NOT_AUTHORITY")
-	if not data is Dictionary or data.size() != 8: return result("", "BAD_REQUEST")
+	if not data is Dictionary or data.size() not in [8, 9]: return result("", "BAD_REQUEST")
 	for key: String in ["epoch", "entity", "kind", "action_id"]:
 		if not data.get(key) is String or data[key].length() > 128: return result("", "BAD_REQUEST")
 	var action_id: String = data.action_id
-	if data.get("version") != 1 or not data.get("version") is int or not data.get("player") is int or not data.get("sequence") is int or not data.get("payload") is Dictionary:
+	if data.get("version") not in [1, 2] or not data.get("version") is int or not data.get("player") is int or not data.get("sequence") is int or not data.get("payload") is Dictionary:
 		return result(action_id, "BAD_REQUEST")
 	if data.epoch != session.epoch: return result(action_id, "STALE_SESSION")
 	if data.player != sender or sender <= 0: return result(action_id, "NOT_OWNER")
 	if not session.roster.has(data.entity) or not world.ships.has(data.entity): return result(action_id, "UNKNOWN_ENTITY")
-	if session.roster[data.entity].peer_id != sender: return result(action_id, "NOT_OWNER")
+	if data.version == 2 and (data.size() != 9 or not data.get("generation") is int): return result(action_id, "BAD_REQUEST")
+	if data.version == 1 and data.size() != 8: return result(action_id, "BAD_REQUEST")
+	if not session.permitted(sender, data.entity, int(data.get("generation", 0))): return result(action_id, "NOT_OWNER")
 	if data.kind not in KINDS: return result(action_id, "UNKNOWN_ACTION")
 	if data.sequence < 1 or data.sequence > 2147483647 or action_id != data.kind + ":" + str(data.sequence): return result(action_id, "BAD_ACTION_ID")
 	var ship: HandlingShip = world.ships[data.entity]

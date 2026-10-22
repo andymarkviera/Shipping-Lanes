@@ -19,6 +19,12 @@ var guest_record: Dictionary = {}
 var guest_token_hash: String = ""
 var economies: Dictionary = {}
 
+func generation(_id: String) -> int:
+	return 0
+
+func permitted(sender: int, id: String, _binding: int = 0) -> bool:
+	return roster.has(id) and roster[id].peer_id == sender
+
 func reconnect_token() -> String:
 	return str(get_tree().get_meta("local_reconnect_" + str(endpoint), ""))
 

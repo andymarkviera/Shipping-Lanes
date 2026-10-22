@@ -207,3 +207,11 @@ first setup; requires existing public-storage dependencies and cryptography 50.0
 See AUTHENTICATED_ADMISSION_PROOF.md for boundaries and evidence. Full remains
 31 stages; compilation now covers 88 scripts. Requires local TCP/UDP subprocess
 access and never configures public accounts.
+
+## Step 40 private identity checks
+
+`tools/CheckIdentity.ps1 -Python <python.exe> -Runtime both` runs eight isolated
+Godot processes per hull/runtime, including fresh-process recovery. It uses only
+Python's standard library. Build Release first. 70 starter and 74 heavy checks
+pass in each runtime; see PRIVATE_SESSION_IDENTITY.md. Full remains 31 stages,
+with this explicit additional runner; compilation now covers 92 scripts.

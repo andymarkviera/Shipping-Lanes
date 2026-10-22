@@ -61,7 +61,7 @@ func submit(throttle: float, rudder: float, lateral: float) -> void:
 	var id: String = local_entity()
 	if id.is_empty(): return
 	sequence += 1
-	var arguments: Array = [session.epoch, id, sequence, throttle, rudder, lateral, Time.get_ticks_msec()]
+	var arguments: Array = [session.epoch, id, sequence, throttle, rudder, lateral, Time.get_ticks_msec(), session.generation(id)]
 	if session.hosting:
 		accept_input(1, arguments)
 	else:
@@ -88,9 +88,9 @@ func _process(_delta: float) -> void:
 		if session.transport == null: continue
 		var args: Array = packet.args
 		if packet.kind == "input" and not session.connecting:
-			request_input.rpc_id(1, args[0], args[1], args[2], args[3], args[4], args[5], args[6])
+			request_input.rpc_id(1, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7] if args.size() == 8 else 0)
 		elif packet.kind == "cargo" and not session.connecting:
-			world.cargo_sync.request_action.rpc_id(1, args[0], args[1], args[2], args[3])
+			world.cargo_sync.request_action.rpc_id(1, args[0], args[1], args[2], args[3], args[4] if args.size() == 5 else 0)
 		elif packet.kind == "state" and session.hosting:
 			for member: Dictionary in session.roster.values():
 				var peer: int = member.peer_id
@@ -99,16 +99,16 @@ func _process(_delta: float) -> void:
 	if not session.hosting: interpolate()
 
 @rpc("any_peer", "call_remote", "unreliable_ordered", 1)
-func request_input(session_epoch: String, id: String, seq: int, throttle: float, rudder: float, lateral: float, sent_ms: int) -> void:
+func request_input(session_epoch: String, id: String, seq: int, throttle: float, rudder: float, lateral: float, sent_ms: int, binding: int = 0) -> void:
 	if not session.hosting: return
-	accept_input(multiplayer.get_remote_sender_id(), [session_epoch, id, seq, throttle, rudder, lateral, sent_ms])
+	accept_input(multiplayer.get_remote_sender_id(), [session_epoch, id, seq, throttle, rudder, lateral, sent_ms, binding])
 
 func accept_input(sender: int, args: Array) -> bool:
-	if args.size() != 7 or not args[0] is String or not args[1] is String or not args[2] is int or not args[6] is int:
+	if args.size() not in [7, 8] or not args[0] is String or not args[1] is String or not args[2] is int or not args[6] is int:
 		rejected_inputs += 1
 		return false
 	var request: Dictionary = ShipActions.make_request(args[0], sender, args[1], "helm", args[2],
-		{"throttle": args[3], "rudder": args[4], "lateral": args[5], "sent_ms": args[6]})
+		{"throttle": args[3], "rudder": args[4], "lateral": args[5], "sent_ms": args[6]}, int(args[7]) if args.size() == 8 and args[7] is int else 0)
 	var response: Dictionary = world.actions.execute(sender, request)
 	if response.applied:
 		accepted_inputs += 1

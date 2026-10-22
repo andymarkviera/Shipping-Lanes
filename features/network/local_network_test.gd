@@ -18,7 +18,7 @@ var send_elapsed: float = 0.0
 var automated_input: bool = false
 
 func _ready() -> void:
-	session = LocalShipSession.new()
+	session = make_session()
 	session.name = "Session"
 	add_child(session)
 	session.changed.connect(refresh)
@@ -77,35 +77,7 @@ func _ready() -> void:
 	readout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	readout.add_theme_font_size_override("font_size", 17)
 	stack.add_child(readout)
-	var fresh_join: ConfirmationDialog = ConfirmationDialog.new()
-	fresh_join.title = "Join a new local test session?"
-	fresh_join.dialog_text = "Use this only after the host starts a new session.\nYour old reconnect credential will be forgotten.\nExisting host progress is not deleted or transferred."
-	fresh_join.confirmed.connect(func():
-		get_tree().remove_meta("local_reconnect_" + str(LocalShipSession.DEFAULT_PORT))
-		session.join_session())
-	layer.add_child(fresh_join)
-	var row: HBoxContainer = HBoxContainer.new()
-	stack.add_child(row)
-	for caption: String in ["Host new locally", "Host new heavy", "Join / Reconnect", "Disconnect", "Join new session", "Main menu"]:
-		if caption == "Disconnect":
-			row = HBoxContainer.new()
-			stack.add_child(row)
-		var button: Button = Button.new()
-		button.text = caption
-		row.add_child(button)
-		button.pressed.connect(func():
-			match caption:
-				"Host new locally":
-					session.ship_definition_id = "ship_starter_container_01"
-					session.host_session()
-				"Host new heavy":
-					session.ship_definition_id = "ship_heavy_lifter_01"
-					session.host_session()
-				"Join / Reconnect": session.join_session()
-				"Join new session": fresh_join.popup_centered(Vector2i(600, 180))
-				"Disconnect": session.stop()
-				"Main menu": get_tree().change_scene_to_file("res://features/main/main.tscn")
-			button.release_focus())
+	add_session_buttons(stack, layer)
 	cargo_buttons = HBoxContainer.new()
 	stack.add_child(cargo_buttons)
 	for action: String in ["lower", "align", "secure", "raise", "release"]:
@@ -220,3 +192,37 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	update_readout()
+
+func make_session() -> LocalShipSession:
+	return LocalShipSession.new()
+
+func add_session_buttons(stack: VBoxContainer, layer: CanvasLayer) -> void:
+	var fresh_join: ConfirmationDialog = ConfirmationDialog.new()
+	fresh_join.title = "Join a new local test session?"
+	fresh_join.dialog_text = "Use this only after the host starts a new session.\nYour old reconnect credential will be forgotten.\nExisting host progress is not deleted or transferred."
+	fresh_join.confirmed.connect(func():
+		get_tree().remove_meta("local_reconnect_" + str(LocalShipSession.DEFAULT_PORT))
+		session.join_session())
+	layer.add_child(fresh_join)
+	var row: HBoxContainer = HBoxContainer.new()
+	stack.add_child(row)
+	for caption: String in ["Host new locally", "Host new heavy", "Join / Reconnect", "Disconnect", "Join new session", "Main menu"]:
+		if caption == "Disconnect":
+			row = HBoxContainer.new()
+			stack.add_child(row)
+		var button: Button = Button.new()
+		button.text = caption
+		row.add_child(button)
+		button.pressed.connect(func():
+			match caption:
+				"Host new locally":
+					session.ship_definition_id = "ship_starter_container_01"
+					session.host_session()
+				"Host new heavy":
+					session.ship_definition_id = "ship_heavy_lifter_01"
+					session.host_session()
+				"Join / Reconnect": session.join_session()
+				"Join new session": fresh_join.popup_centered(Vector2i(600, 180))
+				"Disconnect": session.stop()
+				"Main menu": get_tree().change_scene_to_file("res://features/main/main.tscn")
+			button.release_focus())

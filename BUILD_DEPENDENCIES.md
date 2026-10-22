@@ -201,3 +201,9 @@ documented boundary; later integration gates must revisit it with actual cargo,
 spatial state, services and reconnects. Raise new blockers before dependent work,
 record repairs and preserve a recoverable checkpoint. Never bypass an unmet
 architecture decision to maintain the appearance of numeric progress.
+
+October 21 follow-through: Step 40 now integrates the private authenticated path
+with durable member/ship IDs, DTLS invitations, generation-fenced control and
+fresh-process recovery. See PRIVATE_SESSION_IDENTITY.md. Public service admission,
+leases/handoff, the two-server integration gate and replication/pacing work remain
+required before Step 42; no numeric milestone bypasses those gates.

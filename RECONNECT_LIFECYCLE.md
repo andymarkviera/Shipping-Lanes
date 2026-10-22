@@ -83,3 +83,6 @@ These tests do not establish internet latency or 100-player capacity. The record
 bandwidth/packet-size/client-pacing corrections are still required before Step 42.
 
 Next: the authenticated-admission feasibility prerequisite before Step 40.
+
+Step 40 update: the player-facing local test now uses PRIVATE_SESSION_IDENTITY.md.
+This document's Step 39 fixture remains available for lifecycle regression tests.
