@@ -7,7 +7,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import psycopg
-from authority import Authority
+from authority import Authority, Rejected
+from identity import validate
+from cryptography.exceptions import InvalidSignature
 
 def unique_object(pairs):
     result = {}
@@ -29,15 +31,27 @@ def main(config_path):
             self.connection.settimeout(8)
             code, result = 200, {'ok': False, 'code': 'BAD_REQUEST'}
             try:
-                if self.path != '/v1/authority': raise ValueError('route')
+                if self.path not in ('/v1/authority', '/v1/ticket'): raise ValueError('route')
                 size = int(self.headers.get('Content-Length', '0'))
                 if not 0 < size <= 16384: raise ValueError('size')
                 request = json.loads(self.rfile.read(size), object_pairs_hook=unique_object,
                                      parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite')))
-                server = self.headers.get('X-Server-Id', '')
-                credential = self.headers.get('Authorization', '').removeprefix('Bearer ')
-                if len(server) > 128 or len(credential) > 256: raise ValueError('headers')
-                result = authority.execute(server, credential, request)
+                authorization = self.headers.get('Authorization', '')
+                if not authorization.startswith('Bearer '): raise ValueError('authorization')
+                credential = authorization[7:]
+                if self.path == '/v1/ticket':
+                    if not config.get('identity'): raise ValueError('identity unavailable')
+                    try:
+                        claims = validate(credential, config['identity'])
+                    except (ValueError, TypeError, KeyError, InvalidSignature):
+                        raise Rejected('INVALID_IDENTITY') from None
+                    result = authority.identity_ticket(claims, request)
+                else:
+                    server = self.headers.get('X-Server-Id', '')
+                    if len(server) > 128 or len(credential) > 256: raise ValueError('headers')
+                    result = authority.execute(server, credential, request)
+            except Rejected as error:
+                code, result = 403, {'ok': False, 'code': str(error)}
             except (ValueError, TypeError):
                 code = 400
             except psycopg.Error:

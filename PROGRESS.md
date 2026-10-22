@@ -1252,3 +1252,30 @@ Next: public authority integration with validated OIDC admission and two headles
 Godot instances, followed by bounded replication/client pacing, before Step 42.
 The Python adapter-worker proof is not a playable dedicated server or public launch.
 Keep the eventual dedicated-server launch and player join flow straightforward.
+
+## Public Godot ownership adapter checkpoint
+
+Task ID: `public-authority-integration-gate` (server adapter portion).
+Status: adapter implemented; full public transport/gameplay gate remains open.
+
+Validated OIDC access tokens now issue scoped tickets through the HTTPS service.
+Real Godot processes acquire ownership, move the starter hull, renew on a timer,
+checkpoint actual departure position/fuel, and quiesce physics/collisions/input
+before transfer. Destination restart and backend-outage recovery preserve canonical
+ship/cargo records and receipts while rejecting old ownership generations.
+
+The test courier is operator-owned, not a public player connection. Public DTLS
+peer admission, system-browser sign-in/server selection, world/cargo/action
+integration and dedicated-server launch configuration remain next. Bounded
+replication/client pacing still follows before Step 42. See PUBLIC_GODOT_OWNERSHIP.md.
+
+Verified October 22: 40 integration assertions plus 16 real-provider assertions
+pass in each of editor and Release; three PostgreSQL setup checks accompany each.
+Evidence: `../output/handoff/d04d1341/godot-summary.json` (editor) and
+`../output/handoff/de4d472e/godot-summary.json` (Release). The separate 86-check
+backend suite passes at `../output/handoff/76271b4e/summary.json`. All 95 scripts
+compile; Release export and ordinary startup pass. The original project.godot
+working-tree customization is preserved outside this source checkpoint.
+
+Recovery tag: `public-godot-ownership-adapter`.
+Source backup: `../output/checkpoints/public-godot-ownership-adapter-2026-10-22.zip`.

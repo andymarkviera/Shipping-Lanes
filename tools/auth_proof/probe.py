@@ -37,7 +37,7 @@ def dependencies(run):
             if not entry.is_dir():check_file=java_root/entry.filename;assert hashlib.sha256(check_file.read_bytes()).digest()==hashlib.sha256(z.read(entry)).digest()
     return java_root/manifest['java']['runtime_directory']/'bin/java.exe'
 
-def oidc_proof(run):
+def oidc_proof(run, integration=None):
     java=dependencies(run);certificates(run);port=free_port();issuer='https://localhost:%d/realms/shipping-proof'%port
     flows=[NativeFlow(issuer,run/'ca.pem') for _ in range(2)]
     password=secrets.token_urlsafe(24)
@@ -77,6 +77,8 @@ def oidc_proof(run):
         pieces=tokens['access_token'].split('.');pieces[1]=pieces[1][:-4]+'AAAA'
         rejects(lambda:validate_jwt('.'.join(pieces),jwks,issuer,'shipping-service'),'modified signed token')
         check('refresh_token' in tokens,'provider returns refresh credential kept only in memory')
+        if integration is not None:
+            integration(dict(issuer=issuer, audience='shipping-service', jwks=jwks), tokens, access)
         return dict(issuer=issuer,subject=identity['sub'])
     finally:
         for flow in flows:flow.close()

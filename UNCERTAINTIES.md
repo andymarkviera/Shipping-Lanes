@@ -137,3 +137,9 @@ transfer proofs in PUBLIC_PROFILE_HANDOFF.md, including separate adapter process
 and crash recovery. Integrated OIDC admission, Godot simulation fencing, renewal
 cadence and production timeout tuning remain open until the pre-42 gate and later
 rollout measurements. U019's OS credential persistence/recovery UX remains open.
+
+October 22 adapter integration update: U017/U020 now have real Godot live-hull
+fencing, automatic renewal and canonical departure checkpoints connected to
+OIDC-protected HTTPS tickets. See PUBLIC_GODOT_OWNERSHIP.md. Public DTLS peer
+admission, provider key-rotation operations, player sign-in/recovery UX, periodic
+spatial saves and production timeout/capacity tuning remain open. U019 is unchanged.

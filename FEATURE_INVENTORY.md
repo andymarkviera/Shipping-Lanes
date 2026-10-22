@@ -139,3 +139,8 @@ dependencies, and actual project state. Resolve each due rule in `DECISIONS.md`
 with evidence/default status before dependent code; mark it implemented only
 after its acceptance checks run. Step 03 completion means coverage is assigned,
 not that the open questions or later prototypes have passed.
+
+Public authority adapter follow-through (October 22): real OIDC-to-HTTPS tickets
+and live Godot ownership/fencing/checkpoint/handoff are implemented in
+PUBLIC_GODOT_OWNERSHIP.md. This is not completion of public player transport,
+world/cargo integration or the pre-42 authority gate; retain those dependencies.

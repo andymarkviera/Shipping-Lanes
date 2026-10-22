@@ -313,3 +313,10 @@ and HTTPS. The fixture uses synthetic account enrollment and separate Python
 server-adapter processes. Validated OIDC ticket issuance and live Godot server
 quiescing/spawn integration remain the next pre-42 gate; no public deployment or
 playable dedicated-server launcher is claimed. D074 records the lease decisions.
+
+October 22 public-owner follow-through: OIDC access-token validation now runs in
+the HTTPS ticket service, and Godot owns actual lease-fenced hulls with timed
+renewal, departure pose/fuel checkpoints and fresh-process recovery. See
+PUBLIC_GODOT_OWNERSHIP.md. Public player transport, browser sign-in UX, shared world
+placement, periodic spatial checkpoints, cargo bodies/actions and operator launch
+configuration remain explicit integration work; do not infer internet readiness.
