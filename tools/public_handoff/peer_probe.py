@@ -133,11 +133,18 @@ class PeerProof(GodotProof):
         self.worker_call(stranger, {'op': 'disconnect'})
         stranger['child'].terminate(); stranger['child'].wait()
         second_account = self.authority.create_fixture_account('https://fixture.invalid', 'second-peer-account')
+        with psycopg.connect(**self.fixture.admin) as db:
+            db.execute("UPDATE public_authority.profiles SET profile=jsonb_set(profile, '{ship,position,longitude}', '0.1'::jsonb) WHERE account=%s", (second_account,))
         second = self.peer_worker('client', port)
         second_nonce = self.until(second, lambda s: bool(s['nonce']))['nonce']
         self.worker_call(second, {'op': 'ticket', 'ticket': self.authority.issue_ticket(second_account, 'server-a', second_nonce)})
         second_join = self.until(second, lambda s: bool(s['binding']))
         check(self.status(server)['members'] == 2 and second_join['binding']['ship'] != binding['ship'], 'two enrolled accounts receive distinct concurrent helms')
+        visible = self.until(first, lambda s: len(s['visible_ships']) == 2)
+        check(set(visible['visible_ships']) == {binding['ship'], second_join['binding']['ship']}, 'authenticated observer materializes both canonical hulls')
+        check(len(self.until(second, lambda s: len(s['visible_ships']) == 2)['visible_ships']) == 2, 'both clients receive the shared nearby roster')
+        remote = next(r for r in visible['replicas'] if r['ship'] == second_join['binding']['ship'])
+        check(-176 < remote['x'] < -173 and all(r['inert'] for r in visible['replicas']), 'distinct geographic anchors map to nearby inert visual hulls without spawning at zero')
         self.rejected(server, second, {'op': 'helm', 'sequence': 1, 'throttle': 1.0, 'candidate': binding})
         for seq in range(2, 12):
             self.worker_call(second, {'op': 'helm', 'sequence': seq, 'throttle': .8})
@@ -146,6 +153,8 @@ class PeerProof(GodotProof):
         check(second_state['snapshot']['ship'] == second_join['binding']['ship'], 'second authenticated peer receives only its own ship state')
         self.worker_call(second, {'op': 'disconnect'})
         self.until(server, lambda s: s['members'] == 1)
+        check(self.until(first, lambda s: len(s['visible_ships']) == 1)['visible_ships'] == [binding['ship']], 'departed hull removed by complete roster snapshot')
+        check(not self.status(second)['visible_ships'], 'disconnect clears all presentation replicas')
         neutral = self.until(server, lambda s: s['ships'] and s['ships'][0]['throttle'] == 0)
         check(neutral['ships'][0]['active'], 'missing input neutralizes throttle without revoking healthy lease')
         replacement = self.peer_worker('client', port)

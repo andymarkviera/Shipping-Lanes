@@ -150,3 +150,8 @@ two-account isolation and headless startup pass editor/Release. Pending work:
 shared geographic placement, periodic spatial saves, operator registration/key
 rotation, graceful shutdown, player sign-in/browser UX and congestion/capacity
 measurement. See PUBLIC_PEER_ADMISSION.md. No production availability is inferred.
+
+October 22 nearby presentation update: authenticated clients now materialize nearby
+hulls in recipient-relative geographic charts. Shared collision/spawn placement,
+player-facing camera/login flow, periodic saves and capacity remain unresolved.
+Headless node checks do not establish final visual quality. See PUBLIC_NEARBY_BOATS.md.

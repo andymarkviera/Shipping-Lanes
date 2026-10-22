@@ -150,3 +150,5 @@ headless configuration entry are implemented and verified in PUBLIC_PEER_ADMISSI
 This does not close shared public world/cargo/action integration, player-facing
 sign-in/server browsing, periodic saves, graceful operator shutdown or deployment.
 The original pre-42 authority and replication/pacing gates remain open.
+
+Public nearby observers: `features/network/public_world_view.gd` creates inert hull replicas from authenticated complete nearby rosters. See PUBLIC_NEARBY_BOATS.md; public shared physics and player-facing scene integration remain open.

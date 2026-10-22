@@ -1,6 +1,11 @@
 extends Node
 ## Protocol 7 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
+const View = preload("res://features/network/public_world_view.gd")
+const Geo = preload("res://features/geography/geographic_address.gd")
+const Nav = preload("res://features/geography/navigation_experiment.gd")
+var world_view: Node3D
+var view_sequence: int = 0
 signal challenged(nonce: String)
 signal admitted
 var hosting: bool = false
@@ -23,6 +28,8 @@ var rejected_commands: int = 0
 var ticket_sent: bool = false
 
 func _ready() -> void:
+	world_view = View.new()
+	add_child(world_view)
 	multiplayer.server_relay = false
 	multiplayer.peer_connected.connect(connected)
 	multiplayer.peer_disconnected.connect(disconnected)
@@ -97,6 +104,18 @@ func _process(_delta: float) -> void:
 			var record: Dictionary = members[id]
 			var ship: HandlingShip = record.hull.ship
 			state_update.rpc_id(id, record.ship, record.epoch, record.generation, ship.position, ship.rotation.y, ship.velocity, ship.state.fuel_liters, record.sequence)
+		view_sequence += 1
+		for id: int in members:
+			var record: Dictionary = members[id]
+			var origin: Dictionary = record.hull.current_address()
+			var rows: Array = []
+			for other: Dictionary in members.values():
+				var address: Dictionary = other.hull.current_address()
+				if Nav.separation(origin, address) > Nav.LOCAL_RANGE_M: continue
+				var position_: Vector3 = Nav.local_position(origin, address)
+				var yaw: float = -deg_to_rad(address.heading_deg) - Nav.transport_rotation(origin, address)
+				rows.append({"ship": other.ship, "generation": other.generation, "position": position_, "yaw": yaw})
+			world_update.rpc_id(id, record.ship, record.epoch, record.generation, view_sequence, rows)
 
 @rpc("authority", "call_remote", "reliable")
 func connection_challenge(value: String, server: String) -> void:
@@ -190,6 +209,11 @@ func state_update(ship: String, epoch: int, generation: int, position_: Vector3,
 	if not position_.is_finite() or not velocity_.is_finite() or not is_finite(yaw) or not is_finite(fuel): return
 	last_snapshot = {"ship": ship, "distance": position_.length(), "speed": velocity_.length(), "fuel": fuel, "sequence": sequence}
 
+@rpc("authority", "call_remote", "unreliable_ordered", 2)
+func world_update(ship: String, epoch: int, generation: int, tick: int, rows: Array) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1 or binding != {"ship": ship, "epoch": epoch, "generation": generation}: return
+	world_view.receive(tick, rows)
+
 func disconnected(id: int) -> void:
 	if not hosting:
 		if id == 1: close_client()
@@ -217,6 +241,7 @@ func close_client() -> void:
 	if connection != null: connection.destroy()
 	transport = null
 	connection = null
+	if world_view != null: world_view.clear()
 	binding.clear()
 	last_snapshot.clear()
 	notice = "Disconnected"
