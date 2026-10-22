@@ -207,3 +207,11 @@ with durable member/ship IDs, DTLS invitations, generation-fenced control and
 fresh-process recovery. See PRIVATE_SESSION_IDENTITY.md. Public service admission,
 leases/handoff, the two-server integration gate and replication/pacing work remain
 required before Step 42; no numeric milestone bypasses those gates.
+
+October 22 follow-through: Step 41 completes the real PostgreSQL/HTTPS public
+profile and handoff adapter fixture (PUBLIC_PROFILE_HANDOFF.md). The remaining
+public-authority integration gate must connect actual validated OIDC admission
+and two headless Godot instances, including stopping live physics/collisions when
+authority is uncertain. Complete that and bounded replication/client pacing before
+42. Dedicated-server launch/join usability is an explicit implementation target;
+production rollout and capacity validation remain later work.
