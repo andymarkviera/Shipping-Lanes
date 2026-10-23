@@ -1613,3 +1613,28 @@ is Step 44; manual browser/WAN/sustained workload limits stay explicit. No manda
 Recovery tag: public-helm-feedback.
 Verified source backup: ../output/checkpoints/public-helm-feedback-2026-10-23.zip.
 The preexisting project.godot customization is preserved outside the checkpoint.
+
+## Clear public join failures and retry — October 23, 2026
+
+Added bounded reliable refusal messages for occupied saved spawns, wrong game
+version, invalid/expired join permission, admission busy, account busy/transfer
+and online save-service failure. Cleanup preserves the explanation; starting a new
+sign-in clears it. No arbitrary backend text, automatic retry or saved-position
+teleport. Game protocol is 9; matching builds required, HTTPS tickets remain 7.
+
+The actual native entry integration now blocks an enrolled account's spawn, verifies
+its complete saved profile/revision remain unchanged and lease is released, removes
+the blocking boat and signs in again to sail. This caught a stale-reason retry bug,
+fixed before completion. Final editor 43c95f14 and Release 6535806f each pass 23
+integration + 16 provider checks. Editor peer regression 1ed3c65d passes 60 checks,
+including protocol/ticket refusal, reason reset and occupied-spawn delivery.
+Script check (109), startup, FlowCheck and Release export pass. See
+PUBLIC_JOIN_FEEDBACK.md for evidence and limits. No real browser trust or WAN claim.
+
+Step 42 remains open. FOUNDATION_ACCEPTANCE.md now marks join feedback complete;
+next is the combined two-account foundation run with practical workload limits,
+then two ports once that gate passes. Heavy-loader pickup/stopping deadlines remain.
+
+Recovery tag: public-join-feedback.
+Verified source backup: ../output/checkpoints/public-join-feedback-2026-10-23.zip.
+The preexisting project.godot customization is preserved outside the checkpoint.

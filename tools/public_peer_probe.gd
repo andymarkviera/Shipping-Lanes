@@ -40,7 +40,10 @@ func _process(_delta: float) -> void:
 	DirAccess.remove_absolute(path)
 	var result: Dictionary = {"ok": true}
 	match data.get("op"):
-		"ticket": session.submit_ticket(data.ticket)
+		"reconnect": session.start_client(session.config.duplicate(true))
+		"ticket":
+			if data.has("version"): session.join_public.rpc_id(1, int(data.version), data.ticket)
+			else: session.submit_ticket(data.ticket)
 		"helm":
 			sent_at[int(data.sequence)] = Time.get_ticks_msec()
 			if sent_at.size() > 128: sent_at.erase(sent_at.keys()[0])
@@ -81,7 +84,7 @@ func _process(_delta: float) -> void:
 		"zoom": presentation.camera_rig.zoom(-1)
 		"disconnect": session.close_client()
 		"status":
-			result = {"nonce": session.nonce, "tick": session.world_view.tick, "frames_drawn": Engine.get_frames_drawn(), "display": DisplayServer.get_name(), "frame_ms": frame_ms, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "snapshot_work_us": session.snapshot_work_us, "physics_work_us": session.physics_work_us, "snapshot_bytes": session.snapshot_bytes_sent, "snapshot_packets": session.snapshot_packets_sent, "max_snapshot_bytes": session.max_snapshot_bytes, "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
+			result = {"nonce": session.nonce, "tick": session.world_view.tick, "frames_drawn": Engine.get_frames_drawn(), "display": DisplayServer.get_name(), "frame_ms": frame_ms, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "join_failure": session.join_failure, "failure_message": session.failure_message(session.join_failure), "ticket_sent": session.ticket_sent, "members": session.members.size(), "snapshot_work_us": session.snapshot_work_us, "physics_work_us": session.physics_work_us, "snapshot_bytes": session.snapshot_bytes_sent, "snapshot_packets": session.snapshot_packets_sent, "max_snapshot_bytes": session.max_snapshot_bytes, "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
 			if sent_at.has(int(session.last_snapshot.get("sequence", -2))):
 				result.ack_ms = session.last_snapshot.received_at - sent_at[int(session.last_snapshot.sequence)]
 			if presentation != null:

@@ -299,3 +299,9 @@ current finite foundation checklist is FOUNDATION_ACCEPTANCE.md. Next: clear ref
 admission/retry feedback, then combined foundation acceptance before two ports.
 General safe port allocation remains Step 44; stop review before 46 and pickup
 repair before 50 are still due.
+
+October 23 admission follow-through: PUBLIC_JOIN_FEEDBACK.md completes specific
+refused-admission feedback and fresh sign-in retry. Editor and exported native
+login paths pass blocked-spawn/save-preservation/retry checks. Next is the combined
+two-account foundation scenario and explicit practical workload limits before
+accepting Step 42. General port spawn allocation stays at Step 44.

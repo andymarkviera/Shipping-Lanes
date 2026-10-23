@@ -85,6 +85,18 @@ class PeerProof(GodotProof):
     def exercise_workers(self, ticket):
         port = free_port()
         server = self.peer_worker('server', port)
+        mismatch = self.peer_worker('client', port)
+        self.until(mismatch, lambda s: bool(s['nonce']))
+        self.worker_call(mismatch, {'op': 'ticket', 'ticket': 'x' * 32, 'version': 8})
+        refusal = self.until(mismatch, lambda s: s['notice'] == 'Disconnected')
+        check(refusal['join_failure'] == 'BUILD_MISMATCH' and not refusal['binding'], 'wrong game protocol receives specific refusal without admission')
+        self.worker_call(mismatch, {'op': 'reconnect'})
+        retry = self.until(mismatch, lambda s: bool(s['nonce']))
+        check(not retry['join_failure'], 'new connection clears previous refusal')
+        self.worker_call(mismatch, {'op': 'ticket', 'ticket': 'x' * 32})
+        refusal = self.until(mismatch, lambda s: s['notice'] == 'Disconnected')
+        check(refusal['join_failure'] == 'SIGN_IN_AGAIN', 'invalid ticket receives fresh sign-in guidance')
+        mismatch['child'].terminate(); mismatch['child'].wait()
         wrong = self.peer_worker('client', port, hostname='wrong.invalid')
         bad = self.until(wrong, lambda s: s['notice'] == 'Disconnected')
         check(not bad['nonce'] and not bad['ticket_sent'], 'no credential sent before certificate hostname verification')
@@ -147,6 +159,7 @@ class PeerProof(GodotProof):
         blocked_nonce = self.until(blocked, lambda s: bool(s['nonce']))['nonce']
         self.worker_call(blocked, {'op': 'ticket', 'ticket': self.authority.issue_ticket(blocked_account, 'server-a', blocked_nonce)})
         self.until(blocked, lambda s: s['notice'] == 'Disconnected')
+        check(self.status(blocked)['join_failure'] == 'SPAWN_OCCUPIED', 'blocked spawn receives retained reason over reliable transport')
         check(self.status(server)['members'] == 2, 'occupied saved spawn adds no overlapping hull')
         with psycopg.connect(**self.fixture.admin) as db:
             row = db.execute('SELECT l.phase,p.revision,p.profile FROM public_authority.leases l JOIN public_authority.profiles p USING(account) WHERE account=%s', (blocked_account,)).fetchone()

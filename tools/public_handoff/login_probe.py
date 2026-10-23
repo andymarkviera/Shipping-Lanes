@@ -86,10 +86,34 @@ class LoginProof(PeerProof):
         if 'not been enrolled' not in rejected['notice']: print('SIGNIN_DIAGNOSTIC', rejected['phase'], rejected['notice'], rejected.get('connection_notice'), rejected.get('token_result'), rejected.get('token_status'), flush=True)
         check(not rejected['joined'] and 'not been enrolled' in rejected['notice'] and rejected['token_cleared'], 'unenrolled identity shows clear failure without spawning or retaining access token')
         self.account = self.authority.create_fixture_account(claims['iss'], claims['sub'])
+        blocker_account = self.authority.create_fixture_account('https://fixture.invalid', 'spawn-blocker')
+        blocker = self.peer_worker('client', port)
+        nonce = self.until(blocker, lambda s: bool(s['nonce']))['nonce']
+        self.worker_call(blocker, {'op': 'ticket', 'ticket': self.authority.issue_ticket(blocker_account, 'server-a', nonce)})
+        self.until(blocker, lambda s: bool(s['binding']))
+        with psycopg.connect(**self.fixture.admin) as db:
+            before = db.execute('SELECT revision,profile FROM public_authority.profiles WHERE account=%s', (self.account,)).fetchone()
+        self.worker_call(player, {'op': 'begin'})
+        self.browser(self.until(player, lambda s: bool(s['url']))['url'], identity, credentials)
+        occupied = self.until(player, lambda s: not s['busy'] and 'too close to your saved position' in s['notice'])
+        check(occupied['overlay'] and not occupied['binding'] and occupied['token_cleared'], 'blocked spawn displays specific retry guidance without a boat or retained token')
+        time.sleep(.4)
+        check(self.status(player)['notice'] == occupied['notice'], 'disconnect cleanup preserves the refused-admission explanation')
+        with psycopg.connect(**self.fixture.admin) as db:
+            after = db.execute('SELECT revision,profile FROM public_authority.profiles WHERE account=%s', (self.account,)).fetchone()
+            phase = db.execute('SELECT phase FROM public_authority.leases WHERE account=%s', (self.account,)).fetchone()[0]
+        check(before == after and phase == 'VACANT', 'occupied spawn leaves the complete canonical save unchanged and releases ownership')
+        self.worker_call(blocker, {'op': 'disconnect'})
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            with psycopg.connect(**self.fixture.admin) as db:
+                if db.execute('SELECT phase FROM public_authority.leases WHERE account=%s', (blocker_account,)).fetchone()[0] == 'VACANT': break
+            time.sleep(.1)
+        else: raise AssertionError('Blocker departure did not release ownership')
         self.worker_call(player, {'op': 'begin'})
         self.browser(self.until(player, lambda s: bool(s['url']))['url'], identity, credentials)
         joined = self.until(player, lambda s: s['joined'] and s['ready'])
-        check(not joined['overlay'] and joined['binding'] and joined['token_cleared'], 'native token exchange and ticket request enter playable boat with credentials cleared')
+        check(not joined['overlay'] and joined['binding'] and joined['token_cleared'], 'fresh sign-in after occupied spawn enters playable boat with credentials cleared')
         self.worker_call(player, {'op': 'drive'})
         check(self.until(player, lambda s: s['snapshot'].get('speed', 0) > .02)['ready'], 'signed-in player controls normal dedicated server boat')
         self.worker_call(player, {'op': 'disconnect'})
