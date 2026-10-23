@@ -64,14 +64,22 @@ func run() -> void:
 	app._unhandled_input(escape)
 	check(app.state == app.State.PLAYING, "Escape resumes paused session")
 	app.return_to_title()
-	app.navigate("servers")
+	app.transition(app.State.SERVERS)
 	app.open_settings()
 	app.get_node("UI/Settings").close()
 	check(app.state == app.State.SERVERS, "Settings preserves originating menu")
 	app._unhandled_input(escape)
 	check(app.state == app.State.TITLE, "Escape returns from servers")
 	check(root.gui_get_focus_owner() != null, "Menus have keyboard focus")
+	app.navigate("servers")
 	app.queue_free()
 	await process_frame
+	await process_frame
+	check(current_scene != null and current_scene.get_script().resource_path == "res://features/network/public_entry.gd", "Servers opens public entry scene")
+	check(not current_scene.busy and current_scene.session.binding.is_empty(), "Server selection never auto-signs in")
+	current_scene._unhandled_input(escape)
+	await process_frame
+	await process_frame
+	check(current_scene != null and current_scene.get_script().resource_path == "res://features/main/main.gd", "Escape returns from public server selection")
 	print("Application flow checks: %s" % ("PASS" if failures == 0 else "FAIL"))
 	quit(0 if failures == 0 else 1)

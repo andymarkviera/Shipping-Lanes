@@ -238,3 +238,5 @@ Godot/PostgreSQL/HTTPS/OIDC peer fixture. See PUBLIC_NEARBY_BOATS.md.
 Public shared physics adds no external dependencies. Export explicitly includes public_physics_world.gd and public_physics_probe.tscn. Run `tools/public_handoff/physics_probe.py --runtime editor` or `--runtime release` with the existing Python runtime after export.
 
 Public player presentation reuses existing Godot water, camera, input and ship assets. Export explicitly includes public_client.gd, public_client.tscn and public_client_presentation.gd. No new external dependency.
+
+Native sign-in adds no runtime beyond Godot. public_browser_login.gd uses Crypto, TCPServer and HTTPRequest; public_entry resources and the login probe are explicitly exported. tools/public_handoff/login_probe.py reuses the existing disposable Keycloak/PostgreSQL fixture. Native HTTPS test endpoints explicitly use 127.0.0.1 to match the IPv4 service binds; TLS certificate checks remain enabled.

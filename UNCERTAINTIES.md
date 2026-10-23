@@ -159,3 +159,5 @@ Headless node checks do not establish final visual quality. See PUBLIC_NEARBY_BO
 October 22 shared physics follow-through: nearby public hulls now collide in shared local spaces and blocked saved spawns are refused without save mutation. Starting-berth allocation, blocked-spawn UI, group-threshold performance/capacity and visual validation remain open; this is the existing kinematic collision model. See PUBLIC_SHARED_PHYSICS.md.
 
 Public client follow-through: camera/helm/HUD now connect to authenticated snapshots. Browser login/enrollment and server-selection entry, public water movement/wakes and visual/latency evaluation remain open. Tests are headless. See PUBLIC_CLIENT_SCENE.md.
+
+October 22 browser-entry follow-through: native callback, PKCE token exchange, approved server selection and HTTPS-ticket admission now connect the public player scene. Persistent provider/authority deployment, enrollment and starting positions, live discovery and production certificate/key operations remain open. Headless tests simulate provider navigation, not interactive system-browser appearance. See PUBLIC_SIGN_IN.md.

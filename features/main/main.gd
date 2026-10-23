@@ -18,6 +18,12 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--public-login-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/public_login_probe.tscn")
+		return
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--public-entry-preview"):
+		get_tree().change_scene_to_file.call_deferred("res://features/network/public_entry.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--public-client-preview"):
 		get_tree().change_scene_to_file.call_deferred("res://features/network/public_client.tscn")
 		return
@@ -165,7 +171,9 @@ func navigate(action: String) -> void:
 				recovery_target = -1
 				recovery_source = -1
 				refresh_save_status()
-		"play": start_saved_session()
+		"play":
+			if FileAccess.file_exists("user://public_services.json"): get_tree().change_scene_to_file("res://features/network/public_entry.tscn")
+			else: start_saved_session()
 		"handling":
 			if slots.occupied(active_slot) and not FileAccess.file_exists(slots.folder(active_slot) + "/world.db"):
 				menu.save_notice.text = "Main save unavailable. Open Local Saves for recovery."
@@ -176,7 +184,7 @@ func navigate(action: String) -> void:
 		"test_load": request_test_load()
 		"test_timer": request_test_timer()
 		"continue": continue_session()
-		"servers": transition(State.SERVERS)
+		"servers": get_tree().change_scene_to_file("res://features/network/public_entry.tscn")
 		"settings": open_settings()
 		"pause": pause_session()
 		"resume": transition(State.PLAYING)
@@ -311,7 +319,7 @@ func _exit_tree() -> void:
 
 func refresh_save_status() -> void:
 	menu.slot_status.text = slots.status(menu.slot_picker.selected)
-	menu.play_button.text = "PLAY" if slots.occupied(active_slot) else "CREATE & PLAY"
+	menu.play_button.text = "PLAY" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE & PLAY"
 	menu.save_notice.text = "Local slot %d: %s" % [active_slot + 1, slots.status(active_slot)]
 
 func select_save_slot(index: int) -> void:
