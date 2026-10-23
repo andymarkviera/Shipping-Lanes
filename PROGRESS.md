@@ -1454,3 +1454,34 @@ Preexisting project.godot customization remains untouched and outside Git archiv
 Actual supported server size remains to be measured and selected. Added a small
 reverse/neutral/forward throttle slider indicator to the next handling/neutral-stop
 pass, alongside actual motion feedback. No gameplay or aesthetic changes made.
+
+## Persistent local online setup checkpoint — October 22, 2026
+
+Added tools/LocalOnline.ps1 (Setup/Start/Stop/Play) and a persistent loopback-only
+supervisor using the already pinned provider, PostgreSQL, authority and dedicated
+runtime. Two generated development accounts preserve their identity and canonical
+progress across restarts. Setup refuses overwrite; concurrent supervision is
+locked; credentials live in a restricted directory and are not console output.
+Play selects a separate APPDATA profile, leaving ordinary saves unchanged.
+No new downloads, production accounts, firewall or OS trust changes were made.
+
+Validation: 13 persistent-stack assertions passed at
+../output/local-online/check-84f7430f/check-summary.json. Both accounts completed
+native Godot sign-in, movement, departure saving and lease release before and after
+a full service restart. Canonical account/ship IDs, money, revision, fuel and pose
+were identical across restart. Duplicate supervisor refusal and cleanup passed.
+The PowerShell Start/Stop wrapper separately started the existing Release server,
+reached readiness and stopped its services successfully. Python compilation and
+PowerShell parsing passed. No game scripts changed or export rebuild was needed.
+
+Browser navigation in the proof uses an HTTP test browser with explicit certificate
+trust. Ordinary browser trust and interactive acceptance remain pending; no claim
+of one-click browser readiness is made. Certificate expiry/rotation, orphan cleanup,
+real enrollment/hosting and general safe spawning remain open. Fixed separated
+initial fixture positions do not solve occupied saved positions. Server Stop still
+requires players to disconnect first: periodic saves and graceful drain are next.
+See LOCAL_ONLINE.md and D081. Step 42 remains open.
+
+Recovery tag: persistent-local-online.
+Verified source backup: ../output/checkpoints/persistent-local-online-2026-10-22.zip.
+Existing project.godot customization remains outside this Git archive.
