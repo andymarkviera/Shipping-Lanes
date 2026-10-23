@@ -1398,3 +1398,34 @@ integration gate and Step 42 remain open.
 Recovery tag: `public-client-scene`.
 Source backup: `../output/checkpoints/public-client-scene-2026-10-22.zip`.
 The preexisting project.godot customization remains outside this checkpoint.
+
+## Public browser sign-in checkpoint
+
+October 22, 2026: Servers now opens the public server-selection page. Configured
+players can sign in in their system browser using native Godot PKCE, exchange the
+code over HTTPS, obtain an enrolled-account ticket, and enter the playable public
+boat scene. Cancellation, timeout, retry and disconnect clear transient credentials.
+The game does not collect passwords or persist access/refresh tokens. Play retains
+local development saves until an operator installs the public service configuration.
+See PUBLIC_SIGN_IN.md and decision D080.
+
+Validation: 18 native entry/integration assertions plus 16 provider assertions pass
+in both editor (`../output/handoff/b26b7a11/login-summary.json`) and final Release
+(`../output/handoff/dadc09e4/login-summary.json`). The tests navigate a real disposable
+identity provider and exercise Godot's callback, token exchange, unenrolled-account
+rejection, ticket admission, driving and lease release on a normal dedicated server.
+All 106 scripts compile; FlowCheck verifies Servers navigation and Escape return;
+Release export and disconnected entry startup/exit smoke pass. The test browser is
+headless: interactive browser launch and visual acceptance still need user testing.
+An initial fixture timeout was resolved by matching HTTPS addresses to the services'
+IPv4 listeners, without weakening TLS verification.
+
+No persistent online services or real accounts were provisioned. Unconfigured
+builds show a clear setup message. Next: repeatable persistent service/account setup
+and safe starting positions, followed by the remaining public integration gate.
+Public cargo/actions, periodic saves, capacity and replication pacing remain open;
+Step 42 remains gated. No player-to-player economy features were added.
+
+Recovery tag: `public-browser-sign-in`.
+Source backup: `../output/checkpoints/public-browser-sign-in-2026-10-22.zip`.
+The preexisting project.godot customization remains outside this checkpoint.

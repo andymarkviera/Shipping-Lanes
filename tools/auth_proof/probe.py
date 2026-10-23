@@ -37,14 +37,14 @@ def dependencies(run):
             if not entry.is_dir():check_file=java_root/entry.filename;assert hashlib.sha256(check_file.read_bytes()).digest()==hashlib.sha256(z.read(entry)).digest()
     return java_root/manifest['java']['runtime_directory']/'bin/java.exe'
 
-def oidc_proof(run, integration=None):
-    java=dependencies(run);certificates(run);port=free_port();issuer='https://localhost:%d/realms/shipping-proof'%port
+def oidc_proof(run, integration=None, browser_integration=None, extra_redirects=(), provider_host='localhost'):
+    java=dependencies(run);certificates(run);port=free_port();issuer='https://%s:%d/realms/shipping-proof'%(provider_host,port)
     flows=[NativeFlow(issuer,run/'ca.pem') for _ in range(2)]
     password=secrets.token_urlsafe(24)
-    realm=dict(realm='shipping-proof',enabled=True,registrationAllowed=False,resetPasswordAllowed=False,sslRequired='all',users=[dict(username='synthetic-sailor',enabled=True,email='sailor@example.invalid',emailVerified=True,firstName='Test',lastName='Sailor',credentials=[dict(type='password',value=password,temporary=False)])],clients=[dict(clientId='shipping-native',enabled=True,publicClient=True,standardFlowEnabled=True,directAccessGrantsEnabled=False,redirectUris=[f.redirect for f in flows],attributes={'pkce.code.challenge.method':'S256'},protocolMappers=[dict(name='service-audience',protocol='openid-connect',protocolMapper='oidc-audience-mapper',config={'included.custom.audience':'shipping-service','access.token.claim':'true','id.token.claim':'false'})])])
+    realm=dict(realm='shipping-proof',enabled=True,registrationAllowed=False,resetPasswordAllowed=False,sslRequired='all',users=[dict(username='synthetic-sailor',enabled=True,email='sailor@example.invalid',emailVerified=True,firstName='Test',lastName='Sailor',credentials=[dict(type='password',value=password,temporary=False)])],clients=[dict(clientId='shipping-native',enabled=True,publicClient=True,standardFlowEnabled=True,directAccessGrantsEnabled=False,redirectUris=[f.redirect for f in flows] + list(extra_redirects),attributes={'pkce.code.challenge.method':'S256'},protocolMappers=[dict(name='service-audience',protocol='openid-connect',protocolMapper='oidc-audience-mapper',config={'included.custom.audience':'shipping-service','access.token.claim':'true','id.token.claim':'false'})])])
     imports=run/'kc/data/import';imports.mkdir(parents=True,exist_ok=True);realm_file=imports/'shipping-proof-realm.json';realm_file.write_text(json.dumps(realm))
     home=run/'kc'
-    args=[str(java),'--add-opens=java.base/java.lang=ALL-UNNAMED','--enable-native-access=ALL-UNNAMED','-Xms128m','-Xmx512m','-Dkc.home.dir='+str(home),'-Djboss.server.config.dir='+str(home/'conf'),'-Djava.util.concurrent.ForkJoinPool.common.threadFactory=io.quarkus.bootstrap.forkjoin.QuarkusForkJoinWorkerThreadFactory','-cp',str(home/'lib/quarkus-run.jar'),'io.quarkus.bootstrap.runner.QuarkusEntryPoint','start','--cache=local','--db=dev-file','--http-enabled=false','--http-host=127.0.0.1','--https-port='+str(port),'--hostname=https://localhost:'+str(port),'--https-certificate-file='+str(run/'server.pem'),'--https-certificate-key-file='+str(run/'server-key.pem'),'--import-realm']
+    args=[str(java),'--add-opens=java.base/java.lang=ALL-UNNAMED','--enable-native-access=ALL-UNNAMED','-Xms128m','-Xmx512m','-Dkc.home.dir='+str(home),'-Djboss.server.config.dir='+str(home/'conf'),'-Djava.util.concurrent.ForkJoinPool.common.threadFactory=io.quarkus.bootstrap.forkjoin.QuarkusForkJoinWorkerThreadFactory','-cp',str(home/'lib/quarkus-run.jar'),'io.quarkus.bootstrap.runner.QuarkusEntryPoint','start','--cache=local','--db=dev-file','--http-enabled=false','--http-host=127.0.0.1','--https-port='+str(port),'--hostname=https://'+provider_host+':'+str(port),'--https-certificate-file='+str(run/'server.pem'),'--https-certificate-key-file='+str(run/'server-key.pem'),'--import-realm']
     log=(run/'keycloak.log').open('wb');child=None
     try:
         child=subprocess.Popen(args,stdout=log,stderr=log,creationflags=PYTHON_FLAGS)
@@ -79,6 +79,8 @@ def oidc_proof(run, integration=None):
         check('refresh_token' in tokens,'provider returns refresh credential kept only in memory')
         if integration is not None:
             integration(dict(issuer=issuer, audience='shipping-service', jwks=jwks), tokens, access)
+        if browser_integration is not None:
+            browser_integration(dict(issuer=issuer, audience='shipping-service', jwks=jwks), access, {'username': 'synthetic-sailor', 'password': password})
         return dict(issuer=issuer,subject=identity['sub'])
     finally:
         for flow in flows:flow.close()

@@ -1,0 +1,23 @@
+{
+  "login": {
+    "issuer": "https://login.example.invalid/realms/shipping",
+    "authorization_endpoint": "https://login.example.invalid/realms/shipping/protocol/openid-connect/auth",
+    "token_endpoint": "https://login.example.invalid/realms/shipping/protocol/openid-connect/token",
+    "client_id": "shipping-native",
+    "callback_port": 43821,
+    "ca": ""
+  },
+  "authority_endpoint": "https://accounts.example.invalid",
+  "authority_ca": "",
+  "servers": [
+    {
+      "name": "Configured development server",
+      "server": "replace-with-approved-server-id",
+      "host": "game.example.invalid",
+      "hostname": "replace-with-certificate-hostname",
+      "port": 24570,
+      "certificate": "C:/replace-with-public-game-certificate.pem",
+      "fingerprint": "replace-with-exact-certificate-file-sha256"
+    }
+  ]
+}
