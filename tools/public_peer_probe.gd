@@ -71,8 +71,11 @@ func _process(_delta: float) -> void:
 		"drive":
 			presentation.controls_enabled = true
 			presentation.controls.wait_for_release = false
-			Input.action_press("ship_throttle_up")
+			Input.action_release("ship_throttle_up")
+			Input.action_release("ship_throttle_down")
+			Input.action_press("ship_throttle_up" if data.get("axis", 1) > 0 else "ship_throttle_down")
 		"menu":
+			Input.action_release("ship_throttle_down")
 			Input.action_release("ship_throttle_up")
 			presentation.set_menu(data.get("open", true))
 		"stale":

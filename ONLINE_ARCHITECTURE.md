@@ -327,3 +327,27 @@ Replacement, disconnect persistence, renewal failure and the headless launch pat
 are integrated. See PUBLIC_PEER_ADMISSION.md. Clients currently receive only their
 own ship state; per-owner charts deliberately await shared-world placement.
 Public sign-in/server selection UI and deployment/enrollment remain unimplemented.
+
+## Step 42 accepted — October 23, 2026
+
+PUBLIC_FOUNDATION.md supersedes the open-foundation status in the historical
+follow-through paragraphs above. The normal dedicated and player paths now cover
+verified DTLS/OIDC admission, shared collision charts, nearby replicas, public helm,
+periodic/final saves, restart/reconnect and refusal/retry feedback. Current game
+admission is protocol 9; HTTPS ticket service protocol 7; snapshot codec version 2.
+
+Authority requests are transient children of the stable scene-tree root, not hull
+owners. Owner reparenting during chart changes/departure must not cancel in-flight
+HTTP saves/renewals; lifecycle callers still wait for busy operations before free.
+The combined fixture caught the previous cancellation/hung-drain defect and now
+includes an explicit reparent-during-live-checkpoint regression.
+
+The corrected Release gate passes 41 combined/workload checks, and 26 fresh
+crash/outage checks. Eight moving clients over 60.219 seconds use 0.236 dedicated
+CPU core equivalents and peak sampled working set 91.55 MiB on the development
+host; all accounts save six times and drain cleanly. This does not certify WAN,
+long soaks, all machine types, backend capacity or future port/cargo workloads.
+
+Step 43 supplies separate port scenes/data next; public cargo gameplay and first
+voyage acceptance remain Steps 47–57. Local nonempty prototype payload/receipt
+checks do not imply those new gameplay systems already exist. No peer transfers.

@@ -43,6 +43,16 @@ func _process(_delta: float) -> void:
 			result = {"active": ship_owner.authority.active, "binding": ship_owner.authority.binding, "phase": ship_owner.authority.phase, "deadline": ship_owner.authority.deadline_ms, "has_hull": ship_owner.ship != null}
 			if ship_owner.ship != null:
 				result.merge({"ship_id": ship_owner.ship.state.instance_id, "fuel": ship_owner.ship.state.fuel_liters, "speed": ship_owner.ship.velocity.length(), "distance": ship_owner.ship.position.length(), "paused": ship_owner.ship.simulation_paused, "collision": ship_owner.ship.collision_layer, "visible": ship_owner.ship.visible, "throttle": ship_owner.ship.commanded_throttle, "anchor": ship_owner.geographic_anchor, "cargo": ship_owner.cargo_records})
+		"reparent_checkpoint":
+			var before: int = ship_owner.last_saved_ms
+			ship_owner.checkpoint_current()
+			var inflight: bool = ship_owner.authority.busy and ship_owner.checkpoint_busy
+			var stable: Node3D = Node3D.new()
+			add_child(stable)
+			ship_owner.reparent(stable)
+			var deadline: int = Time.get_ticks_msec() + 8000
+			while ship_owner.checkpoint_busy and Time.get_ticks_msec() < deadline: await get_tree().process_frame
+			result = {"ok": inflight and not ship_owner.checkpoint_busy and ship_owner.last_saved_ms > before, "inflight": inflight}
 		"helm": result = {"ok": ship_owner.helm(data.binding, data.throttle, data.rudder)}
 		"admit", "claim": result = await ship_owner.acquire(data)
 		"begin": result = await ship_owner.begin_transfer(data)

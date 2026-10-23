@@ -98,3 +98,10 @@ been implemented and measured. This pass repairs public thrusters and adds the
 requested throttle indicator. 100 players is an optional stress reference, not a
 required target. Remaining work is clear refused-admission feedback and the combined
 foundation acceptance scenario with explicit workload/manual evidence limits.
+
+## Foundation gate accepted — October 23
+
+PUBLIC_FOUNDATION.md records the completed Step 42 review, fresh combined evidence,
+a repaired save-request lifetime defect and practical eight-player workload.
+Earlier open-foundation findings above are historical. Next is Step 43's two ports;
+manual browser/WAN/long-soak limits and deferred stop/heavy-pickup repairs remain.

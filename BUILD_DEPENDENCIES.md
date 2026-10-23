@@ -305,3 +305,10 @@ refused-admission feedback and fresh sign-in retry. Editor and exported native
 login paths pass blocked-spawn/save-preservation/retry checks. Next is the combined
 two-account foundation scenario and explicit practical workload limits before
 accepting Step 42. General port spawn allocation stays at Step 44.
+
+October 23 foundation acceptance: Step 42 passes after a concrete authority-I/O
+lifetime repair and combined Release validation (PUBLIC_FOUNDATION.md). The next
+applicable task is Step 43, two test ports, then 44 safe spawn/recovery anchors.
+Do not repeat the completed pre-42 infrastructure sequence without new failures.
+Retain eight as the development cap; WAN/browser trust/long-soak and hosting-hardware
+validation remain explicitly limited. Retest workload when port/cargo content grows.

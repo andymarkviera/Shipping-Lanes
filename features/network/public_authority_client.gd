@@ -57,7 +57,10 @@ func request(data: Dictionary) -> Dictionary:
 	http.timeout = 6.0
 	http.body_size_limit = 262144
 	http.max_redirects = 0
-	add_child(http)
+	# Hull owners move between physics viewports and the session during departure.
+	# HTTPRequest cancels on tree exit: keep in-flight I/O under the stable root,
+	# not inside the reparented hull subtree. Lifecycle callers await busy before free.
+	get_tree().root.add_child(http)
 	http.set_tls_options(TLSOptions.client(trust))
 	var error: Error = http.request(endpoint + "/v1/authority", PackedStringArray(["Content-Type: application/json", "X-Server-Id: " + server_id, "Authorization: Bearer " + credential]), HTTPClient.METHOD_POST, JSON.stringify(data))
 	var result: Dictionary = {"ok": false, "code": "OUTCOME_UNKNOWN"}
