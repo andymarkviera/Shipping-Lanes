@@ -89,3 +89,12 @@ planning files. Historical append-only entries remain dated evidence, not curren
 status. Original synced/attached references were not edited. No gameplay changed.
 A verified Git source archive follows this review; the preexisting project.godot
 working change is preserved locally and is not included in that Git archive.
+
+## October 23 consolidated follow-through
+
+Use FOUNDATION_ACCEPTANCE.md for the current acceptance checklist. Persistent local
+setup, periodic durability, compact pacing and controlled impairment have since
+been implemented and measured. This pass repairs public thrusters and adds the
+requested throttle indicator. 100 players is an optional stress reference, not a
+required target. Remaining work is clear refused-admission feedback and the combined
+foundation acceptance scenario with explicit workload/manual evidence limits.

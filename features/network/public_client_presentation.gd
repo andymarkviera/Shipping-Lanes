@@ -4,6 +4,7 @@ var session: Node
 var controls: PlayerControls
 var camera_rig: OrbitCameraRig
 var ocean: OceanPresentation
+var throttle_display = preload("res://features/feedback/throttle_indicator.gd").new()
 var readout: Label
 var pause_panel: PanelContainer
 var controls_enabled: bool = true
@@ -17,6 +18,7 @@ func configure(value: Node) -> void:
 	session = value
 
 func _ready() -> void:
+	add_child(throttle_display)
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.command_requested.connect(func(action: StringName):
@@ -118,21 +120,25 @@ func _process(_delta: float) -> void:
 	elif not installed.is_empty(): text += "\nWaiting for fresh boat updates..."
 	else: text += "\nConnect through sign-in to take the helm."
 	readout.text = text
+	throttle_display.visible = ready_to_drive
+	if ready_to_drive: throttle_display.update_values(throttle_order, session.last_snapshot.speed, session.last_snapshot.get("forward_speed", 0.0))
 
 func _physics_process(delta: float) -> void:
 	if session == null or not controls_enabled or installed.is_empty(): return
 	var rudder: float = 0.0
+	var lateral: float = 0.0
 	if ready_to_drive and controls.input_allowed() and session.last_snapshot.get("fuel", 0) > 0:
 		var ship: HandlingShip = session.world_view.replicas[installed.ship].node
 		if controls.action_strength("ship_throttle_zero") > 0: throttle_order = 0.0
 		else: throttle_order = clampf(throttle_order + (controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down")) * ship.definition.command_rate_per_second * delta, -ship.definition.reverse_throttle_limit, ship.definition.forward_throttle_limit)
 		rudder = controls.steering_axis()
+		lateral = controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left")
 	else: throttle_order = 0.0
 	var now: int = Time.get_ticks_msec()
 	if now >= next_send_ms:
 		next_send_ms = now + 100
 		sequence += 1
-		session.send_helm(sequence, throttle_order, rudder)
+		session.send_helm(sequence, throttle_order, rudder, {}, lateral)
 
 func _exit_tree() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

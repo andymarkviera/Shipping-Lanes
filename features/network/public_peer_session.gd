@@ -1,5 +1,5 @@
 extends Node
-## Protocol 7 DTLS admission and peer-bound helm. No arbitrary authority RPC.
+## Protocol 8 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const SnapshotCodec = preload("res://features/network/public_snapshot_codec.gd")
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
 const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
@@ -140,7 +140,7 @@ func _process(_delta: float) -> void:
 				var yaw: float = -deg_to_rad(address.heading_deg) - Nav.transport_rotation(origin, address)
 				rows.append({"ship": other.ship, "generation": other.generation, "position": position_, "yaw": yaw})
 			var hull: HandlingShip = record.hull.ship
-			var packet: PackedByteArray = SnapshotCodec.encode(rows, record.sequence, hull.state.fuel_liters, hull.velocity.length(), hull.position.length())
+			var packet: PackedByteArray = SnapshotCodec.encode(rows, record.sequence, hull.state.fuel_liters, hull.velocity.length(), hull.position.length(), hull.forward_speed())
 			if packet.is_empty(): continue
 			# Count serialized arguments, excluding ENet/DTLS/IP overhead.
 			var size: int = var_to_bytes([record.ship, record.epoch, record.generation, view_sequence, [packet]]).size()
@@ -162,14 +162,14 @@ func connection_challenge(value: String, server: String) -> void:
 func submit_ticket(ticket: String) -> void:
 	if hosting or transport == null or nonce.is_empty() or ticket_sent: return
 	ticket_sent = true
-	join_public.rpc_id(1, 7, ticket)
+	join_public.rpc_id(1, 8, ticket)
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_public(version: int, ticket: String) -> void:
 	if not hosting or draining: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending.has(sender) or pending[sender].busy: return
-	if version != 7 or ticket.length() < 20 or ticket.length() > 128 or joining:
+	if version != 8 or ticket.length() < 20 or ticket.length() > 128 or joining:
 		transport.disconnect_peer(sender)
 		pending.erase(sender)
 		return
@@ -241,22 +241,22 @@ func join_accepted(ship: String, epoch: int, generation: int) -> void:
 	notice = "Joined"
 	admitted.emit()
 
-func send_helm(sequence: int, throttle: float, rudder: float, candidate: Dictionary = {}) -> void:
+func send_helm(sequence: int, throttle: float, rudder: float, candidate: Dictionary = {}, lateral: float = 0.0) -> void:
 	var value: Dictionary = binding if candidate.is_empty() else candidate
 	if hosting or transport == null or value.is_empty(): return
-	helm_order.rpc_id(1, str(value.ship), int(value.epoch), int(value.generation), sequence, throttle, rudder)
+	helm_order.rpc_id(1, str(value.ship), int(value.epoch), int(value.generation), sequence, throttle, rudder, lateral)
 
 @rpc("any_peer", "call_remote", "unreliable_ordered", 1)
-func helm_order(ship: String, epoch: int, generation: int, sequence: int, throttle: float, rudder: float) -> void:
+func helm_order(ship: String, epoch: int, generation: int, sequence: int, throttle: float, rudder: float, lateral: float) -> void:
 	if not hosting: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not members.has(sender): rejected_commands += 1; return
 	var record: Dictionary = members[sender]
 	var now: int = Time.get_ticks_msec()
-	if ship != record.ship or epoch != record.epoch or generation != record.generation or sequence <= record.sequence or sequence > 2147483647 or not is_finite(throttle) or not is_finite(rudder) or absf(throttle) > 1 or absf(rudder) > 1 or now - record.rate_at < 30:
+	if ship != record.ship or epoch != record.epoch or generation != record.generation or sequence <= record.sequence or sequence > 2147483647 or not is_finite(throttle) or not is_finite(rudder) or absf(throttle) > 1 or absf(rudder) > 1 or not is_finite(lateral) or absf(lateral) > 1 or now - record.rate_at < 30:
 		rejected_commands += 1
 		return
-	if not record.hull.helm(record.hull.authority.binding, throttle, rudder): rejected_commands += 1; return
+	if not record.hull.helm(record.hull.authority.binding, throttle, rudder, lateral): rejected_commands += 1; return
 	record.sequence = sequence
 	record.input_at = now
 	record.rate_at = now
@@ -279,7 +279,7 @@ func world_update(ship: String, epoch: int, generation: int, tick: int, rows: Ar
 		if row.ship == ship and row.generation == generation: own_present = true
 	if not own_present: return
 	world_view.receive(tick, decoded.rows)
-	last_snapshot = {"ship": ship, "distance": decoded.distance, "speed": decoded.speed, "fuel": decoded.fuel, "sequence": decoded.sequence, "received_at": Time.get_ticks_msec()}
+	last_snapshot = {"ship": ship, "distance": decoded.distance, "speed": decoded.speed, "forward_speed": decoded.forward_speed, "fuel": decoded.fuel, "sequence": decoded.sequence, "received_at": Time.get_ticks_msec()}
 
 func disconnected(id: int) -> void:
 	if not hosting:

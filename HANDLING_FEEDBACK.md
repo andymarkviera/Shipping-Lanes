@@ -131,3 +131,12 @@ lag the command and the hull can coast at neutral. Do not silently turn this int
 an instant brake. An interactive mouse control was not explicitly requested;
 start with a readable indicator and preserve existing keyboard controls.
 No handling or interface implementation was performed for this scheduling update.
+
+## October 23 indicator implementation
+
+The requested read-only throttle indicator is now present in local ShipHelm scenes,
+local/private networking and public sailing. It shows neutral separately from
+actual forward/reverse/drifting movement and coasting. See PUBLIC_HELM.md for checks
+and rendered evidence. This completes the indicator portion only: neutral/stop
+usability and heavy-loader pickup/reverse-entry repair are still outstanding at
+their existing deadlines. Existing controls and handling parameters are preserved.
