@@ -9,6 +9,16 @@ var ship: HandlingShip
 var geographic_anchor: Dictionary = {}
 var cargo_records: Array = []
 var departing: bool = false
+var checkpoint_busy: bool = false
+var save_at_ms: int = 0
+var last_saved_ms: int = 0
+const SAVE_INTERVAL_MS: int = 10000
+
+func _process(_delta: float) -> void:
+	if ship == null or departing or not authority.active or checkpoint_busy or authority.busy: return
+	if Time.get_ticks_msec() >= save_at_ms:
+		save_at_ms = Time.get_ticks_msec() + SAVE_INTERVAL_MS
+		checkpoint_current()
 
 func _ready() -> void:
 	authority = Client.new()
@@ -52,6 +62,7 @@ func restore_grant(result: Dictionary, activate: bool = true) -> void:
 	cargo_records = result.profile.cargo.duplicate(true)
 	ship.simulation_paused = not activate
 	departing = false
+	save_at_ms = Time.get_ticks_msec() + SAVE_INTERVAL_MS
 
 func reframe(origin: Dictionary, address: Dictionary) -> void:
 	var old_origin: Dictionary = Geo.normalized(geographic_anchor.latitude, geographic_anchor.longitude)
@@ -67,6 +78,7 @@ func begin_transfer(data: Dictionary) -> Dictionary:
 		return {"ok": false, "code": "LOCAL_QUIESCED"}
 	departing = true
 	park()
+	while checkpoint_busy or authority.busy: await get_tree().process_frame
 	var saved: Dictionary = await checkpoint_current()
 	if not saved.get("ok", false): return saved
 	var result: Dictionary = await authority.request(data)
@@ -83,17 +95,20 @@ func current_address() -> Dictionary:
 	return address
 
 func checkpoint_current() -> Dictionary:
-	# Caller freezes input/physics before committing final pose/fuel.
-	var address: Dictionary = current_address()
+	if checkpoint_busy or authority.busy: return {"ok": false, "code": "LOCAL_BUSY"}
+	checkpoint_busy = true
 	var current: Dictionary = await authority.request(authority.owned("inspect"))
 	if not current.get("ok", false):
 		authority.quiesce()
+		checkpoint_busy = false
 		return current
+	# Capture pose and fuel together after inspect; ordinary sailing stays live.
+	var address: Dictionary = current_address()
 	var snapshot: Dictionary = {"expected_revision": int(current.revision), "position": {"latitude": address.latitude_deg, "longitude": address.longitude_deg, "heading": address.heading_deg}, "fuel_liters": ship.state.fuel_liters}
 	var saved: Dictionary = await authority.request(authority.owned("checkpoint", snapshot))
-	if not saved.get("ok", false):
-		authority.quiesce()
-		return saved
+	if not saved.get("ok", false): authority.quiesce()
+	else: last_saved_ms = Time.get_ticks_msec()
+	checkpoint_busy = false
 	return saved
 
 func helm(candidate: Dictionary, throttle: float, rudder: float) -> bool:

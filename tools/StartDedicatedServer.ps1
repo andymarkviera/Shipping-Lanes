@@ -17,6 +17,10 @@ foreach ($field in @('certificate', 'key', 'ca')) {
         throw "Server configuration requires an existing absolute $field path."
     }
 }
+if ($settings.stop_file) {
+    if (-not [IO.Path]::IsPathFullyQualified($settings.stop_file)) { throw 'stop_file must be absolute.' }
+    if (Test-Path -LiteralPath $settings.stop_file) { throw 'Stop marker already exists. After verifying the previous server has stopped, remove that marker before restarting.' }
+}
 if ($settings.endpoint -notlike 'https://*') { throw 'Authority endpoint must use HTTPS.' }
 $binary = Join-Path $projectRoot 'exports/windows-x86_64/release/ShippingLanes.exe'
 $arguments = @('--headless')

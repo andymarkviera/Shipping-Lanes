@@ -1,6 +1,8 @@
 extends Node
 const Session = preload("res://features/network/public_peer_session.gd")
 var session: Node
+var stop_file: String = ""
+var stopping: bool = false
 
 func _ready() -> void:
 	var path: String = ""
@@ -17,6 +19,8 @@ func _ready() -> void:
 	var valid: bool = client.configure(settings)
 	client.free()
 	if not valid: fail("Authority HTTPS configuration is invalid"); return
+	stop_file = str(settings.get("stop_file", ""))
+	if not stop_file.is_empty() and not stop_file.is_absolute_path(): fail("Stop file must be absolute"); return
 	session = Session.new()
 	session.name = "Session"
 	add_child(session)
@@ -26,3 +30,10 @@ func _ready() -> void:
 func fail(message: String) -> void:
 	push_error(message)
 	get_tree().quit(1)
+
+func _process(_delta: float) -> void:
+	if session == null or stopping or stop_file.is_empty() or not FileAccess.file_exists(stop_file): return
+	stopping = true
+	var saved: bool = await session.drain()
+	print("PUBLIC_SERVER_DRAINED" if saved else "PUBLIC_SERVER_DRAIN_FAILED")
+	get_tree().quit(0 if saved else 2)

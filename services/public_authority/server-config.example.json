@@ -7,5 +7,6 @@
   "key": "C:/absolute/private/path/game-server-key.pem",
   "fingerprint": "SHA256_OF_EXACT_GAME_CERTIFICATE_FILE",
   "bind_ip": "127.0.0.1",
-  "port": 24570
+  "port": 24570,
+  "stop_file": "C:/replace-with-server-runtime-directory/stop-request"
 }

@@ -269,3 +269,11 @@ see LOCAL_ONLINE.md. It proves restart-stable development enrollment and normal
 server launch, but browser trust, real deployment and safe saved-position admission
 remain open. Next prioritize periodic public saves and graceful server shutdown,
 then bounded replication and the integrated foundation gate.
+
+October 23 durability follow-through: public sailing now attempts periodic spatial/
+fuel checkpoints, and dedicated shutdown drains final saves/releases before exit.
+LocalOnline waits for the drain result before backend teardown. See PUBLIC_DURABILITY.md.
+Browser trust, general safe spawning, public gameplay parity and bounded replication/
+client pacing remain due; Step 42 is still open. The next implementation priority
+is bounded replication/client pacing at a measured practical capacity, not a mandatory
+100-player requirement.
