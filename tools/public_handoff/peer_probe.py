@@ -25,7 +25,7 @@ class PeerProof(GodotProof):
         (self.run / 'peer-cert.pem').write_bytes(cert.public_bytes(serialization.Encoding.PEM))
         (self.run / 'peer-key.pem').write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
 
-    def peer_worker(self, role, port, dedicated=False, **overrides):
+    def peer_worker(self, role, port, dedicated=False, rendered=False, **overrides):
         self.worker_number += 1
         folder = self.run / ('peer-' + str(self.worker_number)); folder.mkdir()
         cert = self.run / 'peer-cert.pem'
@@ -38,12 +38,13 @@ class PeerProof(GodotProof):
         config.update(overrides)
         path = folder / 'config.json'; path.write_text(json.dumps(config))
         executable = WORKSPACE / 'output/tools/godot-4.7.2/godot.windows.opt.tools.64.exe' if self.runtime == 'editor' else ROOT / 'exports/windows-x86_64/release/ShippingLanes.exe'
-        args = [str(executable), '--headless']
+        args = [str(executable)] + (['--max-fps', '60'] if rendered else ['--headless'])
         if self.runtime == 'editor': args += ['--path', str(ROOT)]
         args += ['--', '--public-server-config=' + str(path)] if dedicated else ['--', '--public-peer-check', '--peer-folder=' + str(folder)]
         env = os.environ.copy(); env['APPDATA'] = str(folder / 'user')
         log = (folder / 'godot.log').open('wb'); self.logs.append(log)
-        child = subprocess.Popen(args, env=env, stdout=log, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW)
+        startup = subprocess.STARTUPINFO(); startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW; startup.wShowWindow = subprocess.SW_HIDE
+        child = subprocess.Popen(args, env=env, stdout=log, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW, startupinfo=startup)
         self.children.append(child)
         worker = {'child': child, 'folder': folder, 'sequence': 0}
         if dedicated:

@@ -172,3 +172,7 @@ for tested boundaries and incomplete-save reporting.
 Public networking: compact complete nearby/owner frames and latest-input pacing
 now serve the eight-peer development path. See PUBLIC_NETWORK_PACING.md for measured
 packet sizes, timing and remaining impairment/rendered/capacity boundaries.
+
+Public impairment coverage: the actual encrypted player path now has repeatable
+loss/delay/reordering/duplication and brief-blackout checks, including rendered
+Release. No runtime behavior changed; see PUBLIC_NETWORK_IMPAIRMENT.md for limits.

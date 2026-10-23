@@ -2,6 +2,7 @@ extends "res://features/network/public_client.gd"
 var folder: String
 var sequence: int = 0
 var sent_at: Dictionary = {}
+var frame_ms: Array[float] = []
 var started: int
 
 func _ready() -> void:
@@ -30,6 +31,8 @@ func write_result(name_: String, result: Dictionary) -> void:
 	DirAccess.rename_absolute(folder + "/" + name_ + ".tmp", folder + "/" + name_ + ".json")
 
 func _process(_delta: float) -> void:
+	frame_ms.append(_delta * 1000.0)
+	if frame_ms.size() > 600: frame_ms.pop_front()
 	if Time.get_ticks_msec() - started > 240000: get_tree().quit(); return
 	var path: String = folder + "/command-" + str(sequence) + ".json"
 	if not FileAccess.file_exists(path): return
@@ -65,7 +68,7 @@ func _process(_delta: float) -> void:
 		"zoom": presentation.camera_rig.zoom(-1)
 		"disconnect": session.close_client()
 		"status":
-			result = {"nonce": session.nonce, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "snapshot_work_us": session.snapshot_work_us, "physics_work_us": session.physics_work_us, "snapshot_bytes": session.snapshot_bytes_sent, "snapshot_packets": session.snapshot_packets_sent, "max_snapshot_bytes": session.max_snapshot_bytes, "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
+			result = {"nonce": session.nonce, "tick": session.world_view.tick, "frames_drawn": Engine.get_frames_drawn(), "display": DisplayServer.get_name(), "frame_ms": frame_ms, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "snapshot_work_us": session.snapshot_work_us, "physics_work_us": session.physics_work_us, "snapshot_bytes": session.snapshot_bytes_sent, "snapshot_packets": session.snapshot_packets_sent, "max_snapshot_bytes": session.max_snapshot_bytes, "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
 			if sent_at.has(int(session.last_snapshot.get("sequence", -2))):
 				result.ack_ms = session.last_snapshot.received_at - sent_at[int(session.last_snapshot.sequence)]
 			if presentation != null:

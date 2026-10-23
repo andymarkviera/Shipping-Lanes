@@ -1558,3 +1558,35 @@ changes or deferred heavy-loader repair were made. Step 42 remains open.
 Recovery tag: public-compact-network.
 Verified source backup: ../output/checkpoints/public-compact-network-2026-10-23.zip.
 The preexisting project.godot customization is preserved outside the checkpoint.
+
+## Controlled public network impairment checkpoint — October 23, 2026
+
+Added an opaque loopback UDP impairment relay and integration runner. It exercises
+actual DTLS transport with 7% random loss, 20–100 ms one-way delay, deterministic
+additional delays/duplication and a brief blackout. No production gameplay or
+security rules changed. The peer probe records bounded process-delta/graphics
+telemetry; its launcher optionally runs a hidden graphics client at a 60 fps cap.
+
+Final editor checks: 17 pass at ../output/handoff/87f895d7/impairment-summary.json.
+Final rendered Release checks: 18 pass at ../output/handoff/97044f47/impairment-summary.json.
+Both verify live movement, two-boat relevance, nonregressing state, injected faults,
+stale presentation/input handling, blackout recovery, resumed helm and durable
+identity/money/cargo/fuel preservation on departure. The rendered client confirms
+native backend frames are drawn. Script check (108), startup and Release export pass.
+
+The final short samples record observed distinct acknowledgement-age p95 of 287 ms
+(headless editor) and 399 ms (rendered Release) under the injected faults. See
+PUBLIC_NETWORK_IMPAIRMENT.md for sample counts, transport accounting and limits.
+Initial fixture cleanup mishandled Windows UDP endpoint-reset notifications; fixed
+and rerun. Repeated-ack sampling and uncapped hidden rendering were also corrected
+in the harness. No production speedup is claimed from those measurement changes.
+
+Short controlled impairment coverage is now available. Step 42 remains open pending
+integrated foundation acceptance and remaining control/spawn/usability issues;
+longer outages, WAN/NAT, sustained total workload and broader hardware/soak evidence
+remain unproven. No need to repeat every old step manually. Next is the consolidated
+foundation acceptance review and fixing any concrete blockers it identifies.
+
+Recovery tag: public-impaired-network.
+Verified source backup: ../output/checkpoints/public-impaired-network-2026-10-23.zip.
+The preexisting project.godot customization remains outside the Git checkpoint.
