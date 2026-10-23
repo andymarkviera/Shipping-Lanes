@@ -11,7 +11,7 @@ From ShippingLanes in PowerShell 7:
 ./tools/LocalOnline.ps1 -Action Start
 # Wait for LOCAL_ONLINE_READY in the returned log, then:
 ./tools/LocalOnline.ps1 -Action Play
-# Disconnect all players using the game menu before stopping:
+# Saves connected boats before stopping the services:
 ./tools/LocalOnline.ps1 -Action Stop
 ```
 
@@ -66,10 +66,10 @@ using pg_ctl. Provider data and the database survive. If the supervisor itself i
 forcibly killed, inspect the owned service logs/processes before restarting; there
 is no automatic orphan-process adoption or arbitrary PID termination.
 
-Game-server termination is not yet a graceful player drain. Disconnect in the
-client first and allow departure saves to finish before Stop. A server crash or
-forced stop restores only the last committed ship snapshot. Periodic saves and
-graceful shutdown remain the next durability task. Browser visual acceptance,
+LocalOnline Stop now requests a final save-and-release drain and waits for the
+server result before stopping backend services. Failures are reported explicitly.
+Periodic sailing checkpoints run every ten seconds; a crash still restores only
+the last committed snapshot. See PUBLIC_DURABILITY.md for timing and failure limits. Browser visual acceptance,
 remote access, port-conflict reassignment, general account administration, provider
 backup/rotation operations and production capacity are not completed here.
 

@@ -1485,3 +1485,38 @@ See LOCAL_ONLINE.md and D081. Step 42 remains open.
 Recovery tag: persistent-local-online.
 Verified source backup: ../output/checkpoints/persistent-local-online-2026-10-22.zip.
 Existing project.godot customization remains outside this Git archive.
+
+## Public periodic saves and shutdown checkpoint — October 23, 2026
+
+Public owners now attempt coherent geographic pose/heading/fuel saves every ten
+seconds while sailing. Pending-save guards protect disconnect, transfer and
+replacement cleanup. The dedicated server accepts an operator-owned stop marker,
+refuses new admission, parks boats and awaits final checkpoints/releases before
+reporting success. LocalOnline waits for this drain before stopping the backends.
+Standalone stop tooling and configuration example are included. See PUBLIC_DURABILITY.md
+and D082. No handling/UI polish or player-to-player economy changes were made.
+
+Final verification: 26 durability checks pass in editor at
+../output/handoff/7c32861a/durability-summary.json and Release at
+../output/handoff/62fb72ab/durability-summary.json. These exercise actual DTLS peers
+and the normal dedicated runtime with fixture-issued tickets (not an OIDC rerun):
+periodic moving saves, process kill, real lease expiry, crash recovery, final save,
+release/immediate reconnect, replacement-admission shutdown and backend failure.
+The existing adapter-only peer regression passed 55 checks at
+../output/handoff/f3994737/peer-summary.json. All 106 scripts compile; startup and
+final Release export pass. PowerShell/Python syntax checks pass. LocalOnline's
+exported server Stop separately reached PUBLIC_SERVER_DRAINED before backend exit.
+
+The first durability driver attempted throttle before its client was input-ready;
+its timing was corrected. A replacement/shutdown race correctly rejects the stale
+owner's final write and reports incomplete drain; the test now verifies explicit
+outcome and released ownership rather than requiring an unsafe stale write to pass.
+No failed-save success is claimed. Ten seconds is a scheduling interval, not a hard
+crash-loss guarantee: service latency and pending work add delay. Forced termination
+or unavailable authority restores the last committed snapshot. Browser acceptance,
+safe saved-spawn handling, public gameplay parity and network pacing remain open.
+Step 42 stays open; next is bounded replication/client pacing at practical capacity.
+
+Recovery tag: public-periodic-saves.
+Verified source backup: ../output/checkpoints/public-periodic-saves-2026-10-23.zip.
+The preexisting project.godot customization remains outside the Git checkpoint.

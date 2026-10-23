@@ -163,3 +163,8 @@ Public sign-in: public_browser_login.gd handles the native callback/code exchang
 Persistent development setup: tools/LocalOnline.ps1 and public_handoff/local_online.py
 compose the existing services without adding a runtime dependency. Restart and
 native-login coverage is in LOCAL_ONLINE.md. Production operations remain later work.
+
+Public durability: periodic sailing checkpoints, pending-save lifetime guards and
+operator shutdown now connect the real authority to dedicated runtime lifecycle.
+LocalOnline keeps backend services alive through the drain. See PUBLIC_DURABILITY.md
+for tested boundaries and incomplete-save reporting.

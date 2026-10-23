@@ -18,6 +18,9 @@ var pending: Dictionary = {}
 var members: Dictionary = {}
 var accounts: Dictionary = {}
 var joining: bool = false
+var draining: bool = false
+var departures: int = 0
+var departure_failures: int = 0
 var client_id: int
 var client_deadline: int
 var nonce: String = ""
@@ -83,6 +86,7 @@ func start_client(settings: Dictionary) -> Error:
 
 func connected(id: int) -> void:
 	if not hosting: return
+	if draining: transport.disconnect_peer(id); return
 	var challenge: String = Crypto.new().generate_random_bytes(32).hex_encode()
 	pending[id] = {"nonce": challenge, "deadline": Time.get_ticks_msec() + 30000, "busy": false}
 	connection_challenge.rpc_id(id, challenge, str(config.server))
@@ -144,7 +148,7 @@ func submit_ticket(ticket: String) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_public(version: int, ticket: String) -> void:
-	if not hosting: return
+	if not hosting or draining: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending.has(sender) or pending[sender].busy: return
 	if version != 7 or ticket.length() < 20 or ticket.length() > 128 or joining:
@@ -161,12 +165,14 @@ func join_public(version: int, ticket: String) -> void:
 		transport.disconnect_peer(sender)
 		return
 	var result: Dictionary = await hull.authority.request({"realm": "public", "op": "admit", "ticket": ticket, "nonce": pending[sender].nonce, "fingerprint": config.fingerprint})
-	if not result.get("ok", false) or not hull.authority.active or not pending.has(sender) or not multiplayer.get_peers().has(sender):
-		joining = false
+	if not result.get("ok", false) or not hull.authority.active or draining or not pending.has(sender) or not multiplayer.get_peers().has(sender):
+		if result.get("ok", false) and hull.authority.active:
+			await hull.authority.request(hull.authority.owned("release"))
 		hull.authority.quiesce()
 		hull.queue_free()
 		pending.erase(sender)
 		if multiplayer.get_peers().has(sender): transport.disconnect_peer(sender)
+		joining = false
 		return
 	var account: String = hull.authority.binding.account
 	if accounts.has(account):
@@ -177,8 +183,19 @@ func join_public(version: int, ticket: String) -> void:
 			old.hull.authority.quiesce()
 			members.erase(previous)
 			old.hull.reparent(self, false)
+			old.hull.departing = true
+			while old.hull.checkpoint_busy or old.hull.authority.busy: await get_tree().process_frame
 			old.hull.queue_free()
 			transport.disconnect_peer(previous)
+	# Replacement cleanup can await a save; shutdown/disconnect may occur meanwhile.
+	if draining or not pending.has(sender) or not multiplayer.get_peers().has(sender):
+		await hull.authority.request(hull.authority.owned("release"))
+		hull.authority.quiesce()
+		hull.queue_free()
+		pending.erase(sender)
+		accounts.erase(account)
+		joining = false
+		return
 	hull.restore_grant(result, false)
 	if not physics_world.can_place(hull, live_owners()):
 		# Do not teleport or checkpoint a blocked saved spawn.
@@ -245,6 +262,7 @@ func disconnected(id: int) -> void:
 	pending.erase(id)
 	if not members.has(id): return
 	var record: Dictionary = members[id]
+	departures += 1
 	members.erase(id)
 	if accounts.get(record.account) == id: accounts.erase(record.account)
 	record.hull.reparent(self, false)
@@ -252,14 +270,36 @@ func disconnected(id: int) -> void:
 	record.hull.park()
 	record.hull.authority.set_process(false)
 	# Await any in-flight renewal before persisting/releasing the same binding.
-	while is_instance_valid(record.hull) and record.hull.authority.busy:
+	while is_instance_valid(record.hull) and (record.hull.authority.busy or record.hull.checkpoint_busy):
 		await get_tree().process_frame
-	if not is_instance_valid(record.hull): return
+	if not is_instance_valid(record.hull):
+		departures -= 1
+		departure_failures += 1
+		return
+	var completed: bool = false
 	if record.hull.authority.active:
 		var saved: Dictionary = await record.hull.checkpoint_current()
-		if saved.get("ok", false): await record.hull.authority.request(record.hull.authority.owned("release"))
+		if saved.get("ok", false):
+			var released: Dictionary = await record.hull.authority.request(record.hull.authority.owned("release"))
+			completed = released.get("ok", false)
 	record.hull.authority.quiesce()
 	record.hull.queue_free()
+	departures -= 1
+	if not completed: departure_failures += 1
+
+func drain() -> bool:
+	draining = true
+	var deadline: int = Time.get_ticks_msec() + 20000
+	for id: int in pending.keys():
+		transport.disconnect_peer(id)
+	pending.clear()
+	for id: int in members.keys():
+		disconnected(id)
+		transport.disconnect_peer(id)
+	while departures > 0 or joining:
+		if Time.get_ticks_msec() >= deadline: return false
+		await get_tree().process_frame
+	return departure_failures == 0
 
 func close_client() -> void:
 	# Once attached, the multiplayer peer owns and closes the ENet host.

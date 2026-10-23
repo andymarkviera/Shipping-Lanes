@@ -167,3 +167,9 @@ identities and canonical profiles across full restarts. This does not resolve re
 account enrollment, production deployment, certificate/key rotation or general
 safe spawning. Browser trust is deliberately not installed automatically; interactive
 browser acceptance remains pending. See LOCAL_ONLINE.md.
+
+October 23: periodic public spatial/fuel checkpoints and an operator-triggered final
+save/release drain are implemented. A 10-second schedule is not a hard rollback bound;
+request delay and in-flight work add latency. Backend outage or replacement fencing
+may prevent a final save and must report failure. Crash recovery uses committed state.
+Production durability/latency budgets and capacity remain to be measured. See PUBLIC_DURABILITY.md.

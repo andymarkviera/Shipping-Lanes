@@ -79,7 +79,7 @@ class Stack:
     def __init__(self, folder, runtime='editor'):
         self.folder=folder; self.settings=read(folder/'private.json'); self.runtime=runtime
         if read(folder/'initialized.json') != {'version':1}: raise RuntimeError('Incomplete setup')
-        self.children=[]; self.logs=[]; self.db_started=False; self.lock=None
+        self.children=[]; self.logs=[]; self.db_started=False; self.lock=None; self.game=None
     def spawn(self, args, name, env=None):
         log=(self.folder/(name+'.log')).open('wb'); self.logs.append(log)
         child=subprocess.Popen([str(a) for a in args],stdout=log,stderr=log,env=env,creationflags=FLAGS)
@@ -138,11 +138,12 @@ class Stack:
         env=os.environ.copy(); env['PYTHONPATH']=str(PACKAGES)
         service=self.spawn([sys.executable,ROOT/'services/public_authority/service.py',f/'authority.json'],'authority',env)
         self.wait(ready.exists,service,15)
-        server=dict(certificate=str(cert),key=str(f/'local-key.pem'),fingerprint=fingerprint,endpoint='https://127.0.0.1:'+str(s['authority_port']),server='local-development',credential=credential,ca=str(cert),port=s['game_port'],bind_ip='127.0.0.1')
+        (f/'server-stop').unlink(missing_ok=True)
+        server=dict(stop_file=str(f/'server-stop'),certificate=str(cert),key=str(f/'local-key.pem'),fingerprint=fingerprint,endpoint='https://127.0.0.1:'+str(s['authority_port']),server='local-development',credential=credential,ca=str(cert),port=s['game_port'],bind_ip='127.0.0.1')
         write(f/'server.json',server)
         args=self.game_args()+['--headless','--','--public-server-config='+str(f/'server.json')]
         env=os.environ.copy();env['APPDATA']=str(f/'server-user')
-        game=self.spawn(args,'server',env)
+        game=self.spawn(args,'server',env); self.game=game
         self.wait(lambda:'PUBLIC_SERVER_LISTENING' in (f/'server.log').read_text(errors='replace'),game,15)
         public=dict(login=dict(issuer=s['issuer'],authorization_endpoint=discovery['authorization_endpoint'],token_endpoint=discovery['token_endpoint'],client_id='shipping-native',callback_port=s['callback_port'],ca=str(cert)),authority_endpoint=server['endpoint'],authority_ca=str(cert),servers=[dict(name='Local development server',server=server['server'],host='127.0.0.1',hostname='localhost',port=s['game_port'],certificate=str(cert),fingerprint=fingerprint)])
         write(f/'public-services.json',public)
@@ -159,7 +160,15 @@ class Stack:
                 db.execute("UPDATE public_authority.servers SET expires=clock_timestamp()+interval '1 hour' WHERE id='local-development'")
             self.refresh_at=time.monotonic()+600
     def close(self):
-        # Players must disconnect first; graceful game-server shutdown is a separate tracked task.
+        drain_error = False
+        if self.game is not None and self.game.poll() is None:
+            (self.folder/'server-stop').touch()
+            try:
+                drain_error = self.game.wait(timeout=25) != 0
+            except subprocess.TimeoutExpired:
+                drain_error = True
+        elif self.game is not None and self.game.returncode != 0:
+            drain_error = True
         for c in reversed(self.children):
             if c.poll() is None:
                 c.terminate()
@@ -171,6 +180,7 @@ class Stack:
         if self.lock:
             for name in ['ready.json','authority.json','server.json']:(self.folder/name).unlink(missing_ok=True)
             self.lock.close();self.lock=None
+        if drain_error: raise RuntimeError("Server did not confirm a complete final save; inspect server.log. Last committed snapshots remain available.")
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('action',choices=['init','run','stop','client']);p.add_argument('--name',default='development');p.add_argument('--runtime',choices=['editor','release'],default='editor');a=p.parse_args()
