@@ -17,10 +17,10 @@
 Use `tools/Godot.ps1 -Mode Editor` through PowerShell 7, then F5 to run the
 project. `-Mode Run` runs it directly and `-Mode Check` verifies import/startup
 headlessly. See `README.md` and `ENVIRONMENT.md` for complete commands.
-The current entry point is `features/main/main.tscn`; the window says “Shipping
-Lanes” and “Project ready”. Output includes “Shipping Lanes: Main scene loaded
-successfully.” Step 05 replaces the earlier setup scene referenced historically
-below.
+The entry point is `features/main/main.tscn`, with the Container Ship Sim menu.
+Play uses local development saves until public services are configured; Servers
+opens public server selection. Earlier setup-screen descriptions below are history.
+See DEVELOPMENT_REVIEW.md for the latest consolidated assessment.
 
 ## Step 01 — Project contract
 
@@ -1429,3 +1429,21 @@ Step 42 remains gated. No player-to-player economy features were added.
 Recovery tag: `public-browser-sign-in`.
 Source backup: `../output/checkpoints/public-browser-sign-in-2026-10-22.zip`.
 The preexisting project.godot customization remains outside this checkpoint.
+
+## Development review — October 22, 2026
+
+Reviewed roadmap Steps 01–142 and coverage/dependencies against progress records,
+current public login/helm/ownership code, stored integration evidence and the
+reported heavy-loader defect. See DEVELOPMENT_REVIEW.md. Corrected stale current
+scope wording about grounding/setup-only state; retained original reference files.
+No gameplay changed. Step 42 remains open. Reconfirmed pickup repair before Step
+50, with neutral/stop usability before Step 46. Added explicit near-term save,
+shutdown and bounded-network priorities without adding production content scope.
+
+Fresh verification: 106 scripts compile and startup passes; FlowCheck passes;
+PersistenceCheck passes 79 assertions across five editor phases, including owned
+process termination/recovery. Evidence: ../output/persistence-checks/Editor-875ed4a4e18841ab8bf98c66df9c2c42.
+Recent editor/Release online evidence was reviewed, not rerun in this documentation
+review. No WAN/capacity/visual acceptance or heavy-loader repair is claimed.
+Recovery tag: development-review-2026-10-22. Source archive uses the same tag name.
+Preexisting project.godot customization remains untouched and outside Git archive.

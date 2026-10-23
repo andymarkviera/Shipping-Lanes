@@ -3,7 +3,8 @@
 October 18, 2026 · Step 03 · Task ID: `feature-and-uncertainty-inventory`
 
 This is the coverage map for `GAME_SPEC.md`, not an implementation report.
-Steps 01–03 are planning; the project still contains only the setup scene.
+This inventory began at Step 03. Current implementation status is in PROGRESS.md
+and DEVELOPMENT_REVIEW.md; historical checkpoint statements below are dated.
 Engineering choices in `ONLINE_ARCHITECTURE.md` remain unproven until their
 implementation checks pass. Original roadmap numbers and task IDs are retained.
 Supplemental prerequisites are defined in `BUILD_DEPENDENCIES.md`; unresolved
@@ -31,7 +32,7 @@ inventory's completion.
 | F008 | Core: balanced handling, inertia, reverse braking, turning and side thrust | 16 `handling-prototype`; 17–18, 22–24, 27, 30 | U008; numeric tolerances plus Andy's playtest. |
 | F009 | Core: usable ship camera, zoom and feedback | 19 `camera`; 22, 55, 97, 122 | U003, U008; freecam/extra view modes are conditional (F049). |
 | F010 | Support: lightweight visual water/bobbing | 20 `water-presentation`; 96, 98, 123 | U033; visual movement cannot move authoritative cargo or advance jobs. |
-| F011 | Core: hull/shore collision, depth, loaded draft, grounding | 21 `hull-and-shore-collision`; 23, 25–26, 44, 59, 94 | U009; administrative eligibility and physical clearance are separate. |
+| F011 | Core: hull/shore collision and visual loaded draft; all open water navigable | 21 `hull-and-shore-collision`; 23, 25–26, 44, 59, 94 | U009; no hidden shallows or grounding. Visible solid clearance and service eligibility remain. |
 | F012 | Core: propulsion fuel and paid refueling | 28 `fuel-simulation`; 58, 60, 67, 86 | U010; idle/reverse/thruster, pause/docked and empty-fuel behavior explicit. Cargo fuel is separate (F031). |
 | F013 | Core: safe ship spawning, berth eligibility, reservations and docking | 44 `spawn-clearance-and-recovery-anchors`; 43, 45–46, 56, 65 | U011; compatible services come from data, not decorative crane counts. |
 | F014 | Core: impact damage, sinking, cargo loss and paid recovery | 59 `impact-damage-and-recovery`; 44, 54, 62, 67 | U012; cargo removed/charge applied once, ownership retained, no free starter recovery. |
@@ -74,7 +75,7 @@ inventory's completion.
 | F036 | Core: streamed scenery inside one session with durable entities | 89 `region-loading`; 25, 31, 90, 98, 101 | U031; scenery teardown cannot erase cargo/market/refinery state; region travel is not server transfer. |
 | F037 | Core: original continents/islands, spacious oceans, polar destinations and starter neighbors | 88 `world-layout-and-traversal-budget`; 43, 91, 99–101 | U031–U032; ten named concept ports are design baseline, launch set is not frozen; Harbor Point remains proposed. |
 | F038 | Core: map/globe search, selection, position, filters, waypoints, distance and ETA | 93 `map-and-waypoints`; 43, 56, 88, 92, 97, 101 | U025, U031–U032; one dataset; distinguish payout separation, safe route length, actual odometer, ETA. |
-| F039 | Core: open Panama connection/fixed bridge, channels, depth/beam/air-draft warnings | 94 `channels-and-constraints`; 23, 88, 92, 99–101 | U034; launch hull envelope before detailed passage; no level/war closures or forced route network. |
+| F039 | Core: open Panama connection/fixed bridge, channels and visible beam/air-clearance constraints | 94 `channels-and-constraints`; 23, 88, 92, 99–101 | U034; launch hull envelope before detailed passage; no level/war closures or forced route network. |
 | F040 | Core: name/color/flag customization with defaults and isolated materials | 102 `names-and-paint`; 07, 27, 65, 109, 123 | U035; appearance persists without changing hull authority or shared materials. |
 | F041 | Support: readable voyage/service UI and onboarding | 55 `voyage-interface`; 56, 97, 108–109, 122 | U003, U014, U032; errors, receipts, first trip and restart are understandable. |
 | F042 | Support: environment presentation and player visual settings | 96 `environment`; 20, 98, 121–122 | U033; day/night, rain/fog/storm are roadmap presentation work; physical forces are conditional (F050). |
@@ -114,7 +115,7 @@ offshore reservations, processing input/output, and partial quantities.
 | Despawn/switch/resale/optional trade | Eligible ship state, manifest destination, transfer locks and forbidden cases. |
 | Quit/disconnect/crash/restart/reconnect | Resume/cancel/complete rule, last durable boundary, orphan reconciliation. |
 | Public server handoff / scenery transition | Stable IDs, one owner, no duplicated output/refund; private namespace isolation. |
-| Grounding/damage/sinking/recovery | Cargo loss and affected-job cleanup once; full recovery charge remains recorded. |
+| Collision/damage/sinking/recovery | Cargo loss and affected-job cleanup once; full recovery charge remains recorded. |
 | Backend outage/retry/concurrent requests | No half debit/delivery, no duplicate award/withdrawal, no local public fallback. |
 | Definition removal/world revision/backup restore | Safe migration or quarantine, canonical receipts, no silent wipe or restored stale authority. |
 

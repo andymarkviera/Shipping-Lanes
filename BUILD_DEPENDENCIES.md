@@ -190,7 +190,7 @@ are recorded in `HANDLING_FEEDBACK.md`.
 
 ## How to execute this schedule
 
-Proceed next with original Step 04. At each task boundary, check whether a
+Historical Step 03 scheduling baseline: the next task then was Step 04. At each task boundary, check whether a
 supplemental prerequisite above is due. After 10, complete both early geography
 and private-storage proofs before 11. After 31, complete the connected-world
 network experiment; after 34, prove public storage before 35. Inserted work is
@@ -240,3 +240,16 @@ Public shared physics adds no external dependencies. Export explicitly includes 
 Public player presentation reuses existing Godot water, camera, input and ship assets. Export explicitly includes public_client.gd, public_client.tscn and public_client_presentation.gd. No new external dependency.
 
 Native sign-in adds no runtime beyond Godot. public_browser_login.gd uses Crypto, TCPServer and HTTPRequest; public_entry resources and the login probe are explicitly exported. tools/public_handoff/login_probe.py reuses the existing disposable Keycloak/PostgreSQL fixture. Native HTTPS test endpoints explicitly use 127.0.0.1 to match the IPv4 service binds; TLS certificate checks remain enabled.
+
+## Current execution order — October 22 review
+
+See DEVELOPMENT_REVIEW.md for the current consolidated assessment. Finish a
+bounded persistent local service/enrollment setup, safe starting positions and
+clear join failures; then periodic public spatial/fuel saves and graceful shutdown.
+Complete bounded replication/client pacing and the integrated two-peer foundation
+scenario before accepting Step 42. Include the existing prototype cargo and action
+boundaries in authority checks, but do not require the unbuilt Steps 47–54 or
+80–83 production job systems to pass a pre-cargo gate. Carry their integration
+requirements forward to their own gates. Do not expand this into production
+hosting, live discovery or additional art before the first voyage milestone.
+Neutral-stop and reported heavy-loader pickup repairs keep their existing deadlines.

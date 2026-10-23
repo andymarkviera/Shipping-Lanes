@@ -28,7 +28,7 @@ sailing is unchanged. Roadmap Steps 103–105 are not applicable by this decisio
 | Player controls | Ship/helm controls only for version 1. Handling balances accessibility and simulation, with readable docking and navigation. |
 | Cargo | Containers, bulk, gas, oil trading/refining, cargo fuel, and heavy lifting are core release work. Cargo fuel is distinct from ship propulsion fuel. |
 | Progression and upkeep | Small container starter ship; earned in-game money; ship purchases/progression, propulsion fuel, damage and maintenance. Initial customization is ship name, colors, and flags. |
-| Port access | Ordinary ports and passages are open without level locks. Distance, fuel, depth, ship size, berth compatibility, and service availability still matter. |
+| Port access | Ordinary ports and passages are open without level locks. All open water is navigable by every ship; there are no hidden shallows or grounding restrictions. Distance, fuel, visible solid obstacles, ship size, berth compatibility, and service availability still matter. |
 | Recovery | Sinking loses current onboard cargo, preserves ship ownership, and always incurs a recovery fee, including for the starter ship. |
 | Multiplayer | Both player-hosted sessions and dedicated servers, with a Servers browser and Play quick-join entry. The visible title is Container Ship Sim; local test sessions stand in until networking is implemented. Player hosts choose public listing or private access. |
 | Capacity goal | Roughly 100 simultaneous players in a dedicated session is a design target. Supported launch capacity must follow measured tests. |
