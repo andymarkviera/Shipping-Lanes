@@ -263,3 +263,9 @@ justify a practical supported capacity, rather than require 100 to proceed.
 The next neutral-stop-usability pass includes a small reverse/neutral/forward
 throttle slider indicator, with a clear center and actual speed/direction feedback;
 see HANDLING_FEEDBACK.md. Aesthetic menu/world work remains planned for later.
+
+Persistent local online setup now reuses the pinned runtimes through LocalOnline.ps1;
+see LOCAL_ONLINE.md. It proves restart-stable development enrollment and normal
+server launch, but browser trust, real deployment and safe saved-position admission
+remain open. Next prioritize periodic public saves and graceful server shutdown,
+then bounded replication and the integrated foundation gate.
