@@ -253,3 +253,13 @@ boundaries in authority checks, but do not require the unbuilt Steps 47–54 or
 requirements forward to their own gates. Do not expand this into production
 hosting, live discovery or additional art before the first voyage milestone.
 Neutral-stop and reported heavy-loader pickup repairs keep their existing deadlines.
+
+## Player clarification after the development review
+
+100 players is not a required server size. Keep earlier 100-client measurements
+as historical stress evidence and an optional optimization reference. The bounded
+replication/pacing task remains necessary, but its acceptance should measure and
+justify a practical supported capacity, rather than require 100 to proceed.
+The next neutral-stop-usability pass includes a small reverse/neutral/forward
+throttle slider indicator, with a clear center and actual speed/direction feedback;
+see HANDLING_FEEDBACK.md. Aesthetic menu/world work remains planned for later.

@@ -119,3 +119,15 @@ not a passed usability check. Repair remains deferred at his request: review
 neutral/stopping before Step 46 and reproduce/repair pickup before Step 50.
 Do not wait until heavy-job content Steps 80–83 to resolve basic pickup usability.
 The earlier reverse-entry sticking and failed lift observations remain relevant.
+
+## Next handling pass: throttle slider indicator
+
+Andy requested a small throttle slider/indicator showing negative (reverse), zero
+(neutral), and positive (forward) throttle to help bring the boat to a full stop.
+Include it in neutral-stop-usability before Step 46 and cargo pickup retesting.
+Show a clear center neutral marker and current commanded throttle; keep actual
+speed/direction visible so neutral is not mistaken for stopped. Engine output may
+lag the command and the hull can coast at neutral. Do not silently turn this into
+an instant brake. An interactive mouse control was not explicitly requested;
+start with a readable indicator and preserve existing keyboard controls.
+No handling or interface implementation was performed for this scheduling update.
