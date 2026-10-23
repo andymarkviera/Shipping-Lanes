@@ -1447,3 +1447,10 @@ Recent editor/Release online evidence was reviewed, not rerun in this documentat
 review. No WAN/capacity/visual acceptance or heavy-loader repair is claimed.
 Recovery tag: development-review-2026-10-22. Source archive uses the same tag name.
 Preexisting project.godot customization remains untouched and outside Git archive.
+
+## Player preference update — October 22, 2026
+
+100-player capacity is an optional stress-test reference, not a product requirement.
+Actual supported server size remains to be measured and selected. Added a small
+reverse/neutral/forward throttle slider indicator to the next handling/neutral-stop
+pass, alongside actual motion feedback. No gameplay or aesthetic changes made.
