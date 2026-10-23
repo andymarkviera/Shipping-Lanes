@@ -173,3 +173,9 @@ save/release drain are implemented. A 10-second schedule is not a hard rollback 
 request delay and in-flight work add latency. Backend outage or replacement fencing
 may prevent a final save and must report failure. Crash recovery uses committed state.
 Production durability/latency budgets and capacity remain to be measured. See PUBLIC_DURABILITY.md.
+
+October 23 networking update: bounded eight-peer Release measurements and compact
+snapshot validation pass; see PUBLIC_NETWORK_PACING.md. Loopback headless client
+ack p95 is 137 ms in the recorded short sample. WAN impairment, rendered latency,
+transport overhead and sustained total frame work remain open; do not interpret
+this as production capacity or a guarantee of 100-player support.

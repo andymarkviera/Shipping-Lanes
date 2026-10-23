@@ -9,7 +9,7 @@ var pause_panel: PanelContainer
 var controls_enabled: bool = true
 var throttle_order: float = 0.0
 var sequence: int = 0
-var send_elapsed: float = 0.0
+var next_send_ms: int = 0
 var installed: Dictionary = {}
 var ready_to_drive: bool = false
 
@@ -99,7 +99,7 @@ func _process(_delta: float) -> void:
 		installed = session.binding.duplicate()
 		throttle_order = 0.0
 		sequence = 0
-		send_elapsed = 0.0
+		next_send_ms = 0
 	var mine: String = str(installed.get("ship", ""))
 	var fresh: bool = not session.last_snapshot.is_empty() and Time.get_ticks_msec() - int(session.last_snapshot.get("received_at", 0)) < 1000
 	ready_to_drive = not mine.is_empty() and fresh and session.world_view.replicas.has(mine) and Time.get_ticks_msec() - session.world_view.received_at < 1000
@@ -128,9 +128,9 @@ func _physics_process(delta: float) -> void:
 		else: throttle_order = clampf(throttle_order + (controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down")) * ship.definition.command_rate_per_second * delta, -ship.definition.reverse_throttle_limit, ship.definition.forward_throttle_limit)
 		rudder = controls.steering_axis()
 	else: throttle_order = 0.0
-	send_elapsed += delta
-	if send_elapsed >= 0.1:
-		send_elapsed = fmod(send_elapsed, 0.1)
+	var now: int = Time.get_ticks_msec()
+	if now >= next_send_ms:
+		next_send_ms = now + 100
 		sequence += 1
 		session.send_helm(sequence, throttle_order, rudder)
 
