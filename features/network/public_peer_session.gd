@@ -1,5 +1,5 @@
 extends Node
-## Protocol 8 DTLS admission and peer-bound helm. No arbitrary authority RPC.
+## Protocol 9 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const SnapshotCodec = preload("res://features/network/public_snapshot_codec.gd")
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
 const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
@@ -27,6 +27,7 @@ var client_deadline: int
 var nonce: String = ""
 var binding: Dictionary = {}
 var last_snapshot: Dictionary = {}
+var join_failure: String = ""
 var notice: String = "Disconnected"
 var snapshot_at: int = 0
 var accepted_commands: int = 0
@@ -79,6 +80,7 @@ func start_server(settings: Dictionary) -> Error:
 
 func start_client(settings: Dictionary) -> Error:
 	close_client()
+	join_failure = ""
 	nonce = ""
 	ticket_sent = false
 	config = settings.duplicate(true)
@@ -162,16 +164,21 @@ func connection_challenge(value: String, server: String) -> void:
 func submit_ticket(ticket: String) -> void:
 	if hosting or transport == null or nonce.is_empty() or ticket_sent: return
 	ticket_sent = true
-	join_public.rpc_id(1, 8, ticket)
+	join_public.rpc_id(1, 9, ticket)
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_public(version: int, ticket: String) -> void:
 	if not hosting or draining: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending.has(sender) or pending[sender].busy: return
-	if version != 8 or ticket.length() < 20 or ticket.length() > 128 or joining:
-		transport.disconnect_peer(sender)
-		pending.erase(sender)
+	if version != 9:
+		reject_join(sender, "BUILD_MISMATCH")
+		return
+	if ticket.length() < 20 or ticket.length() > 128:
+		reject_join(sender, "SIGN_IN_AGAIN")
+		return
+	if joining:
+		reject_join(sender, "SERVER_BUSY")
 		return
 	joining = true
 	pending[sender].busy = true
@@ -180,7 +187,7 @@ func join_public(version: int, ticket: String) -> void:
 	if not hull.authority.configure(config):
 		joining = false
 		hull.queue_free()
-		transport.disconnect_peer(sender)
+		reject_join(sender, "SERVICE_UNAVAILABLE")
 		return
 	var result: Dictionary = await hull.authority.request({"realm": "public", "op": "admit", "ticket": ticket, "nonce": pending[sender].nonce, "fingerprint": config.fingerprint})
 	if not result.get("ok", false) or not hull.authority.active or draining or not pending.has(sender) or not multiplayer.get_peers().has(sender):
@@ -189,7 +196,12 @@ func join_public(version: int, ticket: String) -> void:
 		hull.authority.quiesce()
 		hull.queue_free()
 		pending.erase(sender)
-		if multiplayer.get_peers().has(sender): transport.disconnect_peer(sender)
+		if multiplayer.get_peers().has(sender):
+			var code: String = str(result.get("code", ""))
+			var reason: String = "SERVICE_UNAVAILABLE"
+			if code in ["INVALID_TICKET", "EXPIRED_OR_USED_TICKET"]: reason = "SIGN_IN_AGAIN"
+			elif code in ["ACCOUNT_BUSY", "TRANSFER_PENDING"]: reason = "ACCOUNT_BUSY"
+			reject_join(sender, reason)
 		joining = false
 		return
 	var account: String = hull.authority.binding.account
@@ -224,7 +236,7 @@ func join_public(version: int, ticket: String) -> void:
 		pending.erase(sender)
 		accounts.erase(account)
 		joining = false
-		if multiplayer.get_peers().has(sender): transport.disconnect_peer(sender)
+		if multiplayer.get_peers().has(sender): reject_join(sender, "SPAWN_OCCUPIED")
 		return
 	members[sender] = {"hull": hull, "account": account, "ship": hull.ship.state.instance_id, "epoch": int(result.epoch), "generation": int(result.generation), "sequence": -1, "input_at": Time.get_ticks_msec(), "rate_at": 0}
 	physics_world.sync(live_owners())
@@ -233,6 +245,34 @@ func join_public(version: int, ticket: String) -> void:
 	accounts[account] = sender
 	pending.erase(sender)
 	join_accepted.rpc_id(sender, hull.ship.state.instance_id, int(result.epoch), int(result.generation))
+
+# Keep the rejected peer briefly so reliable delivery is not discarded by an
+# immediate disconnect. It has no hull/authority and cannot retry this ticket.
+func reject_join(id: int, reason: String) -> void:
+	if not hosting or not multiplayer.get_peers().has(id): return
+	pending[id] = {"nonce": "", "busy": true, "deadline": Time.get_ticks_msec() + 3000}
+	join_rejected.rpc_id(id, reason)
+
+@rpc("authority", "call_remote", "reliable")
+func join_rejected(reason: String) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1 or not binding.is_empty() or nonce.is_empty(): return
+	if reason not in ["SPAWN_OCCUPIED", "BUILD_MISMATCH", "SIGN_IN_AGAIN", "SERVER_BUSY", "SERVICE_UNAVAILABLE", "ACCOUNT_BUSY"]: return
+	join_failure = reason
+	# Close outside the RPC poll; a new connection must not be closed by old work.
+	close_rejected.call_deferred(nonce)
+
+func close_rejected(attempt_nonce: String) -> void:
+	if nonce == attempt_nonce and not join_failure.is_empty(): close_client()
+
+static func failure_message(reason: String) -> String:
+	match reason:
+		"SPAWN_OCCUPIED": return "Another boat is too close to your saved position. Your saved position has not changed. Wait for the area to clear, then sign in and join again."
+		"BUILD_MISMATCH": return "This server needs a different game version. Use the matching game build, then try again."
+		"SIGN_IN_AGAIN": return "Your join permission expired or could not be verified. Sign in again to get a fresh connection."
+		"SERVER_BUSY": return "The server is admitting another player. Wait a moment, then sign in and join again."
+		"ACCOUNT_BUSY": return "Your boat is active on another server or is transferring. Leave that session or wait for it to finish, then sign in again."
+		"SERVICE_UNAVAILABLE": return "The server could not confirm your online save. Wait a moment, then sign in and join again."
+	return "Could not connect to the server. Check that it is running and reachable, then sign in and try again."
 
 @rpc("authority", "call_remote", "reliable")
 func join_accepted(ship: String, epoch: int, generation: int) -> void:

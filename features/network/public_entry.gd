@@ -98,6 +98,7 @@ func configure_services(data: Dictionary) -> bool:
 func start_join(index: int, launch_browser: bool = true) -> void:
 	if busy or configuration.is_empty() or index < 0 or index >= configuration.servers.size(): return
 	cancel_join()
+	session.join_failure = ""
 	selected_server = configuration.servers[index].duplicate(true)
 	busy = true
 	notice = "Finish signing in in your browser, then return here."
@@ -145,8 +146,10 @@ func ticket_response(result: int, status: int, body: PackedByteArray) -> void:
 func _process(_delta: float) -> void:
 	if status_label == null: return
 	if busy and login.phase == "exchange": notice = "Completing secure sign-in..."
-	if busy and connection_deadline > 0 and (Time.get_ticks_msec() >= connection_deadline or session.notice == "Disconnected"):
-		show_failure("Could not join. The server may be unavailable, your saved position occupied, or your account active elsewhere. Please retry.")
+	if busy and not session.join_failure.is_empty():
+		show_failure(session.failure_message(session.join_failure))
+	elif busy and connection_deadline > 0 and (Time.get_ticks_msec() >= connection_deadline or session.notice == "Disconnected"):
+		show_failure(session.failure_message(""))
 	if joined and session.binding.is_empty():
 		joined = false
 		entry_layer.show()
