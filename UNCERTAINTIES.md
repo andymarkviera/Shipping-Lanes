@@ -179,3 +179,8 @@ snapshot validation pass; see PUBLIC_NETWORK_PACING.md. Loopback headless client
 ack p95 is 137 ms in the recorded short sample. WAN impairment, rendered latency,
 transport overhead and sustained total frame work remain open; do not interpret
 this as production capacity or a guarantee of 100-player support.
+
+October 23: short controlled encrypted-transport impairment and blackout recovery
+pass in editor and graphics-enabled Release. Sampled acknowledgement delays under
+the injected faults are recorded in PUBLIC_NETWORK_IMPAIRMENT.md; real WAN/NAT,
+long outages, sustained load and human browser/handling acceptance remain open.

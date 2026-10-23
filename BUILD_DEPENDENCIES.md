@@ -284,3 +284,10 @@ At this cap full frames already fit comfortably; defer delta/chunk complexity un
 measured capacity requires it. Loss/latency/reordering, rendered client timing and
 total sustained server/transport measurements remain before foundation acceptance.
 The old 100-client fixture remains historical stress evidence, not the required cap.
+
+October 23 impairment follow-through: PUBLIC_NETWORK_IMPAIRMENT.md records real
+DTLS loss/delay/duplicate/reordering and blackout recovery in editor and rendered
+Release. The short controlled scenario passes, without establishing WAN capacity,
+long-outage handling or visual usability. Next consolidate the Step 42 foundation
+acceptance checklist and repair its concrete control/spawn/lifecycle blockers;
+retain sustained workload, browser usability and deployment evidence limits.
