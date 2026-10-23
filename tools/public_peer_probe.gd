@@ -1,6 +1,7 @@
 extends "res://features/network/public_client.gd"
 var folder: String
 var sequence: int = 0
+var sent_at: Dictionary = {}
 var started: int
 
 func _ready() -> void:
@@ -37,7 +38,17 @@ func _process(_delta: float) -> void:
 	var result: Dictionary = {"ok": true}
 	match data.get("op"):
 		"ticket": session.submit_ticket(data.ticket)
-		"helm": session.send_helm(int(data.sequence), data.throttle, data.get("rudder", 0.0), data.get("candidate", {}))
+		"helm":
+			sent_at[int(data.sequence)] = Time.get_ticks_msec()
+			if sent_at.size() > 128: sent_at.erase(sent_at.keys()[0])
+			session.send_helm(int(data.sequence), data.throttle, data.get("rudder", 0.0), data.get("candidate", {}))
+		"pace_burst":
+			var previous: bool = presentation.controls_enabled
+			presentation.controls_enabled = true
+			var before: int = presentation.sequence
+			for i: int in 30: presentation._physics_process(1.0 / 60.0)
+			result = {"sent": presentation.sequence - before}
+			presentation.controls_enabled = previous
 		"drive":
 			presentation.controls_enabled = true
 			presentation.controls.wait_for_release = false
@@ -54,7 +65,9 @@ func _process(_delta: float) -> void:
 		"zoom": presentation.camera_rig.zoom(-1)
 		"disconnect": session.close_client()
 		"status":
-			result = {"nonce": session.nonce, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
+			result = {"nonce": session.nonce, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "ticket_sent": session.ticket_sent, "members": session.members.size(), "snapshot_work_us": session.snapshot_work_us, "physics_work_us": session.physics_work_us, "snapshot_bytes": session.snapshot_bytes_sent, "snapshot_packets": session.snapshot_packets_sent, "max_snapshot_bytes": session.max_snapshot_bytes, "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
+			if sent_at.has(int(session.last_snapshot.get("sequence", -2))):
+				result.ack_ms = session.last_snapshot.received_at - sent_at[int(session.last_snapshot.sequence)]
 			if presentation != null:
 				result.presentation = {"ready": presentation.ready_to_drive, "camera": is_instance_valid(presentation.camera_rig.focus), "zoom": presentation.camera_rig.distance_order, "order": presentation.throttle_order, "hud": presentation.readout.text, "menu": presentation.controls.menu_open}
 			for id: String in session.world_view.replicas:

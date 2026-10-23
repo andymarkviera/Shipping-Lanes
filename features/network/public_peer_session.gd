@@ -1,5 +1,6 @@
 extends Node
 ## Protocol 7 DTLS admission and peer-bound helm. No arbitrary authority RPC.
+const SnapshotCodec = preload("res://features/network/public_snapshot_codec.gd")
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
 const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
 var physics_world: Node
@@ -31,6 +32,11 @@ var snapshot_at: int = 0
 var accepted_commands: int = 0
 var rejected_commands: int = 0
 var ticket_sent: bool = false
+var snapshot_work_us: Array[int] = []
+var physics_work_us: Array[int] = []
+var snapshot_bytes_sent: int = 0
+var snapshot_packets_sent: int = 0
+var max_snapshot_bytes: int = 0
 
 func _ready() -> void:
 	physics_world = PhysicsWorld.new()
@@ -48,7 +54,11 @@ func live_owners() -> Array:
 	return result
 
 func _physics_process(_delta: float) -> void:
-	if hosting: physics_world.sync(live_owners())
+	if hosting:
+		var started: int = Time.get_ticks_usec()
+		physics_world.sync(live_owners())
+		physics_work_us.append(Time.get_ticks_usec() - started)
+		if physics_work_us.size() > 600: physics_work_us.pop_front()
 
 func start_server(settings: Dictionary) -> Error:
 	config = settings.duplicate(true)
@@ -116,11 +126,8 @@ func _process(_delta: float) -> void:
 			record.hull.ship.command_throttle(0)
 			record.hull.ship.maneuver(0, 0)
 	if now >= snapshot_at:
-		snapshot_at = now + 200
-		for id: int in members:
-			var record: Dictionary = members[id]
-			var ship: HandlingShip = record.hull.ship
-			state_update.rpc_id(id, record.ship, record.epoch, record.generation, ship.position, ship.rotation.y, ship.velocity, ship.state.fuel_liters, record.sequence)
+		var started: int = Time.get_ticks_usec()
+		snapshot_at = now + 100
 		view_sequence += 1
 		for id: int in members:
 			var record: Dictionary = members[id]
@@ -132,7 +139,18 @@ func _process(_delta: float) -> void:
 				var position_: Vector3 = Nav.local_position(origin, address)
 				var yaw: float = -deg_to_rad(address.heading_deg) - Nav.transport_rotation(origin, address)
 				rows.append({"ship": other.ship, "generation": other.generation, "position": position_, "yaw": yaw})
-			world_update.rpc_id(id, record.ship, record.epoch, record.generation, view_sequence, rows)
+			var hull: HandlingShip = record.hull.ship
+			var packet: PackedByteArray = SnapshotCodec.encode(rows, record.sequence, hull.state.fuel_liters, hull.velocity.length(), hull.position.length())
+			if packet.is_empty(): continue
+			# Count serialized arguments, excluding ENet/DTLS/IP overhead.
+			var size: int = var_to_bytes([record.ship, record.epoch, record.generation, view_sequence, [packet]]).size()
+			if size > 1200: continue
+			max_snapshot_bytes = maxi(max_snapshot_bytes, size)
+			snapshot_bytes_sent += size
+			snapshot_packets_sent += 1
+			world_update.rpc_id(id, record.ship, record.epoch, record.generation, view_sequence, [packet])
+		snapshot_work_us.append(Time.get_ticks_usec() - started)
+		if snapshot_work_us.size() > 256: snapshot_work_us.pop_front()
 
 @rpc("authority", "call_remote", "reliable")
 func connection_challenge(value: String, server: String) -> void:
@@ -228,7 +246,7 @@ func send_helm(sequence: int, throttle: float, rudder: float, candidate: Diction
 	if hosting or transport == null or value.is_empty(): return
 	helm_order.rpc_id(1, str(value.ship), int(value.epoch), int(value.generation), sequence, throttle, rudder)
 
-@rpc("any_peer", "call_remote", "reliable", 1)
+@rpc("any_peer", "call_remote", "unreliable_ordered", 1)
 func helm_order(ship: String, epoch: int, generation: int, sequence: int, throttle: float, rudder: float) -> void:
 	if not hosting: return
 	var sender: int = multiplayer.get_remote_sender_id()
@@ -253,7 +271,15 @@ func state_update(ship: String, epoch: int, generation: int, position_: Vector3,
 @rpc("authority", "call_remote", "unreliable_ordered", 2)
 func world_update(ship: String, epoch: int, generation: int, tick: int, rows: Array) -> void:
 	if hosting or multiplayer.get_remote_sender_id() != 1 or binding != {"ship": ship, "epoch": epoch, "generation": generation}: return
-	world_view.receive(tick, rows)
+	if tick <= world_view.tick or rows.size() != 1 or not rows[0] is PackedByteArray: return
+	var decoded: Dictionary = SnapshotCodec.decode(rows[0])
+	if decoded.is_empty(): return
+	var own_present: bool = false
+	for row: Dictionary in decoded.rows:
+		if row.ship == ship and row.generation == generation: own_present = true
+	if not own_present: return
+	world_view.receive(tick, decoded.rows)
+	last_snapshot = {"ship": ship, "distance": decoded.distance, "speed": decoded.speed, "fuel": decoded.fuel, "sequence": decoded.sequence, "received_at": Time.get_ticks_msec()}
 
 func disconnected(id: int) -> void:
 	if not hosting:

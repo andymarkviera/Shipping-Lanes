@@ -277,3 +277,10 @@ Browser trust, general safe spawning, public gameplay parity and bounded replica
 client pacing remain due; Step 42 is still open. The next implementation priority
 is bounded replication/client pacing at a measured practical capacity, not a mandatory
 100-player requirement.
+
+October 23 network follow-through: PUBLIC_NETWORK_PACING.md implements compact
+complete frames and monotonic latest-input sends for the bounded eight-peer path.
+At this cap full frames already fit comfortably; defer delta/chunk complexity until
+measured capacity requires it. Loss/latency/reordering, rendered client timing and
+total sustained server/transport measurements remain before foundation acceptance.
+The old 100-client fixture remains historical stress evidence, not the required cap.

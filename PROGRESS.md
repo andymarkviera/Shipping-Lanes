@@ -1520,3 +1520,41 @@ Step 42 stays open; next is bounded replication/client pacing at practical capac
 Recovery tag: public-periodic-saves.
 Verified source backup: ../output/checkpoints/public-periodic-saves-2026-10-23.zip.
 The preexisting project.godot customization remains outside the Git checkpoint.
+
+## Compact public network checkpoint — October 23, 2026
+
+Combined owner/nearby updates into validated fixed-size complete frames, using
+binary ship UUIDs and local float coordinates. At the current eight-peer cap the
+payload is 352 bytes and serialized RPC arguments 444 bytes. Snapshots now run at
+10 Hz instead of two separate 5 Hz streams; skipped frames need no delta history.
+Helm orders are sequenced unreliable-ordered and client send deadlines are monotonic,
+so a stalled client sends latest state rather than a catch-up burst. Existing
+ownership, freshness, idle neutralization and save boundaries remain in force.
+See PUBLIC_NETWORK_PACING.md and D083. Matching client/server builds are required.
+
+Validation: 23 codec checks pass in editor and Release, including malformed/truncated
+frames, duplicate identity, nonfinite/range/generation checks and precision. All 108
+scripts compile; startup/export pass. The existing editor adapter-only peer suite
+passes 55 checks at ../output/handoff/42685b2d/peer-summary.json. The final eight-peer
+Release probe passes 18 checks at ../output/handoff/88b871c5/pacing-summary.json.
+Its pacing-metrics.json records 34,636 serialized snapshot argument bytes/second
+aggregate over 9.64 seconds, 444 maximum argument bytes, client send-to-ack p95/max
+137 ms, snapshot-building p99 3.409 ms and group-sync p99 0.362 ms. Those work samples
+do not include all physics/server work; clients were headless on loopback.
+
+Same-data serialization comparison: 4,440 bytes/second/recipient at the new 10 Hz
+versus at least 6,620 for the old 5 Hz format, about 33% less even with twice the
+update frequency. This excludes transport overhead. The first eight-peer run at
+../output/handoff/b8300b75 measured test-runner-polled acknowledgement (172 ms p95);
+final instrumentation uses client-local send/receive timestamps and removes polling
+delay. Do not attribute that measurement-definition difference to a code speedup.
+
+This completes the bounded compact-frame/latest-input implementation pass, not
+full WAN/capacity acceptance. Controlled loss/latency/reordering, rendered timing,
+sustained load/total frame work and final integrated foundation review remain due.
+The practical cap stays eight; 100 players is not required. No aesthetic/handling
+changes or deferred heavy-loader repair were made. Step 42 remains open.
+
+Recovery tag: public-compact-network.
+Verified source backup: ../output/checkpoints/public-compact-network-2026-10-23.zip.
+The preexisting project.godot customization is preserved outside the checkpoint.

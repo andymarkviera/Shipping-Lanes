@@ -168,3 +168,7 @@ Public durability: periodic sailing checkpoints, pending-save lifetime guards an
 operator shutdown now connect the real authority to dedicated runtime lifecycle.
 LocalOnline keeps backend services alive through the drain. See PUBLIC_DURABILITY.md
 for tested boundaries and incomplete-save reporting.
+
+Public networking: compact complete nearby/owner frames and latest-input pacing
+now serve the eight-peer development path. See PUBLIC_NETWORK_PACING.md for measured
+packet sizes, timing and remaining impairment/rendered/capacity boundaries.
