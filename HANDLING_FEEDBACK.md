@@ -110,3 +110,12 @@ human audition is claimed.
 
 Run tools/Godot.ps1 -Mode FeedbackCheck. Exported check:
 -Mode RunExport -Configuration Release -FeedbackProbe.
+
+## October 22 confirmation
+
+Andy explicitly identified the heavy loader and confirmed that he still cannot
+pick up the load. This is an unresolved player-blocking defect in that prototype,
+not a passed usability check. Repair remains deferred at his request: review
+neutral/stopping before Step 46 and reproduce/repair pickup before Step 50.
+Do not wait until heavy-job content Steps 80–83 to resolve basic pickup usability.
+The earlier reverse-entry sticking and failed lift observations remain relevant.
