@@ -291,3 +291,11 @@ Release. The short controlled scenario passes, without establishing WAN capacity
 long-outage handling or visual usability. Next consolidate the Step 42 foundation
 acceptance checklist and repair its concrete control/spawn/lifecycle blockers;
 retain sustained workload, browser usability and deployment evidence limits.
+
+October 23 controls/review follow-through: public lateral thrusters and the shared
+throttle indicator are implemented (PUBLIC_HELM.md). No new dependencies. Matching
+client/server builds use game protocol 8; HTTPS ticket protocol remains 7. The
+current finite foundation checklist is FOUNDATION_ACCEPTANCE.md. Next: clear refused
+admission/retry feedback, then combined foundation acceptance before two ports.
+General safe port allocation remains Step 44; stop review before 46 and pickup
+repair before 50 are still due.

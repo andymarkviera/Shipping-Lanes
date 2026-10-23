@@ -1590,3 +1590,26 @@ foundation acceptance review and fixing any concrete blockers it identifies.
 Recovery tag: public-impaired-network.
 Verified source backup: ../output/checkpoints/public-impaired-network-2026-10-23.zip.
 The preexisting project.godot customization remains outside the Git checkpoint.
+
+## Public thrusters and throttle indicator — October 23, 2026
+
+Consolidated the foundation review in FOUNDATION_ACCEPTANCE.md. Repaired the missing
+public lateral input path with existing authoritative validation/fencing. Added a
+shared opaque reverse/neutral/forward throttle indicator to local and public helm
+views, with actual signed motion and coasting feedback. Public signed speed adds
+four bytes per complete frame; game protocol 8/snapshot version 2 require matching
+builds. HTTPS ticket protocol remains unchanged. No handling or pickup retune.
+
+Checks: 109 scripts/startup, FlowCheck, FeedbackCheck (24), CompositionCheck (60),
+compact codec (24 editor and 24 Release), peer regression (55 editor adapter checks,
+e4bb18bd), controls (11 editor 228f6975 / 12 rendered Release d651e434). Export passes.
+Rendered HUD inspected. See PUBLIC_HELM.md for evidence paths and test limits.
+
+Step 42 remains open: next give refused admissions useful feedback/retry guidance,
+then perform combined two-account foundation acceptance. General spawn allocation
+is Step 44; manual browser/WAN/sustained workload limits stay explicit. No mandatory
+100-player requirement, no player-to-player transfers, no new cargo prerequisites.
+
+Recovery tag: public-helm-feedback.
+Verified source backup: ../output/checkpoints/public-helm-feedback-2026-10-23.zip.
+The preexisting project.godot customization is preserved outside the checkpoint.

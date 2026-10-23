@@ -44,7 +44,7 @@ func _process(_delta: float) -> void:
 		"helm":
 			sent_at[int(data.sequence)] = Time.get_ticks_msec()
 			if sent_at.size() > 128: sent_at.erase(sent_at.keys()[0])
-			session.send_helm(int(data.sequence), data.throttle, data.get("rudder", 0.0), data.get("candidate", {}))
+			session.send_helm(int(data.sequence), data.throttle, data.get("rudder", 0.0), data.get("candidate", {}), data.get("lateral", 0.0))
 		"pace_burst":
 			var previous: bool = presentation.controls_enabled
 			presentation.controls_enabled = true
@@ -52,6 +52,19 @@ func _process(_delta: float) -> void:
 			for i: int in 30: presentation._physics_process(1.0 / 60.0)
 			result = {"sent": presentation.sequence - before}
 			presentation.controls_enabled = previous
+		"input_off":
+			presentation.controls_enabled = false
+			Input.action_release("ship_thruster_left")
+			Input.action_release("ship_thruster_right")
+		"capture":
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png(folder + "/helm.png")
+		"thruster":
+			presentation.controls_enabled = true
+			presentation.controls.wait_for_release = false
+			Input.action_release("ship_thruster_left")
+			Input.action_release("ship_thruster_right")
+			if data.get("axis", 0) != 0: Input.action_press("ship_thruster_right" if data.axis > 0 else "ship_thruster_left")
 		"drive":
 			presentation.controls_enabled = true
 			presentation.controls.wait_for_release = false
@@ -72,11 +85,11 @@ func _process(_delta: float) -> void:
 			if sent_at.has(int(session.last_snapshot.get("sequence", -2))):
 				result.ack_ms = session.last_snapshot.received_at - sent_at[int(session.last_snapshot.sequence)]
 			if presentation != null:
-				result.presentation = {"ready": presentation.ready_to_drive, "camera": is_instance_valid(presentation.camera_rig.focus), "zoom": presentation.camera_rig.distance_order, "order": presentation.throttle_order, "hud": presentation.readout.text, "menu": presentation.controls.menu_open}
+				result.presentation = {"ready": presentation.ready_to_drive, "camera": is_instance_valid(presentation.camera_rig.focus), "zoom": presentation.camera_rig.distance_order, "order": presentation.throttle_order, "hud": presentation.readout.text, "menu": presentation.controls.menu_open, "indicator": presentation.throttle_display.motion.text, "indicator_value": presentation.throttle_display.slider.value}
 			for id: String in session.world_view.replicas:
 				var replica: Dictionary = session.world_view.replicas[id]
 				result.replicas.append({"ship": id, "x": replica.node.position.x, "z": replica.node.position.z, "inert": replica.node.process_mode == Node.PROCESS_MODE_DISABLED and replica.node.collision_layer == 0 and replica.node.collision_mask == 0})
 			for record: Dictionary in session.members.values():
-				result.ships.append({"ship": record.ship, "generation": record.generation, "active": record.hull.authority.active, "space": record.hull.ship.get_world_3d().get_instance_id(), "distance": record.hull.ship.position.length(), "speed": record.hull.ship.velocity.length(), "throttle": record.hull.ship.commanded_throttle})
+				result.ships.append({"ship": record.ship, "generation": record.generation, "active": record.hull.authority.active, "space": record.hull.ship.get_world_3d().get_instance_id(), "distance": record.hull.ship.position.length(), "speed": record.hull.ship.velocity.length(), "throttle": record.hull.ship.commanded_throttle, "lateral": record.hull.ship.lateral_order, "side_speed": record.hull.ship.lateral_speed()})
 	write_result("reply-" + str(sequence), result)
 	sequence += 1

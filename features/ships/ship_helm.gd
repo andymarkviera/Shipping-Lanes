@@ -1,12 +1,15 @@
 class_name ShipHelm
 extends Node
 signal menu_requested
+var throttle_display = preload("res://features/feedback/throttle_indicator.gd").new()
 var ship: HandlingShip
 var controls: PlayerControls
 var feedback: HandlingFeedback
 
 func configure(body: HandlingShip, input: PlayerControls, sound: HandlingFeedback) -> void:
 	ship = body
+	if throttle_display.get_parent() == null: add_child(throttle_display)
+	throttle_display.ship = ship
 	controls = input
 	feedback = sound
 	process_physics_priority = -10
