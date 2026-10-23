@@ -1638,3 +1638,38 @@ then two ports once that gate passes. Heavy-loader pickup/stopping deadlines rem
 Recovery tag: public-join-feedback.
 Verified source backup: ../output/checkpoints/public-join-feedback-2026-10-23.zip.
 The preexisting project.godot customization is preserved outside the checkpoint.
+
+## Step 42 foundation gate passed — October 23, 2026
+
+Combined normal dedicated/player Release test: two distinct boats spawn, sail into
+contact without crossing, consume fuel, reverse apart, save on departure/shutdown,
+restart and reconnect with original identities and complete canonical profiles.
+The initial ba1ca0a3 run exposed a hung final save: reparenting a hull could cancel
+its child HTTPRequest while the authority coroutine kept waiting. HTTP requests
+now live under the stable root, still freed on completion; lifecycle fencing and
+wait-before-free remain. A real in-flight reparent/checkpoint regression passes.
+
+Final 85fb23a5 foundation evidence passes 41 checks. Its eight-player normal-server
+sample lasts 60.219 seconds with 61 all-client polls, six periodic commits per
+account, successful final drain, 0.236 total dedicated-process CPU core equivalents,
+91.55 MiB sampled peak working set and 50.19 MiB peak private bytes. Recent rendered
+process delta p95 is 16.666 ms at a 60 fps cap. This is not WAN or long-soak evidence.
+
+Fresh Release safeguards: 26 physics checks (c6bbbf27); 79 persistence checks
+(Release-c74523fe2e4c4a4fa6605e1f50582579); 49 action checks
+(Release-normal-85095b3979f54945872965ace1b3c69b); 34 impaired cargo checks
+(Release-impaired-a65102021a794754804b2730ac72c79b); 26 post-fix durability checks
+(173de595). Script check (109), startup and Release export pass. See
+PUBLIC_FOUNDATION.md for exact evidence locations, scope and initial failure.
+
+Step 42 is accepted for bounded local development, with manual browser trust,
+WAN/NAT, broader hardware and long-soak limits explicit. Next: Step 43 two reusable
+test ports, separate from economy logic. No new public cargo jobs, player transfers,
+100-player promise or resolution of the user's heavy-pickup issue is implied.
+Stop usability before 46, pickup repair before 50 and foam/wake polish at 99–100
+remain scheduled. Source references under sources/ and attached Library files
+remain untouched.
+
+Recovery tag: foundation-gate.
+Verified source backup: ../output/checkpoints/foundation-gate-2026-10-23.zip.
+The preexisting project.godot customization remains outside the Git checkpoint.

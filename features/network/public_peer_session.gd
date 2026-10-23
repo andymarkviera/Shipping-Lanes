@@ -363,7 +363,9 @@ func drain() -> bool:
 		disconnected(id)
 		transport.disconnect_peer(id)
 	while departures > 0 or joining:
-		if Time.get_ticks_msec() >= deadline: return false
+		if Time.get_ticks_msec() >= deadline:
+			print("PUBLIC_DRAIN_TIMEOUT departures=", departures, " joining=", joining)
+			return false
 		await get_tree().process_frame
 	return departure_failures == 0
 
