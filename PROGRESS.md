@@ -1794,3 +1794,17 @@ pass (output/ports/7717b220). Next: Step 49 container offers; pickup repair befo
 Recovery tag: cargo-operations.
 Verified source backup: ../output/checkpoints/cargo-operations-2026-10-24.zip.
 Preexisting project.godot customization remains outside the checkpoint.
+
+## Step 49 — Container offers — October 24, 2026
+
+Port Test now displays a small seeded offer source and Accept offer action.
+Exclusive authoritative acceptance preserves quotes, checks compatibility/origin
+and reserves capacity across pending jobs. Unaccepted offers expire after 600
+active simulation seconds; accepted terms remain fixed. No cargo/reward/save effects.
+See CONTAINER_OFFERS.md for provisional values, scope and integration obligations.
+119-script/startup, FlowCheck, export and 177 rendered Release checks pass
+(output/ports/51542faf). HUD visually inspected.
+Next: deferred heavy-loader pickup repair before Step 50 loading operations.
+Recovery tag: container-offers.
+Verified source backup: ../output/checkpoints/container-offers-2026-10-24.zip.
+Preexisting project.godot customization remains outside the checkpoint.

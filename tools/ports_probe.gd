@@ -13,6 +13,7 @@ func verify(value: bool, description: String) -> void:
 func _ready() -> void:
 	check_manifest()
 	check_operations()
+	check_offers()
 	var registry: DefinitionRegistry = DefinitionRegistry.new()
 	verify(registry.load_definitions(PrototypeCatalog.RECORDS).is_empty(), "Both ports publish with valid cargo/berth references")
 	var ids: Array[String] = []
@@ -329,3 +330,31 @@ func check_operations() -> void:
 	fresh.start("final_unload")
 	fresh.progress("final_unload", 1)
 	verify(fresh.commit("final_unload").ok and manifest.lines()[0].quantity == 1, "Successful unloading removes only requested quantity")
+
+func check_offers() -> void:
+	var source_script = preload("res://features/cargo/container_offers.gd")
+	var source = source_script.new()
+	var second_source = source_script.new()
+	var manifest_script = preload("res://features/cargo/cargo_manifest.gd")
+	var manifest = manifest_script.new(preload("res://features/catalog/records/starter_ship.tres"), PrototypeCatalog.RECORDS)
+	var rows: Array[Dictionary] = source.list_at("port_brindle_quay")
+	verify(rows.size() == 3 and rows == second_source.list_at("port_brindle_quay"), "Seeded offer IDs and designed quotes repeat deterministically")
+	var id: String = rows[0].id
+	rows[0].reward_minor = 1
+	verify(source.view(id).reward_minor == 25000, "Offer terms cannot be changed through a read")
+	verify(not source.accept(id, "captain_a", "ship_a", "port_slatewater_works", manifest).ok and source.view(id).state == "available", "Wrong origin rejects without taking offer")
+	var heavy = manifest_script.new(preload("res://features/catalog/records/heavy_lifter.tres"), PrototypeCatalog.RECORDS)
+	verify(not source.accept(id, "captain_a", "heavy", "port_brindle_quay", heavy).ok and source.view(id).state == "available", "Incompatible ship cannot accept container job")
+	var accepted: Dictionary = source.accept(id, "captain_a", "ship_a", "port_brindle_quay", manifest)
+	verify(accepted.ok and manifest.lines().is_empty(), "Acceptance locks offer without loading or paying")
+	verify(not source.accept(id, "captain_b", "ship_b", "port_brindle_quay", manifest).ok, "Competing captain cannot accept exclusive offer")
+	verify(source.accept(id, "captain_a", "ship_a", "port_brindle_quay", manifest).offer == accepted.offer, "Same-owner retry returns identical accepted terms")
+	verify(not source.accept(id, "captain_a", "ship_other", "port_brindle_quay", manifest).ok, "Accepted offer cannot transfer to another ship")
+	rows = source.list_at("port_brindle_quay")
+	verify(source.accept(rows[1].id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok and source.accept(rows[2].id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok, "Pending accepted jobs fit exactly in aggregate capacity")
+	var return_offer: String = source.list_at("port_slatewater_works")[0].id
+	verify(not source.accept(return_offer, "captain_a", "ship_a", "port_slatewater_works", manifest).ok and source.view(return_offer).state == "available", "Capacity commitments reject excess acceptance atomically")
+	verify(source.advance_to(600000) and source.view(return_offer).state == "expired", "Unaccepted offer expires at exact deadline")
+	verify(source.view(id) == accepted.offer and source.accept(id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok, "Accepted quote does not expire or change after deadline")
+	verify(not source.advance_to(1), "Authority clock cannot rewind expiry")
+	verify(not source.accept(return_offer, "captain_b", "ship_b", "port_slatewater_works", manifest).ok, "Expired offers cannot be accepted")

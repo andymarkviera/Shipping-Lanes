@@ -356,3 +356,9 @@ reconstruction pass (CARGO_OPERATIONS.md). Step 49/50 must bind trusted ownershi
 source stock, docking and disconnect hooks. Step 51 must persist operation receipts
 and manifest effects together; no crash-safe operation save is claimed by Step 48.
 Next: container offers, with heavy-loader pickup repair still due before Step 50.
+
+October 24 offer follow-through: Step 49 source/preview passes (CONTAINER_OFFERS.md).
+Before Step 50 repair heavy-loader pickup. Loading must atomically convert accepted
+capacity commitments into manifest batches without double-counting, validate docked
+origin and bind trusted identity. Step 51 persists offers/jobs with world-scoped IDs;
+Step 53 settles quoted rewards. Public offer networking remains integration work.
