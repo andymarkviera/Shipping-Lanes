@@ -43,8 +43,10 @@ def exercise(proof, rendered):
     reverse = proof.until(client, lambda s: s['snapshot'].get('forward_speed', 0) < -.05 and 'Reverse' in s['presentation']['indicator'])
     check(reverse['snapshot']['speed'] >= abs(reverse['snapshot']['forward_speed']) - .001, 'signed forward speed agrees with total server speed')
     proof.worker_call(client, {'op': 'helm', 'sequence': 10036, 'throttle': 0})
-    coast = proof.until(client, lambda s: 'Coasting' in s['presentation']['indicator'])
+    coast = proof.until(client, lambda s: 'Slowing down' in s['presentation']['indicator'])
     check(coast['presentation']['indicator_value'] == 0, 'neutral indicator distinguishes moving hull from stopped')
+    proof.until(client, lambda s: s['snapshot'].get('speed', 1) == 0 and 'Stopped' in s['presentation']['indicator'])
+    check(True, 'authority low-speed neutral assist reaches full stop and replicates stopped feedback')
     if rendered:
         proof.worker_call(client, {'op': 'capture'})
         check((client['folder'] / 'helm.png').exists(), 'rendered HUD captured for inspection')

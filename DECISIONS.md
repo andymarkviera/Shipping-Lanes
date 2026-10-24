@@ -175,3 +175,11 @@ service/cargo compatibility and physical clearance. Berth data owns tolerances;
 invalid values fail closed. Ready feedback alone cannot dock or authorize a cargo
 transaction. Step 46 must recheck under authority and handle reservations/state.
 No depth/grounding rule. See BERTH_ELIGIBILITY.md.
+
+## D091 — User-requested low-speed neutral comfort assistance
+
+Capture near-zero throttle at 4%; once engine output is neutral, assist deceleration
+below 2 knots to exact rest. Active side thrust/throttle overrides; normal coasting
+above the threshold remains. Apply on authoritative shared handling, with the same
+input adjustment across clients. This does not declare a boat docked. Historical
+physics baselines remain isolated from the separately tested comfort features.

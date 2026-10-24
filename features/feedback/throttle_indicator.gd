@@ -1,5 +1,5 @@
 extends CanvasLayer
-## Read-only command indicator; neutral does not brake the moving hull.
+## Read-only command and motion feedback; neutral assistance runs on the authority.
 var slider: HSlider
 var motion: Label
 var order_label: Label
@@ -49,11 +49,11 @@ func _ready() -> void:
 func update_values(order: float, speed: float, forward: float) -> void:
 	slider.value = order
 	order_label.text = "Throttle: %s" % ("Neutral" if is_zero_approx(order) else "%+.0f%%" % (order * 100))
-	var direction: String = "Nearly stopped"
+	var direction: String = "Stopped" if speed <= 0.000001 else "Slowing down"
 	if speed >= 0.05:
 		direction = "Forward" if forward > 0.03 else ("Reverse" if forward < -0.03 else "Sideways drift")
 	motion.text = "%s · %.2f kn" % [direction, speed * 3600.0 / 1852.0]
-	if is_zero_approx(order) and speed >= 0.05: motion.text += " · Coasting"
+	if is_zero_approx(order) and speed > 0.000001: motion.text += " · Slowing down"
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(ship): update_values(ship.commanded_throttle, ship.velocity.length(), ship.forward_speed())

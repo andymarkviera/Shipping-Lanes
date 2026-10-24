@@ -185,7 +185,7 @@ func _physics_process(delta: float) -> void:
 	var lateral: float = 0
 	if controls.input_allowed():
 		if controls.action_strength("ship_throttle_zero") > 0: throttle_order = 0
-		else: throttle_order = clampf(throttle_order + (controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down")) * ship.definition.command_rate_per_second * delta, -ship.definition.reverse_throttle_limit, ship.definition.forward_throttle_limit)
+		else: throttle_order = HandlingShip.adjusted_order(throttle_order, controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta, ship.definition)
 		steering = controls.steering_axis()
 		lateral = controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left")
 	else: throttle_order = 0

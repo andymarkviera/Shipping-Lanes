@@ -11,6 +11,9 @@ extends ContentDefinition
 @export var wake_half_width_m: float = 6.5
 @export var cargo_anchor_m: Vector3 = Vector3(0, 2.65, 17)
 @export var visual_bobbing: bool = true
+@export var neutral_snap_zone: float = 0.04
+@export var neutral_stop_speed_mps: float = 1.028889
+@export var neutral_stop_deceleration_mps2: float = 0.35
 @export_group("Prototype handling (SI units)")
 @export var forward_acceleration_mps2: float = 0.8
 @export var reverse_acceleration_mps2: float = 0.5
@@ -36,6 +39,9 @@ extends ContentDefinition
 @export var fuel_burn_when_docked: bool = false
 
 func handling_error() -> String:
+	for field: String in ["neutral_snap_zone", "neutral_stop_speed_mps", "neutral_stop_deceleration_mps2"]:
+		if not is_finite(get(field)) or get(field) < 0: return "Invalid neutral assistance value: " + field
+	if neutral_snap_zone >= minf(forward_throttle_limit, reverse_throttle_limit): return "Neutral zone exceeds throttle range"
 	if not is_finite(fuel_capacity_liters) or fuel_capacity_liters <= 0:
 		return "Invalid fuel capacity"
 	for field: String in ["fuel_full_output_lps", "fuel_idle_lps", "fuel_reverse_multiplier", "fuel_thruster_lps"]:
