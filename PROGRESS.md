@@ -1673,3 +1673,33 @@ remain untouched.
 Recovery tag: foundation-gate.
 Verified source backup: ../output/checkpoints/foundation-gate-2026-10-23.zip.
 The preexisting project.godot customization remains outside the Git checkpoint.
+
+## Step 43 complete — Two test ports — October 23, 2026
+
+Created independently loadable Brindle Quay (container/refuel) and Slatewater Works
+(container/heavy/repair) placeholder ports. Port/berth IDs, planned service IDs,
+cargo references, spawn/approach anchors and berth envelopes are authoring data.
+Quays and buildings are visible shore solids; open water remains navigable.
+Port content has no economy/network/save transaction code.
+
+Main menu PORT TEST opens a disposable starter boat preview with port selection,
+existing bright blue water, wake, saved controls, orbit camera and throttle indicator.
+Switching port resets the test boat only; private slots/public worlds are unchanged.
+Service names describe future capabilities, not working loading/refuel/repair UI.
+The compact opaque panel and title-menu spacing were visually inspected.
+
+Checks: 112 scripts/startup, CatalogCheck, FlowCheck and Release export pass.
+Independent editor probe passes 18 checks (output/ports/864ed3b9); final rendered
+Release passes 21 (output/ports/25c28e0e), including overview/menu captures. Checks
+cover independent loading, references, immutable service views, authored markers,
+solid quays, sampled starter approach clearance and disposable boat switching.
+See TWO_TEST_PORTS.md for details and scope. The approach sampling does not replace
+runtime spawn checks, reservations, cargo envelopes or fallback recovery.
+
+Next: Step 44 spawn clearance and recovery anchors. Neutral/stop usability remains
+before 46 and heavy-loader pickup repair before 50. No peer transfers or hidden
+shallows. Final art, world placement and public cargo integration remain later work.
+
+Recovery tag: two-test-ports.
+Verified source backup: ../output/checkpoints/two-test-ports-2026-10-23.zip.
+The preexisting project.godot customization remains outside the Git checkpoint.

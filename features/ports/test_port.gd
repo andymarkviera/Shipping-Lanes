@@ -1,0 +1,74 @@
+extends Node3D
+## Reusable static port content only. No wallets, jobs, ownership or transactions.
+@export var definition: PortDefinition
+@export var berth: BerthDefinition
+@export var quay_side: int = -1
+@export var quay_length_m: float = 140.0
+var spawn_anchor: Marker3D
+var approach_anchor: Marker3D
+var berth_anchor: Marker3D
+
+func marker(label: String, at: Vector3, heading: float) -> Marker3D:
+	var node: Marker3D = Marker3D.new()
+	node.name = label
+	node.position = at
+	node.rotation.y = -deg_to_rad(heading)
+	add_child(node)
+	return node
+
+func block(label: String, at: Vector3, size_: Vector3, color: Color, solid: bool = true) -> void:
+	var parent: Node3D = StaticBody3D.new() if solid else Node3D.new()
+	parent.name = label
+	parent.position = at
+	add_child(parent)
+	if solid:
+		parent.collision_layer = CollisionRules.SHORE
+		parent.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+		var collider: CollisionShape3D = CollisionShape3D.new()
+		var shape: BoxShape3D = BoxShape3D.new()
+		shape.size = size_
+		collider.shape = shape
+		parent.add_child(collider)
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var box: BoxMesh = BoxMesh.new()
+	box.size = size_
+	mesh.mesh = box
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.9
+	mesh.material_override = material
+	parent.add_child(mesh)
+
+func _ready() -> void:
+	assert(definition != null and berth != null and berth.port_id == definition.id)
+	spawn_anchor = marker("Spawn", definition.spawn_position_m, definition.spawn_heading_degrees)
+	approach_anchor = marker("Approach", definition.approach_position_m, definition.spawn_heading_degrees)
+	berth_anchor = marker("Berth", berth.position_m, berth.heading_degrees)
+	# The inner quay face is x=+/-20. The approach and berth centerline are x=0.
+	block("Quay", Vector3(quay_side * 60, 1, quay_length_m / 2), Vector3(80, 6, quay_length_m), Color("76695b"))
+	block("QuayEdge", Vector3(quay_side * 20.5, 4.1, quay_length_m / 2), Vector3(1, .2, quay_length_m - 4), Color("e2d6ad"), false)
+	block("Warehouse", Vector3(quay_side * 72, 15, quay_length_m * .7), Vector3(42, 22, 45), Color("566b70"))
+	block("WarehouseRoof", Vector3(quay_side * 72, 26.5, quay_length_m * .7), Vector3(46, 1, 49), Color("c5c0ad"), false)
+	for i: int in 3:
+		block("Container%d" % i, Vector3(quay_side * 46, 7, 24 + i * 16), Vector3(12, 6, 6), Color("b56749") if i % 2 == 0 else Color("799c9c"))
+	if definition.service_ids.has("refuel"):
+		block("FuelStore", Vector3(quay_side * 83, 10, 25), Vector3(20, 12, 20), Color("d2b579"))
+	else:
+		block("GantryLegA", Vector3(quay_side * 34, 19, 35), Vector3(4, 30, 4), Color("ccad6a"))
+		block("GantryLegB", Vector3(quay_side * 84, 19, 35), Vector3(4, 30, 4), Color("ccad6a"))
+		block("GantryBeam", Vector3(quay_side * 59, 35, 35), Vector3(54, 3, 5), Color("ccad6a"))
+	for i: int in 3:
+		for side: int in [-1, 1]:
+			block("ApproachMarker%d_%d" % [i, side], Vector3(side * 42, 1, -70 - i * 40), Vector3(3, 4, 3), Color("dfb879"))
+	var sign: Label3D = Label3D.new()
+	sign.text = definition.display_name
+	sign.position = Vector3(quay_side * 60, 40, quay_length_m / 2)
+	sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sign.font_size = 64
+	sign.pixel_size = .09
+	add_child(sign)
+
+func service_view() -> Dictionary:
+	return {"id": definition.id, "name": definition.display_name,
+		"services": definition.service_ids.duplicate(), "berth_id": berth.id,
+		"cargo_types": berth.cargo_type_ids.duplicate(), "berth_services": berth.service_ids.duplicate()}

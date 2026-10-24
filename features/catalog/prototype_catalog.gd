@@ -7,4 +7,8 @@ const RECORDS: Array[ContentDefinition] = [
 	preload("res://features/catalog/records/test_berth.tres"),
 	preload("res://features/catalog/records/heavy_lifter.tres"),
 	preload("res://features/catalog/records/test_industrial.tres"),
+	preload("res://features/ports/brindle_quay.tres"),
+	preload("res://features/ports/brindle_quay_berth.tres"),
+	preload("res://features/ports/slatewater_works.tres"),
+	preload("res://features/ports/slatewater_works_berth.tres"),
 ]

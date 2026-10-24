@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PortDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/port_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "port_slatewater_works"
+display_name = "Slatewater Works"
+berth_ids = Array[String](["berth_slatewater_works_01"])
+scene_path = "res://features/ports/slatewater_works.tscn"
+service_ids = Array[String](["container_transfer", "heavy_transfer", "repair"])
+spawn_position_m = Vector3(0, 0, -180)
+approach_position_m = Vector3(0, 0, -80)
+spawn_heading_degrees = 0.0

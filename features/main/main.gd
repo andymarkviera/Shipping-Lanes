@@ -18,6 +18,9 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--ports-check"):
+		get_tree().change_scene_to_file.call_deferred("res://tools/ports_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--compact-network-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/compact_network_probe.tscn")
 		return
@@ -183,6 +186,7 @@ func navigate(action: String) -> void:
 				return
 			get_tree().set_meta("local_save_requested", true)
 			get_tree().change_scene_to_file("res://features/handling/handling_test.tscn")
+		"ports": get_tree().change_scene_to_file("res://features/ports/port_test.tscn")
 		"heavy_lifter": get_tree().change_scene_to_file("res://features/handling/heavy_lifter_test.tscn")
 		"test_load": request_test_load()
 		"test_timer": request_test_timer()
