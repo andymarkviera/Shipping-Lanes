@@ -9,13 +9,11 @@ func _init() -> void:
 		var destination: String = "port_slatewater_works" if route == 0 else "port_brindle_quay"
 		for index: int in 3:
 			var id: String = "container_seed_v1_%d_%d" % [route, index]
-			_offers[id] = {"id": id, "cargo_id": "cargo_test_container", "unit": "count", "quantity": index + 1, "origin_port_id": origin, "destination_port_id": destination, "reward_minor": (index + 1) * 25000, "expires_ms": 600000, "state": "available", "owner_id": "", "ship_id": "", "accepted_ms": -1}
+			_offers[id] = {"id": id, "cargo_id": "cargo_test_container", "unit": "count", "quantity": index + 1, "origin_port_id": origin, "destination_port_id": destination, "reward_minor": (index + 1) * 25000, "expires_ms": -1, "state": "available", "owner_id": "", "ship_id": "", "accepted_ms": -1}
 
 func advance_to(world_ms: int) -> bool:
 	if world_ms < _now_ms or world_ms > 9000000000000: return false
 	_now_ms = world_ms
-	for offer: Dictionary in _offers.values():
-		if offer.state == "available" and _now_ms >= offer.expires_ms: offer.state = "expired"
 	return true
 
 func view(id: String) -> Dictionary:
@@ -36,7 +34,7 @@ func accept(id: String, owner: String, ship_id: String, port_id: String, manifes
 	if offer.state in ["accepted", "loaded"]:
 		if offer.owner_id == owner and offer.ship_id == ship_id: return {"ok": true, "message": "Already accepted.", "offer": view(id)}
 		return {"ok": false, "message": "Another captain accepted this offer."}
-	if offer.state != "available" or _now_ms >= offer.expires_ms: return {"ok": false, "message": "Offer expired."}
+	if offer.state != "available": return {"ok": false, "message": "Job is not available."}
 	if port_id != offer.origin_port_id: return {"ok": false, "message": "Accept this offer at its origin port."}
 	var candidate: Array[Dictionary] = manifest.lines()
 	# Pending jobs reserve capacity as well as physical cargo. Loading integration
@@ -72,7 +70,7 @@ func release_job(id: String, owner: String, ship_id: String) -> bool:
 	if not _offers.has(id): return false
 	var offer: Dictionary = _offers[id]
 	if offer.state != "accepted" or offer.owner_id != owner or offer.ship_id != ship_id: return false
-	offer.state = "available" if _now_ms < offer.expires_ms else "expired"
+	offer.state = "available"
 	offer.owner_id = ""
 	offer.ship_id = ""
 	offer.accepted_ms = -1
@@ -80,3 +78,14 @@ func release_job(id: String, owner: String, ship_id: String) -> bool:
 
 func release_pending(owner: String, ship_id: String) -> void:
 	for id: String in _offers: release_job(id, owner, ship_id)
+
+func deliver_at(owner: String, ship_id: String, port_id: String, manifest: RefCounted, docked: bool) -> Dictionary:
+	if not docked: return {"ok": false, "message": "Dock at the destination first.", "reward_minor": 0}
+	var reward: int = 0
+	for offer: Dictionary in _offers.values():
+		if offer.state != "loaded" or offer.owner_id != owner or offer.ship_id != ship_id or offer.destination_port_id != port_id: continue
+		var result: Dictionary = manifest.remove("batch_" + offer.id, offer.quantity)
+		if result.ok:
+			offer.state = "delivered"
+			reward += offer.reward_minor
+	return {"ok": reward > 0, "message": "Delivery complete." if reward > 0 else "No cargo for this port.", "reward_minor": reward}

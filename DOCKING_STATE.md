@@ -1,3 +1,5 @@
+> Updated October 24: DOCK_SERVICES_REDESIGN.md supersedes the timed-offer, water-guide and test-service assumptions below. This file retains earlier checkpoint history.
+
 # Step 46 — Docking state machine
 
 Port Test now has Dock, Undock and transient Cancel controls. Readiness is checked

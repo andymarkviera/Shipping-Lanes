@@ -1,3 +1,5 @@
+> Updated October 24: DOCK_SERVICES_REDESIGN.md supersedes the timed-offer, water-guide and test-service assumptions below. This file retains earlier checkpoint history.
+
 # Step 50 — Port loading and prerequisite heavy pickup repair
 
 Heavy fixture: the lowered deck collider's top exactly touched the floating

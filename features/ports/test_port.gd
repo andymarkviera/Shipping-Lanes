@@ -48,30 +48,6 @@ func _ready() -> void:
 		recovery_anchors.append(marker("Recovery%d" % i, definition.recovery_positions_m[i], definition.spawn_heading_degrees))
 	approach_anchor = marker("Approach", definition.approach_position_m, definition.spawn_heading_degrees)
 	berth_anchor = marker("Berth", berth.position_m, berth.heading_degrees)
-	# Non-solid berth guide: never turns open water into an obstacle.
-	var guide: Node3D = Node3D.new()
-	guide.name = "BerthGuide"
-	add_child(guide)
-	guide.transform = berth_anchor.transform
-	for side: int in [-1, 1]:
-		for end: int in [-1, 1]:
-			var line: MeshInstance3D = MeshInstance3D.new()
-			var mesh: BoxMesh = BoxMesh.new()
-			mesh.size = Vector3(4, .15, .4)
-			line.mesh = mesh
-			line.position = Vector3(side * (berth.envelope_m.x / 2 - 2), .7, end * berth.envelope_m.z / 2)
-			var material: StandardMaterial3D = StandardMaterial3D.new()
-			material.albedo_color = Color("f1d486")
-			material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			line.material_override = material
-			guide.add_child(line)
-	var bow_label: Label3D = Label3D.new()
-	bow_label.text = "BERTH — BOW THIS WAY"
-	bow_label.position = Vector3(0, 5, berth.envelope_m.z / 2 + 5)
-	bow_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	bow_label.font_size = 40
-	bow_label.pixel_size = .035
-	guide.add_child(bow_label)
 	# The inner quay face is x=+/-20. The approach and berth centerline are x=0.
 	block("Quay", Vector3(quay_side * 60, 1, quay_length_m / 2), Vector3(80, 6, quay_length_m), Color("76695b"))
 	block("QuayEdge", Vector3(quay_side * 20.5, 4.1, quay_length_m / 2), Vector3(1, .2, quay_length_m - 4), Color("e2d6ad"), false)
@@ -79,7 +55,7 @@ func _ready() -> void:
 	block("WarehouseRoof", Vector3(quay_side * 72, 26.5, quay_length_m * .7), Vector3(46, 1, 49), Color("c5c0ad"), false)
 	for i: int in 3:
 		block("Container%d" % i, Vector3(quay_side * 46, 7, 24 + i * 16), Vector3(12, 6, 6), Color("b56749") if i % 2 == 0 else Color("799c9c"))
-	if definition.service_ids.has("refuel"):
+	if definition.id == "port_brindle_quay":
 		block("FuelStore", Vector3(quay_side * 83, 10, 25), Vector3(20, 12, 20), Color("d2b579"))
 	else:
 		block("GantryLegA", Vector3(quay_side * 34, 19, 35), Vector3(4, 30, 4), Color("ccad6a"))

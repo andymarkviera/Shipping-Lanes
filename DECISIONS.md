@@ -224,3 +224,12 @@ regression reproducing the original blockage. Loading uses authority-owned progr
 and commits manifest plus offer status synchronously. Cancellation creates no partial
 cargo and releases the job. Completed preview cargo survives port switching; crash
 persistence and public network wiring remain explicit follow-ups. See PORT_LOADING.md.
+
+## D097 — Dock-first services and non-expiring jobs by ship family
+
+User direction: show CARGO / REFUEL / REPAIR after docking; multiple compatible
+jobs without expiry. Containers go port-to-port; heavy cargo appears nearby after
+acceptance and is physically dropped at a random ocean point. Test services and
+rewards are temporary; persistent authority comes later. No peer transfers. Remove
+docking water markings and use grey/colored Dock. Exclude the heavy loader's own
+floating payload from camera obstruction checks. See DOCK_SERVICES_REDESIGN.md.

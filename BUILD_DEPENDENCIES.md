@@ -368,3 +368,12 @@ October 24 loading follow-through: Step 50 local authority/preview passes
 37 passing checks, including manual approach/exit. Public network disconnect binding,
 port placement and loading RPCs remain integration work. Step 51 must persist manifest,
 loaded offer and operation receipt together and recover pending reservations safely.
+
+October 24 user-directed redesign supersedes timed offers: non-expiring ship-specific
+jobs behind docked CARGO / REFUEL / REPAIR. Containers deliver port-to-port; heavy
+jobs use nearby physical pickup and random ocean destinations. Step 51 must persist
+both job types, physical heavy attachment/drop target, manifest/operation receipts,
+service condition/fuel and eventual durable settlement together. Free prototype
+services and temporary credits are not production economy integration. Do not restore
+expiry, water docking guides or assume heavy destinations are ports. Camera own-load
+exclusion is regression tested. See DOCK_SERVICES_REDESIGN.md.

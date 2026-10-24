@@ -48,7 +48,7 @@ func release(entry: Dictionary, owner: int) -> void:
 	if is_instance_valid(entry.port):
 		entry.port.spawn_allocator.release(entry.hold)
 	entry.hold = 0
-	if is_instance_valid(entry.body):
+	if is_instance_valid(entry.body) and entry.state in ["docking", "docked", "undocking"]:
 		freeze(entry.body)
 		entry.body.docked = false
 	entry.state = "underway"

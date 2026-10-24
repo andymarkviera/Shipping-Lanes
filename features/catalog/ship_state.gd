@@ -3,6 +3,7 @@ extends RefCounted
 ## Per-instance mutable fixture. Save schema and authoritative actions come later.
 var instance_id: String
 var definition_id: String
+var condition: float = 1.0
 var fuel_liters: float
 var operations: RefCounted
 var manifest: RefCounted

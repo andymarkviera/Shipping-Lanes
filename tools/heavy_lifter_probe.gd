@@ -18,6 +18,24 @@ func run() -> void:
 	ship.set_physics_process(false)
 	await get_tree().physics_frame
 	check(ship.get_child(0) is Node3D and ship.deck_visual.get_child_count() > 0, "Blender hull and separate moving deck imported")
+	var camera_rig: OrbitCameraRig = OrbitCameraRig.new()
+	add_child(camera_rig)
+	camera_rig.set_physics_process(false)
+	camera_rig.set_focus(ship.assembly.focus)
+	var floating_pose: Transform3D = ship.payload_body.global_transform
+	ship.payload_body.global_position = ship.assembly.focus.global_position - Vector3(0, 4, 0)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	ship.assembly.focus.associated_bodies.clear()
+	var stuck: Vector3 = camera_rig.camera.global_position
+	camera_rig.orbit_offset = 1
+	camera_rig._physics_process(.2)
+	check(camera_rig.camera.global_position == stuck, "Old camera query reproduces freeze inside floating load")
+	ship.assembly.focus.associated_bodies.append(ship.payload_body)
+	camera_rig._physics_process(.2)
+	check(camera_rig.camera.global_position.distance_to(stuck) > 10, "Camera escapes and orbits when own floating load is excluded")
+	ship.payload_body.global_transform = floating_pose
+	camera_rig.free()
 	check(not ship.attach_payload(), "Raised deck rejects attachment")
 	check(not ship.detach_payload(), "Cannot release missing load")
 	ship.velocity.z = 1

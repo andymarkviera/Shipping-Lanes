@@ -94,7 +94,7 @@ func _ready() -> void:
 	preview.select_port(1)
 	await get_tree().process_frame
 	verify(preview.port.definition.id == ids[1] and preview.ship.commanded_throttle == 0, "Switching ports resets only disposable test boat")
-	verify(preview.ship.position.distance_to(preview.port.definition.spawn_position_m) < .1, "Preview starts at data-defined anchor")
+	verify(preview.ship.global_position.distance_to(preview.port.spawn_anchor.global_position) < .1, "Preview starts at data-defined anchor")
 	preview.ship.global_transform = preview.port.berth_anchor.global_transform
 	preview.ship.velocity = Vector3.ZERO
 	await get_tree().physics_frame
@@ -103,19 +103,37 @@ func _ready() -> void:
 	verify(preview.readiness.text.begins_with("Berth: Ready to dock"), "Live readiness feedback reaches ready state")
 	await check_docking(preview)
 	check_loading(preview)
+	await check_services(preview)
 	var capture: String = ""
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--port-capture="): capture = arg.trim_prefix("--port-capture=")
 	if not capture.is_empty():
 		for i: int in 2:
 			preview.select_port(i)
+			preview.ship.global_transform = preview.port.berth_anchor.global_transform
+			preview.docking.request_dock(1, "container_transfer", "cargo_test_container")
+			preview.docking.advance(1.1)
+			preview.jobs_panel.show()
+			preview.refresh_jobs()
 			preview.camera.set_process(false)
 			preview.camera.set_physics_process(false)
-			preview.camera.camera.global_position = Vector3(220, 190, -250)
-			preview.camera.camera.look_at(Vector3(0, 0, 35))
+			preview.camera.camera.global_position = preview.port.global_position + Vector3(220, 190, -250)
+			preview.camera.camera.look_at(preview.port.global_position + Vector3(0, 0, 35))
 			await get_tree().process_frame
 			await RenderingServer.frame_post_draw
 			verify(get_viewport().get_texture().get_image().save_png(capture + "-" + str(i) + ".png") == OK, "Port overview captured")
+		preview.heavy_mode = true
+		preview.select_port(1)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		preview.ship.global_transform = preview.port.berth_anchor.global_transform
+		preview.docking.request_dock(1, "heavy_transfer", "cargo_test_industrial")
+		preview.docking.advance(1.1)
+		preview.jobs_panel.show()
+		preview.refresh_jobs()
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		verify(get_viewport().get_texture().get_image().save_png(capture + "-heavy-services.png") == OK, "Heavy service menu captured")
 		preview.queue_free()
 		await get_tree().process_frame
 		var layer: CanvasLayer = CanvasLayer.new()
@@ -148,7 +166,7 @@ func check_berth(port: Node3D) -> void:
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "cargo_test_industrial", space).code == "CARGO", "Ship cargo compatibility enforced")
 	var heavy: ShipDefinition = preload("res://features/catalog/records/heavy_lifter.tres")
 	var heavy_result: Dictionary = rule.evaluate(port.berth, pose, heavy, pose, Vector3.ZERO, "heavy_transfer", "cargo_test_industrial", space)
-	verify(heavy_result.eligible == (port.definition.id == "port_slatewater_works"), "Heavy transfer only available at compatible port")
+	verify(heavy_result.eligible, "Both service ports support heavy-loader work")
 	definition.hull_size_m.x = 30
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "SIZE", "Oversized hull rejected")
 	definition.hull_size_m.x = 13
@@ -355,10 +373,10 @@ func check_offers() -> void:
 	verify(source.accept(rows[1].id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok and source.accept(rows[2].id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok, "Pending accepted jobs fit exactly in aggregate capacity")
 	var return_offer: String = source.list_at("port_slatewater_works")[0].id
 	verify(not source.accept(return_offer, "captain_a", "ship_a", "port_slatewater_works", manifest).ok and source.view(return_offer).state == "available", "Capacity commitments reject excess acceptance atomically")
-	verify(source.advance_to(600000) and source.view(return_offer).state == "expired", "Unaccepted offer expires at exact deadline")
-	verify(source.view(id) == accepted.offer and source.accept(id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok, "Accepted quote does not expire or change after deadline")
-	verify(not source.advance_to(1), "Authority clock cannot rewind expiry")
-	verify(not source.accept(return_offer, "captain_b", "ship_b", "port_slatewater_works", manifest).ok, "Expired offers cannot be accepted")
+	verify(source.advance_to(600000) and source.view(return_offer).state == "available", "Jobs remain available without expiry")
+	verify(source.view(id) == accepted.offer and source.accept(id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok, "Accepted quote remains unchanged as time advances")
+	verify(not source.advance_to(1), "Authority simulation clock cannot rewind")
+	verify(source.accept(return_offer, "captain_b", "ship_b", "port_slatewater_works", manifest).ok, "Jobs remain acceptable after former expiry deadline")
 
 func check_loading(preview: Node3D) -> void:
 	var loading = preview.loading
@@ -399,3 +417,74 @@ func check_loading(preview: Node3D) -> void:
 	dock.cancel(1)
 	loading.set_physics_process(true)
 	dock.set_physics_process(true)
+
+func check_services(preview: Node3D) -> void:
+	var body: HandlingShip = preview.ship
+	var dock = preview.docking
+	# Existing loading test leaves one container aboard at its origin.
+	var origin: String = preview.port.definition.id
+	var before: Array[Dictionary] = body.state.manifest.lines()
+	preview.deliver()
+	verify(body.state.manifest.lines() == before, "Wrong-port delivery cannot remove cargo or pay")
+	var target_index: int = 0 if origin == "port_slatewater_works" else 1
+	dock.request_undock(1)
+	dock.advance(1)
+	body.global_transform = preview.world_ports[target_index].berth_anchor.global_transform
+	body.velocity = Vector3(0, 0, 2)
+	preview._physics_process(.01)
+	verify(body.velocity.z == 2, "Changing nearby-port context preserves underway motion")
+	body.velocity = Vector3.ZERO
+	verify(preview.port == preview.world_ports[target_index] and preview.ship == body, "Sailing to the other port changes active berth without replacing ship")
+	dock.request_dock(1, "container_transfer", "cargo_test_container")
+	dock.advance(1.1)
+	preview.deliver()
+	verify(body.state.manifest.lines().is_empty() and preview.reward_minor == 25000, "Container delivery at destination clears batch and awards test credits once")
+	preview.deliver()
+	verify(preview.reward_minor == 25000, "Repeated delivery cannot duplicate test payout")
+	body.state.fuel_liters = 10
+	body.state.condition = .4
+	preview.refuel()
+	preview.repair()
+	verify(body.state.fuel_liters == body.definition.fuel_capacity_liters and body.state.condition == 1, "Docked refuel and repair service effects apply")
+	dock.request_undock(1)
+	dock.advance(1)
+	body.state.fuel_liters = 10
+	body.state.condition = .4
+	preview.refuel()
+	preview.repair()
+	verify(body.state.fuel_liters == 10 and body.state.condition == .4, "Services cannot be invoked while underway")
+	preview.heavy_mode = true
+	preview.select_port(target_index)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	body = preview.ship
+	verify(body.has_method("attach_payload") and body.payload_body.collision_layer == 0, "Heavy test starts without free job cargo")
+	body.global_transform = preview.port.berth_anchor.global_transform
+	preview.docking.request_dock(1, "heavy_transfer", "cargo_test_industrial")
+	preview.docking.advance(1.1)
+	preview.refresh_jobs()
+	verify(preview.jobs_list.item_count == 3, "Heavy loader gets multiple suitable jobs")
+	var selected: String = preview.selected_offer
+	preview.accept_selected()
+	verify(not preview.heavy_jobs.active.is_empty() and body.payload_body.collision_layer == CollisionRules.HULL, "Accepting docked heavy job spawns nearby physical load")
+	verify(not preview.heavy_jobs.accept(selected, body, preview.port, true), "Second heavy acceptance cannot spawn duplicate load")
+	var destination: Vector3 = preview.heavy_jobs.active.drop
+	verify(destination.distance_to(preview.port.global_position) > 800, "Heavy destination lies out in open ocean")
+	preview.docking.request_undock(1)
+	preview.docking.advance(1)
+	body.request_height(-1.0)
+	for step: int in 240: body.advance_deck(1.0 / 60)
+	# Place the ship, not the cargo, under its spawned job for authority-rule tests.
+	body.global_transform = body.payload_body.global_transform.translated_local(Vector3(0, 1, 8))
+	verify(body.attach_payload(), "Accepted physical job load can be picked up")
+	preview.heavy_jobs.update(body)
+	verify(not body.detach_payload(), "Job cargo cannot be dropped at an arbitrary location")
+	body.global_position = destination + Vector3(0, 0, 8)
+	verify(body.detach_payload(), "Stopped lowered heavy cargo can be dropped at its ocean destination")
+	preview.heavy_jobs.update(body)
+	verify(preview.heavy_jobs.active.is_empty() and preview.heavy_jobs.reward_pending > 0, "Ocean drop-off completes the heavy job")
+	var reward: int = preview.heavy_jobs.reward_pending
+	preview.heavy_jobs.update(body)
+	verify(preview.heavy_jobs.reward_pending == reward, "Repeated update cannot duplicate ocean delivery")
+	preview.heavy_mode = false
+	preview.select_port(0)
