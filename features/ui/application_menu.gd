@@ -49,12 +49,15 @@ func _ready() -> void:
 	play_button = button(home, "PLAY", "play")
 	button(home, "BOAT HANDLING TEST", "handling")
 	button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
+	button(home, "PORT TEST", "ports")
 	button(home, "LOCAL MULTIPLAYER TEST", "local_network")
 	continue_button = button(home, "CONTINUE TEST SESSION", "continue")
 	button(home, "SERVERS", "servers")
 	button(home, "SETTINGS", "settings")
 	button(home, "LOCAL SAVES", "saves")
 	button(home, "EXIT", "exit")
+	for child: Node in home.get_children():
+		if child is Button: child.custom_minimum_size.y = 42
 	save_notice = Label.new()
 	save_notice.add_theme_font_size_override("font_size", 15)
 	save_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

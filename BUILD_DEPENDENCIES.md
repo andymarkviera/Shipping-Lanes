@@ -312,3 +312,9 @@ applicable task is Step 43, two test ports, then 44 safe spawn/recovery anchors.
 Do not repeat the completed pre-42 infrastructure sequence without new failures.
 Retain eight as the development cap; WAN/browser trust/long-soak and hosting-hardware
 validation remain explicitly limited. Retest workload when port/cargo content grows.
+
+October 23 ports follow-through: Step 43 passes (TWO_TEST_PORTS.md). Both static
+port scenes and planned service records are reusable independently of economy.
+Next is Step 44 runtime spawn clearance/recovery anchors. The current starter
+approach geometry checks are only a static baseline, not dynamic reservation or
+cargo-envelope validation. Public world placement remains explicit later integration.
