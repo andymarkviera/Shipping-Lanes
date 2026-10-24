@@ -183,3 +183,11 @@ below 2 knots to exact rest. Active side thrust/throttle overrides; normal coast
 above the threshold remains. Apply on authoritative shared handling, with the same
 input adjustment across clients. This does not declare a boat docked. Historical
 physics baselines remain isolated from the separately tested comfort features.
+
+## D092 — Docking reserves before securing and never teleports
+
+One authority serializes berth acquisition after live eligibility. Securing holds
+position and disables propulsion; failed/cancelled docking releases. Cancelled
+undocking retains its reservation. Disconnect/body/port teardown cleans holds;
+old callbacks cannot unregister a replacement body. Public peer identity binding
+must happen on the server when ports enter that world. See DOCKING_STATE.md.

@@ -86,6 +86,10 @@ func advance_motion(delta: float) -> void:
 		zero_throttle()
 		actual_throttle = 0
 		lateral_order = 0
+	if docked:
+		velocity = Vector3.ZERO
+		yaw_rate = 0
+		rudder = 0
 	advance_engine(delta)
 	var local_velocity: Vector3 = basis.inverse() * velocity
 	var requested_side: float = lateral_order * clampf(1.0 - absf(local_velocity.z) / definition.thruster_cutoff_speed_mps, 0.0, 1.0)

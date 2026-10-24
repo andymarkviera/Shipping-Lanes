@@ -35,4 +35,4 @@ static func evaluate(berth: BerthDefinition, anchor: Transform3D, ship: ShipDefi
 	query.exclude = exclude
 	if not space.intersect_shape(query, 1).is_empty():
 		return result("BLOCKED", "Keep clear of boats, cargo and dock structures.")
-	return result("READY", "Ready to dock — docking controls arrive in the next step.")
+	return result("READY", "Ready to dock — select Dock.")

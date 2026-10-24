@@ -334,3 +334,8 @@ pickup remains unresolved and due before Step 50.
 October 24 neutral follow-through: requested capture and low-speed stopping assist
 implemented and tested for both hulls and public-server full-stop replication.
 See NEUTRAL_ASSIST.md. Step 46 docking is next; heavy pickup remains due before 50.
+
+October 24 docking follow-through: Step 46 component and Port Test integration pass
+(DOCKING_STATE.md). Public-world port placement and trusted network-owner binding
+are still integration work; local two-owner arbitration is covered now. Next: 47
+cargo manifest. Heavy-loader pickup repair remains mandatory before Step 50.

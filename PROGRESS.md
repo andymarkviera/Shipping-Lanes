@@ -1743,3 +1743,16 @@ checks pass, including replicated full stop. Final Release handling suite passes
 Recovery tag: neutral-assist.
 Source backup: ../output/checkpoints/neutral-assist-2026-10-24.zip.
 Preexisting project.godot customization remains outside the checkpoint.
+
+## Step 46 — Docking state machine — October 24, 2026
+
+Port Test now supports Dock/Undock/Cancel, approaching/docking/docked/undocking/
+underway states, exclusive authority-owned reservations, propulsion lock and
+cancellation/disconnect cleanup. Added non-solid berth guides. See DOCKING_STATE.md.
+Public-world port binding remains later work; two logical owners were tested on
+the component, not two network clients docking at a public-world port.
+115 script/startup, 42 fuel, FlowCheck, export and 119 rendered Release port checks
+passed (output/ports/3bedd6f5). Next: Step 47 cargo manifest; pickup repair before 50.
+Recovery tag: docking-state.
+Verified source backup: ../output/checkpoints/docking-state-2026-10-24.zip.
+Preexisting project.godot customization remains outside the checkpoint.
