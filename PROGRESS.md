@@ -1756,3 +1756,11 @@ passed (output/ports/3bedd6f5). Next: Step 47 cargo manifest; pickup repair befo
 Recovery tag: docking-state.
 Verified source backup: ../output/checkpoints/docking-state-2026-10-24.zip.
 Preexisting project.godot customization remains outside the checkpoint.
+
+### Docking presentation preference — October 24, 2026
+
+User requests a later presentation change, not an immediate gameplay edit:
+remove water-surface docking markings from the intended game. Prefer a greyed-out
+Dock button appearing near a berth, becoming colored when stopped and docking is
+available. Preserve compatibility, alignment, clearance and reservation checks;
+stopping alone must not bypass those checks. Current test guides remain temporary.

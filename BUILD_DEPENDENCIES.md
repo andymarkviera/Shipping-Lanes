@@ -339,3 +339,7 @@ October 24 docking follow-through: Step 46 component and Port Test integration p
 (DOCKING_STATE.md). Public-world port placement and trusted network-owner binding
 are still integration work; local two-owner arbitration is covered now. Next: 47
 cargo manifest. Heavy-loader pickup repair remains mandatory before Step 50.
+
+Later docking UI pass: remove temporary water-surface berth markings. Show a greyed
+Dock button near the berth and color it when stopped and eligible. User explicitly
+requested recording this for later, so no current gameplay/presentation change.
