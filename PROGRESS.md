@@ -1730,3 +1730,16 @@ remains before Step 50; no hidden shallows or peer transfers.
 Recovery tag: berth-eligibility.
 Verified source backup: ../output/checkpoints/berth-eligibility-2026-10-24.zip.
 Preexisting project.godot customization remains outside this checkpoint.
+
+## Neutral/stop usability — October 24, 2026
+
+Implemented the requested 4% snap-to-neutral zone and gentle stopping below 2 knots
+on both boats. Active propulsion overrides assistance; above threshold normal
+coasting remains. Local/private/public inputs share the adjustment, and the server
+owns stopping. HUD distinguishes slowing from stopped. See NEUTRAL_ASSIST.md.
+Script/startup, fuel/catalog, 102 Release port checks and 12 Release public helm
+checks pass, including replicated full stop. Final Release handling suite passes 134 checks
+(output/neutral-handling.log). Next: Step 46 docking; pickup repair before Step 50.
+Recovery tag: neutral-assist.
+Source backup: ../output/checkpoints/neutral-assist-2026-10-24.zip.
+Preexisting project.godot customization remains outside the checkpoint.

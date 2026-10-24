@@ -16,6 +16,7 @@ const CAPS: Array[int] = [30, 60, 144]
 
 func _ready() -> void:
 	set_physics_process(false)
+	check_neutral_assist()
 	check_throttle()
 	check_maneuvers()
 	check_checkpoints()
@@ -82,7 +83,7 @@ func _physics_process(_delta: float) -> void:
 		check(coasted > 0.0 and coasted < neutral_speed, "Zero thrust coasts with drag")
 		ship.command_throttle(-1.0)
 	if tick == 180:
-		check(ship.velocity.z > 0.0 and ship.velocity.z < coasted, "Reverse brakes forward travel")
+		check(ship.velocity.z < coasted, "Reverse reduces forward velocity and may now reach astern sooner after neutral assist")
 	if tick == 300:
 		check(ship.velocity.z < 0.0, "Sustained reverse eventually travels astern")
 		check(is_zero_approx(ship.position.y) and is_zero_approx(ship.position.x), "Planar movement")
@@ -165,9 +166,12 @@ func check_throttle() -> void:
 func check_input_scene() -> void:
 	var scene: Node3D = (load("res://features/handling/handling_test.tscn") as PackedScene).instantiate()
 	add_child(scene)
-	await get_tree().create_timer(0.1).timeout
+	# Wait for scene startup/release gate instead of a wall-clock startup race.
+	for frame: int in 120:
+		await get_tree().process_frame
+		if scene.controls.input_allowed(): break
 	Input.action_press("ship_throttle_up")
-	await get_tree().create_timer(0.15).timeout
+	for frame: int in 12: await get_tree().physics_frame
 	check(scene.ship.commanded_throttle > 0.0, "Mapped forward input raises order")
 	Input.action_release("ship_throttle_up")
 	var held: float = scene.ship.commanded_throttle
@@ -276,3 +280,44 @@ func check_maneuvers() -> void:
 	check(absf(subject.yaw_rate) > 0.0 and absf(subject.yaw_rate) < turn_before, "Released rudder winds yaw down gradually")
 	remove_child(subject)
 	subject.free()
+
+func check_neutral_assist() -> void:
+	for definition_: ShipDefinition in [preload("res://features/catalog/records/starter_ship.tres"), preload("res://features/catalog/records/heavy_lifter.tres")]:
+		var body: HandlingShip = Ship.new()
+		body.definition = definition_
+		add_child(body)
+		body.set_physics_process(false)
+		for direction: float in [-1.0, 1.0]:
+			body.command_throttle(direction * 0.045)
+			body.adjust_command(-direction, 1.0 / 60)
+			check(body.commanded_throttle == 0, "Near neutral snaps from either direction")
+			body.adjust_command(-direction, 1.0 / 60)
+			check(body.commanded_throttle * direction < 0, "Continued input can leave neutral")
+			body.adjust_command(0, 1.0 / 60)
+			check(body.commanded_throttle == 0, "Releasing near zero retains exact neutral")
+		for dt: float in [1.0 / 30, 1.0 / 60, 1.0 / 120]:
+			for initial: Vector3 in [Vector3(0, 0, 1.0288), Vector3(0, 0, -1.0288), Vector3(.6, 0, .6)]:
+				body.velocity = initial
+				body.zero_throttle()
+				body.actual_throttle = 0
+				body.maneuver(0, 0)
+				var monotonic: bool = true
+				for tick_: int in int(4.0 / dt):
+					var prior: float = body.velocity.length()
+					body.advance_motion(dt)
+					monotonic = monotonic and body.velocity.length() <= prior and body.velocity.dot(initial) >= 0
+				check(monotonic and body.velocity == Vector3.ZERO, "Low-speed neutral stops smoothly without reversal within four seconds")
+		body.velocity = Vector3(0, 0, 2)
+		body.advance_motion(1.0 / 60)
+		check(absf(body.velocity.z - 2 * exp(-body.definition.linear_drag_per_second / 60)) < .00001, "Above two knots normal coasting is preserved")
+		body.velocity = Vector3.ZERO
+		body.command_throttle(.1)
+		body.advance_motion(.1)
+		check(body.velocity.z > 0, "Positive throttle defeats stop assistance")
+		body.zero_throttle()
+		body.actual_throttle = 0
+		body.velocity = Vector3.ZERO
+		body.maneuver(0, 1)
+		body.advance_motion(.1)
+		check(body.velocity.x < 0, "Neutral still permits deliberate side thruster movement")
+		body.free()

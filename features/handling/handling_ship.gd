@@ -55,7 +55,19 @@ func command_throttle(value: float) -> void:
 		commanded_throttle = clampf(value, -definition.reverse_throttle_limit, definition.forward_throttle_limit)
 
 func adjust_command(axis: float, delta: float) -> void:
-	command_throttle(commanded_throttle + clampf(axis, -1.0, 1.0) * definition.command_rate_per_second * delta)
+	command_throttle(adjusted_order(commanded_throttle, axis, delta, definition))
+
+static func adjusted_order(current: float, axis: float, delta: float, tuning: ShipDefinition) -> float:
+	if not is_finite(axis) or not is_finite(delta) or delta <= 0: return current
+	var next: float = clampf(current + clampf(axis, -1.0, 1.0) * tuning.command_rate_per_second * delta, -tuning.reverse_throttle_limit, tuning.forward_throttle_limit)
+	# Capture approaching/crossing zero, but allow a held key to leave neutral.
+	if current * axis < 0 and (absf(next) <= tuning.neutral_snap_zone or current * next < 0): return 0.0
+	if is_zero_approx(axis) and absf(next) <= tuning.neutral_snap_zone: return 0.0
+	return next
+
+func stopping_assist_active() -> bool:
+	return commanded_throttle == 0 and actual_throttle == 0 and lateral_order == 0 and velocity.length() <= definition.neutral_stop_speed_mps
+
 
 func zero_throttle() -> void:
 	command_throttle(0.0)
@@ -92,6 +104,9 @@ func advance_motion(delta: float) -> void:
 	local_velocity.x = local_velocity.x * exp(-lateral_drag * delta) + side_acceleration / lateral_drag * (1.0 - exp(-lateral_drag * delta))
 	local_velocity.y = 0.0
 	velocity = (basis * local_velocity).limit_length(CollisionRules.SUPPORTED_SPEED_MPS)
+	if stopping_assist_active():
+		velocity = velocity.move_toward(Vector3.ZERO, definition.neutral_stop_deceleration_mps2 * delta)
+		if velocity == Vector3.ZERO: yaw_rate = 0
 	if state.fuel_liters <= 0:
 		zero_throttle()
 		actual_throttle = 0

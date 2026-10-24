@@ -38,6 +38,8 @@ static func replay(parent: Node, segments: Array, acceleration_scale: float = 1.
 	var ship: HandlingShip = HandlingShip.new()
 	parent.add_child(ship)
 	ship.set_physics_process(false)
+	# Historical model baseline excludes the separately tested neutral comfort assist.
+	ship.definition.neutral_stop_speed_mps = 0.0
 	ship.definition.forward_acceleration_mps2 *= acceleration_scale
 	var ticks: int = 0
 	var ahead_power_seconds: float = 0.0
@@ -52,7 +54,7 @@ static func replay(parent: Node, segments: Array, acceleration_scale: float = 1.
 		var segment_start_distance: float = distance
 		for index: int in range(segment.ticks):
 			if segment.get("neutral", false): ship.zero_throttle()
-			else: ship.adjust_command(segment.get("throttle_axis", 0.0), DT)
+			else: ship.command_throttle(ship.commanded_throttle + segment.get("throttle_axis", 0.0) * ship.definition.command_rate_per_second * DT)
 			ship.maneuver(segment.get("rudder", 0.0), segment.get("thruster", 0.0))
 			var previous_speed: float = ship.forward_speed()
 			ship.advance_motion(DT)

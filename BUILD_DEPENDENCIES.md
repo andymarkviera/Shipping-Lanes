@@ -330,3 +330,7 @@ Port Test readiness and 105 rendered Release checks. Review stop/neutral usabili
 before Step 46 docking; recheck eligibility on the docking authority. Production
 port placement and loaded-cargo clearance remain integration work. Heavy-loader
 pickup remains unresolved and due before Step 50.
+
+October 24 neutral follow-through: requested capture and low-speed stopping assist
+implemented and tested for both hulls and public-server full-stop replication.
+See NEUTRAL_ASSIST.md. Step 46 docking is next; heavy pickup remains due before 50.
