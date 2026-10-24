@@ -23,3 +23,4 @@ fuel_capacity_liters = 2000.0
 fuel_full_output_lps = 1.0
 fuel_idle_lps = 0.02
 fuel_thruster_lps = 0.1
+cargo_capacities = {"heavy_slots": 1}

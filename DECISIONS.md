@@ -191,3 +191,11 @@ position and disables propulsion; failed/cancelled docking releases. Cancelled
 undocking retains its reservation. Disconnect/body/port teardown cleans holds;
 old callbacks cannot unregister a replacement body. Public peer identity binding
 must happen on the server when ports enter that world. See DOCKING_STATE.md.
+
+## D093 — Cargo batches retain provenance and independent quantity pools
+
+Per-ship runtime manifests use bounded integer quantities in explicit units and
+capacity pools. Validate complete candidate manifests before publishing; no partial
+mutations on failure. Keep separate batch IDs for separate jobs. Existing saved
+inventory is unchanged until a versioned persistence adapter; job reference ownership
+belongs to future operation authority. See CARGO_MANIFEST.md.

@@ -4,6 +4,7 @@ extends RefCounted
 var instance_id: String
 var definition_id: String
 var fuel_liters: float
+var manifest: RefCounted
 var cargo: Dictionary
 
 func _init(ship_id: String, shared_definition_id: String, fuel: float = 0.0, initial_cargo: Dictionary = {}) -> void:

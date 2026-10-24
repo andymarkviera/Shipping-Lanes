@@ -343,3 +343,10 @@ cargo manifest. Heavy-loader pickup repair remains mandatory before Step 50.
 Later docking UI pass: remove temporary water-surface berth markings. Show a greyed
 Dock button near the berth and color it when stopped and eligible. User explicitly
 requested recording this for later, so no current gameplay/presentation change.
+
+October 24 manifest follow-through: Step 47 runtime manifests pass (CARGO_MANIFEST.md).
+Step 48/50 operations must enforce authority and use manifest validation; Step 51
+must version/migrate persisted inventory into manifests without losing legacy cargo.
+Do not treat an empty new runtime manifest as an empty saved inventory. Heavy-loader
+pickup remains unresolved and required before Step 50. Dock water-guide removal is
+still deferred per user preference.

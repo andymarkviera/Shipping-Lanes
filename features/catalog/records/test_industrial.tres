@@ -5,3 +5,4 @@ script = ExtResource("1")
 id = "cargo_test_industrial"
 display_name = "Test industrial module"
 unit_label = "module"
+capacity_pool = "heavy_slots"
