@@ -64,8 +64,17 @@ func select_port(index: int) -> void:
 	port = PORTS[index].instantiate()
 	add_child(port)
 	ship = preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
+	var allocation: Dictionary = port.reserve_spawn(ship.definition.hull_size_m)
+	if not allocation.ok:
+		ship.free()
+		ship = null
+		helm = null
+		wake = null
+		details.text = "All spawn locations are occupied. Select the port again to retry."
+		return
+	ship.transform = allocation.transform
 	add_child(ship)
-	ship.global_transform = port.spawn_anchor.global_transform
+	# Keep this preview hold until its port is freed; no same-frame spawn race.
 	helm = ShipHelm.new()
 	add_child(helm)
 	helm.configure(ship, controls, ship.assembly.feedback)
