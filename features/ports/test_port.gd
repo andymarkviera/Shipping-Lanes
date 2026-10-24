@@ -81,3 +81,7 @@ func reserve_spawn(size: Vector3, cargo: Array[AABB] = []) -> Dictionary:
 	var candidates: Array[Transform3D] = [spawn_anchor.global_transform]
 	for anchor: Marker3D in recovery_anchors: candidates.append(anchor.global_transform)
 	return spawn_allocator.reserve(get_world_3d().direct_space_state, candidates, size, Vector3(0, 1, 0), cargo)
+
+func berth_readiness(body: HandlingShip, service: String, cargo_id: String) -> Dictionary:
+	var excluded: Array[RID] = [body.get_rid()]
+	return preload("res://features/ports/berth_eligibility.gd").evaluate(berth, berth_anchor.global_transform, body.definition, body.global_transform, body.velocity, service, cargo_id, get_world_3d().direct_space_state, excluded)

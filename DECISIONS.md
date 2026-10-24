@@ -167,3 +167,11 @@ cargo envelopes and conservative reservation volumes. Primary then authored
 recovery order is deterministic; fully occupied ports refuse with retry feedback.
 No hidden shallows. Public saved-spawn relocation waits for geographic port/world
 integration, preserving canonical saves. See SPAWN_CLEARANCE.md.
+
+## D090 — Berth readiness is explicit and read-only
+
+Eligibility uses whole-hull containment, all-direction speed, heading, requested
+service/cargo compatibility and physical clearance. Berth data owns tolerances;
+invalid values fail closed. Ready feedback alone cannot dock or authorize a cargo
+transaction. Step 46 must recheck under authority and handle reservations/state.
+No depth/grounding rule. See BERTH_ELIGIBILITY.md.

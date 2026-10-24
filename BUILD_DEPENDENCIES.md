@@ -324,3 +324,9 @@ pass (SPAWN_CLEARANCE.md). Production world placement must share the allocator
 across simultaneous spawns and supply berth/cargo holds; public canonical recovery
 remains an explicit future integration. Next: 45 berth eligibility; stop review
 before 46, heavy pickup repair before 50. No hidden shallows or peer transfers.
+
+October 24 berth follow-through: Step 45 passes (BERTH_ELIGIBILITY.md), with live
+Port Test readiness and 105 rendered Release checks. Review stop/neutral usability
+before Step 46 docking; recheck eligibility on the docking authority. Production
+port placement and loaded-cargo clearance remain integration work. Heavy-loader
+pickup remains unresolved and due before Step 50.

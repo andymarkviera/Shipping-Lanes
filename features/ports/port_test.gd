@@ -7,6 +7,7 @@ var helm: ShipHelm
 var camera: OrbitCameraRig
 var ocean: OceanPresentation
 var wake: ShipWake
+var readiness: Label
 var details: Label
 
 func _ready() -> void:
@@ -43,6 +44,8 @@ func _ready() -> void:
 	panel.add_child(stack)
 	details = Label.new()
 	stack.add_child(details)
+	readiness = Label.new()
+	stack.add_child(readiness)
 	var buttons: HBoxContainer = HBoxContainer.new()
 	stack.add_child(buttons)
 	for i: int in 2:
@@ -89,3 +92,11 @@ func select_port(index: int) -> void:
 func leave() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().change_scene_to_file("res://features/main/main.tscn")
+
+func _physics_process(_delta: float) -> void:
+	if not is_instance_valid(ship) or not is_instance_valid(port):
+		if readiness != null: readiness.text = ""
+		return
+	var status: Dictionary = port.berth_readiness(ship, "container_transfer", "cargo_test_container")
+	readiness.text = "Berth: " + status.message
+	readiness.modulate = Color("a9e8bc") if status.eligible else Color("f2d6a2")
