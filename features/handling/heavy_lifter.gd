@@ -14,7 +14,7 @@ var payload_visual: Node3D
 var payload_shape: CollisionShape3D
 var attached: bool = false
 var assembly: ShipAssembly
-var notice: String = "Stop, lower the deck, then align the test payload."
+var notice: String = "Lower the deck, reverse under the floating load, stop and secure."
 
 func shape(size: Vector3, at: Vector3) -> CollisionShape3D:
 	return ShipAssembly.box_collision(self, size, at)
@@ -35,7 +35,7 @@ func _ready() -> void:
 	shape(Vector3(24, 2.5, 90), Vector3(0, -3.25, 0))
 	for side: float in [-1, 1]: shape(Vector3(3, 5, 74), Vector3(side * 10.5, 0.5, -5))
 	shape(Vector3(20, 13, 17), Vector3(0, 4.5, 32))
-	deck_shape = shape(Vector3(18, 0.6, 48), Vector3(0, 2.3, -8))
+	deck_shape = shape(Vector3(18, 0.6, 48), Vector3(0, 2.15, -8))
 	payload_shape = shape(Vector3(14, 8, 32), Vector3(0, RAISED + 4, -8))
 	payload_shape.disabled = true
 	cargo_mount = assembly.cargo_anchor
@@ -148,7 +148,7 @@ func advance_deck(delta: float) -> void:
 		return
 	deck_height = next
 	deck_visual.position.y = deck_height - RAISED
-	deck_shape.position.y = deck_height - 0.3
+	deck_shape.position.y = deck_height - 0.45
 	cargo_mount.position.y = deck_height
 	payload_shape.position.y = deck_height + 4
 	if not operating(): notice = "Deck raised — ready to sail." if deck_height == RAISED else "Deck lowered — ready for loading."
@@ -160,3 +160,11 @@ func _physics_process(delta: float) -> void:
 		maneuver(0, 0)
 	advance_deck(delta)
 	super._physics_process(delta)
+
+func alignment_hint() -> String:
+	if attached: return "Payload secured. Raise the deck to sail."
+	if not is_instance_valid(payload_body) or not payload_body.is_inside_tree(): return "Preparing floating payload…"
+	var relative: Transform3D = global_transform.affine_inverse() * payload_body.global_transform
+	var offset: Vector3 = relative.origin - Vector3(0, LOWERED, -8)
+	var angle: float = rad_to_deg(acos(clampf(relative.basis.z.dot(Vector3.BACK), -1, 1)))
+	return "Load offset: side %.1f m · length %.1f m · angle %.1f°\nApproach through the open stern with the deck lowered.\nAlign within 0.5 m and 3°, then stop and select Secure." % [offset.x, offset.z, angle]
