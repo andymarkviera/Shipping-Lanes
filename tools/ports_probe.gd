@@ -11,6 +11,7 @@ func verify(value: bool, description: String) -> void:
 		push_error(description)
 
 func _ready() -> void:
+	check_manifest()
 	var registry: DefinitionRegistry = DefinitionRegistry.new()
 	verify(registry.load_definitions(PrototypeCatalog.RECORDS).is_empty(), "Both ports publish with valid cargo/berth references")
 	var ids: Array[String] = []
@@ -217,3 +218,57 @@ func check_docking(preview: Node3D) -> void:
 	other.free()
 	authority.register(1, body, preview.port)
 	authority.set_physics_process(true)
+
+func check_manifest() -> void:
+	var manifest_script = preload("res://features/cargo/cargo_manifest.gd")
+	var ship: ShipDefinition = preload("res://features/catalog/records/starter_ship.tres").duplicate(true)
+	var manifest = manifest_script.new(ship, PrototypeCatalog.RECORDS)
+	var row: Dictionary = {"batch_id": "lot_1", "cargo_id": "cargo_test_container", "quantity": 4, "unit": "count", "origin_port_id": "port_brindle_quay", "destination_port_id": "port_slatewater_works", "acquisition_id": "purchase_1", "job_id": ""}
+	verify(manifest.add(row).ok, "Compatible cargo batch accepted")
+	row.quantity = 999
+	verify(manifest.lines()[0].quantity == 4, "Caller cannot mutate accepted batch")
+	var view: Array[Dictionary] = manifest.lines()
+	view[0].quantity = 0
+	verify(manifest.lines()[0].quantity == 4, "Manifest read is defensive")
+	var second: Dictionary = manifest.lines()[0].duplicate(true)
+	second.batch_id = "lot_2"
+	second.quantity = 2
+	second.job_id = "job_2"
+	second.acquisition_id = ""
+	verify(manifest.add(second).ok and manifest.usage().container_slots == 6, "Multiple jobs share aggregate capacity and exact limit is allowed")
+	var original: Array[Dictionary] = manifest.lines()
+	for change: Dictionary in [{"quantity": 1, "batch_id": "overflow"}, {"cargo_id": "cargo_test_industrial", "batch_id": "wrong_ship"}, {"quantity": 0}, {"quantity": -1}, {"quantity": 1.5}, {"quantity": 1000000001}, {"unit": "gram"}, {"origin_port_id": "missing"}, {"destination_port_id": "missing"}, {"acquisition_id": "", "job_id": ""}, {"batch_id": "lot_1"}]:
+		var bad: Dictionary = second.duplicate(true)
+		bad.merge(change, true)
+		verify(not manifest.add(bad).ok and manifest.lines() == original, "Invalid/oversized addition leaves all cargo unchanged")
+	verify(not manifest.remove("lot_1", 99).ok and manifest.lines() == original, "Excessive removal is atomic")
+	verify(manifest.remove("lot_1", 2).ok and manifest.lines()[0].quantity == 2 and manifest.lines()[0].acquisition_id == "purchase_1", "Partial removal retains batch provenance")
+	verify(manifest.remove("lot_2", 2).ok and manifest.lines().size() == 1, "Full removal clears only selected job batch")
+	var other = manifest_script.new(ship, PrototypeCatalog.RECORDS)
+	verify(other.lines().is_empty(), "Manifest instances isolated per ship")
+	var heavy = manifest_script.new(preload("res://features/catalog/records/heavy_lifter.tres"), PrototypeCatalog.RECORDS)
+	var module: Dictionary = second.duplicate(true)
+	module.cargo_id = "cargo_test_industrial"
+	module.quantity = 1
+	verify(heavy.add(module).ok and heavy.usage().heavy_slots == 1, "Heavy module uses its own capacity pool")
+	var definitions: Array[ContentDefinition] = PrototypeCatalog.RECORDS.duplicate()
+	var liquid: CargoDefinition = CargoDefinition.new()
+	liquid.id = "cargo_liquid_fixture"
+	liquid.quantity_unit = "milliliter"
+	liquid.capacity_pool = "tank_ml"
+	definitions.append(liquid)
+	ship.cargo_type_ids.append(liquid.id)
+	ship.cargo_capacities.tank_ml = 5000
+	var mixed = manifest_script.new(ship, definitions)
+	var container: Dictionary = second.duplicate(true)
+	container.quantity = 6
+	container.batch_id = "containers"
+	var tank: Dictionary = second.duplicate(true)
+	tank.batch_id = "tank"
+	tank.cargo_id = liquid.id
+	tank.unit = "milliliter"
+	tank.quantity = 5000
+	verify(mixed.add(container).ok and mixed.add(tank).ok, "Counts and liquid volume have independent budgets")
+	tank.batch_id = "tank_overflow"
+	tank.quantity = 1
+	verify(not mixed.add(tank).ok and mixed.usage().tank_ml == 5000, "Liquid overcapacity leaves container and liquid amounts unchanged")

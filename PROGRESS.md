@@ -1764,3 +1764,18 @@ remove water-surface docking markings from the intended game. Prefer a greyed-ou
 Dock button appearing near a berth, becoming colored when stopped and docking is
 available. Preserve compatibility, alignment, clearance and reservation checks;
 stopping alone must not bypass those checks. Current test guides remain temporary.
+
+## Step 47 — Cargo manifest — October 24, 2026
+
+Added per-runtime-ship cargo batches with units, quantities, origin/destination and
+acquisition/job references, independent capacity pools, compatibility validation,
+atomic changes and defensive copies. No loading UI or save migration yet. Current
+limits are provisional (starter six container slots; lifter one heavy slot).
+See CARGO_MANIFEST.md for persistence/authority integration boundaries.
+116-script/startup, catalog, 66 contract checks and Release export pass. Combined
+Release port/manifest suite passes 138 checks (output/ports/2508a1de).
+Next: Step 48 reusable operations; heavy pickup repair before Step 50. Preserve the
+later docking UI preference: no water markings, grey Dock until eligible.
+Recovery tag: cargo-manifest.
+Verified source backup: ../output/checkpoints/cargo-manifest-2026-10-24.zip.
+Preexisting project.godot customization remains outside this checkpoint.

@@ -33,6 +33,7 @@ func load_definitions(records: Array[ContentDefinition]) -> PackedStringArray:
 			if record.runtime_scene_path.is_empty() or not ResourceLoader.exists(record.runtime_scene_path, "PackedScene"):
 				errors.append("Missing runtime ship scene: " + record.id)
 		elif record is CargoDefinition:
+			if record.quantity_unit not in ["count", "gram", "milliliter"] or record.capacity_pool.strip_edges().is_empty(): errors.append("Invalid cargo capacity rule: " + record.id)
 			if record.unit_label.strip_edges().is_empty():
 				errors.append("Missing cargo unit: " + record.id)
 		elif record is PortDefinition:

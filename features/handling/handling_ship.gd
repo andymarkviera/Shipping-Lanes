@@ -35,6 +35,7 @@ func lateral_speed() -> float:
 func _ready() -> void:
 	definition = definition.duplicate(true)
 	state = ShipState.new(str(get_instance_id()), definition.id, definition.fuel_capacity_liters)
+	state.manifest = preload("res://features/cargo/cargo_manifest.gd").new(definition, PrototypeCatalog.RECORDS)
 	fuel = PropulsionFuel.new(state, definition)
 	if not definition.handling_error().is_empty():
 		push_error(definition.handling_error())

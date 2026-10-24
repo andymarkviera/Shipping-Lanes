@@ -2,6 +2,7 @@ class_name ShipDefinition
 extends ContentDefinition
 @export_file("*.tscn") var scene_path: String = ""
 @export var cargo_type_ids: Array[String] = []
+@export var cargo_capacities: Dictionary = {}
 @export_file("*.tscn") var runtime_scene_path: String = ""
 @export_group("Composition")
 @export var hull_size_m: Vector3 = Vector3(13, 4, 64)
@@ -39,6 +40,10 @@ extends ContentDefinition
 @export var fuel_burn_when_docked: bool = false
 
 func handling_error() -> String:
+	for pool: Variant in cargo_capacities:
+		if not pool is String or pool.strip_edges().is_empty(): return "Invalid cargo capacity pool"
+		var capacity: Variant = cargo_capacities[pool]
+		if not capacity is int or capacity < 0 or capacity > 1000000000: return "Invalid cargo capacity"
 	for field: String in ["neutral_snap_zone", "neutral_stop_speed_mps", "neutral_stop_deceleration_mps2"]:
 		if not is_finite(get(field)) or get(field) < 0: return "Invalid neutral assistance value: " + field
 	if neutral_snap_zone >= minf(forward_throttle_limit, reverse_throttle_limit): return "Neutral zone exceeds throttle range"
