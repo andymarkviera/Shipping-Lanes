@@ -318,3 +318,9 @@ port scenes and planned service records are reusable independently of economy.
 Next is Step 44 runtime spawn clearance/recovery anchors. The current starter
 approach geometry checks are only a static baseline, not dynamic reservation or
 cargo-envelope validation. Public world placement remains explicit later integration.
+
+October 23 spawn follow-through: Step 44 port component and preview integration
+pass (SPAWN_CLEARANCE.md). Production world placement must share the allocator
+across simultaneous spawns and supply berth/cargo holds; public canonical recovery
+remains an explicit future integration. Next: 45 berth eligibility; stop review
+before 46, heavy pickup repair before 50. No hidden shallows or peer transfers.

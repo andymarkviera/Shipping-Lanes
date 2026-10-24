@@ -10,3 +10,4 @@ service_ids = Array[String](["container_transfer", "refuel"])
 spawn_position_m = Vector3(0, 0, -180)
 approach_position_m = Vector3(0, 0, -80)
 spawn_heading_degrees = 0.0
+recovery_positions_m = Array[Vector3]([Vector3(0, 0, -280), Vector3(0, 0, -380)])

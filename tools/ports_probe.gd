@@ -39,6 +39,47 @@ func _ready() -> void:
 		verify(clear, "Starter envelope has an unobstructed spawn-to-berth approach")
 		query.transform = Transform3D(Basis.IDENTITY, Vector3(port.quay_side * 60, 1, port.quay_length_m / 2))
 		verify(not get_world_3d().direct_space_state.intersect_shape(query).is_empty(), "Visible quay is solid")
+		var a: Dictionary = port.reserve_spawn(Vector3(13, 4, 64))
+		var b: Dictionary = port.reserve_spawn(Vector3(13, 4, 64))
+		var c: Dictionary = port.reserve_spawn(Vector3(13, 4, 64))
+		verify(a.ok and a.index == 0 and b.ok and b.index == 1 and c.ok and c.index == 2, "Reservations allocate primary then ordered recovery spots without a physics tick")
+		verify(not port.reserve_spawn(Vector3(13, 4, 64)).ok, "All held anchors refuse instead of overlapping")
+		port.spawn_allocator.release(b.ticket)
+		var retry: Dictionary = port.reserve_spawn(Vector3(13, 4, 64))
+		verify(retry.ok and retry.index == 1, "Released slot reused deterministically")
+		port.spawn_allocator.holds.clear()
+		var cargo: Array[AABB] = [AABB(port.spawn_anchor.global_position - Vector3(15, 5, 40), Vector3(30, 20, 80))]
+		var cargo_result: Dictionary = port.reserve_spawn(Vector3(13, 4, 64), cargo)
+		verify(cargo_result.ok and cargo_result.index == 1, "Cargo envelope blocks primary even without a physics body")
+		port.spawn_allocator.holds.clear()
+		var berth_ticket: int = port.spawn_allocator.hold_volume(cargo[0])
+		verify(berth_ticket > 0 and port.reserve_spawn(Vector3(13, 4, 64)).index == 1, "Reserved berth volume blocks overlapping spawn")
+		port.spawn_allocator.holds.clear()
+		var blocker: StaticBody3D = StaticBody3D.new()
+		blocker.collision_layer = CollisionRules.HULL
+		blocker.position = port.spawn_anchor.global_position
+		CollisionRules.add_box_hull(blocker)
+		add_child(blocker)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		var hull_result: Dictionary = port.reserve_spawn(Vector3(13, 4, 64))
+		verify(hull_result.ok and hull_result.index == 1, "Existing hull triggers recovery")
+		port.spawn_allocator.holds.clear()
+		blocker.collision_layer = CollisionRules.CARGO_VISUAL
+		await get_tree().physics_frame
+		verify(port.reserve_spawn(Vector3(13, 4, 64)).index == 1, "Physical cargo blocks spawn")
+		port.spawn_allocator.holds.clear()
+		blocker.free()
+		var shore_pose: Array[Transform3D] = [Transform3D(Basis.IDENTITY, Vector3(port.quay_side * 60, 1, 70))]
+		verify(not port.spawn_allocator.reserve(get_world_3d().direct_space_state, shore_pose, Vector3(13, 4, 64)).ok, "Quay rejects spawn")
+		verify(not port.reserve_spawn(Vector3(-1, 4, 64)).ok, "Invalid envelope fails closed")
+		var far_pose: Array[Transform3D] = [Transform3D(Basis(Vector3.UP, PI / 2), Vector3(500, 0, -500))]
+		verify(port.spawn_allocator.reserve(get_world_3d().direct_space_state, far_pose, Vector3(13, 4, 64)).ok, "Rotated hull accepted in open water without depth restrictions")
+		port.spawn_allocator.holds.clear()
+		port.position = Vector3(600, 0, 100)
+		port.rotation.y = PI / 2
+		var moved: Dictionary = port.reserve_spawn(Vector3(13, 4, 64))
+		verify(moved.ok and moved.transform.origin.is_equal_approx(port.spawn_anchor.global_position), "Port transforms propagate to spawn candidates")
 		port.queue_free()
 		await get_tree().process_frame
 	var preview: Node3D = Preview.instantiate()

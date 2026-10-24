@@ -1703,3 +1703,16 @@ shallows. Final art, world placement and public cargo integration remain later w
 Recovery tag: two-test-ports.
 Verified source backup: ../output/checkpoints/two-test-ports-2026-10-23.zip.
 The preexisting project.godot customization remains outside the Git checkpoint.
+
+## Step 44 — Spawn clearance and recovery anchors — October 23, 2026
+
+Two test ports now use padded hull clearance and ordered recovery anchors.
+Reservations, hulls, shore and cargo block unsafe locations; full occupancy
+returns a retry message. No shallow-water restrictions. See SPAWN_CLEARANCE.md
+for integration boundaries: the preview uses this now; public geographic port
+placement and saved-position recovery transactions remain later integration.
+113 script/startup, CatalogCheck, FlowCheck, Release export and 40 Release port
+checks pass (output/ports/dc18b974). Next: Step 45 berth eligibility.
+Recovery tag: spawn-clearance.
+Verified source backup: ../output/checkpoints/spawn-clearance-2026-10-23.zip.
+Preexisting project.godot changes remain outside this checkpoint.

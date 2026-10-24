@@ -159,3 +159,11 @@ become approved formulas just because they appear in the inventory.
 | D087 | Foundation gate and stable authority I/O lifetime | Accept Step 42 for bounded local development after combined two-player sailing/collision/save/restart, existing cargo/receipt checks and a one-minute eight-player workload. Keep authority HTTPRequest nodes under the stable scene-tree root so owner regrouping/departure cannot cancel awaited saves. Preserve truthful drain failure and explicit WAN/browser/soak limits. Proceed to two test ports; see PUBLIC_FOUNDATION.md. |
 
 | D088 | Two independent test ports | Author Brindle Quay and Slatewater Works as separate scenes/resources with distinct port/berth IDs, local spawn/approach anchors, envelopes and planned service/cargo capabilities. Keep static shore content separate from economy and compose a disposable Port Test from existing boat/water controls. Runtime clearance/recovery belongs to Step 44; no hidden shallow water. See TWO_TEST_PORTS.md. |
+
+## D089 — Port spawn allocation uses explicit safe anchors
+
+Step 44 uses a synchronous allocator with padded hull physics queries, explicit
+cargo envelopes and conservative reservation volumes. Primary then authored
+recovery order is deterministic; fully occupied ports refuse with retry feedback.
+No hidden shallows. Public saved-spawn relocation waits for geographic port/world
+integration, preserving canonical saves. See SPAWN_CLEARANCE.md.

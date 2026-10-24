@@ -4,6 +4,8 @@ extends Node3D
 @export var berth: BerthDefinition
 @export var quay_side: int = -1
 @export var quay_length_m: float = 140.0
+var spawn_allocator = preload("res://features/ports/spawn_clearance.gd").new()
+var recovery_anchors: Array[Marker3D] = []
 var spawn_anchor: Marker3D
 var approach_anchor: Marker3D
 var berth_anchor: Marker3D
@@ -42,6 +44,8 @@ func block(label: String, at: Vector3, size_: Vector3, color: Color, solid: bool
 func _ready() -> void:
 	assert(definition != null and berth != null and berth.port_id == definition.id)
 	spawn_anchor = marker("Spawn", definition.spawn_position_m, definition.spawn_heading_degrees)
+	for i: int in definition.recovery_positions_m.size():
+		recovery_anchors.append(marker("Recovery%d" % i, definition.recovery_positions_m[i], definition.spawn_heading_degrees))
 	approach_anchor = marker("Approach", definition.approach_position_m, definition.spawn_heading_degrees)
 	berth_anchor = marker("Berth", berth.position_m, berth.heading_degrees)
 	# The inner quay face is x=+/-20. The approach and berth centerline are x=0.
@@ -72,3 +76,8 @@ func service_view() -> Dictionary:
 	return {"id": definition.id, "name": definition.display_name,
 		"services": definition.service_ids.duplicate(), "berth_id": berth.id,
 		"cargo_types": berth.cargo_type_ids.duplicate(), "berth_services": berth.service_ids.duplicate()}
+
+func reserve_spawn(size: Vector3, cargo: Array[AABB] = []) -> Dictionary:
+	var candidates: Array[Transform3D] = [spawn_anchor.global_transform]
+	for anchor: Marker3D in recovery_anchors: candidates.append(anchor.global_transform)
+	return spawn_allocator.reserve(get_world_3d().direct_space_state, candidates, size, Vector3(0, 1, 0), cargo)

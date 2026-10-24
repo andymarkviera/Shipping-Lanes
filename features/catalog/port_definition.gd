@@ -7,3 +7,4 @@ extends ContentDefinition
 @export var spawn_position_m: Vector3 = Vector3.ZERO
 @export var approach_position_m: Vector3 = Vector3.ZERO
 @export var spawn_heading_degrees: float = 0.0
+@export var recovery_positions_m: Array[Vector3] = []
