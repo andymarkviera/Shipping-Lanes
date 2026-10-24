@@ -1779,3 +1779,18 @@ later docking UI preference: no water markings, grey Dock until eligible.
 Recovery tag: cargo-manifest.
 Verified source backup: ../output/checkpoints/cargo-manifest-2026-10-24.zip.
 Preexisting project.godot customization remains outside this checkpoint.
+
+## Step 48 — Reusable operation state machine — October 24, 2026
+
+Added authority-owned cargo operation records, ship reservations, start/progress/
+commit/cancel/interruption states and manifest load/unload adapters. Completion
+revalidates; repeated completion does not repeat cargo effects; release occurs once.
+Pending records reconstruct their progress and locks from data without animations.
+See CARGO_OPERATIONS.md for lifecycle, authority and persistence boundaries.
+No new loading UI or disk-save schema. Step 51 must persist effects and receipts
+atomically; network disconnect and docking/source rules are integration obligations.
+118 script/startup, 66 contracts, FlowCheck, export and 160 combined Release checks
+pass (output/ports/7717b220). Next: Step 49 container offers; pickup repair before 50.
+Recovery tag: cargo-operations.
+Verified source backup: ../output/checkpoints/cargo-operations-2026-10-24.zip.
+Preexisting project.godot customization remains outside the checkpoint.

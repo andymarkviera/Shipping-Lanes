@@ -350,3 +350,9 @@ must version/migrate persisted inventory into manifests without losing legacy ca
 Do not treat an empty new runtime manifest as an empty saved inventory. Heavy-loader
 pickup remains unresolved and required before Step 50. Dock water-guide removal is
 still deferred per user preference.
+
+October 24 operation follow-through: Step 48 runtime records/adapters and pending
+reconstruction pass (CARGO_OPERATIONS.md). Step 49/50 must bind trusted ownership,
+source stock, docking and disconnect hooks. Step 51 must persist operation receipts
+and manifest effects together; no crash-safe operation save is claimed by Step 48.
+Next: container offers, with heavy-loader pickup repair still due before Step 50.

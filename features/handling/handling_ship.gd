@@ -36,6 +36,8 @@ func _ready() -> void:
 	definition = definition.duplicate(true)
 	state = ShipState.new(str(get_instance_id()), definition.id, definition.fuel_capacity_liters)
 	state.manifest = preload("res://features/cargo/cargo_manifest.gd").new(definition, PrototypeCatalog.RECORDS)
+	state.operations = preload("res://features/cargo/cargo_operation.gd").new()
+	state.operations.register_rule("manifest", preload("res://features/cargo/manifest_operation_rule.gd").new(state.instance_id, state.manifest))
 	fuel = PropulsionFuel.new(state, definition)
 	if not definition.handling_error().is_empty():
 		push_error(definition.handling_error())
@@ -151,3 +153,8 @@ func turn_without_overlap(angle: float) -> void:
 			yaw_rate = 0.0
 			return
 	global_transform = candidate
+
+func interrupt_cargo_operation() -> void:
+	# Explicit disconnect/teardown hook; temporary physics-world reparenting is not a disconnect.
+	if state != null and state.operations != null:
+		state.operations.interrupt_ship(state.instance_id)

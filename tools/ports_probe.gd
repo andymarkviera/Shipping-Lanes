@@ -12,6 +12,7 @@ func verify(value: bool, description: String) -> void:
 
 func _ready() -> void:
 	check_manifest()
+	check_operations()
 	var registry: DefinitionRegistry = DefinitionRegistry.new()
 	verify(registry.load_definitions(PrototypeCatalog.RECORDS).is_empty(), "Both ports publish with valid cargo/berth references")
 	var ids: Array[String] = []
@@ -272,3 +273,59 @@ func check_manifest() -> void:
 	tank.batch_id = "tank_overflow"
 	tank.quantity = 1
 	verify(not mixed.add(tank).ok and mixed.usage().tank_ml == 5000, "Liquid overcapacity leaves container and liquid amounts unchanged")
+
+func check_operations() -> void:
+	var service_script = preload("res://features/cargo/cargo_operation.gd")
+	var manifest = preload("res://features/cargo/cargo_manifest.gd").new(preload("res://features/catalog/records/starter_ship.tres"), PrototypeCatalog.RECORDS)
+	var rule = preload("res://features/cargo/manifest_operation_rule.gd").new("ship_a", manifest)
+	var service = service_script.new()
+	service.register_rule("containers", rule)
+	var batch: Dictionary = {"batch_id": "op_batch", "cargo_id": "cargo_test_container", "quantity": 2, "unit": "count", "origin_port_id": "port_brindle_quay", "destination_port_id": "port_slatewater_works", "acquisition_id": "offer_1", "job_id": ""}
+	var payload: Dictionary = {"action": "load", "batch": batch}
+	verify(not service.start("missing") and not service.commit("missing").ok, "Missing operation cannot advance")
+	verify(service.reserve("load_1", "ship_a", "containers", payload, 2).ok, "Loading reserves ship operation")
+	verify(not service.reserve("load_2", "ship_a", "containers", payload, 2).ok, "Competing operation cannot reserve same ship")
+	verify(not service.progress("load_1", 1) and not service.commit("load_1").ok and manifest.lines().is_empty(), "No progress or commit before start")
+	verify(service.start("load_1") and not service.start("load_1"), "Start only once")
+	verify(not service.progress("load_1", NAN) and not service.progress("load_1", -1), "Invalid time rejected")
+	service.progress("load_1", .75)
+	verify(not service.commit("load_1").ok and manifest.lines().is_empty(), "Partial progress has no cargo effect")
+	var snapshot: Dictionary = bytes_to_var(var_to_bytes(service.snapshot()))
+	var recovered = service_script.new()
+	recovered.register_rule("containers", rule)
+	verify(recovered.restore(snapshot) and recovered.record("load_1").elapsed == .75, "Pending operation reconstructed from data")
+	snapshot.records.load_1.elapsed = 0
+	verify(recovered.record("load_1").elapsed == .75, "Recovered record isolated from caller mutation")
+	verify(not recovered.reserve("competitor", "ship_a", "containers", payload, 1).ok, "Restore reconstructs reservation")
+	recovered.progress("load_1", 1.25)
+	verify(recovered.record("load_1").state == "ready" and manifest.lines().is_empty(), "Progress reaches ready without animation or auto mutation")
+	verify(recovered.commit("load_1").ok and manifest.lines()[0].quantity == 2, "Commit applies validated cargo exactly once")
+	verify(recovered.commit("load_1").ok and recovered.releases == 1 and manifest.lines()[0].quantity == 2, "Commit retry returns receipt without duplicate effect/release")
+	verify(not recovered.cancel("load_1"), "Terminal operation cannot cancel")
+	var unload: Dictionary = {"action": "unload", "batch_id": "op_batch", "quantity": 1}
+	verify(recovered.reserve("unload_1", "ship_a", "containers", unload, 1).ok, "Released reservation permits unload")
+	recovered.start("unload_1")
+	verify(recovered.cancel("unload_1") and not recovered.cancel("unload_1") and recovered.releases == 2 and manifest.lines()[0].quantity == 2, "Cancellation releases once without cargo effect")
+	recovered.reserve("unload_2", "ship_a", "containers", unload, 1)
+	recovered.start("unload_2")
+	recovered.interrupt_ship("ship_a")
+	verify(recovered.record("unload_2").state == "interrupted" and recovered.releases == 3, "Disconnect interruption releases operation")
+	recovered.reserve("unload_3", "ship_a", "containers", unload, 1)
+	recovered.start("unload_3")
+	recovered.progress("unload_3", 1)
+	manifest.remove("op_batch", 2)
+	verify(not recovered.commit("unload_3").ok and recovered.record("unload_3").state == "failed" and recovered.releases == 4, "Completion revalidation rejects changed cargo and releases")
+	var corrupt: Dictionary = service.snapshot()
+	corrupt.records.load_1.elapsed = -1
+	var fresh = service_script.new()
+	fresh.register_rule("containers", rule)
+	verify(not fresh.restore(corrupt) and fresh.snapshot().records.is_empty(), "Malformed recovery fails atomically")
+	verify(not fresh.reserve("wrong", "ship_b", "containers", payload, 1).ok, "Manifest adapter rejects wrong ship")
+	verify(fresh.reserve("final_load", "ship_a", "containers", payload, 1).ok, "New operation after failures remains usable")
+	fresh.start("final_load")
+	fresh.progress("final_load", 1)
+	fresh.commit("final_load")
+	fresh.reserve("final_unload", "ship_a", "containers", unload, 1)
+	fresh.start("final_unload")
+	fresh.progress("final_unload", 1)
+	verify(fresh.commit("final_unload").ok and manifest.lines()[0].quantity == 1, "Successful unloading removes only requested quantity")

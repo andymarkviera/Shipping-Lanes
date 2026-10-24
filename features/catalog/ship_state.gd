@@ -4,6 +4,7 @@ extends RefCounted
 var instance_id: String
 var definition_id: String
 var fuel_liters: float
+var operations: RefCounted
 var manifest: RefCounted
 var cargo: Dictionary
 
