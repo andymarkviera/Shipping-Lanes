@@ -10,6 +10,12 @@ var wake: ShipWake
 var docking = preload("res://features/ports/docking_authority.gd").new()
 var dock_button: Button
 var cancel_button: Button
+var offers = preload("res://features/cargo/container_offers.gd").new()
+var offer_time: float = 0.0
+var offer_text: Label
+var accept_button: Button
+var selected_offer: String = ""
+var offer_notice: String = ""
 var readiness: Label
 var details: Label
 
@@ -73,6 +79,17 @@ func _ready() -> void:
 	back.text = "Main menu"
 	buttons.add_child(back)
 	back.pressed.connect(leave)
+	offer_text = Label.new()
+	stack.add_child(offer_text)
+	accept_button = Button.new()
+	accept_button.text = "Accept offer"
+	stack.add_child(accept_button)
+	accept_button.pressed.connect(func():
+		accept_button.release_focus()
+		if is_instance_valid(ship):
+			var result: Dictionary = offers.accept(selected_offer, "preview_captain", "preview_ship", port.definition.id, ship.state.manifest)
+			offer_notice = result.message
+		controls.wait_for_release = true)
 	select_port(0)
 
 func select_port(index: int) -> void:
@@ -112,6 +129,8 @@ func leave() -> void:
 	get_tree().change_scene_to_file("res://features/main/main.tscn")
 
 func _physics_process(_delta: float) -> void:
+	offer_time += _delta
+	offers.advance_to(int(offer_time * 1000))
 	if not is_instance_valid(ship) or not is_instance_valid(port):
 		if readiness != null: readiness.text = ""
 		return
@@ -122,3 +141,20 @@ func _physics_process(_delta: float) -> void:
 	cancel_button.visible = current in ["docking", "undocking"]
 	readiness.text = "Berth: " + (current.capitalize() if current in ["docking", "docked", "undocking"] else status.message)
 	readiness.modulate = Color("a9e8bc") if status.eligible else Color("f2d6a2")
+
+func _process(_delta: float) -> void:
+	if not is_instance_valid(port) or offer_text == null: return
+	selected_offer = ""
+	var accepted: int = 0
+	for offer: Dictionary in offers.list_at(port.definition.id):
+		if offer.state == "accepted": accepted += 1
+		if selected_offer.is_empty() and offer.state == "available": selected_offer = offer.id
+	accept_button.disabled = selected_offer.is_empty()
+	if selected_offer.is_empty():
+		offer_text.text = "Container offers: none available · %d accepted
+%s" % [accepted, offer_notice]
+	else:
+		var offer: Dictionary = offers.view(selected_offer)
+		var destination: String = "Slatewater Works" if offer.destination_port_id == "port_slatewater_works" else "Brindle Quay"
+		offer_text.text = "%d container(s) to %s · %.2f credits
+Expires in %ds · %d accepted · %s" % [offer.quantity, destination, offer.reward_minor / 100.0, maxi(0, int(ceil((offer.expires_ms - offer_time * 1000) / 1000))), accepted, offer_notice]

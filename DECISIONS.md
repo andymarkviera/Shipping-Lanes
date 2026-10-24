@@ -207,3 +207,11 @@ before synchronous atomic completion, retain terminal results and release once.
 Cargo adapters own family rules. Restore pending state into a fresh authority;
 crash-safe receipt/effect persistence remains Step 51. Explicit interruption hooks
 avoid treating physics-world reparenting as disconnect. See CARGO_OPERATIONS.md.
+
+## D095 — Exclusive offers freeze quoted terms at acceptance
+
+Designed container fixtures quote 250 credits per unit and expire if unaccepted
+after 600 active preview seconds. Accepted terms remain fixed and reserve ship
+capacity; retries cannot duplicate jobs or transfer them to another ship. Offers
+are session scoped; production IDs, saves and loading commitment conversion must
+be connected explicitly. No acceptance-time payment. See CONTAINER_OFFERS.md.
