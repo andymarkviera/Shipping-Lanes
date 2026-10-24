@@ -42,6 +42,7 @@ func load_definitions(records: Array[ContentDefinition]) -> PackedStringArray:
 				if berth is BerthDefinition and berth.port_id != record.id:
 					errors.append("Berth belongs to another port: " + berth_id)
 		elif record is BerthDefinition:
+			if not record.eligibility_error().is_empty(): errors.append(record.id + ": " + record.eligibility_error())
 			var port: ContentDefinition = candidate.get(record.port_id)
 			if not port is PortDefinition:
 				errors.append("Missing or wrong-type port: " + record.id)

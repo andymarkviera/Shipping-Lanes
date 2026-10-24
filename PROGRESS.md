@@ -1716,3 +1716,17 @@ checks pass (output/ports/dc18b974). Next: Step 45 berth eligibility.
 Recovery tag: spawn-clearance.
 Verified source backup: ../output/checkpoints/spawn-clearance-2026-10-23.zip.
 Preexisting project.godot changes remain outside this checkpoint.
+
+## Step 45 complete — Berth eligibility — October 24, 2026
+
+Port Test shows live readiness based on ship position, total speed, heading,
+service/cargo compatibility, hull fit and physical clearance. Thresholds are berth
+data, validated before catalog publication. This step reports readiness; docking
+controls and authority-owned state transitions are Step 46. See BERTH_ELIGIBILITY.md.
+114-script/startup, CatalogCheck, FlowCheck, Release export and 105 rendered Release
+port checks passed (output/ports/97a7b200). Opaque readiness panel visually inspected.
+Next: stop/neutral usability review before Step 46 docking. Heavy pickup repair
+remains before Step 50; no hidden shallows or peer transfers.
+Recovery tag: berth-eligibility.
+Verified source backup: ../output/checkpoints/berth-eligibility-2026-10-24.zip.
+Preexisting project.godot customization remains outside this checkpoint.
