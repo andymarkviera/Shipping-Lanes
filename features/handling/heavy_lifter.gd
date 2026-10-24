@@ -13,6 +13,7 @@ var payload_body: StaticBody3D
 var payload_visual: Node3D
 var payload_shape: CollisionShape3D
 var attached: bool = false
+var release_guard: Callable
 var assembly: ShipAssembly
 var notice: String = "Lower the deck, reverse under the floating load, stop and secure."
 
@@ -44,6 +45,7 @@ func _ready() -> void:
 	payload_body.transform = transform * Transform3D(Basis.IDENTITY, Vector3(35, LOWERED, -8))
 	payload_body.collision_layer = CollisionRules.HULL
 	payload_body.collision_mask = 0
+	assembly.focus.associated_bodies.append(payload_body)
 	payload_visual = PAYLOAD.instantiate()
 	payload_body.add_child(payload_visual)
 	var collider: CollisionShape3D = CollisionShape3D.new()
@@ -114,6 +116,9 @@ func attach_payload() -> bool:
 	return true
 
 func detach_payload() -> bool:
+	if release_guard.is_valid() and not release_guard.call():
+		notice = "Take this job cargo to its ocean drop-off before releasing it."
+		return false
 	if not attached or operating() or not stopped() or absf(deck_height - LOWERED) > 0.001:
 		notice = "Lower the deck and stop before releasing cargo."
 		return false

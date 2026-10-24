@@ -1,3 +1,5 @@
+> Updated October 24: DOCK_SERVICES_REDESIGN.md supersedes the timed-offer, water-guide and test-service assumptions below. This file retains earlier checkpoint history.
+
 # Step 49 — Seeded container offers
 
 Port Test has a session-owned source with three offers in each direction between

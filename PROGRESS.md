@@ -1824,3 +1824,20 @@ persistent save or public-world loading integration yet. See PORT_LOADING.md.
 Recovery tag: port-loading.
 Verified source backup: ../output/checkpoints/port-loading-2026-10-24.zip.
 Preexisting project.godot customization remains outside the checkpoint.
+
+## User-directed dock services redesign and heavy camera fix — October 24, 2026
+
+Replaced expiring offers with docked CARGO / REFUEL / REPAIR and multiple
+ship-specific non-expiring jobs. Container jobs sail between two coexisting test
+ports and deliver once; heavy jobs spawn nearby cargo for physical pickup and a
+random open-ocean drop-off. Added free prototype refuel/repair and temporary test
+earnings. Removed water docking guides; nearby Dock uses disabled/colored feedback.
+Fixed own floating cargo blocking the heavy camera, with reproduction/regression.
+See DOCK_SERVICES_REDESIGN.md for scope and changed roadmap requirements.
+122 scripts/startup, catalog, FlowCheck, 20 camera, 39 heavy and 205 final rendered
+Release combined checks pass (output/ports/2aaae26f). Both menus inspected.
+This supersedes the timed-offer/port-only-heavy-delivery assumptions in earlier notes.
+Step 51 remains next: persist the redesigned job types and dock service state safely.
+Recovery tag: dock-services-redesign.
+Verified source backup: ../output/checkpoints/dock-services-redesign-2026-10-24.zip.
+Preexisting project.godot customization remains outside this checkpoint.
