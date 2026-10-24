@@ -362,3 +362,9 @@ Before Step 50 repair heavy-loader pickup. Loading must atomically convert accep
 capacity commitments into manifest batches without double-counting, validate docked
 origin and bind trusted identity. Step 51 persists offers/jobs with world-scoped IDs;
 Step 53 settles quoted rewards. Public offer networking remains integration work.
+
+October 24 loading follow-through: Step 50 local authority/preview passes
+(PORT_LOADING.md). Heavy pickup prerequisite now has a reproduced collision fix and
+37 passing checks, including manual approach/exit. Public network disconnect binding,
+port placement and loading RPCs remain integration work. Step 51 must persist manifest,
+loaded offer and operation receipt together and recover pending reservations safely.

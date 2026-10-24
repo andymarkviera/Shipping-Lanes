@@ -27,6 +27,32 @@ func run() -> void:
 	for tick: int in range(240): ship.advance_deck(1.0 / 60.0)
 	check(is_equal_approx(ship.deck_height, Heavy.LOWERED), "Deck reaches exact lower stop")
 	check(not ship.attach_payload(), "Off-center load rejected")
+	# Reproduce the player's stern-first approach without the staging shortcut.
+	ship.payload_body.global_transform = Transform3D(Basis.IDENTITY, Vector3(0, Heavy.LOWERED, -80))
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	ship.deck_shape.position.y += .15
+	check(ship.test_move(ship.global_transform, Vector3(0, 0, -72)), "Original flush deck collision reproduces blocked stern approach")
+	ship.deck_shape.position.y -= .15
+	var clear_approach: bool = true
+	for step: int in 72:
+		if ship.move_and_collide(Vector3(0, 0, -1)) != null:
+			clear_approach = false
+			break
+	check(clear_approach and absf(ship.position.z + 72) < .01, "Lowered deck reverses underneath floating cargo without sticking")
+	check(ship.attach_payload(), "Manually approached load can be secured without Align shortcut")
+	check(ship.detach_payload(), "Manual pickup can be released again")
+	await get_tree().physics_frame
+	var clear_exit: bool = true
+	for step: int in 72:
+		if ship.move_and_collide(Vector3(0, 0, 1)) != null:
+			clear_exit = false
+			break
+	check(clear_exit and absf(ship.position.z) < .01, "Lowered empty carrier exits forward without sticking")
+	ship.position = Vector3.ZERO
+	ship.payload_body.position = Vector3(35, Heavy.LOWERED, -8)
+	await get_tree().physics_frame
+
 	check(ship.align_test_payload(), "Fixture stages load in clear loading space")
 	await get_tree().physics_frame
 	ship.payload_body.rotation.y = 0.2

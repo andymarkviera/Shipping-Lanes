@@ -1808,3 +1808,19 @@ Next: deferred heavy-loader pickup repair before Step 50 loading operations.
 Recovery tag: container-offers.
 Verified source backup: ../output/checkpoints/container-offers-2026-10-24.zip.
 Preexisting project.godot customization remains outside the checkpoint.
+
+## Step 50 — Loading operation and heavy pickup repair — October 24, 2026
+
+Reproduced and fixed lowered heavy-deck/cargo collision contact. Manual stern-first
+pickup, release and forward exit now pass without using the staging shortcut; added
+alignment guidance. 37 editor/Release heavy checks pass. This addresses a reproduced
+path, with further playtesting still useful for other collision cases.
+Port Test loads accepted jobs only while docked at their origin, with authority-owned
+progress, exact-once runtime completion, capacity conversion and cancellation/
+interruption cleanup. Completed cargo follows preview port switching. No payment,
+persistent save or public-world loading integration yet. See PORT_LOADING.md.
+121-script/startup, FlowCheck, export and 187 rendered Release port/cargo checks pass
+(output/ports/955e8c81). Next: Step 51 in-flight operation persistence.
+Recovery tag: port-loading.
+Verified source backup: ../output/checkpoints/port-loading-2026-10-24.zip.
+Preexisting project.godot customization remains outside the checkpoint.

@@ -33,7 +33,7 @@ func batch(offer: Dictionary) -> Dictionary:
 func accept(id: String, owner: String, ship_id: String, port_id: String, manifest: RefCounted) -> Dictionary:
 	if owner.strip_edges().is_empty() or ship_id.strip_edges().is_empty() or manifest == null or not _offers.has(id): return {"ok": false, "message": "Invalid offer or ship."}
 	var offer: Dictionary = _offers[id]
-	if offer.state == "accepted":
+	if offer.state in ["accepted", "loaded"]:
 		if offer.owner_id == owner and offer.ship_id == ship_id: return {"ok": true, "message": "Already accepted.", "offer": view(id)}
 		return {"ok": false, "message": "Another captain accepted this offer."}
 	if offer.state != "available" or _now_ms >= offer.expires_ms: return {"ok": false, "message": "Offer expired."}
@@ -51,4 +51,32 @@ func accept(id: String, owner: String, ship_id: String, port_id: String, manifes
 	offer.owner_id = owner
 	offer.ship_id = ship_id
 	offer.accepted_ms = _now_ms
-	return {"ok": true, "message": "Accepted — loading comes next.", "offer": view(id)}
+	return {"ok": true, "message": "Accepted — dock at the origin to load.", "offer": view(id)}
+
+func loading_error(id: String, owner: String, ship_id: String, port_id: String, manifest: RefCounted) -> String:
+	var offer: Dictionary = view(id)
+	if offer.is_empty() or offer.state != "accepted" or offer.owner_id != owner or offer.ship_id != ship_id or offer.origin_port_id != port_id: return "No matching accepted job at this port."
+	var candidate: Array[Dictionary] = manifest.lines()
+	for pending: Dictionary in _offers.values():
+		if pending.state == "accepted" and pending.ship_id == ship_id: candidate.append(batch(pending))
+	return manifest.validate(candidate)
+
+func complete_loading(id: String, owner: String, ship_id: String, port_id: String, manifest: RefCounted) -> Dictionary:
+	var error: String = loading_error(id, owner, ship_id, port_id, manifest)
+	if not error.is_empty(): return {"ok": false, "message": error}
+	var result: Dictionary = manifest.add(batch(_offers[id]))
+	if result.ok: _offers[id].state = "loaded"
+	return result
+
+func release_job(id: String, owner: String, ship_id: String) -> bool:
+	if not _offers.has(id): return false
+	var offer: Dictionary = _offers[id]
+	if offer.state != "accepted" or offer.owner_id != owner or offer.ship_id != ship_id: return false
+	offer.state = "available" if _now_ms < offer.expires_ms else "expired"
+	offer.owner_id = ""
+	offer.ship_id = ""
+	offer.accepted_ms = -1
+	return true
+
+func release_pending(owner: String, ship_id: String) -> void:
+	for id: String in _offers: release_job(id, owner, ship_id)

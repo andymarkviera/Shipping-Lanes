@@ -102,6 +102,7 @@ func _ready() -> void:
 	verify(preview.port.berth_readiness(preview.ship, "container_transfer", "cargo_test_container").eligible, "Actual preview ship is eligible without self-blocking")
 	verify(preview.readiness.text.begins_with("Berth: Ready to dock"), "Live readiness feedback reaches ready state")
 	await check_docking(preview)
+	check_loading(preview)
 	var capture: String = ""
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--port-capture="): capture = arg.trim_prefix("--port-capture=")
@@ -358,3 +359,43 @@ func check_offers() -> void:
 	verify(source.view(id) == accepted.offer and source.accept(id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok, "Accepted quote does not expire or change after deadline")
 	verify(not source.advance_to(1), "Authority clock cannot rewind expiry")
 	verify(not source.accept(return_offer, "captain_b", "ship_b", "port_slatewater_works", manifest).ok, "Expired offers cannot be accepted")
+
+func check_loading(preview: Node3D) -> void:
+	var loading = preview.loading
+	var dock = preview.docking
+	var body: HandlingShip = preview.ship
+	var source = preview.offers
+	var port_id: String = preview.port.definition.id
+	var id: String = source.list_at(port_id)[0].id
+	loading.set_physics_process(false)
+	dock.set_physics_process(false)
+	verify(source.accept(id, "preview_captain", "preview_ship", port_id, body.state.manifest).ok, "Loading fixture accepts source offer")
+	verify(not loading.start(id) and body.state.manifest.lines().is_empty(), "Undocked loading is rejected without cargo")
+	dock.request_dock(1, "container_transfer", "cargo_test_container")
+	dock.advance(1.1)
+	verify(loading.start(id) and not loading.start(id), "Docked start reserves once despite double click")
+	loading.advance(2)
+	verify(loading.busy() and loading.progress_percent() == 40 and body.state.manifest.lines().is_empty(), "Partial progress produces no free cargo")
+	loading.cancel()
+	verify(not loading.busy() and source.view(id).state == "available" and body.state.manifest.lines().is_empty(), "Cancel releases job and capacity with no partial load")
+	source.accept(id, "preview_captain", "preview_ship", port_id, body.state.manifest)
+	loading.start(id)
+	preview.loading_text.hide()
+	loading.advance(5)
+	verify(not loading.busy() and source.view(id).state == "loaded" and body.state.manifest.lines()[0].quantity == 1, "Authority completes with presentation hidden")
+	preview.loading_text.show()
+	verify(not loading.start(id) and body.state.manifest.lines().size() == 1, "Loaded offer cannot create duplicate cargo")
+	var second: String = source.list_at(port_id)[1].id
+	verify(source.accept(second, "preview_captain", "preview_ship", port_id, body.state.manifest).ok, "Loaded commitment converted to actual cargo without double counting")
+	loading.start(second)
+	loading.advance(1)
+	loading.disconnect_ship()
+	verify(not loading.busy() and source.view(second).state == "available" and body.state.manifest.lines().size() == 1, "Disconnect releases pending job without touching completed cargo")
+	source.accept(second, "preview_captain", "preview_ship", port_id, body.state.manifest)
+	loading.start(second)
+	dock.request_undock(1)
+	loading.advance(.1)
+	verify(not loading.busy() and source.view(second).state == "available", "Loss of docked authority interrupts loading")
+	dock.cancel(1)
+	loading.set_physics_process(true)
+	dock.set_physics_process(true)

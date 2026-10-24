@@ -10,6 +10,10 @@ var wake: ShipWake
 var docking = preload("res://features/ports/docking_authority.gd").new()
 var dock_button: Button
 var cancel_button: Button
+var loading = preload("res://features/cargo/port_loading.gd").new()
+var load_button: Button
+var cancel_load_button: Button
+var loading_text: Label
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var offer_time: float = 0.0
 var offer_text: Label
@@ -21,6 +25,7 @@ var details: Label
 
 func _ready() -> void:
 	add_child(docking)
+	add_child(loading)
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.set_ship_context(true)
@@ -90,9 +95,28 @@ func _ready() -> void:
 			var result: Dictionary = offers.accept(selected_offer, "preview_captain", "preview_ship", port.definition.id, ship.state.manifest)
 			offer_notice = result.message
 		controls.wait_for_release = true)
+	loading_text = Label.new()
+	stack.add_child(loading_text)
+	load_button = Button.new()
+	load_button.text = "Load accepted cargo"
+	stack.add_child(load_button)
+	load_button.pressed.connect(func():
+		load_button.release_focus()
+		for offer: Dictionary in offers.list_at(port.definition.id):
+			if offer.state == "accepted" and offer.owner_id == "preview_captain":
+				loading.start(offer.id)
+				break
+		controls.wait_for_release = true)
+	cancel_load_button = Button.new()
+	cancel_load_button.text = "Cancel loading (releases job)"
+	stack.add_child(cancel_load_button)
+	cancel_load_button.pressed.connect(func(): cancel_load_button.release_focus(); loading.cancel(); controls.wait_for_release = true)
 	select_port(0)
 
 func select_port(index: int) -> void:
+	var carried: Array[Dictionary] = []
+	if is_instance_valid(ship): carried = ship.state.manifest.lines()
+	loading.disconnect_ship()
 	docking.disconnect_owner(1)
 	if helm != null: remove_child(helm); helm.queue_free()
 	if wake != null: remove_child(wake); wake.queue_free()
@@ -112,6 +136,8 @@ func select_port(index: int) -> void:
 	ship.transform = allocation.transform
 	add_child(ship)
 	docking.register(1, ship, port)
+	ship.state.manifest.replace(carried)
+	loading.bind(ship, port, docking, offers, 1, "preview_captain", "preview_ship")
 	# Keep this preview hold until its port is freed; no same-frame spawn race.
 	helm = ShipHelm.new()
 	add_child(helm)
@@ -122,9 +148,10 @@ func select_port(index: int) -> void:
 	controls.wait_for_release = true
 	var services: PackedStringArray = []
 	for service: String in port.definition.service_ids: services.append(service.replace("_", " ").capitalize())
-	details.text = "%s — PORT TEST\nPlanned services: %s\nNo loading or saving · RMB orbit · Wheel zoom · Esc menu" % [port.definition.display_name, ", ".join(services)]
+	details.text = "%s — PORT TEST\nPlanned services: %s\nTemporary session · RMB orbit · Wheel zoom · Esc menu" % [port.definition.display_name, ", ".join(services)]
 
 func leave() -> void:
+	loading.disconnect_ship()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().change_scene_to_file("res://features/main/main.tscn")
 
@@ -138,18 +165,22 @@ func _physics_process(_delta: float) -> void:
 	var current: String = docking.state(1)
 	dock_button.text = "Undock" if current == "docked" else "Dock"
 	dock_button.disabled = not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
+	if loading.busy(): dock_button.disabled = true
 	cancel_button.visible = current in ["docking", "undocking"]
 	readiness.text = "Berth: " + (current.capitalize() if current in ["docking", "docked", "undocking"] else status.message)
 	readiness.modulate = Color("a9e8bc") if status.eligible else Color("f2d6a2")
 
 func _process(_delta: float) -> void:
-	if not is_instance_valid(port) or offer_text == null: return
+	if not is_instance_valid(port) or not is_instance_valid(ship) or offer_text == null: return
 	selected_offer = ""
 	var accepted: int = 0
 	for offer: Dictionary in offers.list_at(port.definition.id):
 		if offer.state == "accepted": accepted += 1
 		if selected_offer.is_empty() and offer.state == "available": selected_offer = offer.id
 	accept_button.disabled = selected_offer.is_empty()
+	load_button.disabled = loading.busy() or docking.state(1) != "docked" or accepted == 0
+	cancel_load_button.visible = loading.busy()
+	loading_text.text = ("Loading: %.0f%%" % loading.progress_percent() if loading.busy() else loading.notice) + " · Cargo batches: %d" % ship.state.manifest.lines().size()
 	if selected_offer.is_empty():
 		offer_text.text = "Container offers: none available · %d accepted
 %s" % [accepted, offer_notice]

@@ -215,3 +215,12 @@ after 600 active preview seconds. Accepted terms remain fixed and reserve ship
 capacity; retries cannot duplicate jobs or transfer them to another ship. Offers
 are session scoped; production IDs, saves and loading commitment conversion must
 be connected explicitly. No acceptance-time payment. See CONTAINER_OFFERS.md.
+
+## D096 — Manual heavy pickup clearance and atomic local port loading
+
+Inset the deck collision surface 0.15 m to avoid flush contact with the floating
+payload during stern-first pickup; retain solid payload/hull collision and add a
+regression reproducing the original blockage. Loading uses authority-owned progress
+and commits manifest plus offer status synchronously. Cancellation creates no partial
+cargo and releases the job. Completed preview cargo survives port switching; crash
+persistence and public network wiring remain explicit follow-ups. See PORT_LOADING.md.
