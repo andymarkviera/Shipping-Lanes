@@ -199,3 +199,11 @@ capacity pools. Validate complete candidate manifests before publishing; no part
 mutations on failure. Keep separate batch IDs for separate jobs. Existing saved
 inventory is unchanged until a versioned persistence adapter; job reference ownership
 belongs to future operation authority. See CARGO_MANIFEST.md.
+
+## D094 — Cargo operations separate progress from authoritative effects
+
+Reserve per ship, advance explicitly without animation callbacks, validate again
+before synchronous atomic completion, retain terminal results and release once.
+Cargo adapters own family rules. Restore pending state into a fresh authority;
+crash-safe receipt/effect persistence remains Step 51. Explicit interruption hooks
+avoid treating physics-world reparenting as disconnect. See CARGO_OPERATIONS.md.
