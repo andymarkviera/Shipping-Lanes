@@ -98,6 +98,7 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	verify(preview.port.berth_readiness(preview.ship, "container_transfer", "cargo_test_container").eligible, "Actual preview ship is eligible without self-blocking")
 	verify(preview.readiness.text.begins_with("Berth: Ready to dock"), "Live readiness feedback reaches ready state")
+	await check_docking(preview)
 	var capture: String = ""
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--port-capture="): capture = arg.trim_prefix("--port-capture=")
@@ -164,3 +165,55 @@ func check_berth(port: Node3D) -> void:
 	await get_tree().physics_frame
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "BLOCKED", "Cargo obstruction prevents docking")
 	body.free()
+
+func check_docking(preview: Node3D) -> void:
+	var authority = preview.docking
+	authority.set_physics_process(false)
+	var body: HandlingShip = preview.ship
+	var position_before: Vector3 = body.global_position
+	body.velocity = Vector3(0, 0, 1)
+	verify(not authority.request_dock(1, "container_transfer", "cargo_test_container").ok and authority.reservations.is_empty(), "Fast approach does not reserve berth")
+	body.velocity = Vector3.ZERO
+	authority.advance(.01)
+	verify(authority.state(1) == "approaching", "Near berth transitions to approaching")
+	verify(authority.request_dock(1, "container_transfer", "cargo_test_container").ok, "Valid request reserves berth")
+	verify(authority.state(1) == "docking" and body.docked, "Docking disables helm immediately")
+	var other: HandlingShip = HandlingShip.new()
+	other.position = Vector3(600, 0, 0)
+	add_child(other)
+	authority.register(2, other, preview.port)
+	verify(not authority.request_dock(2, "container_transfer", "cargo_test_container").ok and authority.reservations.size() == 1, "Competing owner cannot acquire single-capacity berth")
+	verify(not authority.request_dock(1, "container_transfer", "cargo_test_container").ok, "Repeated request cannot duplicate reservation")
+	authority.advance(1.1)
+	verify(authority.state(1) == "docked", "Securing completes to docked")
+	body.command_throttle(1)
+	body.maneuver(1, 1)
+	body.velocity = Vector3(0, 0, 1)
+	body.advance_motion(.1)
+	verify(body.velocity == Vector3.ZERO and body.actual_throttle == 0, "Docked hull rejects propulsion and residual motion")
+	verify(authority.request_undock(1) and authority.state(1) == "undocking", "Undocking starts while reservation is retained")
+	verify(authority.cancel(1) and authority.state(1) == "docked" and authority.reservations.size() == 1, "Cancel undocking keeps berth safely held")
+	authority.request_undock(1)
+	authority.advance(.6)
+	verify(authority.state(1) == "underway" and not body.docked and authority.reservations.is_empty() and body.global_position == position_before, "Undocking releases berth without teleporting hull")
+	authority.request_dock(1, "container_transfer", "cargo_test_container")
+	verify(authority.cancel(1) and not body.docked and authority.reservations.is_empty(), "Cancelled docking releases reservation and helm")
+	authority.request_dock(1, "container_transfer", "cargo_test_container")
+	var obstacle: StaticBody3D = StaticBody3D.new()
+	obstacle.collision_layer = CollisionRules.SHORE
+	obstacle.transform = body.global_transform
+	CollisionRules.add_box_hull(obstacle)
+	add_child(obstacle)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	authority.advance(.1)
+	verify(authority.state(1) == "underway" and authority.reservations.is_empty() and not body.docked, "New obstruction cancels docking and releases reservation")
+	obstacle.free()
+	await get_tree().physics_frame
+	authority.request_dock(1, "container_transfer", "cargo_test_container")
+	authority.disconnect_owner(1)
+	verify(authority.reservations.is_empty() and not body.docked and not authority.members.has(1), "Disconnect releases held berth and ship")
+	authority.disconnect_owner(2)
+	other.free()
+	authority.register(1, body, preview.port)
+	authority.set_physics_process(true)

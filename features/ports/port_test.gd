@@ -7,10 +7,14 @@ var helm: ShipHelm
 var camera: OrbitCameraRig
 var ocean: OceanPresentation
 var wake: ShipWake
+var docking = preload("res://features/ports/docking_authority.gd").new()
+var dock_button: Button
+var cancel_button: Button
 var readiness: Label
 var details: Label
 
 func _ready() -> void:
+	add_child(docking)
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.set_ship_context(true)
@@ -48,6 +52,18 @@ func _ready() -> void:
 	stack.add_child(readiness)
 	var buttons: HBoxContainer = HBoxContainer.new()
 	stack.add_child(buttons)
+	dock_button = Button.new()
+	dock_button.text = "Dock"
+	buttons.add_child(dock_button)
+	dock_button.pressed.connect(func():
+		dock_button.release_focus()
+		if docking.state(1) == "docked": docking.request_undock(1)
+		else: docking.request_dock(1, "container_transfer", "cargo_test_container")
+		controls.wait_for_release = true)
+	cancel_button = Button.new()
+	cancel_button.text = "Cancel"
+	buttons.add_child(cancel_button)
+	cancel_button.pressed.connect(func(): cancel_button.release_focus(); docking.cancel(1); controls.wait_for_release = true)
 	for i: int in 2:
 		var button: Button = Button.new()
 		button.text = "Brindle Quay" if i == 0 else "Slatewater Works"
@@ -60,6 +76,7 @@ func _ready() -> void:
 	select_port(0)
 
 func select_port(index: int) -> void:
+	docking.disconnect_owner(1)
 	if helm != null: remove_child(helm); helm.queue_free()
 	if wake != null: remove_child(wake); wake.queue_free()
 	if ship != null: remove_child(ship); ship.queue_free()
@@ -77,6 +94,7 @@ func select_port(index: int) -> void:
 		return
 	ship.transform = allocation.transform
 	add_child(ship)
+	docking.register(1, ship, port)
 	# Keep this preview hold until its port is freed; no same-frame spawn race.
 	helm = ShipHelm.new()
 	add_child(helm)
@@ -98,5 +116,9 @@ func _physics_process(_delta: float) -> void:
 		if readiness != null: readiness.text = ""
 		return
 	var status: Dictionary = port.berth_readiness(ship, "container_transfer", "cargo_test_container")
-	readiness.text = "Berth: " + status.message
+	var current: String = docking.state(1)
+	dock_button.text = "Undock" if current == "docked" else "Dock"
+	dock_button.disabled = not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
+	cancel_button.visible = current in ["docking", "undocking"]
+	readiness.text = "Berth: " + (current.capitalize() if current in ["docking", "docked", "undocking"] else status.message)
 	readiness.modulate = Color("a9e8bc") if status.eligible else Color("f2d6a2")
