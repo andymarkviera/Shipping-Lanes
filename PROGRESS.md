@@ -1901,3 +1901,17 @@ Next: Step 54 voyage lifecycle reconciliation. Temporary minimap remains Step 56
 Recovery tag: delivery-payout; verified source backup:
 ../output/checkpoints/delivery-payout-2026-10-25.zip.
 Preexisting project.godot customization remains outside this checkpoint.
+
+## Play-test fix — Sailing save freeze — October 25, 2026
+
+Andy confirmed cargo loaded, but repeatedly hit the save-error pause while sailing.
+Reproduced on a copy of the actual save at 600 steering ticks: rotation accumulated
+scale drift rejected by rigid-pose validation. Normalizing each proposed yaw fixes
+the source without weakening save checks or modifying the user's save.
+130 scripts/startup, 134 handling and 39 heavy checks pass. Loaded sailing, reopening
+and continued opposite steering pass 330 checkpoints for copied and fresh voyages
+in Release. Existing voyage/crash recovery checks pass. See SAILING_SAVE_FIX.md.
+Cargo-loading animation recorded for later presentation polish. Step 54 remains next.
+Partial play-test feedback received; confirmation of the fix remains pending.
+Recovery tag: sailing-save-fix; verified source backup:
+../output/checkpoints/sailing-save-fix-2026-10-25.zip.
