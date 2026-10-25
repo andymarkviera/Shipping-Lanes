@@ -96,6 +96,7 @@ func _ready() -> void:
 	verify(preview.port.definition.id == ids[1] and preview.ship.commanded_throttle == 0, "Switching ports resets only disposable test boat")
 	verify(preview.ship.global_position.distance_to(preview.port.spawn_anchor.global_position) < .1, "Preview starts at data-defined anchor")
 	check_restart(preview)
+	check_container_visuals(preview)
 	preview.ship.global_transform = preview.port.berth_anchor.global_transform
 	preview.ship.velocity = Vector3.ZERO
 	await get_tree().physics_frame
@@ -135,6 +136,7 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		verify(get_viewport().get_texture().get_image().save_png(capture + "-heavy-services.png") == OK, "Heavy service menu captured")
+		await capture_containers(preview, capture)
 		preview.queue_free()
 		await get_tree().process_frame
 		var layer: CanvasLayer = CanvasLayer.new()
@@ -526,3 +528,58 @@ func check_restart(preview: Node3D) -> void:
 	body.zero_throttle()
 	body.actual_throttle = 0
 	body.velocity = Vector3.ZERO
+
+func visual_batch(quantity: int) -> Dictionary:
+	return {"batch_id": "visual_fixture", "cargo_id": "cargo_test_container", "quantity": quantity, "unit": "count", "origin_port_id": "port_brindle_quay", "destination_port_id": "port_slatewater_works", "acquisition_id": "fixture", "job_id": ""}
+
+func check_container_visuals(preview: Node3D) -> void:
+	var body: HandlingShip = preview.ship
+	var display: Node3D = body.assembly.container_visuals
+	verify(display.shown_count == 0, "Empty manifest displays an empty deck")
+	verify(body.state.manifest.add(visual_batch(3)).ok and display.shown_count == 3, "Partial manifest immediately displays three containers")
+	var bad: Array[Dictionary] = [visual_batch(7)]
+	verify(not body.state.manifest.replace(bad).ok and display.shown_count == 3, "Rejected capacity mutation cannot change visuals")
+	var full: Array[Dictionary] = [visual_batch(6)]
+	body.state.manifest.replace(full)
+	verify(display.shown_count == 6 and display.instances.multimesh.instance_count == 6, "Full capacity uses a bounded pool of six instances")
+	verify(display.find_children("*", "CollisionObject3D", true, false).is_empty() and display.find_children("*", "CollisionShape3D", true, false).is_empty(), "Containers add no individual physics bodies or shapes")
+	verify(display.get_parent() == body.assembly.visual, "Container visuals follow the same bobbing/roll root as the hull")
+	var empty: Array[Dictionary] = []
+	var transforms: Array[Transform3D] = []
+	for i: int in 6: transforms.append(display.instances.multimesh.get_instance_transform(i))
+	body.state.manifest.replace(full)
+	verify(display.shown_count == 6 and display.get_child_count() == 1, "Repeated identical state cannot create duplicate visual nodes")
+	var other: HandlingShip = preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
+	other.position = Vector3(3000, 0, 0)
+	add_child(other)
+	verify(other.assembly.container_visuals.shown_count == 0 and display.shown_count == 6, "Two ships have independent cargo visibility")
+	other.queue_free()
+	body.state.manifest.remove("visual_fixture", 4)
+	verify(display.shown_count == 2, "Partial removal immediately updates visible count")
+	body.state.manifest.replace(empty)
+	verify(display.shown_count == 0, "Emptying manifest removes all container visuals")
+	body.state.manifest.replace(full)
+	var rebuilt: bool = true
+	for i: int in 6:
+		if display.instances.multimesh.get_instance_transform(i) != transforms[i]: rebuilt = false
+	verify(rebuilt, "Reloading same manifest retains deterministic slot transforms")
+	body.state.manifest.replace(empty)
+
+func capture_containers(preview: Node3D, capture: String) -> void:
+	preview.heavy_mode = false
+	preview.select_port(0)
+	preview.ship.set_physics_process(false)
+	preview.ship.global_transform = preview.port.berth_anchor.global_transform
+	preview.set_physics_process(false)
+	for child: Node in preview.get_children():
+		if child is CanvasLayer: child.hide()
+	preview.helm.throttle_display.hide()
+	preview.camera.camera.global_position = preview.ship.global_position + Vector3(46, 36, 66)
+	preview.camera.camera.look_at(preview.ship.global_position + Vector3(0, 2, 0))
+	for count: int in [0, 3, 6]:
+		var lines: Array[Dictionary] = []
+		if count > 0: lines.append(visual_batch(count))
+		preview.ship.state.manifest.replace(lines)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		verify(get_viewport().get_texture().get_image().save_png(capture + "-containers-" + str(count) + ".png") == OK, "Container load captured: " + str(count))

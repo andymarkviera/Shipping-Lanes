@@ -1871,3 +1871,18 @@ Next: Step 52 container visuals; temporary minimap remains recorded for Step 56.
 Recovery tag: in-flight-voyages; verified source backup:
 ../output/checkpoints/in-flight-voyages-2026-10-24.zip.
 Preexisting project.godot customization remains outside this checkpoint.
+
+## Step 52 — Container visuals — October 24, 2026
+
+User has not yet play-tested Step 51; its status remains automated verification only.
+Starter cargo now appears as temporary colored, ribbed containers derived from the
+manifest. Six authored deck slots, one bounded MultiMesh, no individual physics or
+saved visual objects. Loading completion, delivery and restore update visibility.
+Heavy industrial payload remains separate. See CONTAINER_VISUALS.md.
+128 scripts/startup, catalog, 234 rendered Release port/cargo checks and 44 voyage
+suite checks plus separate-process crash/restart/delivery tests pass. Empty/partial/
+full views inspected (output/ports/9ed2a9a7; output/voyage/c147974b).
+Next: Step 53 delivery/payout; temporary minimap remains Step 56.
+Recovery tag: container-visuals; verified source backup:
+../output/checkpoints/container-visuals-2026-10-24.zip.
+Preexisting project.godot customization remains outside this checkpoint.

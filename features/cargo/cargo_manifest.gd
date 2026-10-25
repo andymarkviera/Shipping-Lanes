@@ -1,5 +1,7 @@
 extends RefCounted
 ## Authority-owned per-ship batches. No money, transfer, loading or save side effects.
+signal changed
+
 const LIMIT: int = 1000000000
 const FIELDS: Array[String] = ["batch_id", "cargo_id", "quantity", "unit", "origin_port_id", "destination_port_id", "acquisition_id", "job_id"]
 var _ship: ShipDefinition
@@ -56,7 +58,9 @@ func add(batch: Dictionary) -> Dictionary:
 func replace(candidate: Array[Dictionary]) -> Dictionary:
 	var error: String = validate(candidate)
 	if not error.is_empty(): return {"ok": false, "message": error}
+	if _lines == candidate: return {"ok": true, "message": "Cargo manifest unchanged."}
 	_lines = candidate.duplicate(true)
+	changed.emit()
 	return {"ok": true, "message": "Cargo manifest updated."}
 
 func remove(batch_id: String, quantity: int) -> Dictionary:

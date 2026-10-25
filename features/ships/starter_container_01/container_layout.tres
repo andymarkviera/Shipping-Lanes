@@ -1,0 +1,5 @@
+[gd_resource type="Resource" script_class="ContainerLayout" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/cargo/container_layout.gd" id="1"]
+[resource]
+script = ExtResource("1")
+centres = PackedVector3Array(-2.7, 3.945, 17, 0, 3.945, 17, 2.7, 3.945, 17, -2.7, 3.945, 10.5, 0, 3.945, 10.5, 2.7, 3.945, 10.5)
