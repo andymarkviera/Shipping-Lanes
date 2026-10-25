@@ -36,6 +36,7 @@ func request(peer: int, action: String, port_id: String) -> Dictionary:
 	var entry: Dictionary = entries[peer]
 	if not entry.owner.authority.active or entry.owner.departing: return {"ok": false, "message": "Connection is no longer active."}
 	if action == "undock":
+		if entry.owner.voyage_busy or preload("res://features/network/public_voyage_service.gd").active(entry.owner).get("state") == "loading": return {"ok": false, "message": "Wait for loading to finish or cancel the job."}
 		if entry.state != "docked" or entry.port_id != port_id: return {"ok": false, "message": "Ship is not docked here."}
 		entry.state = "undocking"
 		entry.remaining = .5

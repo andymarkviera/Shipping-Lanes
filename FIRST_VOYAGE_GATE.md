@@ -82,3 +82,17 @@ client port views and peer-bound server-wide Dock/Undock. Two-player/editor/Rele
 and chart-rebase checks pass. Full gate remains open for the online cargo menu,
 contract requests, loading/undock lock, manifest replication and full two-peer
 job/payment/restart scenario.
+
+## Integration progress: online cargo services
+
+PUBLIC_CARGO_SERVICES.md records the connected peer-bound cargo menu, docked
+eligibility, loading/undock lock, canonical settlement/reconciliation, own voyage
+HUD and nearby container visuals. Final Release passes 38 two-peer cargo checks,
+including reconnect during loading, restart and duplicate-delivery protection.
+Evidence: ../output/handoff/31c2114c/cargo-peer-summary.json.
+
+Items 1–4 above now have a functional container-cargo path. Refuel/repair and
+public heavy-loader services remain outside this milestone. The probe places
+saved approach positions between port phases, so item 5 is NOT fulfilled.
+Gate remains OPEN for actual two-peer consecutive navigated voyages, live
+interruption coverage and Andy's gameplay feedback. Do not advance to Step 58 yet.

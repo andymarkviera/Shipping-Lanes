@@ -9,6 +9,7 @@ var dock_button: Button
 var dock_readout: Label
 var dock_sent_ms: int = 0
 var dock_waiting: int = 0
+var cargo_panel = preload("res://features/network/public_cargo_panel.gd").new()
 var readout: Label
 var pause_panel: PanelContainer
 var controls_enabled: bool = true
@@ -48,6 +49,8 @@ func _ready() -> void:
 	camera_rig.camera.look_at(Vector3.ZERO)
 	var layer: CanvasLayer = CanvasLayer.new()
 	add_child(layer)
+	cargo_panel.session = session
+	layer.add_child(cargo_panel)
 	var panel: PanelContainer = make_panel(layer, Vector2(20, 20))
 	readout = Label.new()
 	readout.custom_minimum_size.x = 350
@@ -143,7 +146,7 @@ func _process(_delta: float) -> void:
 	var waiting: bool = dock_waiting > 0
 	dock_button.visible = port_fresh and not session.dock_snapshot.get("port_id", "").is_empty()
 	dock_button.text = "Undock" if state == "docked" else "Dock"
-	dock_button.disabled = waiting or not (state == "docked" or (state == "underway" and session.dock_snapshot.get("eligible", false)))
+	dock_button.disabled = waiting or session.voyage_snapshot.get("busy", false) or session.voyage_snapshot.get("job", {}).get("state") == "loading" or not (state == "docked" or (state == "underway" and session.dock_snapshot.get("eligible", false)))
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
 	dock_readout.visible = port_fresh
 	dock_readout.text = session.dock_snapshot.get("message", "")
