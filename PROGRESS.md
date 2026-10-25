@@ -1937,3 +1937,14 @@ commit crash tests pass. See VOYAGE_LIFECYCLE.md. Container delivery, heavy pick
 and save-freeze fix confirmed by Andy; wider docking and Step 54 await play-test.
 Next Step 55: voyage HUD. Recovery tag: voyage-lifecycle; source backup:
 ../output/checkpoints/voyage-lifecycle-2026-10-25.zip.
+
+## Step 55 — Voyage interface — October 25, 2026
+
+Added read-only voyage HUD: actual cargo, job quantity, destination, quoted payment,
+next action, loading progress and readable instruments. Corrected container routing
+to follow the accepted destination even at arrival; labelled previous receipts and
+removed stale loading notices. Heavy pickup/drop-off and save-block states included.
+132-script/startup check, 88 Release voyage checks plus crash-recovery and 270 rendered
+port checks pass. See VOYAGE_INTERFACE.md. Awaiting user play-test; Step 56 minimap
+next. Recovery tag voyage-interface; verified source backup:
+../output/checkpoints/voyage-interface-2026-10-25.zip.

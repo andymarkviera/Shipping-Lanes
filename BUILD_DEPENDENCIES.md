@@ -430,3 +430,9 @@ Step 56 minimap after it. Andy confirms full container delivery, heavy pickup an
 save-freeze fix; alongside docking and lifecycle changes still await play-test.
 Cargo-loading and mooring-rope animations remain later presentation work.
 See VOYAGE_LIFECYCLE.md.
+
+October 25 Step 55: state-derived voyage interface implemented and tested for local
+container and heavy trips, reload and save failure. Public network services remain
+a separate dependency. Step 56 minimap should reuse accepted destination/pickup/drop
+state, without introducing docking water markings or another authority. Cargo and
+mooring animations remain queued for later polish. See VOYAGE_INTERFACE.md.

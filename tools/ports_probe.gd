@@ -125,6 +125,16 @@ func _ready() -> void:
 			await get_tree().process_frame
 			await RenderingServer.frame_post_draw
 			verify(get_viewport().get_texture().get_image().save_png(capture + "-" + str(i) + ".png") == OK, "Port overview captured")
+		preview.accept_selected()
+		preview.loading.advance(2)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		verify(get_viewport().get_texture().get_image().save_png(capture + "-voyage-loading.png") == OK, "Pending voyage HUD captured")
+		preview.loading.advance(20)
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		verify(get_viewport().get_texture().get_image().save_png(capture + "-voyage-loaded.png") == OK, "Loaded voyage HUD captured")
+		preview.end_current_job(true)
 		preview.heavy_mode = true
 		preview.select_port(1)
 		await get_tree().physics_frame
