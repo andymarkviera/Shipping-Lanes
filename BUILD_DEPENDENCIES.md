@@ -393,3 +393,9 @@ never trust a client-provided checkpoint. Step 52 must derive container visuals 
 from the restored manifest. Heavy pickup no longer requires angle matching or Secure:
 Raise attaches if the platform is under the load, Lower at destination delivers.
 Preserve this flow in later UI/ship work. See IN_FLIGHT_PERSISTENCE.md.
+
+October 24 Step 52: manifest-driven container visuals pass local/restore checks.
+Next Step 53 must preserve one active job, atomic consumption/reward, wrong-port
+rejection and idempotent receipts. Public manifest/network service wiring is still
+an integration dependency, not completed by visual work. Step 51 remains awaiting
+user play-test feedback. See CONTAINER_VISUALS.md.

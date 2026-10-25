@@ -3,6 +3,7 @@ extends ContentDefinition
 @export_file("*.tscn") var scene_path: String = ""
 @export var cargo_type_ids: Array[String] = []
 @export var cargo_capacities: Dictionary = {}
+@export var container_layout: ContainerLayout
 @export_file("*.tscn") var runtime_scene_path: String = ""
 @export_group("Composition")
 @export var hull_size_m: Vector3 = Vector3(13, 4, 64)

@@ -6,6 +6,7 @@ var visual: ShipVisualMotion
 var focus: CameraFocus
 var cargo_anchor: Node3D
 var feedback: HandlingFeedback
+var container_visuals: Node3D
 
 func configure(body: HandlingShip) -> void:
 	ship = body
@@ -15,6 +16,10 @@ func configure(body: HandlingShip) -> void:
 	add_child(visual)
 	visual.add_child((load(ship.definition.scene_path) as PackedScene).instantiate())
 	visual.set_process(ship.definition.visual_bobbing)
+	container_visuals = preload("res://features/cargo/container_visuals.gd").new()
+	container_visuals.name = "CargoVisuals"
+	visual.add_child(container_visuals)
+	container_visuals.configure(ship.state.manifest, ship.definition)
 	focus = CameraFocus.new()
 	focus.name = "CameraAnchor"
 	focus.position.y = 5

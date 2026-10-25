@@ -251,3 +251,11 @@ Save accepted quotes, manifest, operation receipt and local reward in one SQLite
 transaction. Resume saved loading and deck travel, restart propulsion neutral, and
 refuse inconsistent saves without overwriting them. Public authority RPC integration
 remains separate. See IN_FLIGHT_PERSISTENCE.md.
+
+## D100 — Cargo visuals are derived presentation
+
+Represent actual manifest quantities with fixed authored slots and lightweight
+instances beneath the hull visual root. No cargo physics, saved meshes or independent
+visual authority. Do not show containers for unfinished loading or industrial heavy
+jobs. Keep geometry temporary. Andy explicitly has not play-tested Step 51 yet;
+automated checks do not imply user acceptance. See CONTAINER_VISUALS.md.
