@@ -1,9 +1,16 @@
 extends Node
-## Protocol 9 DTLS admission and peer-bound helm. No arbitrary authority RPC.
+## Protocol 10 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const SnapshotCodec = preload("res://features/network/public_snapshot_codec.gd")
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
 const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
 var physics_world: Node
+var port_authority = preload("res://features/network/public_port_authority.gd").new()
+var dock_snapshot: Dictionary = {}
+var dock_notice: String = ""
+var dock_sequence: int = 0
+var dock_ack: int = 0
+var port_tick: int = -1
+var port_received_ms: int = 0
 const View = preload("res://features/network/public_world_view.gd")
 const Geo = preload("res://features/geography/geographic_address.gd")
 const Nav = preload("res://features/geography/navigation_experiment.gd")
@@ -42,6 +49,8 @@ var max_snapshot_bytes: int = 0
 func _ready() -> void:
 	physics_world = PhysicsWorld.new()
 	add_child(physics_world)
+	port_authority.world = physics_world
+	add_child(port_authority)
 	process_physics_priority = -100
 	world_view = View.new()
 	add_child(world_view)
@@ -58,6 +67,7 @@ func _physics_process(_delta: float) -> void:
 	if hosting:
 		var started: int = Time.get_ticks_usec()
 		physics_world.sync(live_owners())
+		port_authority.advance(_delta)
 		physics_work_us.append(Time.get_ticks_usec() - started)
 		if physics_work_us.size() > 600: physics_work_us.pop_front()
 
@@ -151,6 +161,18 @@ func _process(_delta: float) -> void:
 			snapshot_bytes_sent += size
 			snapshot_packets_sent += 1
 			world_update.rpc_id(id, record.ship, record.epoch, record.generation, view_sequence, [packet])
+			var ports: Array = []
+			for port_id: String in physics_world.Ports.IDS:
+				if Nav.separation(origin, physics_world.Ports.address(port_id)) > 2200: continue
+				var pose: Transform3D = physics_world.Ports.pose(origin, port_id)
+				ports.append({"id": port_id, "position": pose.origin, "yaw": pose.basis.get_euler().y})
+			var status: Dictionary = port_authority.status(id)
+			if status.state == "underway" and record.dock_notice == "Releasing ship…": record.dock_notice = ""
+			var port_bytes: int = var_to_bytes([record.ship, record.epoch, record.generation, view_sequence, ports, status, record.dock_sequence, record.dock_notice]).size()
+			max_snapshot_bytes = maxi(max_snapshot_bytes, port_bytes)
+			snapshot_bytes_sent += port_bytes
+			snapshot_packets_sent += 1
+			port_update.rpc_id(id, record.ship, record.epoch, record.generation, view_sequence, ports, status, record.dock_sequence, record.dock_notice)
 		snapshot_work_us.append(Time.get_ticks_usec() - started)
 		if snapshot_work_us.size() > 256: snapshot_work_us.pop_front()
 
@@ -164,14 +186,14 @@ func connection_challenge(value: String, server: String) -> void:
 func submit_ticket(ticket: String) -> void:
 	if hosting or transport == null or nonce.is_empty() or ticket_sent: return
 	ticket_sent = true
-	join_public.rpc_id(1, 9, ticket)
+	join_public.rpc_id(1, 10, ticket)
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_public(version: int, ticket: String) -> void:
 	if not hosting or draining: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending.has(sender) or pending[sender].busy: return
-	if version != 9:
+	if version != 10:
 		reject_join(sender, "BUILD_MISMATCH")
 		return
 	if ticket.length() < 20 or ticket.length() > 128:
@@ -211,6 +233,7 @@ func join_public(version: int, ticket: String) -> void:
 			# Park and remove the old helm before activating the replacement hull.
 			var old: Dictionary = members[previous]
 			old.hull.authority.quiesce()
+			port_authority.remove(previous)
 			members.erase(previous)
 			old.hull.reparent(self, false)
 			old.hull.departing = true
@@ -238,7 +261,8 @@ func join_public(version: int, ticket: String) -> void:
 		joining = false
 		if multiplayer.get_peers().has(sender): reject_join(sender, "SPAWN_OCCUPIED")
 		return
-	members[sender] = {"hull": hull, "account": account, "ship": hull.ship.state.instance_id, "epoch": int(result.epoch), "generation": int(result.generation), "sequence": -1, "input_at": Time.get_ticks_msec(), "rate_at": 0}
+	members[sender] = {"hull": hull, "account": account, "ship": hull.ship.state.instance_id, "epoch": int(result.epoch), "generation": int(result.generation), "sequence": -1, "input_at": Time.get_ticks_msec(), "rate_at": 0, "dock_sequence": 0, "dock_at": 0, "dock_notice": ""}
+	port_authority.register(sender, hull)
 	physics_world.sync(live_owners())
 	hull.ship.simulation_paused = false
 	joining = false
@@ -266,7 +290,7 @@ func close_rejected(attempt_nonce: String) -> void:
 
 static func failure_message(reason: String) -> String:
 	match reason:
-		"SPAWN_OCCUPIED": return "Another boat is too close to your saved position. Your saved position has not changed. Wait for the area to clear, then sign in and join again."
+		"SPAWN_OCCUPIED": return "A boat or dock structure is too close to your saved position. Your saved position has not changed. Wait for the area to clear, then sign in and join again."
 		"BUILD_MISMATCH": return "This server needs a different game version. Use the matching game build, then try again."
 		"SIGN_IN_AGAIN": return "Your join permission expired or could not be verified. Sign in again to get a fresh connection."
 		"SERVER_BUSY": return "The server is admitting another player. Wait a moment, then sign in and join again."
@@ -329,6 +353,7 @@ func disconnected(id: int) -> void:
 	if not members.has(id): return
 	var record: Dictionary = members[id]
 	departures += 1
+	port_authority.remove(id)
 	members.erase(id)
 	if accounts.get(record.account) == id: accounts.erase(record.account)
 	record.hull.reparent(self, false)
@@ -378,4 +403,40 @@ func close_client() -> void:
 	if world_view != null: world_view.clear()
 	binding.clear()
 	last_snapshot.clear()
+	dock_snapshot.clear()
+	dock_notice = ""
+	dock_sequence = 0
+	dock_ack = 0
+	port_tick = -1
 	notice = "Disconnected"
+
+func send_dock(action: String, port_id: String, candidate: Dictionary = {}) -> void:
+	var value: Dictionary = binding if candidate.is_empty() else candidate
+	if hosting or transport == null or value.is_empty(): return
+	dock_sequence += 1
+	dock_order.rpc_id(1, str(value.ship), int(value.epoch), int(value.generation), dock_sequence, action, port_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func dock_order(ship: String, epoch: int, generation: int, sequence: int, action: String, port_id: String) -> void:
+	if not hosting or draining: return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if not members.has(sender): return
+	var record: Dictionary = members[sender]
+	if ship != record.ship or epoch != record.epoch or generation != record.generation or sequence <= record.dock_sequence or sequence > 2147483647: return
+	if action not in ["dock", "undock"] or not physics_world.Ports.IDS.has(port_id): return
+	var now: int = Time.get_ticks_msec()
+	if now - record.dock_at < 250: return
+	record.dock_at = now
+	record.dock_sequence = sequence
+	record.dock_notice = port_authority.request(sender, action, port_id).message
+
+@rpc("authority", "call_remote", "unreliable_ordered", 2)
+func port_update(ship: String, epoch: int, generation: int, tick: int, rows: Array, status: Dictionary, ack: int, message: String) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1 or binding != {"ship": ship, "epoch": epoch, "generation": generation} or tick <= port_tick: return
+	if rows.size() > 2 or status.get("state") not in ["unavailable", "underway", "docking", "docked", "undocking"] or not status.get("eligible") is bool or not status.get("port_id") is String or not status.get("message") is String or message.length() > 256: return
+	if not world_view.receive_ports(rows): return
+	port_tick = tick
+	port_received_ms = Time.get_ticks_msec()
+	dock_snapshot = status.duplicate(true)
+	dock_ack = ack
+	dock_notice = message

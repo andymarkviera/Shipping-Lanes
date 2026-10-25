@@ -328,3 +328,13 @@ Keep local saves separate. Loading can become ready while offline, but cargo is
 created only by a validated completion request. Retain request IDs across unknown
 outcomes, and distinguish old receipts from current canonical state. Gate remains
 open until physical two-peer voyages pass. See PUBLIC_VOYAGE_CONTRACTS.md.
+
+## D109 — Stable online ports and server-wide berth ownership
+
+Place the two prototype ports in canonical geography and project their geometry
+into nearby server charts and inert client views. Store berth ownership outside
+temporary chart nodes. Bind docking to authenticated peer-owned hulls, enforce
+physical eligibility, and clear reservations on departure/authority loss. Keep
+uncertain commands pending with explicit recovery instead of automatic replay.
+No persistent berth claim across reconnect. Protocol 10 requires matching game
+builds. See PUBLIC_PORTS.md.

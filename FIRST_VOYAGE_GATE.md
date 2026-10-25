@@ -74,3 +74,11 @@ backend. It narrows the gap but does not close the gate: physical docking and
 peer-facing service/manifest wiring are still absent. Backend port IDs require
 trusted server eligibility checks before use. 99 contract/crash/handoff checks and
 41 existing authority checks pass. Next: server port anchors and peer-bound docking.
+
+## Integration progress: physical online ports and docking
+
+PUBLIC_PORTS.md records canonical port placement, real server colliders, inert
+client port views and peer-bound server-wide Dock/Undock. Two-player/editor/Release
+and chart-rebase checks pass. Full gate remains open for the online cargo menu,
+contract requests, loading/undock lock, manifest replication and full two-peer
+job/payment/restart scenario.

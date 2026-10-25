@@ -112,7 +112,7 @@ func checkpoint_current() -> Dictionary:
 	return saved
 
 func helm(candidate: Dictionary, throttle: float, rudder: float, lateral: float = 0.0) -> bool:
-	if departing or not authority.permits(candidate) or ship == null: return false
+	if departing or not authority.permits(candidate) or ship == null or ship.docked: return false
 	if not is_finite(throttle) or not is_finite(rudder) or not is_finite(lateral): return false
 	ship.command_throttle(throttle)
 	ship.maneuver(rudder, lateral)

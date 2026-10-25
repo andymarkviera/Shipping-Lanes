@@ -456,3 +456,10 @@ anchors, server-side docking/berth ownership, peer-bound command validation, rel
 owned-job state and client service/manifest presentation. Do not call backend port
 assertions proof of physical eligibility. Step 57 remains open; no Step 58 yet.
 See PUBLIC_VOYAGE_CONTRACTS.md.
+
+October 25 Step 57 update: online physical ports, rebase-safe server docking and
+client Dock/Undock are implemented and tested with two actual peers. Remaining:
+validate cargo service requests against this authoritative docked state, call
+canonical contract transactions, replicate owned job/manifest/wallet/receipts and
+complete two-peer voyage/crash gate. Loading must lock undocking before enabling
+peer-facing cargo acceptance. Step 57 remains OPEN. See PUBLIC_PORTS.md.

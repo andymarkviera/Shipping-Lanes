@@ -60,9 +60,12 @@ func mapping_case(latitude: float, longitude: float) -> void:
 	world.sync([])
 
 func _ready() -> void:
+	set_physics_process(false)
 	process_physics_priority = -100
 	world = World.new()
 	add_child(world)
+	await port_case()
+	set_physics_process(true)
 	mapping_case(0.0, 179.99)
 	mapping_case(89.99, 30.0)
 	var origin: Dictionary = Geo.normalized(0, 0, 0)
@@ -89,3 +92,47 @@ func _physics_process(_delta: float) -> void:
 		check(first.collision_layer == 0 and first.collision_mask == 0 and not first.is_physics_processing(), "fenced hull cannot obstruct shared space")
 		print("PUBLIC_PHYSICS_%s (%d checks)" % ["PASS" if failures == 0 else "FAIL", checks])
 		get_tree().quit(0 if failures == 0 else 1)
+
+func port_case() -> void:
+	check(not Geo.decode(Geo.normalized(0, 0, -1e-15)).is_empty(), "Tiny negative heading remains canonical across north")
+	var leader: Node3D = make_owner(Nav.travel(Geo.normalized(0, 0, 180), 100))
+	var sailor: Node3D = make_owner(Nav.travel(Geo.normalized(0, 0, 0), 70))
+	for owner: Node3D in [leader, sailor]:
+		owner.ship.set_physics_process(false)
+		owner.authority.set_process(false)
+		owner.authority.active = true
+	world.sync([leader, sailor])
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var port: Node3D = world.port_for(sailor, "port_brindle_quay")
+	check(port != null and port.get_world_3d() == sailor.ship.get_world_3d(), "Canonical port occupies the ship's real collision world")
+	var docks = preload("res://features/network/public_port_authority.gd").new()
+	docks.world = world
+	add_child(docks)
+	docks.register(1, sailor)
+	check(docks.status(1).eligible, "Geographic berth accepts aligned stopped hull")
+	check(docks.request(1, "dock", "port_brindle_quay").ok, "Server reserves geographic berth")
+	docks.advance(1.1)
+	check(docks.entries[1].state == "docked" and sailor.ship.docked, "Server docking freezes and secures hull")
+	var before: Dictionary = sailor.current_address()
+	leader.reparent(self, false)
+	world.sync([sailor])
+	docks.advance(.1)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	docks.advance(.1)
+	check(docks.entries[1].state == "docked" and docks.reservations.get("port_brindle_quay") == 1, "Berth ownership survives physics regroup/rebase")
+	check(Nav.separation(before, sailor.current_address()) < .001, "Docked regroup preserves world position")
+	check(sailor.ship.global_position.distance_to(world.port_for(sailor, "port_brindle_quay").berth_anchor.global_position) < .01, "Rebased port and docked ship remain aligned")
+	sailor.authority.active = false
+	docks.advance(.1)
+	check(docks.reservations.is_empty() and not sailor.ship.docked, "Lost authority releases berth")
+	var shore: Dictionary = Nav.travel(Geo.normalized(0, 0, rad_to_deg(atan2(60, 70))), sqrt(8500))
+	check(not world.Ports.spawn_clear(shore, Vector3(13, 4, 64)), "Saved spawn inside quay is refused")
+	check(world.Ports.spawn_clear(before, Vector3(13, 4, 64)), "Clear saved berth position remains allowed")
+	for owner: Node3D in [leader, sailor]:
+		owner.reparent(self, false)
+		owner.queue_free()
+	docks.queue_free()
+	world.sync([])
+	await get_tree().process_frame

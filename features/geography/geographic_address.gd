@@ -79,4 +79,7 @@ static func angular_separation(a: Dictionary, b: Dictionary) -> float:
 
 static func wrap_scalar(value: float, minimum: float, span: float) -> float:
 	# Avoid approximate endpoint equality in wrapf near longitude +180.
-	return value - span * floor((value - minimum) / span)
+	var wrapped: float = value - span * floor((value - minimum) / span)
+	# Tiny negative bearings can round to the excluded upper endpoint (360).
+	# Exact comparison preserves legitimate near-seam coordinates.
+	return minimum if wrapped >= minimum + span else wrapped
