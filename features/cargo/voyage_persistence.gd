@@ -30,7 +30,7 @@ func boot() -> void:
 	view.controls.set_menu_open(false)
 	ready_to_save = true
 	checkpoint()
-	if not blocked: view.offer_notice = "Voyage saved. Loading resumes; the boat restarts stopped in neutral."
+	if not blocked: view.offer_notice = store.recovery_notice if not store.recovery_notice.is_empty() else "Voyage saved. Loading resumes; the boat restarts stopped in neutral."
 
 func checkpoint() -> bool:
 	if blocked or not ready_to_save or not is_instance_valid(view.ship): return false

@@ -3,6 +3,7 @@ extends RefCounted
 const Codec = preload("res://features/cargo/voyage_snapshot.gd")
 var db: SQLite
 var current: Dictionary = {}
+var recovery_notice: String = ""
 var revision: int = 0
 var error: String = ""
 var fault_hook: Callable
@@ -29,8 +30,10 @@ func open_store(path: String) -> bool:
 	var row: Dictionary = db.query_result[0]
 	if not row.payload is String or row.payload.length() > 4000000 or row.payload.sha256_text() != row.digest: return fail("Voyage checkpoint is damaged. Preserved; no reset performed.")
 	var decoded: Variant = bytes_to_var(Marshalls.base64_to_raw(row.payload))
-	if not Codec.valid(decoded): return fail("Voyage checkpoint is incompatible or inconsistent. Preserved.")
-	current = decoded
+	var recovery: Dictionary = preload("res://features/cargo/voyage_lifecycle.gd").reconcile(decoded)
+	if not recovery.ok: return fail("Voyage checkpoint is incompatible or inconsistent. Preserved.")
+	current = recovery.data
+	if recovery.changed: recovery_notice = "Interrupted unfinished job released safely. No cargo or payment was created."
 	revision = int(row.revision)
 	return revision > 0
 

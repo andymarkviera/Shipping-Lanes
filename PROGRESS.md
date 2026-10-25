@@ -1927,3 +1927,13 @@ Record mooring-rope tie-up/release animations for later port presentation polish
 alongside the already-requested cargo-loading animation. Step 54 remains next.
 Recovery tag: alongside-docking; verified source backup:
 ../output/checkpoints/alongside-docking-2026-10-25.zip.
+
+## Step 54 — Voyage lifecycle — October 25, 2026
+
+Cancellation, confirmed container abandonment, ship-switch guards and conservative
+orphan-loading recovery implemented. Added tested future despawn hook; carrying heavy
+cargo remains protected. 78 editor/Release voyage checks and real loading/delivery
+commit crash tests pass. See VOYAGE_LIFECYCLE.md. Container delivery, heavy pickup
+and save-freeze fix confirmed by Andy; wider docking and Step 54 await play-test.
+Next Step 55: voyage HUD. Recovery tag: voyage-lifecycle; source backup:
+../output/checkpoints/voyage-lifecycle-2026-10-25.zip.

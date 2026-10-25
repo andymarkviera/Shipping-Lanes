@@ -2,6 +2,7 @@ extends Node3D
 const Preview = preload("res://features/ports/port_test.tscn")
 const Snapshot = preload("res://features/cargo/voyage_snapshot.gd")
 const Store = preload("res://features/cargo/voyage_store.gd")
+const Lifecycle = preload("res://features/cargo/voyage_lifecycle.gd")
 const PATH = "user://voyage_test/voyage.db"
 var checks: int = 0
 var failures: int = 0
@@ -102,6 +103,7 @@ func run() -> void:
 				check(view.reward_minor == 25000 and view.ship.state.manifest.lines().is_empty(), "Restarted delivery cannot pay twice")
 				check(view.delivery.receipts(view.offers, "preview_captain").size() == 1 and view.delivery.receipt_text(view.offers).contains("250.00"), "Reopening retains exactly one matching delivery receipt")
 	else:
+		await lifecycle_suite(view)
 		await suite(view, store)
 	store.close()
 	view.queue_free()
@@ -171,6 +173,10 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	view.accept_selected()
 	var pickup: Dictionary = Snapshot.capture(view)
 	check(Snapshot.valid(pickup), "Nearby heavy pickup and ocean destination can be saved")
+	check(Lifecycle.end_job(view).ok and view.heavy_jobs.active.is_empty() and view.ship.payload_body.collision_layer == 0, "Cancel heavy pickup removes floating load without reward")
+	check(await Snapshot.restore(view, pickup), "Cancelled pickup fixture restores for carrying tests")
+	view.ship.set_physics_process(false)
+	view.helm.set_physics_process(false)
 	view.docking.request_undock(1)
 	view.docking.advance(1)
 	view.ship.request_height(-1.0)
@@ -181,6 +187,7 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	view.heavy_jobs.update(view.ship)
 	var carrying: Dictionary = Snapshot.capture(view)
 	check(Snapshot.valid(carrying), "In-flight deck movement and attachment form valid checkpoint")
+	check(not Lifecycle.end_job(view, true).ok and not Lifecycle.before_ship_removal(view).ok and view.ship.attached, "Carrying heavy load cannot be silently discarded or despawned")
 	view.ship.collision_layer = 0
 	var heavy: Node3D = await make_view()
 	check(await Snapshot.restore(heavy, carrying), "Heavy attachment restores in fresh scene")
@@ -257,3 +264,80 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	check(resumed.delivery.receipts(resumed.offers, "preview_captain").is_empty(), "Failed delivery cannot display a paid receipt")
 	resumed.queue_free()
 	await get_tree().process_frame
+
+func lifecycle_suite(view: Node3D) -> void:
+	var initial: Dictionary = Snapshot.capture(view)
+	var legacy: Dictionary = initial.duplicate(true)
+	legacy.version = 1
+	check(Snapshot.valid(legacy), "Existing version-one voyages remain readable")
+	dock(view)
+	view.accept_selected()
+	view.loading.advance(2)
+	var partial: Dictionary = Snapshot.capture(view)
+	var body: Node3D = view.ship
+	check(not view.select_port(1) and view.ship == body, "Active loading cannot replace the ship")
+	check(Lifecycle.end_job(view).ok, "Cancel unfinished loading")
+	check(view.ship.state.operations._locks.is_empty() and view.offers.active_job("preview_captain").is_empty() and view.reward_minor == 0, "Cancel clears job and lock without payment")
+	check(not Lifecycle.end_job(view).ok, "Repeated cancellation changes nothing")
+	var orphan: Dictionary = partial.duplicate(true)
+	orphan.operations.records.clear()
+	orphan.loading = ""
+	orphan.loading_offer = ""
+	var repair: Dictionary = Lifecycle.reconcile(orphan)
+	check(repair.ok and repair.changed and Snapshot.valid(repair.data), "Orphan accepted job safely released")
+	check(not Lifecycle.reconcile(repair.data).changed, "Orphan repair is idempotent")
+	var recovery_store = Store.new()
+	check(recovery_store.open_store("user://voyage_test/orphan.db") and recovery_store.save(partial), "Orphan store starts from a valid checkpoint")
+	var encoded: String = Marshalls.raw_to_base64(var_to_bytes(orphan))
+	recovery_store.db.query_with_bindings("UPDATE voyage SET payload=?, digest=? WHERE id=1", [encoded, encoded.sha256_text()])
+	recovery_store.close()
+	check(recovery_store.open_store("user://voyage_test/orphan.db") and not recovery_store.recovery_notice.is_empty() and Snapshot.valid(recovery_store.current), "Store reconciles checksummed orphan on reopen")
+	recovery_store.close()
+	orphan = partial.duplicate(true)
+	orphan.docked = false
+	repair = Lifecycle.reconcile(orphan)
+	check(repair.ok and repair.changed and repair.data.operations.records.values()[0].state == "interrupted", "Orphan live operation releases its lock")
+	orphan.credits += 1
+	check(not Lifecycle.reconcile(orphan).ok, "Recovery never conceals unexplained payment")
+	orphan = partial.duplicate(true)
+	orphan.operations.records.values()[0].state = "committing"
+	check(not Lifecycle.reconcile(orphan).ok, "Recovery refuses ambiguous settlement")
+	view.accept_selected()
+	view.loading.advance(10)
+	var loaded: Dictionary = Snapshot.capture(view)
+	check(not view.select_port(1) and view.ship == body, "Loaded ship cannot be replaced")
+	check(not Lifecycle.end_job(view).ok and not view.ship.state.manifest.lines().is_empty(), "Loaded cargo requires explicit abandonment")
+	view.request_abandon()
+	check(not view.ship.state.manifest.lines().is_empty(), "First abandon click only requests confirmation")
+	view.request_abandon()
+	var abandoned: Dictionary = Snapshot.capture(view)
+	check(Snapshot.valid(abandoned) and abandoned.manifest.is_empty() and abandoned.credits == 0, "Confirmed abandonment removes cargo without reward")
+	check(view.delivery.receipts(view.offers, "preview_captain").is_empty() and view.ship.assembly.container_visuals.shown_count == 0, "Abandonment produces no paid receipt or visible cargo")
+	check(not Lifecycle.end_job(view, true).ok, "Repeated abandonment cannot create payment")
+	check(await Snapshot.restore(view, abandoned), "Abandoned job survives reopen")
+	view.ship.set_physics_process(false)
+	view.helm.set_physics_process(false)
+	check(await Snapshot.restore(view, loaded), "Restore loaded fixture for despawn policy")
+	view.ship.set_physics_process(false)
+	view.helm.set_physics_process(false)
+	check(Lifecycle.before_ship_removal(view).ok and view.ship.state.manifest.lines().is_empty() and view.reward_minor == 0, "Trusted despawn settles container loss without payment")
+	check(await Snapshot.restore(view, loaded), "Restore fixture for failed cancellation save")
+	view.ship.set_physics_process(false)
+	view.helm.set_physics_process(false)
+	var durable = Store.new()
+	check(durable.open_store("user://voyage_test/lifecycle.db") and durable.save(loaded), "Lifecycle fixture saved")
+	var other = Store.new()
+	check(other.open_store("user://voyage_test/lifecycle.db") and other.save(loaded), "Another writer advances lifecycle revision")
+	other.close()
+	var writer: Node = preload("res://features/cargo/voyage_persistence.gd").new()
+	writer.view = view
+	writer.store = durable
+	writer.ready_to_save = true
+	view.persistence = writer
+	check(not Lifecycle.end_job(view, true).ok and view.ship.state.manifest.lines().size() == 1 and view.reward_minor == 0, "Failed abandonment save preserves live cargo and payment")
+	view.persistence = null
+	writer.free()
+	durable.close()
+	check(await Snapshot.restore(view, initial), "Lifecycle suite returns to empty voyage")
+	view.ship.set_physics_process(false)
+	view.helm.set_physics_process(false)
