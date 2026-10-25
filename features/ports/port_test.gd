@@ -18,6 +18,9 @@ var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
 var receipt_label: Label
+var abandon_button: Button
+var abandon_job_id: String = ""
+var abandon_deadline: int = 0
 var heavy_mode: bool = false
 var offer_time: float = 0
 var offer_notice: String = ""
@@ -136,7 +139,8 @@ func _ready() -> void:
 	jobs_list.item_selected.connect(func(index: int): selected_offer = jobs_list.get_item_metadata(index); jobs_list.release_focus())
 	accept_button = button(jobs_panel, "Accept selected job", accept_selected)
 	deliver_button = button(jobs_panel, "Deliver cargo at this port", deliver)
-	cancel_load_button = button(jobs_panel, "Cancel loading (release job)", func(): loading.cancel(); refresh_jobs())
+	cancel_load_button = button(jobs_panel, "Cancel loading (release job)", func(): end_current_job(false))
+	abandon_button = button(jobs_panel, "Abandon cargo (no payment)", request_abandon)
 	loading_text = Label.new()
 	stack.add_child(loading_text)
 	receipt_label = Label.new()
@@ -145,7 +149,7 @@ func _ready() -> void:
 	stack.add_child(heavy_controls)
 	button(heavy_controls, "Lower", func(): ship.request_height(Heavy.LOWERED))
 	button(heavy_controls, "Raise", func(): ship.request_height(Heavy.RAISED))
-	button(heavy_controls, "Cancel pickup", func(): heavy_jobs.cancel_pickup(ship); refresh_jobs())
+	button(heavy_controls, "Cancel pickup", func(): end_current_job(false))
 	select_port(0)
 	if save_enabled and not OS.get_cmdline_user_args().has("--ports-check") and not OS.get_cmdline_user_args().has("--voyage-check"):
 		persistence = preload("res://features/cargo/voyage_persistence.gd").new()
@@ -164,29 +168,34 @@ func ship_key() -> String:
 func can_switch() -> bool:
 	return not loading.busy() and offers.active_job("preview_captain").is_empty() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
 
-func select_port(index: int) -> void:
-	if not heavy_jobs.active.is_empty(): return
-	var carried: Array[Dictionary] = []
-	if is_instance_valid(ship): carried = ship.state.manifest.lines()
+func select_port(index: int, restoring: bool = false) -> bool:
+	if index < 0 or index >= world_ports.size(): return false
+	if is_instance_valid(ship) and not restoring and not can_switch():
+		heavy_mode = ship.definition.id == "ship_heavy_lifter_01"
+		offer_notice = "Finish or cancel your current job before changing ships."
+		return false
+	var next_port: Node3D = world_ports[index]
+	var next_ship: HandlingShip = preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate() if heavy_mode else preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
+	var allocation: Dictionary = next_port.reserve_spawn(next_ship.definition.hull_size_m)
+	if not allocation.ok:
+		next_ship.free()
+		if is_instance_valid(ship): heavy_mode = ship.definition.id == "ship_heavy_lifter_01"
+		offer_notice = "Spawn occupied. Current ship and job preserved."
+		return false
 	loading.disconnect_ship()
 	docking.disconnect_owner(1)
 	if is_instance_valid(port): port.spawn_allocator.release(spawn_ticket)
 	for node: Node in [helm, wake, ship]:
 		if is_instance_valid(node): remove_child(node); node.queue_free()
-	port = world_ports[index]
-	ship = preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate() if heavy_mode else preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
-	var allocation: Dictionary = port.reserve_spawn(ship.definition.hull_size_m)
-	if not allocation.ok:
-		ship.free(); ship = null; helm = null; wake = null
-		details.text = "Spawn occupied. Return to the menu and retry."
-		return
+	port = next_port
+	ship = next_ship
+	if restoring: heavy_jobs.active.clear()
 	spawn_ticket = allocation.ticket
 	ship.transform = allocation.transform
 	add_child(ship)
 	if heavy_mode:
 		ship.payload_body.collision_layer = 0
 		ship.payload_body.hide()
-	ship.state.manifest.replace(carried)
 	bind_port()
 	helm = ShipHelm.new()
 	add_child(helm)
@@ -196,6 +205,7 @@ func select_port(index: int) -> void:
 	camera.distance_order = ship.definition.camera_distance_m
 	camera.set_focus(ship.assembly.focus)
 	controls.wait_for_release = true
+	return true
 
 func bind_port() -> void:
 	offer_notice = ""
@@ -235,6 +245,22 @@ func accept_selected() -> void:
 				offers.release_job(selected_offer, "preview_captain", ship_key())
 				offer_notice = "Loading could not start. Job released; try again while docked."
 	refresh_jobs()
+
+func end_current_job(abandon: bool) -> void:
+	var result: Dictionary = preload("res://features/cargo/voyage_lifecycle.gd").end_job(self, abandon)
+	offer_notice = result.message
+	abandon_job_id = ""
+	refresh_jobs()
+
+func request_abandon() -> void:
+	var job: Dictionary = offers.active_job("preview_captain")
+	if job.is_empty() or job.state != "loaded": return
+	if abandon_job_id == job.id and Time.get_ticks_msec() <= abandon_deadline:
+		end_current_job(true)
+	else:
+		abandon_job_id = job.id
+		abandon_deadline = Time.get_ticks_msec() + 5000
+		offer_notice = "This removes the cargo with no payment. Press Confirm abandon within 5 seconds."
 
 func refuel() -> void:
 	if docking.state(1) != "docked" or loading.busy(): return
@@ -299,6 +325,9 @@ func _process(_delta: float) -> void:
 	receipt_label.text = delivery.receipt_text(offers)
 	receipt_label.visible = not receipt_label.text.is_empty()
 	cancel_load_button.visible = loading.busy()
+	var active: Dictionary = offers.active_job("preview_captain")
+	abandon_button.visible = not heavy_mode and active.get("state") == "loaded"
+	abandon_button.text = "Confirm abandon — no payment" if not abandon_job_id.is_empty() and Time.get_ticks_msec() <= abandon_deadline else "Abandon cargo (no payment)"
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
 	loading_text.text = ("Loading %.0f%%" % loading.progress_percent() if loading.busy() else offer_notice) + "\nFuel %.0f / %.0f L · Condition %.0f%%" % [ship.state.fuel_liters, ship.definition.fuel_capacity_liters, ship.state.condition * 100]
 	waypoint.visible = false

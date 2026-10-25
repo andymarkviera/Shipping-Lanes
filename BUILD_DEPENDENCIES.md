@@ -421,3 +421,12 @@ Add mooring-rope tie-up/release animations to later port presentation polish. Bi
 to authoritative docking state, cancellation and reconnect; no independent control
 locks. Cargo-loading animation remains queued. Step 54 remains next.
 See ALONGSIDE_DOCKING.md.
+
+October 25 Step 54: local voyage lifecycle rules and conservative orphan recovery
+implemented and tested. Future sinking/despawn must call before_ship_removal and honor
+failure before deleting a ship; carrying heavy loads currently refuse removal.
+Public network port/service settlement remains outstanding. Step 55 voyage HUD next,
+Step 56 minimap after it. Andy confirms full container delivery, heavy pickup and
+save-freeze fix; alongside docking and lifecycle changes still await play-test.
+Cargo-loading and mooring-rope animations remain later presentation work.
+See VOYAGE_LIFECYCLE.md.

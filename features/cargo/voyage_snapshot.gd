@@ -14,7 +14,7 @@ static func capture(view: Node3D) -> Dictionary:
 	var heavy: Dictionary = {}
 	if view.heavy_mode:
 		heavy = {"active": view.heavy_jobs.active.duplicate(true), "completed": view.heavy_jobs.completed.duplicate(true), "attached": body.attached, "height": body.deck_height, "target": body.deck_target, "payload_pose": body.payload_body.global_transform}
-	return {"version": 1, "realm": "private_port_voyage_v1", "owner": "preview_captain", "heavy_mode": view.heavy_mode,
+	return {"version": 2, "realm": "private_port_voyage_v1", "owner": "preview_captain", "heavy_mode": view.heavy_mode,
 		"port": view.world_ports.find(view.port), "pose": body.global_transform, "fuel": body.state.fuel_liters, "condition": body.state.condition,
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
@@ -29,7 +29,7 @@ static func number(value: Variant, low: float, high: float) -> bool:
 static func valid(value: Variant) -> bool:
 	if not value is Dictionary or value.size() != 19: return false
 	var d: Dictionary = value
-	if d.get("version") != 1 or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
+	if d.get("version") not in [1, 2] or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
 	for key: String in ["offers", "operations", "heavy", "heavy_completed"]:
 		if not d.get(key) is Dictionary: return false
 	for key: String in ["heavy_mode", "docked"]:
@@ -58,7 +58,8 @@ static func valid(value: Variant) -> bool:
 		if not row is Dictionary or row.size() != seeded._offers[id].size(): return false
 		for key: String in seeded._offers[id]:
 			if key not in ["state", "owner_id", "ship_id", "accepted_ms"] and row.get(key) != seeded._offers[id][key]: return false
-		if row.get("state") not in ["available", "accepted", "loaded", "delivered"] or not row.get("accepted_ms") is int: return false
+		if row.get("state") not in ["available", "accepted", "loaded", "delivered", "abandoned"] or not row.get("accepted_ms") is int: return false
+		if row.state == "abandoned" and d.version < 2: return false
 		if row.state == "available":
 			if row.get("owner_id") != "" or row.get("ship_id") != "" or row.accepted_ms != -1: return false
 		else:
@@ -83,7 +84,7 @@ static func valid(value: Variant) -> bool:
 		if e.state in ["ready", "committed"] and e.elapsed != e.duration: return false
 		if e.state == "running" and e.elapsed >= e.duration: return false
 		if e.state == "committed":
-			if offer.state not in ["loaded", "delivered"] or committed_offers.has(offer.id): return false
+			if offer.state not in ["loaded", "delivered", "abandoned"] or committed_offers.has(offer.id): return false
 			committed_offers.append(offer.id)
 		if e.state not in Operations.TERMINAL:
 			live += 1
@@ -120,7 +121,7 @@ static func heavy_job_valid(job: Variant, possible: Dictionary) -> bool:
 static func restore(view: Node3D, data: Dictionary) -> bool:
 	if not valid(data): return false
 	view.heavy_mode = data.heavy_mode
-	view.select_port(data.port)
+	if not view.select_port(data.port, true): return false
 	await view.get_tree().physics_frame # Deferred floating-body creation must finish.
 	if not is_instance_valid(view.ship): return false
 	var body: HandlingShip = view.ship

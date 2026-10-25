@@ -282,3 +282,13 @@ Allow ships to moor directly alongside solid quays by separating actual shore ov
 from the padded other-boat/cargo clearance query. Enlarge both berth envelopes without
 changing speed/heading checks or physical collision. Later rope animations follow
 confirmed docking/undocking state, not a separate gameplay lock. See ALONGSIDE_DOCKING.md.
+
+## D104 — Explicit voyage cancellation and loss policy
+
+Unfinished jobs release without payment. Loaded container abandonment requires a
+second click and forfeits cargo, retaining a terminal record. Save before applying
+live changes. Heavy cargo cannot be cancelled while attached. Prevent ship changes
+with active jobs. Repair only verified unpaid empty-manifest orphan loading; never
+infer missing cargo, undo receipts or mask unexplained money. Future sinking callers
+must honor the tested removal hook; no sinking system introduced by this step.
+See VOYAGE_LIFECYCLE.md.
