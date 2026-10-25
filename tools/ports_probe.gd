@@ -95,6 +95,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	verify(preview.port.definition.id == ids[1] and preview.ship.commanded_throttle == 0, "Switching ports resets only disposable test boat")
 	verify(preview.ship.global_position.distance_to(preview.port.spawn_anchor.global_position) < .1, "Preview starts at data-defined anchor")
+	check_restart(preview)
 	preview.ship.global_transform = preview.port.berth_anchor.global_transform
 	preview.ship.velocity = Vector3.ZERO
 	await get_tree().physics_frame
@@ -160,14 +161,18 @@ func check_berth(port: Node3D) -> void:
 	verify(rule.evaluate(port.berth, pose, definition, backwards, Vector3.ZERO, "container_transfer", "cargo_test_container", space).code == "HEADING", "Backward facing hull is not aligned")
 	var angled: Transform3D = pose * Transform3D(Basis(Vector3.UP, deg_to_rad(9)), Vector3.ZERO)
 	verify(rule.evaluate(port.berth, pose, definition, angled, Vector3.ZERO, "container_transfer", "cargo_test_container", space).eligible, "Small approach angle is tolerated")
-	var outside: Transform3D = pose.translated_local(Vector3(10, 0, 0))
+	var outside: Transform3D = pose.translated_local(Vector3(14, 0, 0))
 	verify(rule.evaluate(port.berth, pose, definition, outside, Vector3.ZERO, "container_transfer", "cargo_test_container", space).code == "POSITION", "Nearby center insufficient when whole hull does not fit")
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "unknown_service", "", space).code == "SERVICE", "Unsupported service rejected")
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "cargo_test_industrial", space).code == "CARGO", "Ship cargo compatibility enforced")
 	var heavy: ShipDefinition = preload("res://features/catalog/records/heavy_lifter.tres")
 	var heavy_result: Dictionary = rule.evaluate(port.berth, pose, heavy, pose, Vector3.ZERO, "heavy_transfer", "cargo_test_industrial", space)
 	verify(heavy_result.eligible, "Both service ports support heavy-loader work")
-	definition.hull_size_m.x = 30
+	var forgiving: Transform3D = pose.translated_local(Vector3(-port.quay_side * 3, 0, 0))
+	verify(rule.evaluate(port.berth, pose, heavy, forgiving, Vector3.ZERO, "heavy_transfer", "cargo_test_industrial", space).eligible, "Heavy loader docks three metres off centre")
+	forgiving = pose * Transform3D(Basis(Vector3.UP, deg_to_rad(5)), Vector3.ZERO)
+	verify(rule.evaluate(port.berth, pose, heavy, forgiving, Vector3.ZERO, "heavy_transfer", "cargo_test_industrial", space).eligible, "Heavy loader docks five degrees off heading")
+	definition.hull_size_m.x = 40
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "SIZE", "Oversized hull rejected")
 	definition.hull_size_m.x = 13
 	var bad: BerthDefinition = port.berth.duplicate(true)
@@ -370,7 +375,7 @@ func check_offers() -> void:
 	verify(source.accept(id, "captain_a", "ship_a", "port_brindle_quay", manifest).offer == accepted.offer, "Same-owner retry returns identical accepted terms")
 	verify(not source.accept(id, "captain_a", "ship_other", "port_brindle_quay", manifest).ok, "Accepted offer cannot transfer to another ship")
 	rows = source.list_at("port_brindle_quay")
-	verify(source.accept(rows[1].id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok and source.accept(rows[2].id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok, "Pending accepted jobs fit exactly in aggregate capacity")
+	verify(not source.accept(rows[1].id, "captain_a", "ship_a", "port_brindle_quay", manifest).ok and not source.accept(rows[2].id, "captain_a", "other_ship", "port_brindle_quay", manifest).ok, "One active job per captain even across ships")
 	var return_offer: String = source.list_at("port_slatewater_works")[0].id
 	verify(not source.accept(return_offer, "captain_a", "ship_a", "port_slatewater_works", manifest).ok and source.view(return_offer).state == "available", "Capacity commitments reject excess acceptance atomically")
 	verify(source.advance_to(600000) and source.view(return_offer).state == "available", "Jobs remain available without expiry")
@@ -398,23 +403,25 @@ func check_loading(preview: Node3D) -> void:
 	verify(not loading.busy() and source.view(id).state == "available" and body.state.manifest.lines().is_empty(), "Cancel releases job and capacity with no partial load")
 	source.accept(id, "preview_captain", "preview_ship", port_id, body.state.manifest)
 	loading.start(id)
+	loading.advance(1)
+	loading.disconnect_ship()
+	verify(not loading.busy() and source.view(id).state == "available" and body.state.manifest.lines().is_empty(), "Disconnect releases incomplete job without cargo")
+	source.accept(id, "preview_captain", "preview_ship", port_id, body.state.manifest)
+	loading.start(id)
+	dock.request_undock(1)
+	loading.advance(.1)
+	verify(not loading.busy() and source.view(id).state == "available", "Loss of docked authority interrupts loading")
+	dock.cancel(1)
+	preview.selected_offer = id
+	preview.accept_selected()
+	verify(loading.busy(), "Accept button starts loading automatically")
 	preview.loading_text.hide()
 	loading.advance(5)
 	verify(not loading.busy() and source.view(id).state == "loaded" and body.state.manifest.lines()[0].quantity == 1, "Authority completes with presentation hidden")
 	preview.loading_text.show()
 	verify(not loading.start(id) and body.state.manifest.lines().size() == 1, "Loaded offer cannot create duplicate cargo")
 	var second: String = source.list_at(port_id)[1].id
-	verify(source.accept(second, "preview_captain", "preview_ship", port_id, body.state.manifest).ok, "Loaded commitment converted to actual cargo without double counting")
-	loading.start(second)
-	loading.advance(1)
-	loading.disconnect_ship()
-	verify(not loading.busy() and source.view(second).state == "available" and body.state.manifest.lines().size() == 1, "Disconnect releases pending job without touching completed cargo")
-	source.accept(second, "preview_captain", "preview_ship", port_id, body.state.manifest)
-	loading.start(second)
-	dock.request_undock(1)
-	loading.advance(.1)
-	verify(not loading.busy() and source.view(second).state == "available", "Loss of docked authority interrupts loading")
-	dock.cancel(1)
+	verify(not source.accept(second, "preview_captain", "preview_ship", port_id, body.state.manifest).ok, "Loaded job prevents another acceptance until delivery")
 	loading.set_physics_process(true)
 	dock.set_physics_process(true)
 
@@ -472,6 +479,7 @@ func check_services(preview: Node3D) -> void:
 	verify(destination.distance_to(preview.port.global_position) > 800, "Heavy destination lies out in open ocean")
 	preview.docking.request_undock(1)
 	preview.docking.advance(1)
+	check_restart(preview)
 	body.request_height(-1.0)
 	for step: int in 240: body.advance_deck(1.0 / 60)
 	# Place the ship, not the cargo, under its spawned job for authority-rule tests.
@@ -488,3 +496,33 @@ func check_services(preview: Node3D) -> void:
 	verify(preview.heavy_jobs.reward_pending == reward, "Repeated update cannot duplicate ocean delivery")
 	preview.heavy_mode = false
 	preview.select_port(0)
+
+func check_restart(preview: Node3D) -> void:
+	# Tab navigation and cancelled pointer clicks used to leave HUD focus behind,
+	# making PlayerControls reject all sailing input indefinitely.
+	var focusable: int = 0
+	for node: Node in preview.find_children("*", "Control", true, false):
+		if node.focus_mode != Control.FOCUS_NONE:
+			focusable += 1
+	verify(focusable == 0, "Sailing HUD has no controls that can trap keyboard focus")
+	var body: HandlingShip = preview.ship
+	body.zero_throttle()
+	body.actual_throttle = 0
+	body.velocity = Vector3.ZERO
+	preview.controls._process(0)
+	Input.action_press("ship_throttle_up")
+	preview.helm._physics_process(.25)
+	body.advance_motion(.25)
+	verify(body.commanded_throttle > 0 and body.forward_speed() > 0, "Stopped ship resumes forward propulsion through real input boundary")
+	Input.action_release("ship_throttle_up")
+	body.zero_throttle()
+	body.actual_throttle = 0
+	body.velocity = Vector3.ZERO
+	Input.action_press("ship_throttle_down")
+	preview.helm._physics_process(.25)
+	body.advance_motion(.25)
+	verify(body.commanded_throttle < 0 and body.forward_speed() < 0, "Stopped ship resumes reverse propulsion through real input boundary")
+	Input.action_release("ship_throttle_down")
+	body.zero_throttle()
+	body.actual_throttle = 0
+	body.velocity = Vector3.ZERO

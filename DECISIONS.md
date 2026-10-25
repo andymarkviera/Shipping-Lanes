@@ -233,3 +233,11 @@ acceptance and is physically dropped at a random ocean point. Test services and
 rewards are temporary; persistent authority comes later. No peer transfers. Remove
 docking water markings and use grey/colored Dock. Exclude the heavy loader's own
 floating payload from camera obstruction checks. See DOCK_SERVICES_REDESIGN.md.
+
+## D098 — One voyage job and usable docking controls
+
+User requires one active job, with container acceptance starting loading at once.
+Keep manual nearby heavy pickup/ocean drop. Fix HUD focus trapping without weakening
+menu or lost-window input gates. Widen berth approach tolerance while retaining hull
+clearance. Temporary container visuals stay in Step 52; include the requested simple
+minimap in Step 56 navigation usability. See DOCKING_USABILITY.md.

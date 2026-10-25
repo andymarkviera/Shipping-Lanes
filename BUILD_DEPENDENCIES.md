@@ -377,3 +377,11 @@ service condition/fuel and eventual durable settlement together. Free prototype
 services and temporary credits are not production economy integration. Do not restore
 expiry, water docking guides or assume heavy destinations are ports. Camera own-load
 exclusion is regression tested. See DOCK_SERVICES_REDESIGN.md.
+
+October 24 usability correction: one active job per captain supersedes multi-job
+acceptance and mixed-destination gameplay assumptions; manifest batching remains a
+generic storage capability. Step 51 must preserve this uniqueness on reconnect.
+Container acceptance starts loading automatically; heavy jobs keep nearby pickup.
+Step 52 is the next cargo-visual milestone. Extend Step 56 with a temporary minimap
+showing the boat, ports and current delivery target, before Step 57's voyage gate.
+HUD focus and heavy berth tolerance fixes verified; see DOCKING_USABILITY.md.

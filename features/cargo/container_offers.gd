@@ -28,12 +28,18 @@ func list_at(port_id: String) -> Array[Dictionary]:
 func batch(offer: Dictionary) -> Dictionary:
 	return {"batch_id": "batch_" + offer.id, "cargo_id": offer.cargo_id, "quantity": offer.quantity, "unit": offer.unit, "origin_port_id": offer.origin_port_id, "destination_port_id": offer.destination_port_id, "acquisition_id": "", "job_id": "job_" + offer.id}
 
+func active_job(owner: String) -> Dictionary:
+	for offer: Dictionary in _offers.values():
+		if offer.owner_id == owner and offer.state in ["accepted", "loaded"]: return offer.duplicate(true)
+	return {}
+
 func accept(id: String, owner: String, ship_id: String, port_id: String, manifest: RefCounted) -> Dictionary:
 	if owner.strip_edges().is_empty() or ship_id.strip_edges().is_empty() or manifest == null or not _offers.has(id): return {"ok": false, "message": "Invalid offer or ship."}
 	var offer: Dictionary = _offers[id]
 	if offer.state in ["accepted", "loaded"]:
 		if offer.owner_id == owner and offer.ship_id == ship_id: return {"ok": true, "message": "Already accepted.", "offer": view(id)}
 		return {"ok": false, "message": "Another captain accepted this offer."}
+	if not active_job(owner).is_empty(): return {"ok": false, "message": "Deliver or cancel your current job before accepting another."}
 	if offer.state != "available": return {"ok": false, "message": "Job is not available."}
 	if port_id != offer.origin_port_id: return {"ok": false, "message": "Accept this offer at its origin port."}
 	var candidate: Array[Dictionary] = manifest.lines()

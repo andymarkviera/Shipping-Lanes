@@ -21,7 +21,6 @@ var reward_minor: int = 0
 var spawn_ticket: int = 0
 var dock_button: Button
 var cancel_button: Button
-var load_button: Button
 var cancel_load_button: Button
 var accept_button: Button
 var deliver_button: Button
@@ -40,6 +39,8 @@ var waypoint: Label3D
 func button(parent: Node, title: String, action: Callable) -> Button:
 	var node: Button = Button.new()
 	node.text = title
+	# Sailing HUD actions must never retain keyboard focus (including Tab/cancelled clicks).
+	node.focus_mode = Control.FOCUS_NONE
 	parent.add_child(node)
 	node.pressed.connect(func(): node.release_focus(); action.call(); controls.wait_for_release = true)
 	return node
@@ -118,13 +119,13 @@ func _ready() -> void:
 	offer_text = Label.new()
 	jobs_panel.add_child(offer_text)
 	jobs_list = ItemList.new()
+	jobs_list.focus_mode = Control.FOCUS_NONE
 	jobs_list.custom_minimum_size = Vector2(430, 100)
 	jobs_panel.add_child(jobs_list)
+	for child: Node in jobs_list.get_children(true):
+		if child is ScrollBar: child.focus_mode = Control.FOCUS_NONE
 	jobs_list.item_selected.connect(func(index: int): selected_offer = jobs_list.get_item_metadata(index); jobs_list.release_focus())
 	accept_button = button(jobs_panel, "Accept selected job", accept_selected)
-	load_button = button(jobs_panel, "Load accepted cargo", func():
-		for offer: Dictionary in offers.list_at(port.definition.id):
-			if offer.state == "accepted" and offer.owner_id == "preview_captain": loading.start(offer.id); break)
 	deliver_button = button(jobs_panel, "Deliver cargo at this port", deliver)
 	cancel_load_button = button(jobs_panel, "Cancel loading (release job)", func(): loading.cancel(); refresh_jobs())
 	loading_text = Label.new()
@@ -148,7 +149,7 @@ func ship_key() -> String:
 	return "preview_heavy" if heavy_mode else "preview_ship"
 
 func can_switch() -> bool:
-	return not loading.busy() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
+	return not loading.busy() and offers.active_job("preview_captain").is_empty() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
 
 func select_port(index: int) -> void:
 	if not heavy_jobs.active.is_empty(): return
@@ -206,11 +207,20 @@ func refresh_jobs() -> void:
 		selected_offer = jobs_list.get_item_metadata(0)
 
 func accept_selected() -> void:
-	if docking.state(1) != "docked" or selected_offer.is_empty(): return
+	if docking.state(1) != "docked" or selected_offer.is_empty() or loading.busy(): return
+	if not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty():
+		offer_notice = "Finish your current job before accepting another."
+		return
 	if heavy_mode:
 		offer_notice = "Load ready nearby. Undock and collect it." if heavy_jobs.accept(selected_offer, ship, port, true) else "Cannot accept this job yet."
 	else:
-		offer_notice = offers.accept(selected_offer, "preview_captain", ship_key(), port.definition.id, ship.state.manifest).message
+		var result: Dictionary = offers.accept(selected_offer, "preview_captain", ship_key(), port.definition.id, ship.state.manifest)
+		offer_notice = result.message
+		if result.ok:
+			if loading.start(selected_offer): offer_notice = "Accepted — loading your cargo."
+			else:
+				offers.release_job(selected_offer, "preview_captain", ship_key())
+				offer_notice = "Loading could not start. Job released; try again while docked."
 	refresh_jobs()
 
 func refuel() -> void:
@@ -268,12 +278,7 @@ func _process(_delta: float) -> void:
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else "Container jobs"
-	accept_button.disabled = selected_offer.is_empty() or (heavy_mode and not heavy_jobs.active.is_empty())
-	var accepted: int = 0
-	for offer: Dictionary in offers.list_at(port.definition.id):
-		if offer.state == "accepted" and offer.ship_id == ship_key(): accepted += 1
-	load_button.visible = not heavy_mode
-	load_button.disabled = loading.busy() or accepted == 0
+	accept_button.disabled = selected_offer.is_empty() or loading.busy() or not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty()
 	deliver_button.visible = not heavy_mode
 	cancel_load_button.visible = loading.busy()
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
