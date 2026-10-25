@@ -414,3 +414,10 @@ Add cargo-loading animation to later port/cargo presentation polish after lifecy
 stability. Drive the animation from loading state/progress, handle cancel/restart,
 and never use animation completion to award cargo. Step 54 remains next.
 See SAILING_SAVE_FIX.md.
+
+October 25 play-test follow-through: Andy confirms the sailing-save fix and successful
+heavy pickup. Wider, quay-contact docking is now implemented and automatically tested.
+Add mooring-rope tie-up/release animations to later port presentation polish. Bind them
+to authoritative docking state, cancellation and reconnect; no independent control
+locks. Cargo-loading animation remains queued. Step 54 remains next.
+See ALONGSIDE_DOCKING.md.

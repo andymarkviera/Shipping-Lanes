@@ -275,3 +275,10 @@ floating-point scale accumulation from tripping save and berth validation. Do no
 weaken validators or remove the failed-save safeguard. User save was copied for
 reproduction, not modified. Cargo-loading animation is deferred presentation work
 and must remain subordinate to authoritative loading. See SAILING_SAVE_FIX.md.
+
+## D103 — Larger docking envelope and contact at the quay
+
+Allow ships to moor directly alongside solid quays by separating actual shore overlap
+from the padded other-boat/cargo clearance query. Enlarge both berth envelopes without
+changing speed/heading checks or physical collision. Later rope animations follow
+confirmed docking/undocking state, not a separate gameplay lock. See ALONGSIDE_DOCKING.md.

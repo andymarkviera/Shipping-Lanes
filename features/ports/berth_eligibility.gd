@@ -31,9 +31,20 @@ static func evaluate(berth: BerthDefinition, anchor: Transform3D, ship: ShipDefi
 	var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
 	query.shape = shape
 	query.transform = pose.translated_local(Vector3(0, 1, 0))
-	query.collision_mask = CollisionRules.HULL | CollisionRules.SHORE | CollisionRules.CARGO_VISUAL
+	query.collision_mask = CollisionRules.HULL | CollisionRules.CARGO_VISUAL
 	query.collide_with_areas = true
 	query.exclude = exclude
 	if not space.intersect_shape(query, 1).is_empty():
 		return result("BLOCKED", "Keep clear of boats, cargo and dock structures.")
+	# Keep the padded buffer around other boats/cargo, but mooring is allowed
+	# against the quay. Only actual hull overlap blocks shore eligibility.
+	# A 1 cm inset per face avoids classifying exact surface contact as penetration;
+	# physical hull/shore collision remains unchanged.
+	var shore_shape: BoxShape3D = BoxShape3D.new()
+	shore_shape.size = ship.hull_size_m - Vector3.ONE * .02
+	query.shape = shore_shape
+	query.collision_mask = CollisionRules.SHORE
+	query.margin = 0
+	if not space.intersect_shape(query, 1).is_empty():
+		return result("BLOCKED", "The hull overlaps a dock structure. Move clear, then dock alongside.")
 	return result("READY", "Ready to dock — select Dock.")
