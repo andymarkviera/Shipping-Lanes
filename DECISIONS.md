@@ -348,3 +348,15 @@ payment. Publish bounded own-job state and nearby cargo counts for presentation.
 Loading locks undocking; reconnect requires redocking without losing the job.
 Protocol 11. Full navigated two-peer voyage gate remains open despite passing
 fixture-approach cargo UI/reconnect/settlement checks. See PUBLIC_CARGO_SERVICES.md.
+
+
+## D111 — Deferred globe, presentation and single-local-save direction
+
+Andy requests a globe minimap, visible Earth-like curvature, slightly softened
+distant objects, Wind Waker-style art, improved bow water effects, angled docking
+cutscenes and turning roll, with waves considered later. Use the exact placements
+and reference shortlist in DEFERRED_PLAYER_REQUESTS.md. One local save with
+Restart Progress supersedes the three private development slots as intended
+player-facing UX; preserve/migrate existing progress safely when implemented.
+This does not authorize resetting the online profile or deleting saves now.
+Step 57 remains the immediate priority. No runtime behavior changed here.

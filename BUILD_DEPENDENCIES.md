@@ -470,3 +470,19 @@ settlement checks pass (38), plus physics/local voyage regressions. Protocol 11.
 The test uses fixture approaches; full consecutive navigated two-peer voyages and
 live interruption validation remain next before closing the gate. Public heavy,
 refuel/repair and minimap integration remain outstanding. See PUBLIC_CARGO_SERVICES.md.
+
+
+## October 25 player-request placements
+
+See DEFERRED_PLAYER_REQUESTS.md for the full eight-item plan and Zelda picture
+shortlist. Keep Step 57 first and original roadmap numbers unchanged.
+- After 67/before 68: one-local-save/Restart Progress follow-up and turning-roll
+  presentation follow-up. Migration/reset must preserve recoverability; no reset now.
+- Before/at 88: Wind Waker HD art-direction brief and curved-world scale/rendering
+  decision; integrate curvature with 89–90 and validate at 98/101.
+- 91: angled, skippable docking camera with later ropes/loading presentation.
+- 93: actual globe minimap supersedes temporary Step 56 flat chart.
+- 96: subtle distant softening, bow/hull foam and wake polish, optional visual waves.
+- 98: performance/readability validation; 108/122: save UX/accessibility; 123: art polish.
+One local progression slot supersedes the player-facing three-slot intention;
+online canonical profiles remain separate. Existing saves are untouched.

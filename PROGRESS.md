@@ -2012,3 +2012,12 @@ See PUBLIC_CARGO_SERVICES.md. Full gate stays OPEN: these cargo checks use fixtu
 approach positions; complete navigated two-peer consecutive voyages remain next.
 User play-test pending. Tag public-cargo-services; verified source backup:
 ../output/checkpoints/public-cargo-services-2026-10-25.zip.
+
+
+## Deferred player-request planning — October 25, 2026
+
+Reviewed the original 142-step roadmap and current implementation notes. Recorded
+all eight new preferences with specific follow-up placements and a Wind Waker HD
+reference-picture shortlist in DEFERRED_PLAYER_REQUESTS.md. D111 records the local
+single-save policy change for later implementation. Runtime and saves unchanged;
+Step 57 online voyage gate remains next.
