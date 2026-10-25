@@ -17,6 +17,7 @@ var loading = preload("res://features/cargo/port_loading.gd").new()
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
+var voyage_hud = preload("res://features/ports/voyage_hud.gd").new()
 var receipt_label: Label
 var abandon_button: Button
 var abandon_job_id: String = ""
@@ -99,6 +100,7 @@ func _ready() -> void:
 	for edge: String in ["left", "right", "top", "bottom"]: style.set("content_margin_" + edge, 12)
 	panel.add_theme_stylebox_override("panel", style)
 	layer.add_child(panel)
+	layer.add_child(voyage_hud)
 	var stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(stack)
 	details = Label.new()
@@ -307,14 +309,15 @@ func _physics_process(delta: float) -> void:
 	dock_button.disabled = loading.busy() or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
 	cancel_button.visible = current in ["docking", "undocking"]
-	readiness.text = "Berth: " + (current.capitalize() if current in ["docking", "docked", "undocking"] else status.message)
+	readiness.text = "Berth: " + (current.capitalize() + ("…" if current != "docked" else "") if current in ["docking", "docked", "undocking"] else status.message)
 	services.visible = current == "docked"
 	if is_instance_valid(helm): helm.throttle_display.visible = not services.visible
 	if not services.visible: jobs_panel.hide()
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
-	details.text = "%s · %s\nLocal test voyage · Earnings %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", reward_minor / 100.0]
+	voyage_hud.refresh(self)
+	details.text = "%s · %s\nVoyage wallet: %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", reward_minor / 100.0]
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else "Container jobs"
@@ -323,13 +326,20 @@ func _process(_delta: float) -> void:
 	deliver_button.tooltip_text = delivery.reason(self)
 	deliver_button.disabled = not deliver_button.tooltip_text.is_empty()
 	receipt_label.text = delivery.receipt_text(offers)
+	if heavy_mode:
+		receipt_label.text = ""
+		if not heavy_jobs.completed.is_empty():
+			var completed: Dictionary = heavy_jobs.completed.values().back()
+			receipt_label.text = "DELIVERY RECEIPT\n1 industrial module delivered offshore\nPaid %.2f credits" % (completed.reward_minor / 100.0)
+	receipt_label.text = receipt_label.text.replace("DELIVERY RECEIPT", "LAST DELIVERY RECEIPT")
 	receipt_label.visible = not receipt_label.text.is_empty()
 	cancel_load_button.visible = loading.busy()
 	var active: Dictionary = offers.active_job("preview_captain")
 	abandon_button.visible = not heavy_mode and active.get("state") == "loaded"
 	abandon_button.text = "Confirm abandon — no payment" if not abandon_job_id.is_empty() and Time.get_ticks_msec() <= abandon_deadline else "Abandon cargo (no payment)"
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
-	loading_text.text = ("Loading %.0f%%" % loading.progress_percent() if loading.busy() else offer_notice) + "\nFuel %.0f / %.0f L · Condition %.0f%%" % [ship.state.fuel_liters, ship.definition.fuel_capacity_liters, ship.state.condition * 100]
+	if not loading.busy() and offer_notice == "Accepted — loading your cargo.": offer_notice = loading.notice
+	loading_text.text = "Loading %.0f%% — please wait." % loading.progress_percent() if loading.busy() else offer_notice
 	waypoint.visible = false
 	if heavy_mode and not heavy_jobs.active.is_empty():
 		var target: Vector3 = ship.payload_body.global_position if heavy_jobs.active.state == "pickup" else heavy_jobs.active.drop
@@ -338,8 +348,7 @@ func _process(_delta: float) -> void:
 		waypoint.visible = true
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
-		var destination: Node3D = world_ports[1] if port == world_ports[0] else world_ports[0]
-		navigation.text = "%s: %.0f m · RMB orbit · Wheel zoom · Esc menu" % [destination.definition.display_name, ship.global_position.distance_to(destination.berth_anchor.global_position)]
+		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

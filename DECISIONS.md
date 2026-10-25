@@ -292,3 +292,12 @@ with active jobs. Repair only verified unpaid empty-manifest orphan loading; nev
 infer missing cargo, undo receipts or mask unexplained money. Future sinking callers
 must honor the tested removal hook; no sinking system introduced by this step.
 See VOYAGE_LIFECYCLE.md.
+
+## D105 — Voyage HUD reads accepted job and live cargo state
+
+Keep the voyage panel read-only. Show promised cargo separately from cargo aboard,
+quoted payment separately from wallet/last paid receipt, and use the accepted job's
+destination through arrival. Show pending loading and save-block states explicitly.
+Use opaque panels and non-focusable controls; preserve throttle/neutral behavior.
+Step 56 adds geographic navigation; this step does not add a minimap or network
+port-service settlement. See VOYAGE_INTERFACE.md.
