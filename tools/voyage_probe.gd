@@ -3,6 +3,7 @@ const Preview = preload("res://features/ports/port_test.tscn")
 const Snapshot = preload("res://features/cargo/voyage_snapshot.gd")
 const Store = preload("res://features/cargo/voyage_store.gd")
 const Lifecycle = preload("res://features/cargo/voyage_lifecycle.gd")
+const Navigation = preload("res://features/ports/local_navigation.gd")
 const PATH = "user://voyage_test/voyage.db"
 var checks: int = 0
 var failures: int = 0
@@ -121,6 +122,8 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	view.loading.advance(2)
 	var partial: Dictionary = Snapshot.capture(view)
 	view._process(0)
+	check(Navigation.target(view).label == "Slatewater Works", "Navigation points to accepted delivery port")
+	check(view.action_reason.text.contains("Loading in progress") and view.refuel_button.disabled, "Pending service actions expose reason and remain disabled")
 	check(view.voyage_hud.heading.text == "LOADING CARGO" and view.voyage_hud.progress.value == 40, "HUD shows authoritative pending loading progress")
 	check(view.voyage_hud.cargo.text.contains("aboard: 0") and view.voyage_hud.route.text.contains("Slatewater Works"), "Pending HUD distinguishes promised cargo from aboard cargo")
 	var op_count: int = view.ship.state.operations._records.size()
@@ -185,6 +188,7 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	view.accept_selected()
 	var pickup: Dictionary = Snapshot.capture(view)
 	view._process(0)
+	check(Navigation.target(view).kind == "pickup" and Navigation.target(view).position == view.ship.payload_body.global_position, "Minimap pickup uses physical load location")
 	check(view.voyage_hud.heading.text == "COLLECT HEAVY LOAD" and view.voyage_hud.cargo.text.contains("awaiting pickup"), "Heavy pickup HUD does not claim cargo aboard")
 	check(Snapshot.valid(pickup), "Nearby heavy pickup and ocean destination can be saved")
 	check(Lifecycle.end_job(view).ok and view.heavy_jobs.active.is_empty() and view.ship.payload_body.collision_layer == 0, "Cancel heavy pickup removes floating load without reward")
@@ -212,6 +216,7 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	for i: int in 240: heavy.ship.advance_deck(1.0 / 60)
 	check(heavy.ship.deck_height == 2.6 and heavy.ship.helm_available(), "Interrupted lift finishes and helm unlocks")
 	heavy._process(0)
+	check(Navigation.target(heavy).kind == "drop" and Navigation.target(heavy).position == heavy.heavy_jobs.active.drop, "Reopened heavy voyage map uses saved ocean drop")
 	check(heavy.voyage_hud.heading.text == "DELIVER HEAVY LOAD" and heavy.voyage_hud.route.text.contains("Ocean drop-off"), "Recovered heavy cargo HUD follows ocean destination")
 	check(not heavy.ship.request_height(-1.0), "Job cannot be lowered for delivery at wrong location")
 	heavy.ship.global_position = heavy.heavy_jobs.active.drop - heavy.ship.global_basis * Vector3(0, 0, -8)
@@ -272,6 +277,7 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	resumed.bind_port()
 	dock(resumed)
 	resumed._process(0)
+	check(Navigation.target(resumed).position == resumed.world_ports[1].berth_anchor.global_position, "Navigation target stays at destination after port-context changes")
 	check(resumed.voyage_hud.route.text.contains("Slatewater Works") and resumed.voyage_hud.instruction.text.contains("Deliver cargo"), "At destination HUD stays on accepted route and explains delivery")
 	var before_delivery: Dictionary = Snapshot.capture(resumed)
 	var competitor = Store.new()
@@ -286,6 +292,21 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	await get_tree().process_frame
 
 func lifecycle_suite(view: Node3D) -> void:
+	check(Navigation.target(view).is_empty(), "Idle minimap has no stale job target")
+	view.selected_offer = view.jobs_list.get_item_metadata(1)
+	var selection: String = view.selected_offer
+	view.refresh_jobs()
+	view.refresh_jobs()
+	check(view.selected_offer == selection and view.jobs_list.get_selected_items()[0] == 1, "Service refresh preserves selection by job ID")
+	view.selected_offer = view.jobs_list.get_item_metadata(0)
+	view.refresh_jobs()
+	check(view.accept_reason() == "Dock before accepting a job.", "Unavailable job acceptance explains docking requirement")
+	var bounds: Dictionary = Navigation.frame(view)
+	var area := Rect2(30, 58, 260, 125)
+	for place: Node3D in view.world_ports:
+		check(area.grow(1).has_point(Navigation.project(place.berth_anchor.global_position, bounds, area)), "Auto-fit keeps each port within chart")
+	check(Navigation.chart_vector(Vector3.FORWARD) == Vector2(0, 1) and Navigation.chart_vector(Vector3(0, 0, 1)) == Vector2(0, -1), "Chart north follows the ship's positive-Z bow convention")
+	check(Navigation.chart_vector(Vector3(-1, 0, 0)) == Vector2(1, 0), "Chart east agrees with clockwise helm heading")
 	var initial: Dictionary = Snapshot.capture(view)
 	var legacy: Dictionary = initial.duplicate(true)
 	legacy.version = 1
@@ -334,6 +355,7 @@ func lifecycle_suite(view: Node3D) -> void:
 	check(Snapshot.valid(abandoned) and abandoned.manifest.is_empty() and abandoned.credits == 0, "Confirmed abandonment removes cargo without reward")
 	check(view.delivery.receipts(view.offers, "preview_captain").is_empty() and view.ship.assembly.container_visuals.shown_count == 0, "Abandonment produces no paid receipt or visible cargo")
 	check(not Lifecycle.end_job(view, true).ok, "Repeated abandonment cannot create payment")
+	check(Navigation.target(view).is_empty(), "Abandonment removes target immediately")
 	check(await Snapshot.restore(view, abandoned), "Abandoned job survives reopen")
 	view.ship.set_physics_process(false)
 	view.helm.set_physics_process(false)

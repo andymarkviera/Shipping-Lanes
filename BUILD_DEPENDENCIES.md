@@ -436,3 +436,10 @@ container and heavy trips, reload and save failure. Public network services rema
 a separate dependency. Step 56 minimap should reuse accepted destination/pickup/drop
 state, without introducing docking water markings or another authority. Cargo and
 mooring animations remain queued for later polish. See VOYAGE_INTERFACE.md.
+
+October 25 Step 56: local minimap and service usability implemented/tested; Step 57
+first voyage gate next. Local chart uses ship frame, not geographic global projection.
+Public network port/service request pending and timeout recovery remain outstanding;
+reuse request identities and reconcile before retry, never auto-resubmit from HUD
+refresh. Full local voyage regression passes; user acceptance of Steps 54–56 remains
+pending. See LOCAL_NAVIGATION.md.
