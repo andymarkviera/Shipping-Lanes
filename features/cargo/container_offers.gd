@@ -87,11 +87,20 @@ func release_pending(owner: String, ship_id: String) -> void:
 
 func deliver_at(owner: String, ship_id: String, port_id: String, manifest: RefCounted, docked: bool) -> Dictionary:
 	if not docked: return {"ok": false, "message": "Dock at the destination first.", "reward_minor": 0}
+	var candidate: Array[Dictionary] = manifest.lines()
+	var delivered: Array[Dictionary] = []
 	var reward: int = 0
 	for offer: Dictionary in _offers.values():
 		if offer.state != "loaded" or offer.owner_id != owner or offer.ship_id != ship_id or offer.destination_port_id != port_id: continue
-		var result: Dictionary = manifest.remove("batch_" + offer.id, offer.quantity)
-		if result.ok:
-			offer.state = "delivered"
-			reward += offer.reward_minor
-	return {"ok": reward > 0, "message": "Delivery complete." if reward > 0 else "No cargo for this port.", "reward_minor": reward}
+		var index: int = -1
+		for i: int in candidate.size():
+			if candidate[i].batch_id == "batch_" + offer.id: index = i; break
+		if index < 0 or candidate[index] != batch(offer): return {"ok": false, "message": "Job cargo does not match its accepted terms.", "reward_minor": 0}
+		candidate.remove_at(index)
+		delivered.append(offer)
+		reward += offer.reward_minor
+	if delivered.is_empty(): return {"ok": false, "message": "No cargo for this port.", "reward_minor": 0}
+	var result: Dictionary = manifest.replace(candidate)
+	if not result.ok: return {"ok": false, "message": result.message, "reward_minor": 0}
+	for offer: Dictionary in delivered: offer.state = "delivered"
+	return {"ok": true, "message": "Delivery complete.", "reward_minor": reward}

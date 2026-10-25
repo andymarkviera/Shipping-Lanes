@@ -35,7 +35,10 @@ func boot() -> void:
 func checkpoint() -> bool:
 	if blocked or not ready_to_save or not is_instance_valid(view.ship): return false
 	reconcile_heavy()
-	var data: Dictionary = Snapshot.capture(view)
+	return commit_snapshot(Snapshot.capture(view))
+
+func commit_snapshot(data: Dictionary) -> bool:
+	if blocked or not ready_to_save: return false
 	if not store.save(data):
 		stop_with_error(store.error)
 		return false

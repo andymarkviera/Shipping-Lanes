@@ -46,7 +46,7 @@ func run() -> void:
 		view.loading.advance(2)
 		check(view.loading.progress_percent() == 40, "Seed loading is partially complete")
 		check(store.save(Snapshot.capture(view)), "Partial loading saved atomically")
-	elif mode in ["before_commit", "after_commit", "verify_partial", "verify_loaded", "deliver", "verify_delivered"]:
+	elif mode in ["before_commit", "after_commit", "verify_partial", "verify_loaded", "deliver", "delivery_before_commit", "delivery_after_commit", "verify_delivered"]:
 		check(not store.current.is_empty(), "Existing checkpoint found")
 		if not store.current.is_empty():
 			check(await Snapshot.restore(view, store.current), "Fresh process restores voyage")
@@ -72,19 +72,35 @@ func run() -> void:
 				view.loading.advance(100)
 				check(view.ship.state.manifest.lines().size() == 1, "Restart cannot duplicate cargo")
 				check(view.ship.assembly.container_visuals.shown_count == 1, "Fresh-process reload reconstructs one visible container")
-			elif mode == "deliver":
+			elif mode in ["deliver", "delivery_before_commit", "delivery_after_commit"]:
 				view.docking.request_undock(1)
 				view.docking.advance(1)
 				view.port = view.world_ports[1]
 				view.bind_port()
 				dock(view)
+				var writer: Node = preload("res://features/cargo/voyage_persistence.gd").new()
+				writer.view = view
+				writer.store = store
+				writer.ready_to_save = true
+				view.persistence = writer
+				if mode.begins_with("delivery_"):
+					store.fault_hook = func(phase: String):
+						if "delivery_" + phase == mode:
+							var marker: FileAccess = FileAccess.open("user://fault_" + mode, FileAccess.WRITE)
+							marker.store_string(mode)
+							marker.flush()
+							marker.close()
+							OS.kill(OS.get_process_id())
 				view.deliver()
+				check(not mode.begins_with("delivery_"), "Delivery fault hook terminates inside actual commit")
+				writer.free()
 				check(view.reward_minor == 25000 and view.ship.state.manifest.lines().is_empty(), "Delivery atomically consumes job cargo and grants quoted reward")
 				check(view.ship.assembly.container_visuals.shown_count == 0, "Delivery removes visible containers immediately")
-				check(store.save(Snapshot.capture(view)), "Delivery saved")
+				check(store.current.credits == 25000 and store.current.manifest.is_empty(), "Delivery saved before reporting success")
 			else:
 				view.deliver()
 				check(view.reward_minor == 25000 and view.ship.state.manifest.lines().is_empty(), "Restarted delivery cannot pay twice")
+				check(view.delivery.receipts(view.offers, "preview_captain").size() == 1 and view.delivery.receipt_text(view.offers).contains("250.00"), "Reopening retains exactly one matching delivery receipt")
 	else:
 		await suite(view, store)
 	store.close()
@@ -225,5 +241,19 @@ func suite(view: Node3D, store: RefCounted) -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	check(resumed.persistence.store.current.loading == "" and resumed.persistence.store.current.manifest.size() == 1, "Autosave persists cargo completion without a manual save")
+	resumed.loading.set_physics_process(false)
+	resumed.docking.set_physics_process(false)
+	resumed.docking.request_undock(1)
+	resumed.docking.advance(1)
+	resumed.port = resumed.world_ports[1]
+	resumed.bind_port()
+	dock(resumed)
+	var before_delivery: Dictionary = Snapshot.capture(resumed)
+	var competitor = Store.new()
+	check(competitor.open_store(resumed.save_path) and competitor.save(before_delivery), "Competing session advances durable revision")
+	competitor.close()
+	resumed.deliver()
+	check(resumed.persistence.blocked and resumed.reward_minor == 0 and resumed.ship.state.manifest.lines().size() == 1, "Failed delivery commit leaves live cargo and wallet unchanged")
+	check(resumed.delivery.receipts(resumed.offers, "preview_captain").is_empty(), "Failed delivery cannot display a paid receipt")
 	resumed.queue_free()
 	await get_tree().process_frame

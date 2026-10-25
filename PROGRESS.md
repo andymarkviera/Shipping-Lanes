@@ -1886,3 +1886,18 @@ Next: Step 53 delivery/payout; temporary minimap remains Step 56.
 Recovery tag: container-visuals; verified source backup:
 ../output/checkpoints/container-visuals-2026-10-24.zip.
 Preexisting project.godot customization remains outside this checkpoint.
+
+## Step 53 — Delivery and payout — October 25, 2026
+
+Container delivery commits cargo removal, job completion and reward together before
+showing success. Failed commits preserve live cargo/balance. Added authoritative
+eligibility, exact accepted-batch matching, disabled-action reasons and a persistent
+readable delivery receipt. See DELIVERY_PAYOUT.md for local/public scope.
+129 scripts/startup, 241 rendered Release port/cargo checks and 48 voyage cases plus
+actual loading/delivery process-death recovery checks pass. Evidence:
+output/ports/263016bc and output/voyage/b44b9b2b. Receipt layout inspected.
+Steps 51–53 remain awaiting Andy's play-test feedback; no user acceptance inferred.
+Next: Step 54 voyage lifecycle reconciliation. Temporary minimap remains Step 56.
+Recovery tag: delivery-payout; verified source backup:
+../output/checkpoints/delivery-payout-2026-10-25.zip.
+Preexisting project.godot customization remains outside this checkpoint.

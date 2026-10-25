@@ -399,3 +399,10 @@ Next Step 53 must preserve one active job, atomic consumption/reward, wrong-port
 rejection and idempotent receipts. Public manifest/network service wiring is still
 an integration dependency, not completed by visual work. Step 51 remains awaiting
 user play-test feedback. See CONTAINER_VISUALS.md.
+
+October 25 Step 53: local delivery now commits before success acknowledgment; exact
+batch matching, receipts and real before/after-delivery-COMMIT recovery checks pass.
+Step 54 must reconcile cancellation, abandonment, despawn and ship-switch outcomes
+without refund/delivery duplication. Keep public port/service settlement integration
+explicitly outstanding. Steps 51–53 still await user play-test feedback.
+See DELIVERY_PAYOUT.md.
