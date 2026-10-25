@@ -34,6 +34,8 @@ def run(mode, realm='crash', killed=False):
 
 ok = run('suite', 'suite')
 if ok:
+    ok = run('round_trip', 'round_trip') and run('verify_round_trip', 'round_trip') and run('verify_round_trip', 'round_trip')
+if ok:
     for mode in ['seed', 'before_commit', 'verify_partial', 'after_commit', 'verify_loaded', 'delivery_before_commit', 'verify_loaded', 'delivery_after_commit', 'verify_delivered', 'verify_delivered']:
         if not run(mode, killed=mode in ['before_commit', 'after_commit', 'delivery_before_commit', 'delivery_after_commit']):
             ok = False
