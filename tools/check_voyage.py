@@ -34,8 +34,8 @@ def run(mode, realm='crash', killed=False):
 
 ok = run('suite', 'suite')
 if ok:
-    for mode in ['seed', 'before_commit', 'verify_partial', 'after_commit', 'verify_loaded', 'deliver', 'verify_delivered']:
-        if not run(mode, killed=mode in ['before_commit', 'after_commit']):
+    for mode in ['seed', 'before_commit', 'verify_partial', 'after_commit', 'verify_loaded', 'delivery_before_commit', 'verify_loaded', 'delivery_after_commit', 'verify_delivered', 'verify_delivered']:
+        if not run(mode, killed=mode in ['before_commit', 'after_commit', 'delivery_before_commit', 'delivery_after_commit']):
             ok = False
             break
 (folder / 'summary.json').write_text(json.dumps(results, indent=2), encoding='utf-8')

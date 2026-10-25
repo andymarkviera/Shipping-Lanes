@@ -259,3 +259,11 @@ instances beneath the hull visual root. No cargo physics, saved meshes or indepe
 visual authority. Do not show containers for unfinished loading or industrial heavy
 jobs. Keep geometry temporary. Andy explicitly has not play-tested Step 51 yet;
 automated checks do not imply user acceptance. See CONTAINER_VISUALS.md.
+
+## D101 — Save container settlement before acknowledging it
+
+Prepare delivery on copies, validate the authoritative dock/ship and exact accepted
+cargo, then persist removal and quoted payout together before applying live state.
+Refuse unsafe saves and preserve cargo; reconstruct receipts from delivered job terms.
+One active job remains the gameplay rule. Steps 51–53 are not yet user play-tested.
+See DELIVERY_PAYOUT.md.

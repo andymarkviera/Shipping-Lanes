@@ -14,6 +14,7 @@ func _ready() -> void:
 	check_manifest()
 	check_operations()
 	check_offers()
+	check_delivery_rules()
 	var registry: DefinitionRegistry = DefinitionRegistry.new()
 	verify(registry.load_definitions(PrototypeCatalog.RECORDS).is_empty(), "Both ports publish with valid cargo/berth references")
 	var ids: Array[String] = []
@@ -583,3 +584,28 @@ func capture_containers(preview: Node3D, capture: String) -> void:
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		verify(get_viewport().get_texture().get_image().save_png(capture + "-containers-" + str(count) + ".png") == OK, "Container load captured: " + str(count))
+
+func check_delivery_rules() -> void:
+	var source = preload("res://features/cargo/container_offers.gd").new()
+	var manifest = preload("res://features/cargo/cargo_manifest.gd").new(preload("res://features/catalog/records/starter_ship.tres"), PrototypeCatalog.RECORDS)
+	var id: String = source.list_at("port_brindle_quay")[0].id
+	source.accept(id, "captain", "ship", "port_brindle_quay", manifest)
+	source.complete_loading(id, "captain", "ship", "port_brindle_quay", manifest)
+	var before: Array[Dictionary] = manifest.lines()
+	verify(not source.deliver_at("captain", "ship", "port_slatewater_works", manifest, false).ok and manifest.lines() == before, "Undocked delivery preserves all cargo")
+	verify(not source.deliver_at("other", "ship", "port_slatewater_works", manifest, true).ok and not source.deliver_at("captain", "other", "port_slatewater_works", manifest, true).ok, "Wrong owner and ship cannot claim a job payout")
+	var mismatched: Array[Dictionary] = manifest.lines()
+	mismatched[0].origin_port_id = "port_slatewater_works"
+	manifest.replace(mismatched)
+	verify(not source.deliver_at("captain", "ship", "port_slatewater_works", manifest, true).ok and source.view(id).state == "loaded", "Matching batch ID alone is insufficient: accepted cargo terms must agree")
+	manifest.replace(before)
+	var unrelated: Dictionary = visual_batch(2)
+	unrelated.destination_port_id = "port_brindle_quay"
+	manifest.add(unrelated)
+	var delivered: Dictionary = source.deliver_at("captain", "ship", "port_slatewater_works", manifest, true)
+	verify(delivered.ok and delivered.reward_minor == 25000 and manifest.lines().size() == 1 and manifest.lines()[0] == unrelated, "Delivery preserves unrelated destinations and pays the exact accepted quote")
+	verify(not source.deliver_at("captain", "ship", "port_slatewater_works", manifest, true).ok, "Repeating delivery cannot pay the same job twice")
+	var receipt = preload("res://features/cargo/delivery_service.gd").receipts(source, "captain")
+	verify(receipt.size() == 1 and receipt[0].quantity == 1 and receipt[0].reward_minor == 25000, "Receipt matches consumed quantity and credited reward")
+	receipt[0].reward_minor = 1
+	verify(source.view(id).reward_minor == 25000, "Receipt presentation cannot rewrite accepted terms")

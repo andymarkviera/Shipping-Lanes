@@ -16,6 +16,8 @@ var docking = preload("res://features/ports/docking_authority.gd").new()
 var loading = preload("res://features/cargo/port_loading.gd").new()
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
+var delivery = preload("res://features/cargo/delivery_service.gd").new()
+var receipt_label: Label
 var heavy_mode: bool = false
 var offer_time: float = 0
 var offer_notice: String = ""
@@ -137,6 +139,8 @@ func _ready() -> void:
 	cancel_load_button = button(jobs_panel, "Cancel loading (release job)", func(): loading.cancel(); refresh_jobs())
 	loading_text = Label.new()
 	stack.add_child(loading_text)
+	receipt_label = Label.new()
+	stack.add_child(receipt_label)
 	heavy_controls = HBoxContainer.new()
 	stack.add_child(heavy_controls)
 	button(heavy_controls, "Lower", func(): ship.request_height(Heavy.LOWERED))
@@ -243,9 +247,7 @@ func repair() -> void:
 	ship.state.condition = 1.0
 
 func deliver() -> void:
-	if heavy_mode or loading.busy(): return
-	var result: Dictionary = offers.deliver_at("preview_captain", ship_key(), port.definition.id, ship.state.manifest, docking.state(1) == "docked")
-	reward_minor += result.reward_minor
+	var result: Dictionary = delivery.deliver(self)
 	offer_notice = result.message
 	refresh_jobs()
 
@@ -292,6 +294,10 @@ func _process(_delta: float) -> void:
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else "Container jobs"
 	accept_button.disabled = selected_offer.is_empty() or loading.busy() or not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty()
 	deliver_button.visible = not heavy_mode
+	deliver_button.tooltip_text = delivery.reason(self)
+	deliver_button.disabled = not deliver_button.tooltip_text.is_empty()
+	receipt_label.text = delivery.receipt_text(offers)
+	receipt_label.visible = not receipt_label.text.is_empty()
 	cancel_load_button.visible = loading.busy()
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
 	loading_text.text = ("Loading %.0f%%" % loading.progress_percent() if loading.busy() else offer_notice) + "\nFuel %.0f / %.0f L · Condition %.0f%%" % [ship.state.fuel_liters, ship.definition.fuel_capacity_liters, ship.state.condition * 100]
