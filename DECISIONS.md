@@ -318,3 +318,13 @@ Two consecutive local settlements and restart pass but cannot certify two player
 using ports, jobs and delivery together. Keep Step 57 open and prioritize that
 integration before Step 58 or additional cargo families. Preserve the existing
 public single-profile / private development-slot separation. See FIRST_VOYAGE_GATE.md.
+
+## D108 — Canonical public voyage transactions precede peer-facing ports
+
+Use the existing account lease/revision/receipt transaction for container contracts.
+The backend owns offer terms and loading readiness; the trusted game server must
+validate physical docking before asserting a port ID. No unrestricted player RPC.
+Keep local saves separate. Loading can become ready while offline, but cargo is
+created only by a validated completion request. Retain request IDs across unknown
+outcomes, and distinguish old receipts from current canonical state. Gate remains
+open until physical two-peer voyages pass. See PUBLIC_VOYAGE_CONTRACTS.md.

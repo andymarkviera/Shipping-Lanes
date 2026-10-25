@@ -66,3 +66,11 @@ restoration and two-boat roster visibility. Evidence:
 This is sailing/restart evidence only, not two-peer port cargo delivery. The initial
 restricted attempt could not connect to its isolated local PostgreSQL database;
 the permitted local-network retry passed and cleaned up its test processes.
+
+## Integration progress: durable public contracts
+
+PUBLIC_VOYAGE_CONTRACTS.md records the implemented/tested public job and settlement
+backend. It narrows the gap but does not close the gate: physical docking and
+peer-facing service/manifest wiring are still absent. Backend port IDs require
+trusted server eligibility checks before use. 99 contract/crash/handoff checks and
+41 existing authority checks pass. Next: server port anchors and peer-bound docking.

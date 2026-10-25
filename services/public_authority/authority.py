@@ -10,6 +10,7 @@ import math
 import re
 import secrets
 import uuid
+import voyages
 from pathlib import Path
 
 import psycopg
@@ -158,6 +159,10 @@ class Authority:
                   'checkpoint': owned | {'expected_revision', 'position', 'fuel_liters'},
                   'purchase': owned | {'action_id', 'expected_revision'},
                   'deliver': owned | {'action_id', 'expected_revision', 'cargo_id'},
+                  'voyage_accept': owned | {'action_id', 'expected_revision', 'offer_id', 'port_id'},
+                  'voyage_load': owned | {'action_id', 'expected_revision', 'job_id', 'port_id'},
+                  'voyage_deliver': owned | {'action_id', 'expected_revision', 'job_id', 'port_id'},
+                  'voyage_cancel': owned | {'action_id', 'expected_revision', 'job_id', 'abandon'},
                   'begin': owned | {'transfer_id', 'destination'}, 'seal': owned | {'transfer_id'},
                   'cancel': owned | {'transfer_id'}}
         op = request.get('op')
@@ -167,8 +172,9 @@ class Authority:
         require(type(op) is str and op in fields and set(request) == base | fields[op], 'BAD_REQUEST')
         for name in ['epoch', 'generation', 'expected_revision']:
             if name in request: require(type(request[name]) is int and 0 <= request[name] <= MAX_INTEGER, 'BAD_INTEGER')
-        for name in ['account', 'ticket', 'nonce', 'transfer_id', 'destination', 'action_id', 'cargo_id']:
+        for name in ['account', 'ticket', 'nonce', 'transfer_id', 'destination', 'action_id', 'cargo_id', 'job_id', 'offer_id', 'port_id']:
             if name in request: require(type(request[name]) is str and 0 < len(request[name]) <= 128 and re.fullmatch(r'[A-Za-z0-9_-]+', request[name]) is not None, 'BAD_IDENTIFIER')
+        if op == 'voyage_cancel': require(type(request['abandon']) is bool, 'BAD_REQUEST')
         if op == 'checkpoint':
             p = request['position']
             require(type(p) is dict and set(p) == {'latitude', 'longitude', 'heading'}, 'BAD_POSITION')
@@ -252,6 +258,8 @@ class Authority:
             profile['profile']['ship']['fuel_liters'] = request['fuel_liters']
             db.execute('UPDATE public_authority.profiles SET profile=%s,revision=revision+1 WHERE account=%s', (Jsonb(profile['profile']), account))
             return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']+1}
+        if op in voyages.OPERATIONS:
+            return self._voyage(db, account, profile, request)
         # Only game-owned purchase/delivery; no peer economic operations exist.
         intent = {key: request[key] for key in ('op', 'action_id', 'expected_revision', 'cargo_id') if key in request}
         fingerprint = digest(canonical(intent))
@@ -264,7 +272,7 @@ class Authority:
         cargo = profile['profile']['cargo']
         if profile['revision'] != request['expected_revision']: code = 'STALE_REVISION'
         elif op == 'purchase' and (profile['money'] < 10000 or game['stock'] < 1): code = 'INSUFFICIENT_RESOURCES'
-        elif op == 'deliver' and not any(item['id'] == request['cargo_id'] for item in cargo): code = 'CARGO_NOT_OWNED'
+        elif op == 'deliver' and not any(item['id'] == request['cargo_id'] and 'job_id' not in item for item in cargo): code = 'CARGO_NOT_OWNED'
         elif op == 'deliver' and game['money'] < 5000: code = 'INSUFFICIENT_RESOURCES'
         if code == 'COMMITTED':
             amount = -10000 if op == 'purchase' else 5000
@@ -280,4 +288,31 @@ class Authority:
         result = {'ok': code == 'COMMITTED', 'code': code, 'action_id': request['action_id'], 'revision': profile['revision']+(1 if code == 'COMMITTED' else 0), 'amount': amount}
         db.execute('INSERT INTO public_authority.receipts VALUES(%s,%s,%s,%s)', (account, request['action_id'], fingerprint, Jsonb(result)))
         if code == 'COMMITTED': db.execute('INSERT INTO public_authority.journal VALUES(%s,%s,%s)', (account, request['action_id'], amount))
+        return result
+
+    def _voyage(self, db, account, profile, request):
+        # Lease and profile are already locked. Reject unknown request fields above.
+        intent = {k: v for k, v in request.items() if k not in ('realm', 'account', 'epoch', 'generation')}
+        fingerprint = digest(canonical(intent))
+        prior = db.execute('SELECT * FROM public_authority.receipts WHERE account=%s AND action_id=%s', (account, request['action_id'])).fetchone()
+        if prior:
+            require(hmac.compare_digest(prior['fingerprint'], fingerprint), 'ID_CONFLICT')
+            return dict(prior['result'], duplicate=True)
+        game = db.execute('SELECT * FROM public_authority.game WHERE id=1 FOR UPDATE').fetchone()
+        candidate, amount, job = profile['profile'], 0, None
+        if profile['revision'] != request['expected_revision']:
+            code = 'STALE_REVISION'
+        else:
+            now_ms = int(self._now(db).timestamp()*1000)
+            code, candidate, amount, job = voyages.transition(profile['profile'], request, now_ms, game['money'])
+        ok = code in ('JOB_ACCEPTED', 'CARGO_LOADED', 'VOYAGE_DELIVERED', 'JOB_CLOSED')
+        if ok:
+            require(0 <= profile['money']+amount <= MAX_INTEGER, 'OVERFLOW')
+            db.execute('UPDATE public_authority.profiles SET profile=%s,money=money+%s,revision=revision+1 WHERE account=%s', (Jsonb(candidate), amount, account))
+            self.fault('after_profile_write', request)
+            if amount: db.execute('UPDATE public_authority.game SET money=money-%s WHERE id=1', (amount,))
+        result = dict(ok=ok, code=code, action_id=request['action_id'], revision=profile['revision']+int(ok), amount=amount)
+        if job is not None: result['job'] = job
+        db.execute('INSERT INTO public_authority.receipts VALUES(%s,%s,%s,%s)', (account, request['action_id'], fingerprint, Jsonb(result)))
+        if ok: db.execute('INSERT INTO public_authority.journal VALUES(%s,%s,%s)', (account, request['action_id'], amount))
         return result
