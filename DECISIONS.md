@@ -310,3 +310,11 @@ based on the nearest port. Direct dashed guide is not pathfinding. Preserve sele
 job IDs and expose disabled-action reasons. No world-space docking marks. Local
 service refresh must not submit commands; public network timeout/reconciliation
 wiring remains a separate integration obligation. See LOCAL_NAVIGATION.md.
+
+## D107 — Hold first voyage gate for actual multiplayer cargo integration
+
+Separate local voyage evidence from public sailing/economy foundation evidence.
+Two consecutive local settlements and restart pass but cannot certify two players
+using ports, jobs and delivery together. Keep Step 57 open and prioritize that
+integration before Step 58 or additional cargo families. Preserve the existing
+public single-profile / private development-slot separation. See FIRST_VOYAGE_GATE.md.

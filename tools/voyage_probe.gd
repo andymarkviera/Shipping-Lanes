@@ -42,7 +42,18 @@ func run() -> void:
 	var view: Node3D = await make_view()
 	var store = Store.new()
 	check(store.open_store(PATH), "Store opens")
-	if mode == "seed":
+	if mode == "round_trip":
+		await round_trip(view, store)
+	elif mode == "verify_round_trip":
+		check(await Snapshot.restore(view, store.current), "New process reopens two completed voyages")
+		view.ship.set_physics_process(false)
+		view.helm.set_physics_process(false)
+		check(view.reward_minor == 50000 and view.ship.state.manifest.lines().is_empty(), "Restart restores both payments and empty hold")
+		check(view.delivery.receipts(view.offers, "preview_captain").size() == 2, "Two distinct paid receipts survive restart")
+		view.deliver()
+		view.deliver()
+		check(view.reward_minor == 50000 and Navigation.target(view).is_empty(), "Repeated delivery after restart cannot pay or target completed job")
+	elif mode == "seed":
 		dock(view)
 		view.accept_selected()
 		view.loading.advance(2)
@@ -383,3 +394,52 @@ func lifecycle_suite(view: Node3D) -> void:
 	check(await Snapshot.restore(view, initial), "Lifecycle suite returns to empty voyage")
 	view.ship.set_physics_process(false)
 	view.helm.set_physics_process(false)
+
+func round_trip(view: Node3D, store: RefCounted) -> void:
+	var writer: Node = preload("res://features/cargo/voyage_persistence.gd").new()
+	writer.view = view
+	writer.store = store
+	writer.ready_to_save = true
+	view.persistence = writer
+	check(writer.checkpoint(), "First-voyage fixture saves initial spawn")
+	for leg: int in 2:
+		dock(view)
+		view.refresh_jobs()
+		view.accept_selected()
+		view.accept_selected()
+		view.loading.advance(2)
+		check(writer.checkpoint() and view.loading.busy(), "Round-trip pending load saved")
+		view.loading.advance(20)
+		check(writer.checkpoint() and view.ship.state.manifest.lines().size() == 1, "Round-trip loaded cargo saved once")
+		var expected: Dictionary = view.ship.state.manifest.lines()[0].duplicate(true)
+		check(view.docking.request_undock(1), "Round-trip undocks loaded ship")
+		view.docking.advance(1.1)
+		# Controlled open-water steering sample; approach placement below is a fixture,
+		# not an automated player-navigation or physical two-peer voyage proof.
+		view.ship.global_position = Vector3(750, 0, -800)
+		view.ship.command_throttle(1)
+		view.ship.maneuver(.3, 0)
+		var starting_fuel: float = view.ship.state.fuel_liters
+		var starting_position: Vector3 = view.ship.global_position
+		for tick: int in 1800:
+			view.ship.advance_motion(1.0 / 60)
+			view.ship.position += view.ship.velocity / 60
+			view._physics_process(1.0 / 60)
+			if tick % 300 == 0: check(writer.checkpoint(), "Round-trip sailing checkpoint remains valid")
+		check(view.ship.state.fuel_liters < starting_fuel and view.ship.global_position.distance_to(starting_position) > 10, "Loaded ship moves and consumes fuel on each leg")
+		check(view.ship.state.manifest.lines()[0] == expected, "Sailing retains exact cargo batch")
+		view.ship.zero_throttle()
+		view.ship.maneuver(0, 0)
+		view.port = view.world_ports[1 - leg]
+		view.bind_port()
+		dock(view)
+		view.deliver()
+		view.deliver()
+		check(view.reward_minor == (leg + 1) * 25000 and view.ship.state.manifest.lines().is_empty(), "Each completed leg pays exactly once")
+		check(store.current.credits == view.reward_minor and store.current.manifest.is_empty(), "Each receipt commits before delivery acknowledgment")
+		if leg == 0:
+			check(view.docking.request_undock(1), "Depart first receipt for return voyage")
+			view.docking.advance(1.1)
+	check(view.delivery.receipts(view.offers, "preview_captain").size() == 2, "Consecutive opposite-port jobs retain two receipts")
+	view.persistence = null
+	writer.free()

@@ -443,3 +443,9 @@ Public network port/service request pending and timeout recovery remain outstand
 reuse request identities and reconcile before retry, never auto-resubmit from HUD
 refresh. Full local voyage regression passes; user acceptance of Steps 54–56 remains
 pending. See LOCAL_NAVIGATION.md.
+
+October 25 Step 57 audit: HOLD. Local double-delivery/restart, crash recovery and
+loaded sailing checks pass. Missing public server port anchors, per-account job
+state, durable public settlement and client service/manifest replication prevent
+the required two-peer voyage test. Implement and verify these before Step 58;
+standalone two-peer sailing is only a baseline. See FIRST_VOYAGE_GATE.md.

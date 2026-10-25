@@ -1959,3 +1959,19 @@ recovery, and 270 rendered port checks pass. See LOCAL_NAVIGATION.md. Public net
 service timeout wiring remains outstanding; local UI never auto-resubmits commands.
 Awaiting user play-test. Next Step 57 first voyage gate. Recovery tag local-navigation;
 verified backup ../output/checkpoints/local-navigation-2026-10-25.zip.
+
+## Step 57 — First voyage gate audit — October 25, 2026 (OPEN)
+
+Added repeatable two-consecutive-job settlement and fresh-process restart checks:
+101 suite + 34 round-trip checks pass in editor/Release, with two restart verifications
+and existing process-kill loading/payout checks. Extended sailing passes 330 saves.
+Gate is NOT accepted: Port Test remains separate from authenticated public sessions,
+so two-peer cargo loading/delivery cannot yet be exercised. See FIRST_VOYAGE_GATE.md
+for the required port/world, per-account job, settlement and presentation integration.
+Do not advance to Step 58 until this gap is closed and the two-peer voyage passes.
+Save policy clarified without changes: public account profile, three private dev
+slots, and a separate single Port Test autosave. Recovery tag first-voyage-audit;
+backup ../output/checkpoints/first-voyage-audit-2026-10-25.zip.
+
+Fresh exported two-peer baseline passes 24 checks (sailing, contact, independent
+saves and server restart), ../output/handoff/81248558. Full cargo gate stays open.
