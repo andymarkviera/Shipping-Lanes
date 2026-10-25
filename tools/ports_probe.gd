@@ -152,6 +152,8 @@ func _ready() -> void:
 	get_tree().quit(0 if failures == 0 else 1)
 
 func check_berth(port: Node3D) -> void:
+	await get_tree().physics_frame
+	await get_tree().physics_frame
 	var rule = preload("res://features/ports/berth_eligibility.gd")
 	var definition: ShipDefinition = preload("res://features/catalog/records/starter_ship.tres").duplicate(true)
 	var pose: Transform3D = port.berth_anchor.global_transform
@@ -164,7 +166,7 @@ func check_berth(port: Node3D) -> void:
 	verify(rule.evaluate(port.berth, pose, definition, backwards, Vector3.ZERO, "container_transfer", "cargo_test_container", space).code == "HEADING", "Backward facing hull is not aligned")
 	var angled: Transform3D = pose * Transform3D(Basis(Vector3.UP, deg_to_rad(9)), Vector3.ZERO)
 	verify(rule.evaluate(port.berth, pose, definition, angled, Vector3.ZERO, "container_transfer", "cargo_test_container", space).eligible, "Small approach angle is tolerated")
-	var outside: Transform3D = pose.translated_local(Vector3(14, 0, 0))
+	var outside: Transform3D = pose.translated_local(Vector3(40, 0, 0))
 	verify(rule.evaluate(port.berth, pose, definition, outside, Vector3.ZERO, "container_transfer", "cargo_test_container", space).code == "POSITION", "Nearby center insufficient when whole hull does not fit")
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "unknown_service", "", space).code == "SERVICE", "Unsupported service rejected")
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "cargo_test_industrial", space).code == "CARGO", "Ship cargo compatibility enforced")
@@ -175,7 +177,17 @@ func check_berth(port: Node3D) -> void:
 	verify(rule.evaluate(port.berth, pose, heavy, forgiving, Vector3.ZERO, "heavy_transfer", "cargo_test_industrial", space).eligible, "Heavy loader docks three metres off centre")
 	forgiving = pose * Transform3D(Basis(Vector3.UP, deg_to_rad(5)), Vector3.ZERO)
 	verify(rule.evaluate(port.berth, pose, heavy, forgiving, Vector3.ZERO, "heavy_transfer", "cargo_test_industrial", space).eligible, "Heavy loader docks five degrees off heading")
-	definition.hull_size_m.x = 40
+	for hull: ShipDefinition in [definition, heavy]:
+		var service: String = "heavy_transfer" if hull == heavy else "container_transfer"
+		var cargo: String = "cargo_test_industrial" if hull == heavy else "cargo_test_container"
+		var contact_x: float = port.quay_side * (20 - hull.hull_size_m.x / 2)
+		var contact: Transform3D = pose.translated_local(Vector3(contact_x, 0, 0))
+		verify(rule.evaluate(port.berth, pose, hull, contact, Vector3.ZERO, service, cargo, space).eligible, "Hull can dock at the quay surface: " + hull.id)
+		contact.origin += pose.basis.x * port.quay_side * .25
+		verify(rule.evaluate(port.berth, pose, hull, contact, Vector3.ZERO, service, cargo, space).code == "BLOCKED", "Hull penetrating the quay remains blocked: " + hull.id)
+		var wide: Transform3D = pose.translated_local(Vector3(-port.quay_side * 15, 0, 35))
+		verify(rule.evaluate(port.berth, pose, hull, wide, Vector3.ZERO, service, cargo, space).eligible, "Wider side and length approach is eligible: " + hull.id)
+	definition.hull_size_m.x = 70
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "SIZE", "Oversized hull rejected")
 	definition.hull_size_m.x = 13
 	var bad: BerthDefinition = port.berth.duplicate(true)
@@ -229,6 +241,8 @@ func check_docking(preview: Node3D) -> void:
 	authority.request_dock(1, "container_transfer", "cargo_test_container")
 	verify(authority.cancel(1) and not body.docked and authority.reservations.is_empty(), "Cancelled docking releases reservation and helm")
 	authority.request_dock(1, "container_transfer", "cargo_test_container")
+	# Keep the fixture still so physics depenetration cannot move it clear first.
+	body.set_physics_process(false)
 	var obstacle: StaticBody3D = StaticBody3D.new()
 	obstacle.collision_layer = CollisionRules.SHORE
 	obstacle.transform = body.global_transform
@@ -239,6 +253,7 @@ func check_docking(preview: Node3D) -> void:
 	authority.advance(.1)
 	verify(authority.state(1) == "underway" and authority.reservations.is_empty() and not body.docked, "New obstruction cancels docking and releases reservation")
 	obstacle.free()
+	body.set_physics_process(true)
 	await get_tree().physics_frame
 	authority.request_dock(1, "container_transfer", "cargo_test_container")
 	authority.disconnect_owner(1)
@@ -246,6 +261,15 @@ func check_docking(preview: Node3D) -> void:
 	authority.disconnect_owner(2)
 	other.free()
 	authority.register(1, body, preview.port)
+	var old_pose: Transform3D = body.global_transform
+	body.global_transform = preview.port.berth_anchor.global_transform.translated_local(Vector3(preview.port.quay_side * (20 - body.definition.hull_size_m.x / 2 - .03), 0, 0))
+	verify(authority.request_dock(1, "container_transfer", "cargo_test_container").ok, "Actual ship can request docking right alongside quay")
+	authority.advance(1.1)
+	verify(authority.state(1) == "docked", "Alongside docking completes without an obstruction cancellation")
+	authority.request_undock(1)
+	authority.advance(.6)
+	verify(body.helm_available(), "Alongside undocking restores helm")
+	body.global_transform = old_pose
 	authority.set_physics_process(true)
 
 func check_manifest() -> void:

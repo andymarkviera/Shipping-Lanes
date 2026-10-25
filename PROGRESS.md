@@ -1915,3 +1915,15 @@ Cargo-loading animation recorded for later presentation polish. Step 54 remains 
 Partial play-test feedback received; confirmation of the fix remains pending.
 Recovery tag: sailing-save-fix; verified source backup:
 ../output/checkpoints/sailing-save-fix-2026-10-25.zip.
+
+## Play-test adjustment — Alongside docking — October 25, 2026
+
+Andy confirms the save freeze is fixed and heavy-loader pickup works. Expanded berth
+width/length and removed the artificial shore gap so stopped ships can dock right
+alongside either quay. Other-boat/cargo clearance and actual shore physics remain.
+261 editor/Release port checks and voyage/crash recovery checks pass; see
+ALONGSIDE_DOCKING.md (output/ports/133ed93b; output/voyage/44e357ba).
+Record mooring-rope tie-up/release animations for later port presentation polish,
+alongside the already-requested cargo-loading animation. Step 54 remains next.
+Recovery tag: alongside-docking; verified source backup:
+../output/checkpoints/alongside-docking-2026-10-25.zip.
