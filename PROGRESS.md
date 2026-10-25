@@ -1841,3 +1841,17 @@ Step 51 remains next: persist the redesigned job types and dock service state sa
 Recovery tag: dock-services-redesign.
 Verified source backup: ../output/checkpoints/dock-services-redesign-2026-10-24.zip.
 Preexisting project.godot customization remains outside this checkpoint.
+
+## Docking usability correction — October 24, 2026
+
+Fixed sailing HUD keyboard focus traps, including cargo-list scrollbars. Both hulls
+restart forward/reverse from rest through PlayerControls. Heavy berths now allow a
+practical approach tolerance, preserving physical clearance and heading checks.
+One active job per captain; accepting a container job automatically starts loading.
+Heavy jobs retain nearby pickup. See DOCKING_USABILITY.md.
+ControlsCheck, 134 handling checks and 220 final rendered Release port/cargo checks
+pass (output/ports/4b745e41). Final menu captures inspected. Step 51 remains next;
+visible containers Step 52; temporary minimap added to Step 56 scope.
+Recovery tag: docking-usability; verified source backup:
+../output/checkpoints/docking-usability-2026-10-24.zip.
+Preexisting project.godot customization remains outside this checkpoint.

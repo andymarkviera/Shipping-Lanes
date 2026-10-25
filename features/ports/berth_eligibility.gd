@@ -19,7 +19,8 @@ static func evaluate(berth: BerthDefinition, anchor: Transform3D, ship: ShipDefi
 	var bounds: AABB = local * AABB(-size / 2, size)
 	var zone: AABB = AABB(-berth.envelope_m / 2, berth.envelope_m)
 	if not zone.encloses(bounds):
-		return result("POSITION", "Move the whole ship inside the berth area.")
+		var offset: Vector3 = pose.affine_inverse() * anchor.origin
+		return result("POSITION", "Berth centre: %.0f m %s, %.0f m %s. Align alongside the quay." % [absf(offset.x), "starboard" if offset.x > 0 else "port", absf(offset.z), "ahead" if offset.z > 0 else "astern"])
 	if velocity.length() > berth.max_docking_speed_mps + 0.000001:
 		return result("SPEED", "Slow to %.2f m/s or less to dock." % berth.max_docking_speed_mps)
 	var heading_error: float = rad_to_deg(acos(clampf(pose.basis.z.dot(anchor.basis.z), -1, 1)))
