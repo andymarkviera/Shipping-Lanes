@@ -1,6 +1,9 @@
 extends Node3D
 const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.tscn"), preload("res://features/ports/slatewater_works.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
+@export var save_enabled: bool = true
+@export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
+var persistence: Node
 var world_ports: Array[Node3D] = []
 var port: Node3D
 var ship: HandlingShip
@@ -42,7 +45,11 @@ func button(parent: Node, title: String, action: Callable) -> Button:
 	# Sailing HUD actions must never retain keyboard focus (including Tab/cancelled clicks).
 	node.focus_mode = Control.FOCUS_NONE
 	parent.add_child(node)
-	node.pressed.connect(func(): node.release_focus(); action.call(); controls.wait_for_release = true)
+	node.pressed.connect(func():
+		if is_instance_valid(persistence) and not persistence.ready_to_save and title != "Main menu": return
+		node.release_focus()
+		action.call()
+		controls.wait_for_release = true)
 	return node
 
 func _ready() -> void:
@@ -133,11 +140,13 @@ func _ready() -> void:
 	heavy_controls = HBoxContainer.new()
 	stack.add_child(heavy_controls)
 	button(heavy_controls, "Lower", func(): ship.request_height(Heavy.LOWERED))
-	button(heavy_controls, "Secure", func(): ship.attach_payload())
 	button(heavy_controls, "Raise", func(): ship.request_height(Heavy.RAISED))
-	button(heavy_controls, "Drop load", func(): ship.detach_payload())
 	button(heavy_controls, "Cancel pickup", func(): heavy_jobs.cancel_pickup(ship); refresh_jobs())
 	select_port(0)
+	if save_enabled and not OS.get_cmdline_user_args().has("--ports-check") and not OS.get_cmdline_user_args().has("--voyage-check"):
+		persistence = preload("res://features/cargo/voyage_persistence.gd").new()
+		add_child(persistence)
+		get_tree().auto_accept_quit = false
 
 func service_id() -> String:
 	return "heavy_transfer" if heavy_mode else "container_transfer"
@@ -241,7 +250,10 @@ func deliver() -> void:
 	refresh_jobs()
 
 func leave() -> void:
+	if is_instance_valid(persistence) and not persistence.blocked:
+		if not persistence.checkpoint(): return
 	loading.disconnect_ship()
+	get_tree().auto_accept_quit = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().change_scene_to_file("res://features/main/main.tscn")
 
@@ -274,7 +286,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
-	details.text = "%s · %s\nTemporary test session · Earnings %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", reward_minor / 100.0]
+	details.text = "%s · %s\nLocal test voyage · Earnings %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", reward_minor / 100.0]
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else "Container jobs"
@@ -289,7 +301,16 @@ func _process(_delta: float) -> void:
 		waypoint.position = target + Vector3(0, 12, 0)
 		waypoint.text = "PICKUP" if heavy_jobs.active.state == "pickup" else "OCEAN DROP-OFF"
 		waypoint.visible = true
-		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, lower the deck, then Drop load.", ship.notice]
+		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
 		var destination: Node3D = world_ports[1] if port == world_ports[0] else world_ports[0]
 		navigation.text = "%s: %.0f m · RMB orbit · Wheel zoom · Esc menu" % [destination.definition.display_name, ship.global_position.distance_to(destination.berth_anchor.global_position)]
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if is_instance_valid(persistence) and not persistence.blocked:
+			if not persistence.checkpoint(): return
+		get_tree().quit()
+
+func _exit_tree() -> void:
+	get_tree().auto_accept_quit = true

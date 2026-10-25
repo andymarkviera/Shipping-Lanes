@@ -57,9 +57,10 @@ func _ready() -> void:
 	var fuel_tools: FuelTestControls = FuelTestControls.new()
 	stack.add_child(fuel_tools)
 	fuel_tools.configure(ship, controls)
-	for entry: Array in [["1. Lower deck", func(): ship.request_height(Heavy.LOWERED)], ["Optional: position test payload", func(): ship.align_test_payload()], ["3. Secure payload", func(): ship.attach_payload()], ["4. Raise deck", func(): ship.request_height(Heavy.RAISED)], ["Release payload (deck lowered)", func(): ship.detach_payload()]]:
+	for entry: Array in [["1. Lower deck", func(): ship.request_height(Heavy.LOWERED)], ["Optional: position test payload", func(): ship.align_test_payload()], ["Raise / pick up load", func(): ship.request_height(Heavy.RAISED)], ["Release payload (deck lowered)", func(): ship.detach_payload()]]:
 		var button: Button = Button.new()
 		button.text = entry[0]
+		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(func():
 			entry[1].call()
 			button.release_focus()

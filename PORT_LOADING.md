@@ -1,3 +1,5 @@
+> Step 51 update: IN_FLIGHT_PERSISTENCE.md supersedes the discard-on-exit and manual Secure workflow below; this document retains checkpoint history.
+
 > Updated October 24: DOCK_SERVICES_REDESIGN.md supersedes the timed-offer, water-guide and test-service assumptions below. This file retains earlier checkpoint history.
 
 # Step 50 — Port loading and prerequisite heavy pickup repair

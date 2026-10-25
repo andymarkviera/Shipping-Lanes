@@ -1,3 +1,5 @@
+> Step 51 update: IN_FLIGHT_PERSISTENCE.md supersedes the discard-on-exit and manual Secure workflow below; this document retains checkpoint history.
+
 # Dock services and ship-specific jobs — October 24, 2026
 
 User direction supersedes timed-offer design: dock first, then CARGO / REFUEL /

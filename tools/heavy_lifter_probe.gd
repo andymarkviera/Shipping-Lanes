@@ -74,9 +74,9 @@ func run() -> void:
 	check(ship.align_test_payload(), "Fixture stages load in clear loading space")
 	await get_tree().physics_frame
 	ship.payload_body.rotation.y = 0.2
-	check(not ship.attach_payload(), "Misaligned heading rejected")
-	ship.payload_body.rotation.y = 0
-	check(ship.attach_payload(), "Aligned load attaches")
+	check(ship.pickup_position_ready(), "Crooked load over platform is eligible without angle matching")
+	check(ship.request_height(Heavy.RAISED) and ship.attached, "Raise automatically picks up crooked load")
+	ship.deck_target = ship.deck_height
 	check(not ship.attach_payload(), "Duplicate attachment rejected")
 	check(ship.payload_body.collision_layer == 0 and not ship.payload_shape.disabled, "Exactly one active cargo collision owner")
 	check(ship.payload_visual.get_parent() == ship.cargo_mount, "Cargo becomes a fixed transform child")
@@ -142,8 +142,8 @@ func run() -> void:
 	check(ship.payload_body.collision_layer == CollisionRules.HULL and ship.payload_shape.disabled, "Detached load regains sole collision ownership")
 	ship.request_height(Heavy.RAISED)
 	ship.advance_deck(1.0 / 60.0)
-	check(ship.deck_height == Heavy.LOWERED, "Unsecured load cannot be raised through")
-	check(ship.attach_payload(), "Same payload can be loaded again")
+	check(ship.attached and ship.deck_height > Heavy.LOWERED, "Raise picks up previously released load instead of moving through it")
+	check(not ship.attach_payload(), "Automatic pickup cannot duplicate attachment")
 	ship.payload_body.queue_free()
 	ship.queue_free()
 	await get_tree().process_frame
@@ -158,8 +158,7 @@ func run() -> void:
 	scene.buttons[1].pressed.emit()
 	await get_tree().physics_frame
 	scene.buttons[2].pressed.emit()
-	check(scene.ship.attached, "Visible align and secure controls attach the test load")
-	scene.buttons[3].pressed.emit()
+	check(scene.ship.attached, "Visible staging and Raise controls pick up the test load")
 	check(scene.ship.deck_target == Heavy.RAISED, "Visible raise button targets the deck")
 	scene.queue_free()
 	print("HEAVY_LIFTER_CHECK_%s (%d checks)" % ["PASS" if failures == 0 else "FAIL", checks])

@@ -15,7 +15,7 @@ var payload_shape: CollisionShape3D
 var attached: bool = false
 var release_guard: Callable
 var assembly: ShipAssembly
-var notice: String = "Lower the deck, reverse under the floating load, stop and secure."
+var notice: String = "Lower the platform, move underneath the load, stop and press Raise."
 
 func shape(size: Vector3, at: Vector3) -> CollisionShape3D:
 	return ShipAssembly.box_collision(self, size, at)
@@ -68,7 +68,14 @@ func request_height(target: float) -> bool:
 		notice = "Come to a complete stop with the engine neutral first."
 		return false
 	if target not in [RAISED, LOWERED]: return false
+	if target == RAISED and not attached and absf(deck_height - LOWERED) <= .001 and payload_body.collision_layer != 0:
+		var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, -8)
+		if absf(offset.x) < 25 and absf(offset.z) < 50 and not attach_payload(): return false
+	if target == LOWERED and attached and release_guard.is_valid() and not release_guard.call():
+		notice = "Take this load to its ocean drop-off before lowering it."
+		return false
 	deck_target = target
+	if target == LOWERED and not operating() and attached and release_guard.is_valid(): detach_payload()
 	notice = "Raising deck…" if target == RAISED else "Lowering deck…"
 	return true
 
@@ -93,16 +100,15 @@ func align_test_payload() -> bool:
 		return false
 	# Fixture-only convenience: move the staged load, not the player's ship.
 	payload_body.global_transform = pose
-	notice = "Test payload aligned. Secure it before raising."
+	notice = "Test payload positioned. Press Raise to pick it up."
 	return true
 
 func attach_payload() -> bool:
 	if attached or operating() or not stopped() or absf(deck_height - LOWERED) > 0.001:
-		notice = "Stop with the deck fully lowered to secure cargo."
+		notice = "Stop with the platform fully lowered, then press Raise."
 		return false
-	var relative: Transform3D = global_transform.affine_inverse() * payload_body.global_transform
-	if relative.origin.distance_to(Vector3(0, LOWERED, -8)) > 0.5 or relative.basis.z.dot(Vector3.FORWARD * -1) < cos(deg_to_rad(3)):
-		notice = "Payload is not aligned over the deck."
+	if not pickup_position_ready():
+		notice = "Move the platform underneath the centre of the load, then stop and Raise."
 		return false
 	if not space_clear(cargo_mount.global_transform.translated_local(Vector3(0, 4, 0)), payload_shape.shape):
 		notice = "Cannot secure cargo inside an obstacle."
@@ -142,21 +148,23 @@ func advance_deck(delta: float) -> void:
 		var cargo_swept: BoxShape3D = BoxShape3D.new()
 		cargo_swept.size = Vector3(14, 8 + absf(next - deck_height), 32)
 		clear = clear and space_clear(global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 + 4, -8)), cargo_swept)
-	elif deck_target > deck_height:
+	elif deck_target > deck_height and payload_body.collision_layer != 0:
 		# An unsecured floating load must never be raised through.
 		var local_load: Vector3 = to_local(payload_body.global_position)
 		if absf(local_load.x) < 16 and absf(local_load.z + 8) < 40:
 			clear = false
 	if not clear:
 		deck_target = deck_height
-		notice = "Deck stopped: clearance blocked. Move clear or secure the load."
+		notice = "Deck stopped: clearance blocked. Check the space above and around the load."
 		return
 	deck_height = next
 	deck_visual.position.y = deck_height - RAISED
 	deck_shape.position.y = deck_height - 0.45
 	cargo_mount.position.y = deck_height
 	payload_shape.position.y = deck_height + 4
-	if not operating(): notice = "Deck raised — ready to sail." if deck_height == RAISED else "Deck lowered — ready for loading."
+	if not operating():
+		notice = "Deck raised — ready to sail." if deck_height == RAISED else "Deck lowered — ready for loading."
+		if deck_height == LOWERED and attached and release_guard.is_valid(): detach_payload()
 
 func _physics_process(delta: float) -> void:
 	if simulation_paused: return
@@ -166,10 +174,13 @@ func _physics_process(delta: float) -> void:
 	advance_deck(delta)
 	super._physics_process(delta)
 
+func pickup_position_ready() -> bool:
+	if not is_instance_valid(payload_body) or not payload_body.is_inside_tree() or payload_body.collision_layer == 0: return false
+	var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, -8)
+	# The load centre must be over the platform. Heading is deliberately unrestricted.
+	return absf(offset.x) <= 9 and absf(offset.z) <= 24 and absf(offset.y) <= 2
+
 func alignment_hint() -> String:
-	if attached: return "Payload secured. Raise the deck to sail."
-	if not is_instance_valid(payload_body) or not payload_body.is_inside_tree(): return "Preparing floating payload…"
-	var relative: Transform3D = global_transform.affine_inverse() * payload_body.global_transform
-	var offset: Vector3 = relative.origin - Vector3(0, LOWERED, -8)
-	var angle: float = rad_to_deg(acos(clampf(relative.basis.z.dot(Vector3.BACK), -1, 1)))
-	return "Load offset: side %.1f m · length %.1f m · angle %.1f°\nApproach through the open stern with the deck lowered.\nAlign within 0.5 m and 3°, then stop and select Secure." % [offset.x, offset.z, angle]
+	if attached: return "Load aboard. Raise to sail; Lower at the ocean drop-off to deliver."
+	if pickup_position_ready(): return "Platform is under the load. Stop in neutral and press Raise."
+	return "Lower the platform and reverse underneath the centre of the load.\nCrooked is fine — no angle matching required."
