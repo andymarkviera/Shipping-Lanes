@@ -463,3 +463,10 @@ validate cargo service requests against this authoritative docked state, call
 canonical contract transactions, replicate owned job/manifest/wallet/receipts and
 complete two-peer voyage/crash gate. Loading must lock undocking before enabling
 peer-facing cargo acceptance. Step 57 remains OPEN. See PUBLIC_PORTS.md.
+
+October 25 Step 57 update: online cargo command/UI/replication wiring now connects
+physical docking to canonical contracts. Release two-peer cargo/reconnect/
+settlement checks pass (38), plus physics/local voyage regressions. Protocol 11.
+The test uses fixture approaches; full consecutive navigated two-peer voyages and
+live interruption validation remain next before closing the gate. Public heavy,
+refuel/repair and minimap integration remain outstanding. See PUBLIC_CARGO_SERVICES.md.

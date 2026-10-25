@@ -3,6 +3,7 @@ extends Node3D
 const Hull = preload("res://features/ships/starter_container_01/starter_runtime.tscn")
 const Ports = preload("res://features/network/public_port_catalog.gd")
 var ports: Dictionary = {}
+var cargo_counts: Dictionary = {}
 var replicas: Dictionary = {}
 var tick: int = -1
 var received_at: int = 0
@@ -45,11 +46,18 @@ func _process(delta: float) -> void:
 		for record: Dictionary in replicas.values(): record.node.queue_free()
 		replicas.clear()
 		return
-	for record: Dictionary in replicas.values():
+	for id: String in replicas:
+		var record: Dictionary = replicas[id]
+		var count: int = clampi(int(cargo_counts.get(id, 0)), 0, 6)
+		var visuals: Node3D = record.node.assembly.container_visuals
+		if visuals.instances != null:
+			visuals.shown_count = count
+			visuals.instances.multimesh.visible_instance_count = count
 		record.node.position = record.node.position.lerp(record.target, 1.0 - exp(-15.0 * delta))
 		record.node.rotation.y = lerp_angle(record.node.rotation.y, record.yaw, 1.0 - exp(-15.0 * delta))
 
 func clear() -> void:
+	cargo_counts.clear()
 	for port: Node3D in ports.values(): port.queue_free()
 	ports.clear()
 	for record: Dictionary in replicas.values(): record.node.queue_free()

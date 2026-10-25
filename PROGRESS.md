@@ -2000,3 +2000,15 @@ Tag public-ports; backup ../output/checkpoints/public-ports-2026-10-25.zip.
 
 Existing exported two-peer sailing/contact/save/restart baseline also passes 24
 checks after adding physical ports: ../output/handoff/470b1bae.
+
+## Step 57 integration — Online cargo menu and settlement — October 25, 2026
+
+Connected authenticated docked players to canonical container contracts. Added
+one-job cargo menu, loading/undock lock, nearby visible containers, destination/
+wallet HUD, delivery receipt and reconnect-safe loading. Game protocol 11.
+138-script/startup check, Release export, 38 actual two-peer cargo checks,
+37 physics checks and local voyage/crash regressions pass. Rendered UI inspected.
+See PUBLIC_CARGO_SERVICES.md. Full gate stays OPEN: these cargo checks use fixture
+approach positions; complete navigated two-peer consecutive voyages remain next.
+User play-test pending. Tag public-cargo-services; verified source backup:
+../output/checkpoints/public-cargo-services-2026-10-25.zip.

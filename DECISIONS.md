@@ -338,3 +338,13 @@ physical eligibility, and clear reservations on departure/authority loss. Keep
 uncertain commands pending with explicit recovery instead of automatic replay.
 No persistent berth claim across reconnect. Protocol 10 requires matching game
 builds. See PUBLIC_PORTS.md.
+
+## D110 — Bind online cargo commands to actual server docking
+
+Derive account, job and port from authenticated server ownership and docked state.
+Serialize voyage mutations with saves/departure; reconcile current canonical state
+after known results and fence uncertain outcomes. Never auto-resubmit an uncertain
+payment. Publish bounded own-job state and nearby cargo counts for presentation.
+Loading locks undocking; reconnect requires redocking without losing the job.
+Protocol 11. Full navigated two-peer voyage gate remains open despite passing
+fixture-approach cargo UI/reconnect/settlement checks. See PUBLIC_CARGO_SERVICES.md.

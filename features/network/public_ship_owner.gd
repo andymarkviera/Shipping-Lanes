@@ -8,6 +8,9 @@ var authority: Node
 var ship: HandlingShip
 var geographic_anchor: Dictionary = {}
 var cargo_records: Array = []
+var public_profile: Dictionary = {}
+var wallet_minor: int = 0
+var voyage_busy: bool = false
 var departing: bool = false
 var checkpoint_busy: bool = false
 var save_at_ms: int = 0
@@ -15,7 +18,7 @@ var last_saved_ms: int = 0
 const SAVE_INTERVAL_MS: int = 10000
 
 func _process(_delta: float) -> void:
-	if ship == null or departing or not authority.active or checkpoint_busy or authority.busy: return
+	if ship == null or departing or not authority.active or checkpoint_busy or voyage_busy or authority.busy: return
 	if Time.get_ticks_msec() >= save_at_ms:
 		save_at_ms = Time.get_ticks_msec() + SAVE_INTERVAL_MS
 		checkpoint_current()
@@ -59,7 +62,7 @@ func restore_grant(result: Dictionary, activate: bool = true) -> void:
 	# Admission starts paused until safe placement in a server physics group.
 	ship.position = Vector3.ZERO
 	ship.rotation.y = -deg_to_rad(geographic_anchor.heading)
-	cargo_records = result.profile.cargo.duplicate(true)
+	install_profile(result)
 	ship.simulation_paused = not activate
 	departing = false
 	save_at_ms = Time.get_ticks_msec() + SAVE_INTERVAL_MS
@@ -78,7 +81,7 @@ func begin_transfer(data: Dictionary) -> Dictionary:
 		return {"ok": false, "code": "LOCAL_QUIESCED"}
 	departing = true
 	park()
-	while checkpoint_busy or authority.busy: await get_tree().process_frame
+	while checkpoint_busy or voyage_busy or authority.busy: await get_tree().process_frame
 	var saved: Dictionary = await checkpoint_current()
 	if not saved.get("ok", false): return saved
 	var result: Dictionary = await authority.request(data)
@@ -95,7 +98,7 @@ func current_address() -> Dictionary:
 	return address
 
 func checkpoint_current() -> Dictionary:
-	if checkpoint_busy or authority.busy: return {"ok": false, "code": "LOCAL_BUSY"}
+	if checkpoint_busy or voyage_busy or authority.busy: return {"ok": false, "code": "LOCAL_BUSY"}
 	checkpoint_busy = true
 	var current: Dictionary = await authority.request(authority.owned("inspect"))
 	if not current.get("ok", false):
@@ -117,3 +120,8 @@ func helm(candidate: Dictionary, throttle: float, rudder: float, lateral: float 
 	ship.command_throttle(throttle)
 	ship.maneuver(rudder, lateral)
 	return true
+
+func install_profile(result: Dictionary) -> void:
+	public_profile = result.profile.duplicate(true)
+	cargo_records = public_profile.cargo.duplicate(true)
+	wallet_minor = int(result.get("money", 0))
