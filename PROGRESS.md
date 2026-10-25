@@ -1855,3 +1855,19 @@ visible containers Step 52; temporary minimap added to Step 56 scope.
 Recovery tag: docking-usability; verified source backup:
 ../output/checkpoints/docking-usability-2026-10-24.zip.
 Preexisting project.godot customization remains outside this checkpoint.
+
+## Step 51 — In-flight voyage persistence — October 24, 2026
+
+Local Port Test now saves jobs, loading progress, manifest/receipts, heavy attachment
+and ocean target, pose, fuel/condition and test credits atomically. Restart is neutral;
+loading and deck travel resume. Failed/corrupt saves pause without resetting progress.
+Heavy pickup now uses platform-under-load rather than tight angle alignment: Raise
+picks up automatically; Lower at the destination delivers. Secure is removed.
+See IN_FLIGHT_PERSISTENCE.md for recovery policies and public-integration limits.
+126 scripts/startup, FlowCheck, 39 heavy and 220 rendered Release port/cargo checks pass.
+41-case voyage suite plus actual before/after-COMMIT process-death and reopened
+single-payment checks pass in editor and Release (output/voyage/dea4dccd).
+Next: Step 52 container visuals; temporary minimap remains recorded for Step 56.
+Recovery tag: in-flight-voyages; verified source backup:
+../output/checkpoints/in-flight-voyages-2026-10-24.zip.
+Preexisting project.godot customization remains outside this checkpoint.

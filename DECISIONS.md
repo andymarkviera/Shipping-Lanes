@@ -241,3 +241,13 @@ Keep manual nearby heavy pickup/ocean drop. Fix HUD focus trapping without weake
 menu or lost-window input gates. Widen berth approach tolerance while retaining hull
 clearance. Temporary container visuals stay in Step 52; include the requested simple
 minimap in Step 56 navigation usability. See DOCKING_USABILITY.md.
+
+## D099 — Forgiving heavy pickup and atomic local voyage checkpoints
+
+User replaces tight heavy heading/position matching with platform-under-load pickup.
+Raise attaches and aligns the load to its deck slot; Lower at its ocean destination
+releases it. No separate Secure button in gameplay. Preserve stopped/clearance checks.
+Save accepted quotes, manifest, operation receipt and local reward in one SQLite
+transaction. Resume saved loading and deck travel, restart propulsion neutral, and
+refuse inconsistent saves without overwriting them. Public authority RPC integration
+remains separate. See IN_FLIGHT_PERSISTENCE.md.

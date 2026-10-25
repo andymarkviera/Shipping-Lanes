@@ -385,3 +385,11 @@ Container acceptance starts loading automatically; heavy jobs keep nearby pickup
 Step 52 is the next cargo-visual milestone. Extend Step 56 with a temporary minimap
 showing the boat, ports and current delivery target, before Step 57's voyage gate.
 HUD focus and heavy berth tolerance fixes verified; see DOCKING_USABILITY.md.
+
+October 24 Step 51 follow-through: local voyage persistence and authority reconnect
+snapshot reconstruction pass, including real process interruption at COMMIT. Public
+port/service ownership RPCs and production settlement integration remain outstanding;
+never trust a client-provided checkpoint. Step 52 must derive container visuals solely
+from the restored manifest. Heavy pickup no longer requires angle matching or Secure:
+Raise attaches if the platform is under the load, Lower at destination delivers.
+Preserve this flow in later UI/ship work. See IN_FLIGHT_PERSISTENCE.md.
