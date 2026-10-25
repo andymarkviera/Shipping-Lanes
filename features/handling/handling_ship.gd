@@ -134,7 +134,9 @@ func _physics_process(delta: float) -> void:
 func turn_without_overlap(angle: float) -> void:
 	if is_zero_approx(angle): return
 	var candidate: Transform3D = global_transform
-	candidate.basis = candidate.basis.rotated(Vector3.UP, angle)
+	# Repeated float rotations otherwise accumulate scale drift. The save/berth
+	# validators correctly require a rigid pose; keep the physical hull rigid too.
+	candidate.basis = candidate.basis.rotated(Vector3.UP, angle).orthonormalized()
 	for child: Node in get_children():
 		if not child is CollisionShape3D or child.disabled or child.shape == null: continue
 		var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()

@@ -267,3 +267,11 @@ cargo, then persist removal and quoted payout together before applying live stat
 Refuse unsafe saves and preserve cargo; reconstruct receipts from delivered job terms.
 One active job remains the gameplay rule. Steps 51–53 are not yet user play-tested.
 See DELIVERY_PAYOUT.md.
+
+## D102 — Preserve rigid ship transforms while turning
+
+Normalize the proposed hull rotation before clearance queries/application to prevent
+floating-point scale accumulation from tripping save and berth validation. Do not
+weaken validators or remove the failed-save safeguard. User save was copied for
+reproduction, not modified. Cargo-loading animation is deferred presentation work
+and must remain subordinate to authoritative loading. See SAILING_SAVE_FIX.md.

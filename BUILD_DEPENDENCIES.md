@@ -406,3 +406,11 @@ Step 54 must reconcile cancellation, abandonment, despawn and ship-switch outcom
 without refund/delivery duplication. Keep public port/service settlement integration
 explicitly outstanding. Steps 51–53 still await user play-test feedback.
 See DELIVERY_PAYOUT.md.
+
+October 25 play-test prerequisite: repeated steering/save freeze reproduced and fixed
+by preserving orthonormal physical hull rotations. Cargo loading succeeded in Andy's
+test; full steps 51–53 acceptance and confirmation of this fix remain pending.
+Add cargo-loading animation to later port/cargo presentation polish after lifecycle
+stability. Drive the animation from loading state/progress, handle cancel/restart,
+and never use animation completion to award cargo. Step 54 remains next.
+See SAILING_SAVE_FIX.md.
