@@ -1986,3 +1986,17 @@ export pass. See PUBLIC_VOYAGE_CONTRACTS.md. Full gate remains OPEN: physical on
 ports/docking, peer commands, service UI and cargo replication are next. No save
 policy or player save changed. Tag public-voyage-contracts; verified source backup
 ../output/checkpoints/public-voyage-contracts-2026-10-25.zip.
+
+## Step 57 integration — Online port anchors and docking — October 25, 2026
+
+Online players now see both authored test ports and use server-controlled Dock/
+Undock. One server-wide berth lock survives physics regroup/rebase and releases on
+disconnect, lost authority or drain. 19 editor/Release two-peer checks and 37 physics
+checks pass; local voyage regression passes. Fixed tiny negative heading rounding
+to invalid 360 degrees; 342 geography assertions pass. Game protocol now 10, backend
+ticket protocol remains 7. See PUBLIC_PORTS.md. Gate stays OPEN: online cargo
+service/contract requests and manifest presentation are next. User play-test pending.
+Tag public-ports; backup ../output/checkpoints/public-ports-2026-10-25.zip.
+
+Existing exported two-peer sailing/contact/save/restart baseline also passes 24
+checks after adding physical ports: ../output/handoff/470b1bae.

@@ -5,6 +5,10 @@ var controls: PlayerControls
 var camera_rig: OrbitCameraRig
 var ocean: OceanPresentation
 var throttle_display = preload("res://features/feedback/throttle_indicator.gd").new()
+var dock_button: Button
+var dock_readout: Label
+var dock_sent_ms: int = 0
+var dock_waiting: int = 0
 var readout: Label
 var pause_panel: PanelContainer
 var controls_enabled: bool = true
@@ -51,6 +55,19 @@ func _ready() -> void:
 	var hud_stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(hud_stack)
 	hud_stack.add_child(readout)
+	dock_readout = Label.new()
+	dock_readout.custom_minimum_size.x = 350
+	dock_readout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hud_stack.add_child(dock_readout)
+	dock_button = Button.new()
+	dock_button.text = "Dock"
+	dock_button.focus_mode = Control.FOCUS_NONE
+	hud_stack.add_child(dock_button)
+	dock_button.pressed.connect(func():
+		throttle_order = 0
+		session.send_dock("undock" if session.dock_snapshot.get("state") == "docked" else "dock", session.dock_snapshot.get("port_id", ""))
+		dock_waiting = session.dock_sequence
+		dock_sent_ms = Time.get_ticks_msec())
 	var menu_button: Button = Button.new()
 	menu_button.text = "Menu"
 	hud_stack.add_child(menu_button)
@@ -99,6 +116,7 @@ func _process(_delta: float) -> void:
 	if session == null: return
 	if installed != session.binding:
 		installed = session.binding.duplicate()
+		dock_waiting = 0
 		throttle_order = 0.0
 		sequence = 0
 		next_send_ms = 0
@@ -119,6 +137,20 @@ func _process(_delta: float) -> void:
 		text += "\nSaved steering controls | RMB orbit\nWheel zoom | Esc menu"
 	elif not installed.is_empty(): text += "\nWaiting for fresh boat updates..."
 	else: text += "\nConnect through sign-in to take the helm."
+	var port_fresh: bool = ready_to_drive and not session.dock_snapshot.is_empty() and Time.get_ticks_msec() - session.port_received_ms < 1000
+	var state: String = session.dock_snapshot.get("state", "underway")
+	if session.dock_ack >= dock_waiting: dock_waiting = 0
+	var waiting: bool = dock_waiting > 0
+	dock_button.visible = port_fresh and not session.dock_snapshot.get("port_id", "").is_empty()
+	dock_button.text = "Undock" if state == "docked" else "Dock"
+	dock_button.disabled = waiting or not (state == "docked" or (state == "underway" and session.dock_snapshot.get("eligible", false)))
+	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
+	dock_readout.visible = port_fresh
+	dock_readout.text = session.dock_snapshot.get("message", "")
+	if waiting:
+		dock_readout.text = "Waiting for server…" if Time.get_ticks_msec() - dock_sent_ms < 4000 else "Dock request unconfirmed. Reconnect to reconcile; do not repeat it."
+	elif not session.dock_notice.is_empty() and state == "underway": dock_readout.text += "\n" + session.dock_notice
+	if state in ["docking", "docked", "undocking"]: throttle_order = 0
 	readout.text = text
 	throttle_display.visible = ready_to_drive
 	if ready_to_drive: throttle_display.update_values(throttle_order, session.last_snapshot.speed, session.last_snapshot.get("forward_speed", 0.0))
@@ -127,7 +159,7 @@ func _physics_process(delta: float) -> void:
 	if session == null or not controls_enabled or installed.is_empty(): return
 	var rudder: float = 0.0
 	var lateral: float = 0.0
-	if ready_to_drive and controls.input_allowed() and session.last_snapshot.get("fuel", 0) > 0:
+	if ready_to_drive and controls.input_allowed() and session.last_snapshot.get("fuel", 0) > 0 and session.dock_snapshot.get("state", "underway") == "underway":
 		var ship: HandlingShip = session.world_view.replicas[installed.ship].node
 		if controls.action_strength("ship_throttle_zero") > 0: throttle_order = 0.0
 		else: throttle_order = HandlingShip.adjusted_order(throttle_order, controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta, ship.definition)
