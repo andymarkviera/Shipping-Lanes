@@ -18,6 +18,10 @@ var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
 var voyage_hud = preload("res://features/ports/voyage_hud.gd").new()
+var minimap = preload("res://features/ports/local_minimap.gd").new()
+var action_reason: Label
+var refuel_button: Button
+var repair_button: Button
 var receipt_label: Label
 var abandon_button: Button
 var abandon_job_id: String = ""
@@ -101,6 +105,8 @@ func _ready() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	layer.add_child(panel)
 	layer.add_child(voyage_hud)
+	minimap.view = self
+	layer.add_child(minimap)
 	var stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(stack)
 	details = Label.new()
@@ -111,7 +117,7 @@ func _ready() -> void:
 	stack.add_child(buttons)
 	dock_button = button(buttons, "Dock", func():
 		if docking.state(1) == "docked": docking.request_undock(1); jobs_panel.hide()
-		else: docking.request_dock(1, service_id(), cargo_id()))
+		else: offer_notice = docking.request_dock(1, service_id(), cargo_id()).message)
 	cancel_button = button(buttons, "Cancel", func(): docking.cancel(1))
 	button(buttons, "Main menu", leave)
 	switch_button = button(buttons, "Test heavy loader", func():
@@ -125,8 +131,8 @@ func _ready() -> void:
 	var tabs: HBoxContainer = HBoxContainer.new()
 	services.add_child(tabs)
 	button(tabs, "CARGO", func(): jobs_panel.visible = not jobs_panel.visible; refresh_jobs())
-	button(tabs, "REFUEL", refuel)
-	button(tabs, "REPAIR", repair)
+	refuel_button = button(tabs, "REFUEL", refuel)
+	repair_button = button(tabs, "REPAIR", repair)
 	button(tabs, "Close services", func(): jobs_panel.hide())
 	jobs_panel = VBoxContainer.new()
 	services.add_child(jobs_panel)
@@ -143,6 +149,9 @@ func _ready() -> void:
 	deliver_button = button(jobs_panel, "Deliver cargo at this port", deliver)
 	cancel_load_button = button(jobs_panel, "Cancel loading (release job)", func(): end_current_job(false))
 	abandon_button = button(jobs_panel, "Abandon cargo (no payment)", request_abandon)
+	action_reason = Label.new()
+	action_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	jobs_panel.add_child(action_reason)
 	loading_text = Label.new()
 	stack.add_child(loading_text)
 	receipt_label = Label.new()
@@ -219,6 +228,7 @@ func bind_port() -> void:
 
 func refresh_jobs() -> void:
 	if jobs_list == null or not is_instance_valid(port): return
+	var previous: String = selected_offer
 	jobs_list.clear()
 	selected_offer = ""
 	var rows: Array[Dictionary] = heavy_jobs.list_at(port.definition.id) if heavy_mode else offers.list_at(port.definition.id)
@@ -228,11 +238,25 @@ func refresh_jobs() -> void:
 		jobs_list.add_item("%s · %.2f credits" % [title, row.reward_minor / 100.0])
 		jobs_list.set_item_metadata(jobs_list.item_count - 1, row.id)
 	if jobs_list.item_count > 0:
-		jobs_list.select(0)
-		selected_offer = jobs_list.get_item_metadata(0)
+		var selected: int = 0
+		for index: int in jobs_list.item_count:
+			if jobs_list.get_item_metadata(index) == previous: selected = index
+		jobs_list.select(selected)
+		selected_offer = jobs_list.get_item_metadata(selected)
+
+func accept_reason() -> String:
+	if is_instance_valid(persistence) and not persistence.ready_to_save: return "Please wait for voyage saving/recovery."
+	if docking.state(1) != "docked": return "Dock before accepting a job."
+	if loading.busy(): return "Loading in progress — wait or cancel loading."
+	if not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty(): return "Finish or cancel your current job before accepting another."
+	if selected_offer.is_empty(): return "No jobs available here for this ship."
+	return ""
 
 func accept_selected() -> void:
-	if docking.state(1) != "docked" or selected_offer.is_empty() or loading.busy(): return
+	var reason: String = accept_reason()
+	if not reason.is_empty():
+		offer_notice = reason
+		return
 	if not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty():
 		offer_notice = "Finish your current job before accepting another."
 		return
@@ -317,11 +341,23 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
 	voyage_hud.refresh(self)
+	minimap.queue_redraw()
 	details.text = "%s · %s\nVoyage wallet: %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", reward_minor / 100.0]
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else "Container jobs"
-	accept_button.disabled = selected_offer.is_empty() or loading.busy() or not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty()
+	accept_button.tooltip_text = accept_reason()
+	accept_button.disabled = not accept_button.tooltip_text.is_empty()
+	refuel_button.text = "REFUEL"
+	repair_button.text = "REPAIR"
+	# Full/no-damage remains a harmless action with explicit feedback; loading locks services.
+	refuel_button.disabled = loading.busy()
+	repair_button.disabled = loading.busy()
+	refuel_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Fill to %.0f L capacity; free test service." % ship.definition.fuel_capacity_liters
+	repair_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Restore condition to 100%; free test service."
+	action_reason.text = accept_button.tooltip_text
+	if not heavy_mode and offers.active_job("preview_captain").get("state") == "loaded": action_reason.text = delivery.reason(self)
+	action_reason.visible = not action_reason.text.is_empty()
 	deliver_button.visible = not heavy_mode
 	deliver_button.tooltip_text = delivery.reason(self)
 	deliver_button.disabled = not deliver_button.tooltip_text.is_empty()
@@ -349,6 +385,7 @@ func _process(_delta: float) -> void:
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
 		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
+	if services.visible: navigation.text += "\nRefuel / repair: free test services"
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

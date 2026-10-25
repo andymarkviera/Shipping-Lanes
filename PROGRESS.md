@@ -1948,3 +1948,14 @@ removed stale loading notices. Heavy pickup/drop-off and save-block states inclu
 port checks pass. See VOYAGE_INTERFACE.md. Awaiting user play-test; Step 56 minimap
 next. Recovery tag voyage-interface; verified source backup:
 ../output/checkpoints/voyage-interface-2026-10-25.zip.
+
+## Step 56 — Service menu and navigation usability — October 25, 2026
+
+Added local minimap with named ports, ship heading and active container/heavy target.
+Job selection survives refresh; unavailable actions display reasons, pending loading
+locks service actions, and free refuel/repair test pricing is explicit. No new water
+docking markings. 134-script/startup, 101 editor/Release voyage assertions plus crash
+recovery, and 270 rendered port checks pass. See LOCAL_NAVIGATION.md. Public network
+service timeout wiring remains outstanding; local UI never auto-resubmits commands.
+Awaiting user play-test. Next Step 57 first voyage gate. Recovery tag local-navigation;
+verified backup ../output/checkpoints/local-navigation-2026-10-25.zip.

@@ -301,3 +301,12 @@ destination through arrival. Show pending loading and save-block states explicit
 Use opaque panels and non-focusable controls; preserve throttle/neutral behavior.
 Step 56 adds geographic navigation; this step does not add a minimap or network
 port-service settlement. See VOYAGE_INTERFACE.md.
+
+## D106 — Read-only local chart and stable service selection
+
+Map the local helm frame (+Z north, -X east) to a north-up auto-fit chart. Targets
+derive from accepted jobs and actual heavy attachment; never choose a destination
+based on the nearest port. Direct dashed guide is not pathfinding. Preserve selected
+job IDs and expose disabled-action reasons. No world-space docking marks. Local
+service refresh must not submit commands; public network timeout/reconciliation
+wiring remains a separate integration obligation. See LOCAL_NAVIGATION.md.
