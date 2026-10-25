@@ -449,3 +449,10 @@ loaded sailing checks pass. Missing public server port anchors, per-account job
 state, durable public settlement and client service/manifest replication prevent
 the required two-peer voyage test. Implement and verify these before Step 58;
 standalone two-peer sailing is only a baseline. See FIRST_VOYAGE_GATE.md.
+
+October 25 Step 57 integration update: public container contract transaction layer
+now tested with real HTTPS/SQL crashes and handoff. Remaining: canonical port world
+anchors, server-side docking/berth ownership, peer-bound command validation, reliable
+owned-job state and client service/manifest presentation. Do not call backend port
+assertions proof of physical eligibility. Step 57 remains open; no Step 58 yet.
+See PUBLIC_VOYAGE_CONTRACTS.md.

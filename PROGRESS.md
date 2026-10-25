@@ -1975,3 +1975,14 @@ backup ../output/checkpoints/first-voyage-audit-2026-10-25.zip.
 
 Fresh exported two-peer baseline passes 24 checks (sailing, contact, independent
 saves and server restart), ../output/handoff/81248558. Full cargo gate stays open.
+
+## Step 57 integration — Durable public container contracts — October 25, 2026
+
+Added account-fenced accept/load/deliver/cancel transactions with canonical cargo,
+server-owned terms, durable loading readiness and atomic payment/receipts. 99 real
+HTTPS/PostgreSQL checks pass, including six process-kill loading/payout scenarios;
+41 existing admission/economy/handoff checks pass. 134-script/startup and Release
+export pass. See PUBLIC_VOYAGE_CONTRACTS.md. Full gate remains OPEN: physical online
+ports/docking, peer commands, service UI and cargo replication are next. No save
+policy or player save changed. Tag public-voyage-contracts; verified source backup
+../output/checkpoints/public-voyage-contracts-2026-10-25.zip.
