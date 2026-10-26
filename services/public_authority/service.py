@@ -21,7 +21,8 @@ def unique_object(pairs):
 def main(config_path):
     config = json.loads(Path(config_path).read_text())
     def fault(stage, request):
-        if config.get('fault') == {'stage': stage, 'action_id': request.get('action_id', request.get('transfer_id'))}:
+        selector = config.get('fault')
+        if selector == {'stage': stage, 'action_id': request.get('action_id', request.get('transfer_id'))} or selector == {'stage': stage, 'operation': request.get('op')}:
             Path(config['fault_marker']).write_text(stage)
             os._exit(91) # Only operator-owned fixture configuration can arm this.
     authority = Authority(config['database'], fault)

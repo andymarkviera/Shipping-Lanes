@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-26",
+  "runtime": "Windows Release Godot 4.7.2",
+  "game_protocol": 11,
+  "navigated_checks": 37,
+  "duration_seconds": 1279.438,
+  "players": 2,
+  "deliveries": 4,
+  "route": [
+    {
+      "player": 0,
+      "leg": 0,
+      "traced_meters": 3031,
+      "samples": 482
+    },
+    {
+      "player": 0,
+      "leg": 1,
+      "traced_meters": 4083,
+      "samples": 585
+    },
+    {
+      "player": 1,
+      "leg": 0,
+      "traced_meters": 3113,
+      "samples": 542
+    },
+    {
+      "player": 1,
+      "leg": 1,
+      "traced_meters": 4088,
+      "samples": 591
+    }
+  ],
+  "mid_voyage_reconnect": true,
+  "restart_profiles_exact": true,
+  "clean_runtime_logs": true,
+  "navigated_evidence": "../output/handoff/b11843c1/navigated-voyage-summary.json",
+  "interruption_checks": 66,
+  "interruption_evidence": "../output/handoff/6cc20fe4/cargo-interruption-summary.json",
+  "limits": [
+    "Local DTLS/HTTPS network with fixture account tickets; not public internet deployment.",
+    "Initial spawn positions are fixtures; all subsequent voyage travel uses ordinary helm.",
+    "Interruption cases use fixture port approaches, separately from the full navigated run.",
+    "Manual online gameplay feedback remains pending."
+  ]
+}

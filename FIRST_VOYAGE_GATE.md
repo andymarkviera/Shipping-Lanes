@@ -1,7 +1,10 @@
-# Step 57 — First voyage gate (OPEN)
+# Step 57 — First voyage gate (automated PASS; play-test pending)
 
-October 25, 2026. The local exported voyage checks pass, but the full roadmap gate
-is NOT accepted. Do not advance to Step 58 or more cargo families yet.
+Current status — October 26, 2026: automated Windows two-peer full voyages and
+live loading/payment crash recovery pass. See PUBLIC_VOYAGE_VALIDATION.md.
+Online gameplay feedback remains pending before final gate acceptance; Step 58
+has not started. The October 25 audit/integration entries below are historical;
+their missing-wiring statements describe the earlier build.
 
 ## New repeatable local evidence
 
@@ -96,3 +99,17 @@ public heavy-loader services remain outside this milestone. The probe places
 saved approach positions between port phases, so item 5 is NOT fulfilled.
 Gate remains OPEN for actual two-peer consecutive navigated voyages, live
 interruption coverage and Andy's gameplay feedback. Do not advance to Step 58 yet.
+
+## Final automated voyage evidence — October 26, 2026
+
+Two clients physically navigated both legs and completed four deliveries, including
+loaded mid-voyage reconnect, duplicate-payment attempts and complete server restart.
+All 37 checks pass in Windows Release with clean engine logs.
+Evidence: ../output/handoff/b11843c1/navigated-voyage-summary.json.
+Four actual peer-triggered save-service crashes before/after loading/payment COMMIT
+pass 66 checks: ../output/handoff/6cc20fe4/cargo-interruption-summary.json.
+
+These close the missing automated travel/integration evidence. They do not certify
+public internet deployment, larger capacity or heavy-loader public jobs. Andy's
+online feedback remains pending before full acceptance; prior user-confirmed local
+play is recorded separately. Next planned numbered step remains 58 refueling.

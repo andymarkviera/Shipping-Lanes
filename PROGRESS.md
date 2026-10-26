@@ -2021,3 +2021,15 @@ all eight new preferences with specific follow-up placements and a Wind Waker HD
 reference-picture shortlist in DEFERRED_PLAYER_REQUESTS.md. D111 records the local
 single-save policy change for later implementation. Runtime and saves unchanged;
 Step 57 online voyage gate remains next.
+
+## Step 57 — Automated online voyage validation — October 26, 2026
+
+Windows Release: 37 full navigated two-player checks pass across four deliveries,
+mid-trip reconnect and exact canonical restoration after server restart. A separate
+66-check run passes actual loading/payment service-death recovery before/after
+COMMIT. Final engine logs clean. See PUBLIC_VOYAGE_VALIDATION.md.
+Added repeatable helm-driven routes and bounded read-only probe observations;
+no gameplay tuning or user save changes. Automated gate evidence is complete;
+manual online feedback remains pending before full acceptance. Step 58 not started.
+Tag public-voyage-validation; verified backup:
+../output/checkpoints/public-voyage-validation-2026-10-26.zip.
