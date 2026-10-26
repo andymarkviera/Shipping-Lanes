@@ -9,6 +9,12 @@ var list: ItemList
 var accept: Button
 var deliver: Button
 var cancel: Button
+var cargo_contents: VBoxContainer
+var fuel_contents: VBoxContainer
+var fuel_amount: SpinBox
+var fuel_text: Label
+var fuel_buy: Button
+var displayed_quote: String = ""
 var services: VBoxContainer
 var selected: String = ""
 var signature: String = ""
@@ -47,23 +53,45 @@ func _ready() -> void:
 	status = label(stack)
 	services = VBoxContainer.new()
 	stack.add_child(services)
-	button(services, "CARGO", func(): list.visible = not list.visible)
+	button(services, "CARGO", func(): cargo_contents.show(); fuel_contents.hide())
+	cargo_contents = VBoxContainer.new()
+	services.add_child(cargo_contents)
 	list = ItemList.new()
 	list.custom_minimum_size = Vector2(350, 95)
 	list.add_theme_font_size_override("font_size", 14)
 	list.focus_mode = Control.FOCUS_NONE
-	services.add_child(list)
+	cargo_contents.add_child(list)
 	for child: Node in list.get_children(true):
 		if child is ScrollBar: child.focus_mode = Control.FOCUS_NONE
 	list.item_selected.connect(func(index: int): selected = list.get_item_metadata(index); list.release_focus())
-	accept = button(services, "Accept selected job", func(): send("accept"))
-	deliver = button(services, "Deliver cargo", func(): send("deliver"))
-	cancel = button(services, "Cancel loading", cancel_job)
+	accept = button(cargo_contents, "Accept selected job", func(): send("accept"))
+	deliver = button(cargo_contents, "Deliver cargo", func(): send("deliver"))
+	cancel = button(cargo_contents, "Cancel loading", cancel_job)
+	button(services, "REFUEL", func(): cargo_contents.hide(); fuel_contents.show())
+	fuel_contents = VBoxContainer.new()
+	services.add_child(fuel_contents)
+	fuel_contents.hide()
+	fuel_text = label(fuel_contents)
+	fuel_amount = SpinBox.new()
+	fuel_amount.min_value = 1
+	fuel_amount.max_value = 1000
+	fuel_amount.step = 1
+	fuel_amount.value = 10
+	fuel_amount.suffix = "L"
+	fuel_amount.update_on_text_changed = true
+	fuel_contents.add_child(fuel_amount)
+	fuel_buy = button(fuel_contents, "Buy propulsion fuel", buy_fuel)
 	receipt = label(stack)
 
 func send(action: String, abandon: bool = false) -> void:
 	if session == null or waiting > 0 or session.voyage_snapshot.get("busy", false): return
 	session.send_voyage(action, selected if action == "accept" else "", abandon)
+	waiting = session.voyage_sequence
+	sent_ms = Time.get_ticks_msec()
+
+func buy_fuel() -> void:
+	if fuel_buy.disabled or waiting > 0 or displayed_quote.is_empty(): return
+	session.send_refuel(displayed_quote, int(fuel_amount.value))
 	waiting = session.voyage_sequence
 	sent_ms = Time.get_ticks_msec()
 
@@ -113,6 +141,19 @@ func _process(_delta: float) -> void:
 	var docked: bool = session.dock_snapshot.get("state") == "docked"
 	services.visible = docked and fresh
 	refresh_choices(data.get("offers", []))
+	var quote: Dictionary = data.get("refuel", {})
+	displayed_quote = str(quote.get("id", ""))
+	var liters: int = int(fuel_amount.value)
+	var cost: int = liters * int(quote.get("unit_price_minor", 0))
+	fuel_buy.disabled = pending or not fresh or not docked or quote.is_empty() or liters < 1 or liters > int(quote.get("max_liters", 0)) or cost > int(data.get("wallet", 0))
+	fuel_amount.editable = not pending
+	fuel_text.text = "Propulsion tank fuel only. Not cargo fuel."
+	if quote.is_empty(): fuel_text.text += "\nRefueling unavailable while loading or at this berth."
+	else:
+		fuel_text.text += "\nTank: %.1f / %.0f L · Space: %d whole L\n%.2f credits/L · Total: %.2f credits" % [quote.fuel, quote.capacity, quote.max_liters, quote.unit_price_minor / 100.0, cost / 100.0]
+		if liters > int(quote.max_liters): fuel_text.text += "\nChoose fewer liters; not enough tank space."
+		elif cost > int(data.get("wallet", 0)): fuel_text.text += "\nNot enough credits."
+	fuel_buy.text = "Buy %d L · %.2f credits" % [liters, cost / 100.0]
 	accept.disabled = pending or not job.is_empty() or selected.is_empty()
 	accept.tooltip_text = "Finish your current job first." if not job.is_empty() else ""
 	deliver.visible = job.get("state") == "loaded"

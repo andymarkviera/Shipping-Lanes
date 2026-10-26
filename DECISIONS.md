@@ -369,3 +369,15 @@ Wait real lease expiry after uncertain ownership and preserve historical failed-
 shutdown warnings. Do not rebuild exports while test processes use their resources.
 Windows full-voyage and crash-recovery checks pass; online user feedback remains
 separate and pending. No handling change was needed. See PUBLIC_VOYAGE_VALIDATION.md.
+
+
+## D113 — Paid online propulsion fuel and deferred manual feedback
+
+Proceed with Step 58 after automated Step 57 evidence while Andy tests later.
+Keep that user acceptance explicitly pending. Online refueling sells whole liters
+at a provisional 25 minor credits/L, separate from cargo fuel. Bind quotes to the
+actual dock/live fuel/wallet, consume once, checkpoint fuel burned before buying,
+and commit tank/payment/receipt together. Never automatically retry an uncertain
+purchase; reacquire canonical state on reconnect. Both port and berth must support
+the service. No profile reset or migration. The isolated local Port Test retains
+its labelled free fixture services. See PUBLIC_REFUELING.md.

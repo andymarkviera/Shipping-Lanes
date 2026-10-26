@@ -53,6 +53,13 @@ func _process(_delta: float) -> void:
 			if data.has("version"): session.join_public.rpc_id(1, int(data.version), data.ticket)
 			else: session.submit_ticket(data.ticket)
 		"voyage": session.send_voyage(data.get("action", "accept"), data.get("offer", ""), data.get("abandon", false), data.get("candidate", {}))
+		"refuel": session.send_refuel(data.get("quote", ""), int(data.get("liters", 10)), data.get("candidate", {}))
+		"fuel_buy":
+			presentation.cargo_panel.cargo_contents.hide()
+			presentation.cargo_panel.fuel_contents.show()
+			presentation.cargo_panel.fuel_amount.value = int(data.get("liters", 10))
+			presentation.cargo_panel._process(0)
+			presentation.cargo_panel.fuel_buy.pressed.emit()
 		"cargo_accept": presentation.cargo_panel.accept.pressed.emit()
 		"cargo_deliver": presentation.cargo_panel.deliver.pressed.emit()
 		"dock": session.send_dock(data.get("action", "dock"), data.get("port_id", "port_brindle_quay"), data.get("candidate", {}))

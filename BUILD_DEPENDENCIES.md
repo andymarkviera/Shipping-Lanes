@@ -493,3 +493,13 @@ profile restoration after restart: 37 checks. Actual peer loading/payment crash
 recovery adds 66 checks. No mid-route relocation in the navigated test. Manual
 online feedback remains pending before full acceptance. Next planned step: 58
 refueling. See PUBLIC_VOYAGE_VALIDATION.md and its compact baseline JSON.
+
+
+October 26 Step 58: paid online propulsion refueling implemented for the current
+starter ship at both authored ports. Client protocol 12 requires matching server
+restart; backend ticket protocol 7 unchanged. Receipt/quote replay protection,
+live fuel checkpoint and atomic debit preserve canonical saves. No save migration.
+Local Port Test still provides labelled free test services; online heavy/repair
+remain separate integration work. Manual online feedback is pending by agreement,
+not recorded as passed. See PUBLIC_REFUELING.md. Next numbered step: 59 damage
+and paid recovery; preserve atomic economy and no-free-recovery requirements.

@@ -2033,3 +2033,23 @@ no gameplay tuning or user save changes. Automated gate evidence is complete;
 manual online feedback remains pending before full acceptance. Step 58 not started.
 Tag public-voyage-validation; verified backup:
 ../output/checkpoints/public-voyage-validation-2026-10-26.zip.
+
+
+## Step 58 — Online refueling — October 26, 2026
+
+Added dock-only REFUEL with custom whole-liter quantity, visible quote, tank-space
+and balance checks. Live propulsion fuel is checkpointed before atomic purchase;
+canonical tank/payment/receipt commit together. Consumed quotes cannot buy twice;
+unknown outcomes fence ownership until reconnect. Protocol 12. See
+PUBLIC_REFUELING.md for evidence and the local free-test-service boundary.
+User authorizes continuing while manual online voyage feedback remains pending.
+Andy confirmed a local Port Test heavy delivery and undock; the earlier two-window
+test is not treated as confirmed authenticated online cargo acceptance.
+Recovery tag: public-refueling; source backup:
+../output/checkpoints/public-refueling-2026-10-26.zip.
+
+Validation: 58 HTTPS/payment checks, 28 final Release refueling peer checks,
+25 final Release commit-interruption/reconnect checks and 38 Release cargo
+regression checks pass; 138-script/startup and Release export pass. Development
+stack restarted and test client reopened cleanly after preserving/rebuilding its
+shader cache. Manual feedback remains pending.

@@ -1,0 +1,28 @@
+{
+  "step": 58,
+  "date": "2026-10-26",
+  "game_protocol": 12,
+  "authority_ticket_protocol": 7,
+  "unit_price_minor": 25,
+  "quantity_unit": "whole propulsion liters",
+  "proofs": {
+    "authority": {
+      "checks": 58,
+      "evidence": "../output/handoff/4f3553a9/refuel-summary.json"
+    },
+    "release_peers": {
+      "checks": 28,
+      "evidence": "../output/handoff/b833a384/refuel-peer-summary.json"
+    },
+    "release_interruptions": {
+      "checks": 25,
+      "evidence": "../output/handoff/94baeedb/refuel-interruption-summary.json"
+    },
+    "cargo_regression": {
+      "checks": 38,
+      "evidence": "../output/handoff/905f5fe6/cargo-peer-summary.json"
+    }
+  },
+  "manual_online_feedback": "pending",
+  "local_port_test": "explicit free service fixture; not canonical online economy"
+}
