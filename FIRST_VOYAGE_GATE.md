@@ -2,8 +2,9 @@
 
 Current status — October 26, 2026: automated Windows two-peer full voyages and
 live loading/payment crash recovery pass. See PUBLIC_VOYAGE_VALIDATION.md.
-Online gameplay feedback remains pending before final gate acceptance; Step 58
-has not started. The October 25 audit/integration entries below are historical;
+Online gameplay feedback remains pending before final gate acceptance. Andy
+authorized continuing development while that play-test is pending; Step 58
+online refueling is implemented (see PUBLIC_REFUELING.md). The October 25 audit/integration entries below are historical;
 their missing-wiring statements describe the earlier build.
 
 ## New repeatable local evidence

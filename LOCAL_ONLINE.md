@@ -83,3 +83,15 @@ canonical account/ship IDs, money, revision, fuel and position across the restar
 The browser navigation is automated HTTP; Godot performs callback, PKCE exchange,
 ticket request and DTLS gameplay. It leaves data for evidence and stops its owned
 processes. No ordinary save or production account is used.
+
+
+## Delivery and refueling in this setup
+
+Use Play from this launcher, then SERVERS -> Local development server -> SIGN IN &
+JOIN. Use an account in the protected login-info.txt file. Dock, open CARGO, accept
+one container job and deliver at its named port. REFUEL now offers paid propulsion
+fuel in a custom whole-liter amount; review the total before Buy. Price is a
+provisional 0.25 credits/L. This belongs to authenticated online play, not the
+separate LOCAL MULTIPLAYER TEST or free Port Test services. Game protocol 12 needs
+matching client/server code: stop the stack gracefully and reopen clients after
+updates. Development data and accounts persist across restarts.
