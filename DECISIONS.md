@@ -360,3 +360,12 @@ Restart Progress supersedes the three private development slots as intended
 player-facing UX; preserve/migrate existing progress safely when implemented.
 This does not authorize resetting the online profile or deleting saves now.
 Step 57 remains the immediate priority. No runtime behavior changed here.
+
+## D112 — Separate complete voyage evidence from fixtures and manual acceptance
+
+Use ordinary authenticated helm/docking/cargo commands for full travel validation;
+retain fixture approaches only in separately labelled commit-interruption cases.
+Wait real lease expiry after uncertain ownership and preserve historical failed-save
+shutdown warnings. Do not rebuild exports while test processes use their resources.
+Windows full-voyage and crash-recovery checks pass; online user feedback remains
+separate and pending. No handling change was needed. See PUBLIC_VOYAGE_VALIDATION.md.

@@ -486,3 +486,10 @@ shortlist. Keep Step 57 first and original roadmap numbers unchanged.
 - 98: performance/readability validation; 108/122: save UX/accessibility; 123: art polish.
 One local progression slot supersedes the player-facing three-slot intention;
 online canonical profiles remain separate. Existing saves are untouched.
+
+October 26 Step 57: automated Windows gate evidence passes. Two peers complete
+full consecutive navigated voyages (four deliveries), mid-trip reconnect and
+profile restoration after restart: 37 checks. Actual peer loading/payment crash
+recovery adds 66 checks. No mid-route relocation in the navigated test. Manual
+online feedback remains pending before full acceptance. Next planned step: 58
+refueling. See PUBLIC_VOYAGE_VALIDATION.md and its compact baseline JSON.

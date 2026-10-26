@@ -3,6 +3,7 @@ var folder: String
 var sequence: int = 0
 var sent_at: Dictionary = {}
 var frame_ms: Array[float] = []
+var lifetime_ms: int = 240000
 var started: int
 
 func _ready() -> void:
@@ -10,6 +11,7 @@ func _ready() -> void:
 		if arg.begins_with("--peer-folder="): folder = arg.trim_prefix("--peer-folder=")
 	if folder.is_empty(): get_tree().quit(1); return
 	var config: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(folder + "/config.json"))
+	lifetime_ms = clampi(int(config.get("probe_lifetime_ms", 240000)), 240000, 1800000)
 	if config.role == "client":
 		super._ready()
 		presentation.controls_enabled = false
@@ -33,7 +35,7 @@ func write_result(name_: String, result: Dictionary) -> void:
 func _process(_delta: float) -> void:
 	frame_ms.append(_delta * 1000.0)
 	if frame_ms.size() > 600: frame_ms.pop_front()
-	if Time.get_ticks_msec() - started > 240000: get_tree().quit(); return
+	if Time.get_ticks_msec() - started > lifetime_ms: get_tree().quit(); return
 	var path: String = folder + "/command-" + str(sequence) + ".json"
 	if not FileAccess.file_exists(path): return
 	var reader: FileAccess = FileAccess.open(path, FileAccess.READ)
@@ -101,6 +103,14 @@ func _process(_delta: float) -> void:
 			result = {"voyage": session.voyage_snapshot, "cargo_visuals": session.world_view.cargo_counts, "dock": session.dock_snapshot, "dock_ack": session.dock_ack, "dock_notice": session.dock_notice, "ports": session.world_view.ports.keys(), "nonce": session.nonce, "tick": session.world_view.tick, "frames_drawn": Engine.get_frames_drawn(), "display": DisplayServer.get_name(), "frame_ms": frame_ms, "binding": session.binding, "snapshot": session.last_snapshot, "notice": session.notice, "join_failure": session.join_failure, "failure_message": session.failure_message(session.join_failure), "ticket_sent": session.ticket_sent, "members": session.members.size(), "snapshot_work_us": session.snapshot_work_us, "physics_work_us": session.physics_work_us, "snapshot_bytes": session.snapshot_bytes_sent, "snapshot_packets": session.snapshot_packets_sent, "max_snapshot_bytes": session.max_snapshot_bytes, "accepted": session.accepted_commands, "rejected": session.rejected_commands, "ships": [], "visible_ships": session.world_view.replicas.keys(), "replicas": []}
 			if sent_at.has(int(session.last_snapshot.get("sequence", -2))):
 				result.ack_ms = session.last_snapshot.received_at - sent_at[int(session.last_snapshot.sequence)]
+			result.navigation = {}
+			if not session.binding.is_empty() and session.world_view.replicas.has(session.binding.ship):
+				var own: Dictionary = session.world_view.replicas[session.binding.ship]
+				result.navigation.heading = -rad_to_deg(own.yaw)
+				for id: String in session.world_view.ports:
+					var port: Node3D = session.world_view.ports[id]
+					var offset: Vector3 = port.to_local(own.target)
+					result.navigation[id] = {"x": offset.x, "z": offset.z}
 			if presentation != null:
 				result.presentation = {"ready": presentation.ready_to_drive, "camera": is_instance_valid(presentation.camera_rig.focus), "zoom": presentation.camera_rig.distance_order, "order": presentation.throttle_order, "hud": presentation.readout.text, "menu": presentation.controls.menu_open, "indicator": presentation.throttle_display.motion.text, "indicator_value": presentation.throttle_display.slider.value}
 			for id: String in session.world_view.replicas:
