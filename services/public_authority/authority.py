@@ -13,6 +13,7 @@ import uuid
 import voyages
 import refueling
 import recovery
+import wear
 from pathlib import Path
 
 import psycopg
@@ -171,6 +172,10 @@ class Authority:
                   'begin': owned | {'transfer_id', 'destination'}, 'seal': owned | {'transfer_id'},
                   'cancel': owned | {'transfer_id'}}
         op = request.get('op')
+        if op in ('checkpoint', 'impact') and 'operating_seconds' in request:
+            base.add('operating_seconds')
+            seconds = request['operating_seconds']
+            require(type(seconds) in (int, float) and math.isfinite(seconds) and 0 <= seconds <= 86400, 'BAD_WEAR_TIME')
         if op == 'admit' and 'fingerprint' in request:
             base.add('fingerprint')
             require(type(request['fingerprint']) is str and re.fullmatch(r'[a-f0-9]{64}', request['fingerprint']) is not None, 'BAD_FINGERPRINT')
@@ -267,10 +272,11 @@ class Authority:
         if op == 'checkpoint':
             if recovery.pending(profile['profile']): return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']}
             require(profile['revision'] == request['expected_revision'], 'STALE_REVISION')
+            wear.apply(profile['profile']['ship'], request.get('operating_seconds', 0))
             profile['profile']['ship']['position'] = request['position']
             profile['profile']['ship']['fuel_liters'] = request['fuel_liters']
             db.execute('UPDATE public_authority.profiles SET profile=%s,revision=revision+1 WHERE account=%s', (Jsonb(profile['profile']), account))
-            return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']+1}
+            return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']+1, 'condition_bp': profile['profile']['ship']['condition_bp']}
         if op in voyages.OPERATIONS or op in recovery.OPERATIONS or op == 'refuel':
             return self._voyage(db, account, profile, request)
         require(not recovery.pending(profile['profile']), 'RECOVERY_REQUIRED')

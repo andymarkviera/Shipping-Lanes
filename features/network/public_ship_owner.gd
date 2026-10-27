@@ -17,6 +17,7 @@ var placement_frame: int = 0
 var host_session: Node
 var departing: bool = false
 var checkpoint_busy: bool = false
+var operating_seconds: float = 0.0
 var save_at_ms: int = 0
 var last_saved_ms: int = 0
 const SAVE_INTERVAL_MS: int = 10000
@@ -26,6 +27,11 @@ func _process(_delta: float) -> void:
 	if Time.get_ticks_msec() >= save_at_ms:
 		save_at_ms = Time.get_ticks_msec() + SAVE_INTERVAL_MS
 		checkpoint_current()
+
+func _physics_process(delta: float) -> void:
+	if ship == null or departing or not authority.active or ship.simulation_paused or ship.docked or recovery_placing or damage_pending: return
+	if ship.state.fuel_liters > 0 and (absf(ship.actual_throttle) > 0.001 or absf(ship.lateral_order) > 0.001):
+		operating_seconds += delta
 
 func _ready() -> void:
 	authority = Client.new()
@@ -55,7 +61,9 @@ func restore_grant(result: Dictionary, activate: bool = true) -> void:
 	if ship != null:
 		remove_child(ship)
 		ship.queue_free()
+	operating_seconds = 0.0
 	ship = Hull.instantiate()
+	ship.condition_affects_propulsion = true
 	ship.simulation_paused = true
 	add_child(ship)
 	# Public surface-navigation hulls must not slide above/below another hull.
@@ -113,10 +121,15 @@ func checkpoint_current() -> Dictionary:
 		return current
 	# Capture pose and fuel together after inspect; ordinary sailing stays live.
 	var address: Dictionary = current_address()
-	var snapshot: Dictionary = {"expected_revision": int(current.revision), "position": {"latitude": address.latitude_deg, "longitude": address.longitude_deg, "heading": address.heading_deg}, "fuel_liters": ship.state.fuel_liters}
+	var elapsed: float = operating_seconds
+	var snapshot: Dictionary = {"operating_seconds": elapsed, "expected_revision": int(current.revision), "position": {"latitude": address.latitude_deg, "longitude": address.longitude_deg, "heading": address.heading_deg}, "fuel_liters": ship.state.fuel_liters}
 	var saved: Dictionary = await authority.request(authority.owned("checkpoint", snapshot))
 	if not saved.get("ok", false): authority.quiesce()
-	else: last_saved_ms = Time.get_ticks_msec()
+	else:
+		operating_seconds = maxf(0, operating_seconds - elapsed)
+		public_profile.ship.condition_bp = int(saved.get("condition_bp", public_profile.ship.get("condition_bp", 10000)))
+		ship.state.condition = int(public_profile.ship.condition_bp) / 10000.0
+		last_saved_ms = Time.get_ticks_msec()
 	checkpoint_busy = false
 	return saved
 
@@ -172,6 +185,7 @@ func on_impact(damage_bp: int) -> void:
 	var result: Dictionary = current
 	if current.get("ok", false):
 		intent.expected_revision = int(current.revision)
+		intent.operating_seconds = operating_seconds
 		var request: Dictionary = intent.duplicate(true)
 		request.erase("finished")
 		result = await authority.request(authority.owned("impact", request))
@@ -179,6 +193,7 @@ func on_impact(damage_bp: int) -> void:
 	elif authority.active:
 		var fresh: Dictionary = await authority.request(authority.owned("inspect"))
 		if fresh.get("ok", false):
+			operating_seconds = 0.0
 			install_profile(fresh)
 			if host_session != null and host_session.pending_impacts.get(authority.binding.account) == intent: host_session.pending_impacts.erase(authority.binding.account)
 			if recovery_required(): freeze_wreck()

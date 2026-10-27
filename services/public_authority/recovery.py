@@ -1,6 +1,7 @@
 """Trusted impact settlement and paid ship recovery; no peer-supplied damage."""
 import copy
 import math
+import wear
 
 FEE_MINOR = 25000
 MIN_RECOVERY_FUEL = 100.0
@@ -18,6 +19,7 @@ def transition(profile, request, wallet):
     data = copy.deepcopy(profile)
     if request['op'] == 'impact':
         if pending(data): return reject('RECOVERY_REQUIRED')
+        wear.apply(data['ship'], request.get('operating_seconds', 0))
         condition = max(0, data['ship'].get('condition_bp', 10000) - request['damage_bp'])
         data['ship'].update(condition_bp=condition, fuel_liters=request['fuel_liters'], position=request['position'])
         if condition > 0: return 'HULL_DAMAGED', data, 0, None
@@ -35,7 +37,7 @@ def transition(profile, request, wallet):
         return 'SHIP_SUNK', data, -paid, None
     if not pending(data) or data['recovery']['id'] != request['incident_id']:
         return reject('NO_RECOVERY')
-    data['ship'].update(condition_bp=10000, position=dict(SLOTS[request['slot']]),
+    data['ship'].update(condition_bp=10000, wear_fraction_bp=0.0, position=dict(SLOTS[request['slot']]),
                         fuel_liters=max(MIN_RECOVERY_FUEL, data['ship']['fuel_liters']))
     data['recovery'].update(state='recovered', slot=request['slot'])
     return 'SHIP_RECOVERED', data, 0, None

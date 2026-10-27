@@ -10,6 +10,7 @@ var dock_readout: Label
 var dock_sent_ms: int = 0
 var dock_waiting: int = 0
 var cargo_panel = preload("res://features/network/public_cargo_panel.gd").new()
+var gauges = preload("res://features/feedback/vessel_gauges.gd").new()
 var readout: Label
 var pause_panel: PanelContainer
 var controls_enabled: bool = true
@@ -57,6 +58,7 @@ func _ready() -> void:
 	readout.add_theme_font_size_override("font_size", 18)
 	var hud_stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(hud_stack)
+	hud_stack.add_child(gauges)
 	hud_stack.add_child(readout)
 	dock_readout = Label.new()
 	dock_readout.custom_minimum_size.x = 350
@@ -75,7 +77,7 @@ func _ready() -> void:
 	menu_button.text = "Menu"
 	hud_stack.add_child(menu_button)
 	menu_button.pressed.connect(func(): menu_button.release_focus(); set_menu(true))
-	pause_panel = make_panel(layer, Vector2(20, 220))
+	pause_panel = make_panel(layer, Vector2(20, 340))
 	var stack: VBoxContainer = VBoxContainer.new()
 	pause_panel.add_child(stack)
 	var label: Label = Label.new()
@@ -136,7 +138,7 @@ func _process(_delta: float) -> void:
 		camera_rig.release_mouse()
 	var text: String = "CONTAINER SHIP SIM\n%s" % session.notice
 	if ready_to_drive:
-		text += "\nSpeed %.1f kn | Fuel %.1f L\nThrottle order %+.0f%%" % [session.last_snapshot.speed * 3600.0 / 1852.0, session.last_snapshot.fuel, throttle_order * 100.0]
+		text += "\nSpeed %.1f kn\nThrottle order %+.0f%%" % [session.last_snapshot.speed * 3600.0 / 1852.0, throttle_order * 100.0]
 		text += "\nSaved steering controls | RMB orbit\nWheel zoom | Esc menu"
 	elif not installed.is_empty(): text += "\nWaiting for fresh boat updates..."
 	else: text += "\nConnect through sign-in to take the helm."
@@ -154,6 +156,9 @@ func _process(_delta: float) -> void:
 		dock_readout.text = "Waiting for server…" if Time.get_ticks_msec() - dock_sent_ms < 4000 else "Dock request unconfirmed. Reconnect to reconcile; do not repeat it."
 	elif not session.dock_notice.is_empty() and state == "underway": dock_readout.text += "\n" + session.dock_notice
 	if state in ["docking", "docked", "undocking"] or session.voyage_snapshot.get("recovery", {}).get("state") == "pending" or session.voyage_snapshot.get("damage_pending", false) or session.voyage_snapshot.get("recovery_placing", false): throttle_order = 0
+	gauges.visible = ready_to_drive
+	if ready_to_drive:
+		gauges.update_values(float(session.voyage_snapshot.get("condition_bp", 10000)) / 10000.0, float(session.last_snapshot.get("fuel", 0)) / maxf(1, float(session.voyage_snapshot.get("fuel_capacity", 1000))))
 	readout.text = text
 	throttle_display.visible = ready_to_drive
 	if ready_to_drive: throttle_display.update_values(throttle_order, session.last_snapshot.speed, session.last_snapshot.get("forward_speed", 0.0))

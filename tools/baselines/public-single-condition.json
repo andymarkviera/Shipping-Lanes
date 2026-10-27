@@ -1,0 +1,21 @@
+{
+  "step": 60,
+  "date": "2026-10-26",
+  "authority": {
+    "checks": 27,
+    "evidence": "output/handoff/f0df5bae"
+  },
+  "runtime_checks": 10,
+  "editor_peer": {
+    "checks": 34,
+    "evidence": "output/handoff/5109d754"
+  },
+  "release_peer": {
+    "checks": 34,
+    "evidence": "output/handoff/c09ac8be"
+  },
+  "script_checks": 141,
+  "release_export": "passed",
+  "manual_feedback": "pending",
+  "local_port_test": "unchanged"
+}

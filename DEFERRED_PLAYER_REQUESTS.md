@@ -45,3 +45,12 @@ dock-first, no-player-transfer and no-hidden-shallows decisions. Development
 tests may keep isolated save fixtures even when the player-facing menu has one
 local save. Complete Step 57 before this deferred work; art reference planning is
 recorded now so later world/port assets follow a consistent direction.
+
+
+## Single condition / aesthetic gauges — October 26, 2026
+
+Step 60 changed by explicit user request: one condition shared by impact damage and
+gradual wear, never separate machinery degradation. Engine silhouette and fuel-pump
+icons share the HUD, with lowering colored fill and no labels. Step 61 should polish
+this unified feedback instead of adding separate damage/wear meters. Step 62 repairs
+this same condition. Heavy-loader lifting equipment must remain unaffected.

@@ -2070,3 +2070,21 @@ export pass. See PUBLIC_RECOVERY.md for scope and evidence. Manual feedback pend
 Recovery tag: public-impact-recovery; verified source backup:
 ../output/checkpoints/public-impact-recovery-2026-10-26.zip.
 Next numbered step: 60 component wear, separate from immediate impact damage.
+
+
+## Step 60 — Single boat condition and icon HUD — October 26, 2026
+
+User supersedes separate component wear: one condition for collisions and gradual
+active use, no machinery degradation. Added unlabeled engine/fuel fill gauges to
+the online HUD. Initial wear 1% per active propulsion hour, no offline/docked/paused
+or neutral-idle wear; a 10% wear-only floor prevents wear-induced sinking. Lower
+condition mildly reduces main propulsion; lifting equipment remains unaffected.
+Canonical fractional wear persists with checkpoints/impact receipts. No save reset.
+27 authority checks, 10 runtime clock/curve checks, 34 editor and 34 Release real
+two-peer recovery checks pass. 141-script/startup check and Release export pass.
+Full/half/low icon render and actual Release HUD inspected. See PUBLIC_CONDITION.md.
+Local Port Test remains separate; manual player feedback pending.
+Checkpoint tag: public-single-condition; source backup:
+../output/checkpoints/public-single-condition-2026-10-26.zip.
+Next: Step 61 feedback polish should follow the new single-meter design; Step 62
+remains paid repairs. Never reintroduce machinery wear or separate wear/damage HUDs.

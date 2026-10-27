@@ -187,7 +187,6 @@ func _process(_delta: float) -> void:
 		status.text += "\nJob payment: %.2f credits" % (job.reward_minor / 100.0)
 		if job.state == "loading": status.text += "\nLoading · %d s remaining. Stay docked." % ceili(int(data.get("remaining_ms", 0)) / 1000.0)
 		else: status.text += "\n" + ("Select Deliver cargo." if docked and data.get("port") == job.destination else "Sail to the destination, stop and dock.")
-	status.text += "\nHull: %.0f%%" % (int(data.get("condition_bp", 10000)) / 100.0)
 	var debt: int = int(data.get("recovery_debt_minor", 0))
 	if debt > 0: status.text += "\nRecovery balance: %.2f credits\nHalf of future delivery earnings repays this balance." % (debt / 100.0)
 	if sunk:
