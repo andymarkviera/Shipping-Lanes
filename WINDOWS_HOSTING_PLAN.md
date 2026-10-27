@@ -26,3 +26,15 @@ including federated Google accounts, using an approved sender/service.
 
 No public ports, router settings, Google project or external email service were changed
 by this planning record. ShippingLanes remains the existing local development setup.
+
+
+## Implemented preview package
+
+The Windows invited-player preview is now built. See tools/hosting/README-WINDOWS-HOST.md
+and CHATGPT-SERVER-HANDOFF.md in that directory. It bundles runtimes, parameterizes
+LAN/hostname addressing and protects the backend through a bounded HTTPS front door.
+The public launch gates above remain incomplete; no Google signup/reset email,
+external reachability, router configuration or public certificate readiness is implied.
+Andy will transfer the ZIP and ask ChatGPT on the server PC to discover its IP and
+configure DuckDNS as appropriate. Single stable issuer plus LAN game-address override
+requires home DNS/loopback routing for the login hostname. IPv4 only in this preview.

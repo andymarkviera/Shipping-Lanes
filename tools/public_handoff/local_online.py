@@ -36,7 +36,7 @@ def provider_module():
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     return module
 
-def certificates(folder):
+def certificates(folder, host="127.0.0.1"):
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
@@ -45,21 +45,26 @@ def certificates(folder):
     now = datetime.datetime.now(datetime.timezone.utc)
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'Container Ship Sim local development only')])
-    cert = x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key()).serial_number(x509.random_serial_number()).not_valid_before(now-datetime.timedelta(minutes=5)).not_valid_after(now+datetime.timedelta(days=90)).add_extension(x509.BasicConstraints(ca=True,path_length=0),True).add_extension(x509.SubjectAlternativeName([x509.DNSName('localhost'),x509.IPAddress(ipaddress.ip_address('127.0.0.1'))]),False).sign(key,hashes.SHA256())
+    names = [x509.DNSName('localhost'),x509.IPAddress(ipaddress.ip_address('127.0.0.1'))]
+    if host not in ('localhost', '127.0.0.1'):
+        try: names.append(x509.IPAddress(ipaddress.ip_address(host)))
+        except ValueError: names.append(x509.DNSName(host))
+    cert = x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key()).serial_number(x509.random_serial_number()).not_valid_before(now-datetime.timedelta(minutes=5)).not_valid_after(now+datetime.timedelta(days=90)).add_extension(x509.BasicConstraints(ca=True,path_length=0),True).add_extension(x509.SubjectAlternativeName(names),False).sign(key,hashes.SHA256())
     (folder/'local-cert.pem').write_bytes(cert.public_bytes(serialization.Encoding.PEM))
     (folder/'local-key.pem').write_bytes(key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()))
 
-def initialize(folder):
+def initialize(folder, hosting=None):
     if folder.exists(): raise RuntimeError('Setup already exists; use run. Existing data will not be overwritten.')
     folder.mkdir(parents=True)
     protect(folder)
     java = provider_module().dependencies(folder)
-    certificates(folder)
+    certificates(folder, hosting["host"] if hosting else "127.0.0.1")
     ports = [free_port() for _ in range(4)]
     if len(set(ports)) != 4: raise RuntimeError('Port selection collided; use a new setup name.')
     database = dict(host='127.0.0.1', port=ports[0], dbname='postgres', user='local_admin', password=secrets.token_urlsafe(32))
     settings = dict(version=1, java=str(java), database=database, provider_port=ports[1], authority_port=ports[2], callback_port=ports[3], game_port=free_port(True))
-    issuer = 'https://127.0.0.1:%d/realms/shipping-local' % ports[1]
+    if hosting: settings['hosting'] = hosting
+    issuer = ('https://%s:%d' % (hosting['host'], hosting['https_port']) if hosting else 'https://127.0.0.1:%d' % ports[1]) + '/realms/shipping-local'
     users = [dict(username='dev-sailor-'+str(i+1), subject=str(uuid.uuid4()), password=secrets.token_urlsafe(18)) for i in range(2)]
     settings['issuer'] = issuer; settings['users'] = users
     write(folder/'private.json', settings)
@@ -70,6 +75,8 @@ def initialize(folder):
     with (folder/'postgres/postgresql.conf').open('a') as f:
         f.write("\nlisten_addresses='127.0.0.1'\nport=%d\nfsync=on\nsynchronous_commit=on\nfull_page_writes=on\nmax_connections=40\n" % ports[0])
     realm = dict(realm='shipping-local', enabled=True, registrationAllowed=False, resetPasswordAllowed=False, sslRequired='all', users=[dict(id=u['subject'],username=u['username'],enabled=True,email=u['username']+'@example.invalid',emailVerified=True,firstName='Development',lastName='Sailor',credentials=[dict(type='password',value=u['password'],temporary=False)]) for u in users], clients=[dict(clientId='shipping-native',enabled=True,publicClient=True,standardFlowEnabled=True,directAccessGrantsEnabled=False,redirectUris=['http://127.0.0.1:%d/callback'%ports[3]],attributes={'pkce.code.challenge.method':'S256'},protocolMappers=[dict(name='service-audience',protocol='openid-connect',protocolMapper='oidc-audience-mapper',config={'included.custom.audience':'shipping-service','access.token.claim':'true','id.token.claim':'false'})])])
+    if hosting:
+        realm.update(bruteForceProtected=True, permanentLockout=False, failureFactor=5, waitIncrementSeconds=60, maxFailureWaitSeconds=900, quickLoginCheckMilliSeconds=1000, minimumQuickLoginWaitSeconds=60, maxDeltaTimeSeconds=3600, accessTokenLifespan=300, ssoSessionIdleTimeout=1800, ssoSessionMaxLifespan=28800)
     imports=folder/'kc/data/import'; imports.mkdir(parents=True,exist_ok=True)
     write(imports/'shipping-local-realm.json', realm)
     write(folder/'initialized.json', dict(version=1))
@@ -101,6 +108,9 @@ class Stack:
         f=self.folder; s=self.settings
         command([BIN/'pg_ctl.exe','-D',f/'postgres','-l',f/'postgres.log','-w','start']); self.db_started=True
         authority=Authority(s['database']); authority.initialize()
+        # Resolve the bundled runtime at every launch so moving the package is safe.
+        manifest=read(ROOT/'tools/auth_proof/dependencies.json')
+        s['java']=str(WORKSPACE/'output/tools/auth/java'/manifest['java']['runtime_directory']/'bin/java.exe')
         cert=f/'local-cert.pem'; fingerprint=hashlib.sha256(cert.read_bytes()).hexdigest()
         credential=secrets.token_urlsafe(32); service_password=secrets.token_urlsafe(32)
         with authority.connect() as db:
@@ -118,34 +128,42 @@ class Stack:
             db.execute('GRANT USAGE ON SCHEMA public_authority TO local_authority')
             db.execute('GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA public_authority TO local_authority')
         home=f/'kc'
-        args=[s['java'],'--add-opens=java.base/java.lang=ALL-UNNAMED','--enable-native-access=ALL-UNNAMED','-Xms128m','-Xmx512m','-Dkc.home.dir='+str(home),'-Djboss.server.config.dir='+str(home/'conf'),'-Djava.util.concurrent.ForkJoinPool.common.threadFactory=io.quarkus.bootstrap.forkjoin.QuarkusForkJoinWorkerThreadFactory','-cp',str(home/'lib/quarkus-run.jar'),'io.quarkus.bootstrap.runner.QuarkusEntryPoint','start','--cache=local','--db=dev-file','--http-enabled=false','--http-host=127.0.0.1','--https-port='+str(s['provider_port']),'--hostname=https://127.0.0.1:'+str(s['provider_port']),'--https-certificate-file='+str(cert),'--https-certificate-key-file='+str(f/'local-key.pem'),'--import-realm']
+        args=[s['java'],'--add-opens=java.base/java.lang=ALL-UNNAMED','--enable-native-access=ALL-UNNAMED','-Xms128m','-Xmx512m','-Dkc.home.dir='+str(home),'-Djboss.server.config.dir='+str(home/'conf'),'-Djava.util.concurrent.ForkJoinPool.common.threadFactory=io.quarkus.bootstrap.forkjoin.QuarkusForkJoinWorkerThreadFactory','-cp',str(home/'lib/quarkus-run.jar'),'io.quarkus.bootstrap.runner.QuarkusEntryPoint','start','--cache=local','--db=dev-file','--http-enabled=false','--http-host=127.0.0.1','--https-port='+str(s['provider_port']),'--hostname='+s['issuer'].split('/realms/')[0],'--https-certificate-file='+str(cert),'--https-certificate-key-file='+str(f/'local-key.pem'),'--import-realm']
         provider=self.spawn(args,'provider')
         context=ssl.create_default_context(cafile=str(cert))
         def fetch(url):
             with urllib.request.urlopen(url,context=context,timeout=2) as reply: return json.load(reply)
+        internal_issuer='https://127.0.0.1:%d/realms/shipping-local' % s['provider_port']
         deadline=time.monotonic()+110; restarted=False
         while time.monotonic()<deadline:
             if provider.poll()==10 and not restarted:
                 provider=self.spawn(args[:1]+['-Dkc.config.built=true']+args[1:],'provider-built'); restarted=True
             if provider.poll() is not None: raise RuntimeError('Provider startup failed; see logs')
-            try: discovery=fetch(s['issuer']+'/.well-known/openid-configuration'); break
+            try: discovery=fetch(internal_issuer+'/.well-known/openid-configuration'); break
             except OSError: time.sleep(.3)
         else: raise RuntimeError('Provider readiness timeout')
         (home/'data/import/shipping-local-realm.json').unlink(missing_ok=True)
-        identity=dict(issuer=s['issuer'],audience='shipping-service',jwks=fetch(discovery['jwks_uri']))
+        identity=dict(issuer=s['issuer'],audience='shipping-service',jwks=fetch(internal_issuer+'/protocol/openid-connect/certs'))
         ready=f/'authority-ready'; ready.unlink(missing_ok=True)
         write(f/'authority.json',dict(database=dict(s['database'],user='local_authority',password=service_password),port=s['authority_port'],certificate=str(cert),key=str(f/'local-key.pem'),ready=str(ready),identity=identity))
         env=os.environ.copy(); env['PYTHONPATH']=str(PACKAGES)
         service=self.spawn([sys.executable,ROOT/'services/public_authority/service.py',f/'authority.json'],'authority',env)
         self.wait(ready.exists,service,15)
         (f/'server-stop').unlink(missing_ok=True)
-        server=dict(stop_file=str(f/'server-stop'),certificate=str(cert),key=str(f/'local-key.pem'),fingerprint=fingerprint,endpoint='https://127.0.0.1:'+str(s['authority_port']),server='local-development',credential=credential,ca=str(cert),port=s['game_port'],bind_ip='127.0.0.1')
+        server=dict(stop_file=str(f/'server-stop'),certificate=str(cert),key=str(f/'local-key.pem'),fingerprint=fingerprint,endpoint='https://127.0.0.1:'+str(s['authority_port']),server='local-development',credential=credential,ca=str(cert),port=s.get('hosting',{}).get('game_port',s['game_port']),bind_ip=s.get('hosting',{}).get('bind_ip','127.0.0.1'))
         write(f/'server.json',server)
         args=self.game_args()+['--headless','--','--public-server-config='+str(f/'server.json')]
         env=os.environ.copy();env['APPDATA']=str(f/'server-user')
         game=self.spawn(args,'server',env); self.game=game
         self.wait(lambda:'PUBLIC_SERVER_LISTENING' in (f/'server.log').read_text(errors='replace'),game,15)
         public=dict(login=dict(issuer=s['issuer'],authorization_endpoint=discovery['authorization_endpoint'],token_endpoint=discovery['token_endpoint'],client_id='shipping-native',callback_port=s['callback_port'],ca=str(cert)),authority_endpoint=server['endpoint'],authority_ca=str(cert),servers=[dict(name='Local development server',server=server['server'],host='127.0.0.1',hostname='localhost',port=s['game_port'],certificate=str(cert),fingerprint=fingerprint)])
+        if s.get('hosting'):
+            h=s['hosting']; gateway_ready=f/'gateway-ready'; gateway_ready.unlink(missing_ok=True)
+            write(f/'gateway.json',dict(bind=h['bind_ip'],port=h['https_port'],host=h['host'],certificate=str(cert),key=str(f/'local-key.pem'),provider_port=s['provider_port'],authority_port=s['authority_port'],ready=str(gateway_ready)))
+            gateway=self.spawn([sys.executable,ROOT/'tools/hosting/gateway.py',f/'gateway.json'],'gateway',env)
+            self.wait(gateway_ready.exists,gateway,15)
+            public['authority_endpoint']='https://%s:%d' % (h['host'],h['https_port'])
+            public['servers'][0].update(name=h['name'],host=h['host'],hostname=h['host'],port=h['game_port'])
         write(f/'public-services.json',public)
         write(f/'ready.json',dict(version=1,development_only=True))
         self.refresh_at=time.monotonic()+600
@@ -178,7 +196,7 @@ class Stack:
         if self.db_started:
             command([BIN/'pg_ctl.exe','-D',self.folder/'postgres','-m','fast','-w','stop']); self.db_started=False
         if self.lock:
-            for name in ['ready.json','authority.json','server.json']:(self.folder/name).unlink(missing_ok=True)
+            for name in ['ready.json','authority.json','server.json','gateway.json','gateway-ready']:(self.folder/name).unlink(missing_ok=True)
             self.lock.close();self.lock=None
         if drain_error: raise RuntimeError("Server did not confirm a complete final save; inspect server.log. Last committed snapshots remain available.")
 
