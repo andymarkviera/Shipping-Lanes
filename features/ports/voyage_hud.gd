@@ -87,4 +87,4 @@ func refresh(view: Node3D) -> void:
 	progress.visible = data.progress >= 0
 	progress.value = maxf(0, data.progress)
 	var values: Dictionary = HandlingFeedback.instruments(view.ship)
-	instruments.text = "%.1f kn · %s\nFuel %.0f L · Condition %.0f%%" % [values.speed_knots, values.direction.capitalize(), view.ship.state.fuel_liters, view.ship.state.condition * 100]
+	instruments.text = "%.1f kn · %s" % [values.speed_knots, values.direction.capitalize()]

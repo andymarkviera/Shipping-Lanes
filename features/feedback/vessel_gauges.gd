@@ -1,5 +1,7 @@
 extends Control
 ## Unlabeled shared condition / propulsion-fuel HUD, drawn as original vector shapes.
+@export_range(0, 1) var low_condition_threshold: float = 0.25
+@export_range(0, 1) var low_fuel_threshold: float = 0.15
 var condition: float = 1.0
 var fuel: float = 1.0
 
@@ -23,8 +25,8 @@ func icon(points: PackedVector2Array, level: float, tint: Color) -> void:
 	draw_polyline(outline, tint.lightened(0.22), 2.5, true)
 
 func _draw() -> void:
-	var amber := Color("ffc84f")
-	var aqua := Color("7bdddf")
+	var amber := Color("f18b73") if condition <= low_condition_threshold else Color("ffc84f")
+	var aqua := Color("ffc84f") if fuel <= low_fuel_threshold else Color("7bdddf")
 	icon(PackedVector2Array([Vector2(12,24),Vector2(25,24),Vector2(32,16),Vector2(56,16),Vector2(66,27),Vector2(75,27),Vector2(75,23),Vector2(83,23),Vector2(83,49),Vector2(74,49),Vector2(74,45),Vector2(66,45),Vector2(57,56),Vector2(31,56),Vector2(22,47),Vector2(12,47)]), condition, amber)
 	draw_line(Vector2(34,10),Vector2(54,10),amber,3,true)
 	draw_line(Vector2(44,10),Vector2(44,16),amber,3,true)

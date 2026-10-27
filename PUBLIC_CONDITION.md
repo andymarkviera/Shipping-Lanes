@@ -59,3 +59,14 @@ sinking and paid recovery. Ten Godot runtime checks passed for the operating clo
 and propulsion curve. Full/half/low rendered gauges inspected in
 `../output/wear-hud-preview.png`. Further peer regression recorded in PROGRESS.md.
 Manual player feedback is still pending; no local player save was changed.
+
+
+## Step 61 follow-up: shared gameplay HUD
+
+The earlier online-only presentation scope is superseded. Gauges now sit bottom-left
+in a shared overlay for active local/online gameplay, including Port Test, both boat
+types and port services. No gauges on the main menu where there is no active boat.
+Local fixtures display their existing condition/fuel state; this UI change does not
+add online degradation or paid recovery to those fixtures. Visual warning thresholds
+(25% condition, 15% fuel) do not affect economic or handling rules. Hull rust remains
+optional later art work. Windows hosting/security follow-up is tracked separately.
