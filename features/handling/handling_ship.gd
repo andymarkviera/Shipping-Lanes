@@ -16,6 +16,11 @@ var state: ShipState
 var fuel: PropulsionFuel
 var simulation_paused: bool = false
 var docked: bool = false
+var condition_affects_propulsion: bool = false
+
+func propulsion_condition_factor() -> float:
+	if not condition_affects_propulsion: return 1.0
+	return lerpf(0.75, 1.0, clampf(state.condition / 0.5, 0.0, 1.0))
 
 func helm_available() -> bool:
 	return not simulation_paused and not docked
@@ -106,7 +111,7 @@ func advance_motion(delta: float) -> void:
 	var target_yaw: float = -rudder * signf(local_velocity.z) * effectiveness * deg_to_rad(definition.max_turn_rate_degrees)
 	yaw_rate = move_toward(yaw_rate, target_yaw, deg_to_rad(definition.turn_acceleration_degrees) * delta)
 	turn_without_overlap(yaw_rate * delta)
-	var acceleration: float = actual_throttle * fuel_fraction * (definition.forward_acceleration_mps2 if actual_throttle >= 0.0 else definition.reverse_acceleration_mps2)
+	var acceleration: float = actual_throttle * fuel_fraction * propulsion_condition_factor() * (definition.forward_acceleration_mps2 if actual_throttle >= 0.0 else definition.reverse_acceleration_mps2)
 	var drag: float = definition.linear_drag_per_second
 	local_velocity.z = local_velocity.z * exp(-drag * delta) + acceleration / drag * (1.0 - exp(-drag * delta))
 	var lateral_drag: float = definition.lateral_drag_per_second

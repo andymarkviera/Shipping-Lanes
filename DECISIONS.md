@@ -395,3 +395,14 @@ ship identity. Cargo and active jobs are lost, not restored by reconnect. The fe
 is not waived for the starter. Reserve and recheck safe return positions, and
 reconcile pending impacts across connection replacement. Maintain the local fixture
 boundary; future online ships must participate in paid recovery. See PUBLIC_RECOVERY.md.
+
+
+## D115 — One boat condition, no machinery degradation
+
+Andy explicitly replaces separate component wear with a single condition reduced
+by collisions and gradual active use. Use unlabeled aesthetic engine/fuel gauges
+with lowering fill. Never degrade heavy-loader lifting machinery. Initial wear is
+1% per active propulsion hour, no offline/docked/paused/neutral-idle wear, and a
+10% wear-only floor. Low condition mildly reduces main propulsion only. Step 61
+must follow the single-meter design, and Step 62 will repair it. PUBLIC_CONDITION.md
+documents persistence, tuning, scope and tests. Synced source roadmap stays read-only.

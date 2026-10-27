@@ -513,3 +513,11 @@ Ticket protocol 7 unchanged; all gameplay clients/servers must update to protoco
 Local Port Test/heavy fixtures remain separate. Step 60 wear must not overwrite or
 silently heal immediate damage; Step 62 repairs must use canonical paid settlement.
 See PUBLIC_RECOVERY.md. User play-test remains pending by agreement.
+
+
+October 26 Step 60 supersedes component wear with one canonical boat condition,
+per Andy's instruction. No machinery degradation. Trusted simulated operating time
+is checkpointed with fractional wear, alongside existing collision damage. Online
+HUD now uses unlabeled engine/fuel fill icons. Existing local fixtures remain separate.
+No reset/migration; ticket/game protocols remain 7/13 with optional server fields.
+Restart matching backend/server code. See PUBLIC_CONDITION.md and D115.
