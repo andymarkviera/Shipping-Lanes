@@ -2,6 +2,10 @@ class_name HandlingShip
 extends CharacterBody3D
 ## Local, planar handling fixture. +Z is the bow; all values use SI units.
 @export var definition: ShipDefinition = preload("res://features/catalog/records/starter_ship.tres")
+signal validated_impact(damage_bp: int)
+@export var harmless_impact_mps: float = 2.0
+@export var impact_damage_bp_per_mps_squared: float = 100.0
+var impact_cooldowns: Dictionary = {}
 var commanded_throttle: float = 0.0
 var actual_throttle: float = 0.0
 var distance_m: float = 0.0
@@ -123,13 +127,25 @@ func _physics_process(delta: float) -> void:
 	if simulation_paused: return
 	advance_motion(delta)
 	var previous: Vector3 = position
+	var incoming_velocity: Vector3 = velocity
 	var speed_before: float = velocity.length()
 	move_and_slide()
+	var damage: int = 0
+	var now: int = Time.get_ticks_msec()
+	for key: int in impact_cooldowns.keys():
+		if now >= impact_cooldowns[key]: impact_cooldowns.erase(key)
 	for index: int in range(get_slide_collision_count()):
+		var collision: KinematicCollision3D = get_slide_collision(index)
+		var closing: float = maxf(0, -(incoming_velocity - collision.get_collider_velocity()).dot(collision.get_normal()))
+		var collider: int = collision.get_collider_id()
+		if not docked and closing > harmless_impact_mps and not impact_cooldowns.has(collider):
+			damage = maxi(damage, clampi(ceili(pow(closing - harmless_impact_mps, 2) * impact_damage_bp_per_mps_squared), 1, 10000))
+			impact_cooldowns[collider] = now + 1000
 		var normal: Vector3 = get_slide_collision(index).get_normal()
 		if velocity.dot(normal) < 0.0: velocity = velocity.slide(normal)
 	velocity = velocity.limit_length(speed_before)
 	distance_m += position.distance_to(previous)
+	if damage > 0: validated_impact.emit(damage)
 
 func turn_without_overlap(angle: float) -> void:
 	if is_zero_approx(angle): return

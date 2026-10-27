@@ -503,3 +503,13 @@ Local Port Test still provides labelled free test services; online heavy/repair
 remain separate integration work. Manual online feedback is pending by agreement,
 not recorded as passed. See PUBLIC_REFUELING.md. Next numbered step: 59 damage
 and paid recovery; preserve atomic economy and no-free-recovery requirements.
+
+
+October 26 Step 59: online impact/sinking/paid recovery implemented and tested.
+Canonical condition defaults preserve existing profiles. Sinking retains ownership,
+loses cargo, fails jobs and records the full recovery fee/debt together. Recovery
+uses reserved, clearance-checked slots; half of later earnings repays unpaid balance.
+Ticket protocol 7 unchanged; all gameplay clients/servers must update to protocol 13.
+Local Port Test/heavy fixtures remain separate. Step 60 wear must not overwrite or
+silently heal immediate damage; Step 62 repairs must use canonical paid settlement.
+See PUBLIC_RECOVERY.md. User play-test remains pending by agreement.

@@ -64,6 +64,7 @@ func _ready() -> void:
 	process_physics_priority = -100
 	world = World.new()
 	add_child(world)
+	await impact_case()
 	await port_case()
 	set_physics_process(true)
 	mapping_case(0.0, 179.99)
@@ -136,3 +137,31 @@ func port_case() -> void:
 	docks.queue_free()
 	world.sync([])
 	await get_tree().process_frame
+
+func impact_case() -> void:
+	for incoming: Vector3 in [Vector3(0, 0, 1.5), Vector3(0, 0, 14), Vector3(14, 0, 1.0)]:
+		var owner: Node3D = make_owner(Geo.normalized(10, 10))
+		owner.ship.position.z = 7
+		owner.ship.velocity = incoming
+		var hits: Array[int] = []
+		owner.ship.validated_impact.connect(func(amount: int): hits.append(amount))
+		var wall := StaticBody3D.new()
+		wall.collision_layer = CollisionRules.SHORE
+		wall.collision_mask = CollisionRules.HULL
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = Vector3(200, 10, 1)
+		shape.shape = box
+		wall.add_child(shape)
+		add_child(wall)
+		wall.position.z = 40
+		var contact: bool = false
+		for tick: int in 75:
+			await get_tree().physics_frame
+			contact = contact or owner.ship.get_slide_collision_count() > 0
+		check(contact, "impact threshold fixture makes actual solid contact")
+		if incoming.z <= 2: check(hits.is_empty(), "gentle/glancing contact causes no hull damage")
+		else: check(hits.size() == 1 and hits[0] > 0 and hits[0] <= 10000, "hard real collision emits one bounded damage event")
+		owner.queue_free()
+		wall.queue_free()
+		await get_tree().process_frame

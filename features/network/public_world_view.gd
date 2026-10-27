@@ -4,6 +4,7 @@ const Hull = preload("res://features/ships/starter_container_01/starter_runtime.
 const Ports = preload("res://features/network/public_port_catalog.gd")
 var ports: Dictionary = {}
 var cargo_counts: Dictionary = {}
+var wrecks: Array = []
 var replicas: Dictionary = {}
 var tick: int = -1
 var received_at: int = 0
@@ -48,6 +49,7 @@ func _process(delta: float) -> void:
 		return
 	for id: String in replicas:
 		var record: Dictionary = replicas[id]
+		record.node.visible = not wrecks.has(id)
 		var count: int = clampi(int(cargo_counts.get(id, 0)), 0, 6)
 		var visuals: Node3D = record.node.assembly.container_visuals
 		if visuals.instances != null:
@@ -58,6 +60,7 @@ func _process(delta: float) -> void:
 
 func clear() -> void:
 	cargo_counts.clear()
+	wrecks.clear()
 	for port: Node3D in ports.values(): port.queue_free()
 	ports.clear()
 	for record: Dictionary in replicas.values(): record.node.queue_free()

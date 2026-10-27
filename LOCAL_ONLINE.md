@@ -92,6 +92,12 @@ JOIN. Use an account in the protected login-info.txt file. Dock, open CARGO, acc
 one container job and deliver at its named port. REFUEL now offers paid propulsion
 fuel in a custom whole-liter amount; review the total before Buy. Price is a
 provisional 0.25 credits/L. This belongs to authenticated online play, not the
-separate LOCAL MULTIPLAYER TEST or free Port Test services. Game protocol 12 needs
+separate LOCAL MULTIPLAYER TEST or free Port Test services. Game protocol 13 needs
 matching client/server code: stop the stack gracefully and reopen clients after
 updates. Development data and accounts persist across restarts.
+
+Online hard collisions now damage the hull. Sinking shows a Recover ship button,
+loses cargo and records a provisional 250-credit fee. Unpaid fees remain as a
+balance repaid from half of future earnings. Recovery retains ship ownership and
+returns it to clear water near Brindle Quay. This is the online Step 59 flow;
+Port Test/heavy-loader fixtures retain their separate prototype behavior.

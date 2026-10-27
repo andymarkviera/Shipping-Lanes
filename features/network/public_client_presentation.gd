@@ -153,7 +153,7 @@ func _process(_delta: float) -> void:
 	if waiting:
 		dock_readout.text = "Waiting for server…" if Time.get_ticks_msec() - dock_sent_ms < 4000 else "Dock request unconfirmed. Reconnect to reconcile; do not repeat it."
 	elif not session.dock_notice.is_empty() and state == "underway": dock_readout.text += "\n" + session.dock_notice
-	if state in ["docking", "docked", "undocking"]: throttle_order = 0
+	if state in ["docking", "docked", "undocking"] or session.voyage_snapshot.get("recovery", {}).get("state") == "pending" or session.voyage_snapshot.get("damage_pending", false) or session.voyage_snapshot.get("recovery_placing", false): throttle_order = 0
 	readout.text = text
 	throttle_display.visible = ready_to_drive
 	if ready_to_drive: throttle_display.update_values(throttle_order, session.last_snapshot.speed, session.last_snapshot.get("forward_speed", 0.0))
@@ -162,7 +162,7 @@ func _physics_process(delta: float) -> void:
 	if session == null or not controls_enabled or installed.is_empty(): return
 	var rudder: float = 0.0
 	var lateral: float = 0.0
-	if ready_to_drive and controls.input_allowed() and session.last_snapshot.get("fuel", 0) > 0 and session.dock_snapshot.get("state", "underway") == "underway":
+	if ready_to_drive and controls.input_allowed() and session.last_snapshot.get("fuel", 0) > 0 and session.dock_snapshot.get("state", "underway") == "underway" and session.voyage_snapshot.get("recovery", {}).get("state") != "pending" and not session.voyage_snapshot.get("damage_pending", false) and not session.voyage_snapshot.get("recovery_placing", false):
 		var ship: HandlingShip = session.world_view.replicas[installed.ship].node
 		if controls.action_strength("ship_throttle_zero") > 0: throttle_order = 0.0
 		else: throttle_order = HandlingShip.adjusted_order(throttle_order, controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta, ship.definition)

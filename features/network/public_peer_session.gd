@@ -1,10 +1,12 @@
 extends Node
-## Protocol 12 DTLS admission and peer-bound helm. No arbitrary authority RPC.
+## Protocol 13 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const SnapshotCodec = preload("res://features/network/public_snapshot_codec.gd")
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
 const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
 var physics_world: Node
+var pending_impacts: Dictionary = {}
 var port_authority = preload("res://features/network/public_port_authority.gd").new()
+var recovery = preload("res://features/network/public_recovery_service.gd").new()
 var voyages = preload("res://features/network/public_voyage_service.gd").new()
 var voyage_snapshot: Dictionary = {}
 var voyage_sequence: int = 0
@@ -55,6 +57,8 @@ func _ready() -> void:
 	add_child(physics_world)
 	port_authority.world = physics_world
 	add_child(port_authority)
+	recovery.session = self
+	add_child(recovery)
 	voyages.session = self
 	add_child(voyages)
 	process_physics_priority = -100
@@ -137,6 +141,11 @@ func _process(_delta: float) -> void:
 			transport.disconnect_peer(id)
 	for id: int in members.keys():
 		var record: Dictionary = members[id]
+		if record.hull.recovery_placing and Engine.get_physics_frames() >= record.hull.placement_frame and physics_world.changed_frame != Engine.get_physics_frames() and physics_world.can_place(record.hull, live_owners()):
+			record.hull.recovery_placing = false
+			record.hull.ship.collision_layer = CollisionRules.HULL
+			record.hull.ship.collision_mask = CollisionRules.SOLID_WATERCRAFT
+			record.hull.ship.simulation_paused = false
 		if not record.hull.authority.active:
 			transport.disconnect_peer(id)
 			disconnected(id)
@@ -192,14 +201,14 @@ func connection_challenge(value: String, server: String) -> void:
 func submit_ticket(ticket: String) -> void:
 	if hosting or transport == null or nonce.is_empty() or ticket_sent: return
 	ticket_sent = true
-	join_public.rpc_id(1, 12, ticket)
+	join_public.rpc_id(1, 13, ticket)
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_public(version: int, ticket: String) -> void:
 	if not hosting or draining: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending.has(sender) or pending[sender].busy: return
-	if version != 12:
+	if version != 13:
 		reject_join(sender, "BUILD_MISMATCH")
 		return
 	if ticket.length() < 20 or ticket.length() > 128:
@@ -243,7 +252,7 @@ func join_public(version: int, ticket: String) -> void:
 			members.erase(previous)
 			old.hull.reparent(self, false)
 			old.hull.departing = true
-			while old.hull.checkpoint_busy or old.hull.voyage_busy or old.hull.authority.busy: await get_tree().process_frame
+			while old.hull.checkpoint_busy or old.hull.voyage_busy or old.hull.damage_pending or old.hull.authority.busy: await get_tree().process_frame
 			old.hull.queue_free()
 			transport.disconnect_peer(previous)
 	# Replacement cleanup can await a save; shutdown/disconnect may occur meanwhile.
@@ -255,6 +264,40 @@ func join_public(version: int, ticket: String) -> void:
 		accounts.erase(account)
 		joining = false
 		return
+	# A replacement admission must reconcile an already observed impact, even if
+	# its old connection was fenced or removed during the authority response.
+	if pending_impacts.has(account):
+		var intent: Dictionary = pending_impacts[account]
+		while not intent.finished: await get_tree().process_frame
+		if pending_impacts.has(account):
+			var impact_request: Dictionary = intent.duplicate(true)
+			impact_request.erase("finished")
+			if int(impact_request.expected_revision) < 0: impact_request.expected_revision = int(result.revision)
+			var impact_result: Dictionary = await hull.authority.request(hull.authority.owned("impact", impact_request))
+			if not impact_result.get("ok", false):
+				hull.authority.quiesce()
+				hull.queue_free()
+				joining = false
+				reject_join(sender, "SERVICE_UNAVAILABLE")
+				return
+			var fresh: Dictionary = await hull.authority.request(hull.authority.owned("inspect"))
+			if not fresh.get("ok", false):
+				hull.authority.quiesce()
+				hull.queue_free()
+				joining = false
+				reject_join(sender, "SERVICE_UNAVAILABLE")
+				return
+			result.merge(fresh, true)
+			pending_impacts.erase(account)
+	if draining or not pending.has(sender) or not multiplayer.get_peers().has(sender):
+		await hull.authority.request(hull.authority.owned("release"))
+		hull.authority.quiesce()
+		hull.queue_free()
+		pending.erase(sender)
+		accounts.erase(account)
+		joining = false
+		return
+	hull.host_session = self
 	hull.restore_grant(result, false)
 	if not physics_world.can_place(hull, live_owners()):
 		# Do not teleport or checkpoint a blocked saved spawn.
@@ -270,7 +313,7 @@ func join_public(version: int, ticket: String) -> void:
 	members[sender] = {"hull": hull, "account": account, "ship": hull.ship.state.instance_id, "epoch": int(result.epoch), "generation": int(result.generation), "sequence": -1, "input_at": Time.get_ticks_msec(), "rate_at": 0, "dock_sequence": 0, "dock_at": 0, "dock_notice": "", "voyage_sequence": 0, "voyage_at": 0, "voyage_notice": ""}
 	port_authority.register(sender, hull)
 	physics_world.sync(live_owners())
-	hull.ship.simulation_paused = false
+	hull.ship.simulation_paused = hull.recovery_required()
 	joining = false
 	accounts[account] = sender
 	pending.erase(sender)
@@ -367,7 +410,7 @@ func disconnected(id: int) -> void:
 	record.hull.park()
 	record.hull.authority.set_process(false)
 	# Await any in-flight renewal before persisting/releasing the same binding.
-	while is_instance_valid(record.hull) and (record.hull.authority.busy or record.hull.checkpoint_busy or record.hull.voyage_busy):
+	while is_instance_valid(record.hull) and (record.hull.authority.busy or record.hull.checkpoint_busy or record.hull.voyage_busy or record.hull.damage_pending):
 		await get_tree().process_frame
 	if not is_instance_valid(record.hull):
 		departures -= 1
@@ -476,6 +519,7 @@ func voyage_update(ship: String, epoch: int, generation: int, data: Dictionary, 
 	voyage_snapshot = data.duplicate(true)
 	voyage_received_ms = Time.get_ticks_msec()
 	world_view.cargo_counts = counts.duplicate()
+	world_view.wrecks = data.get("wrecks", []).duplicate()
 
 func send_refuel(quote: String, liters: int, candidate: Dictionary = {}) -> void:
 	var value: Dictionary = binding if candidate.is_empty() else candidate
@@ -494,4 +538,23 @@ func refuel_order(ship: String, epoch: int, generation: int, sequence: int, quot
 	record.voyage_at = Time.get_ticks_msec()
 	record.voyage_sequence = sequence
 	var result: Dictionary = await voyages.refuel(peer, quote, liters)
+	if members.get(peer) == record: record.voyage_notice = voyages.message(result.get("code", "OUTCOME_UNKNOWN"))
+
+func send_recover(incident: String, candidate: Dictionary = {}) -> void:
+	var value: Dictionary = binding if candidate.is_empty() else candidate
+	if hosting or transport == null or value.is_empty(): return
+	voyage_sequence += 1
+	recovery_order.rpc_id(1, str(value.ship), int(value.epoch), int(value.generation), voyage_sequence, incident)
+
+@rpc("any_peer", "call_remote", "reliable")
+func recovery_order(ship: String, epoch: int, generation: int, sequence: int, incident: String) -> void:
+	if not hosting or draining: return
+	var peer: int = multiplayer.get_remote_sender_id()
+	if not members.has(peer): return
+	var record: Dictionary = members[peer]
+	if ship != record.ship or epoch != record.epoch or generation != record.generation or sequence <= record.voyage_sequence or sequence > 2147483647: return
+	if incident.length() > 80 or Time.get_ticks_msec() - record.voyage_at < 250: return
+	record.voyage_at = Time.get_ticks_msec()
+	record.voyage_sequence = sequence
+	var result: Dictionary = await recovery.execute(peer, incident)
 	if members.get(peer) == record: record.voyage_notice = voyages.message(result.get("code", "OUTCOME_UNKNOWN"))
