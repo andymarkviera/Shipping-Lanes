@@ -417,3 +417,15 @@ condition/fuel feedback with configurable visual-only low thresholds; no separat
 machinery wear or damage/wear meters. Optional hull rust deferred to the art pass.
 Andy requests Windows LAN/internet hosting and secure sign-in; PUBLIC access must
 pass the security work recorded in WINDOWS_HOSTING_PLAN.md. Welcome email deferred.
+
+
+## D117 — Portable Windows invited-player host, honest public-access gate
+
+Deliver the same runtime for LAN/hostname routes and include a server-PC ChatGPT
+handoff. Preserve one stable login issuer when switching game connection addresses.
+DuckDNS requires actual DNS/router configuration; local sign-in may need split DNS.
+Never expose canonical mutation APIs or DB ports. Bundled test accounts are temporary;
+Google sign-up and password-reset email are not claimed complete. Require public TLS
+lifecycle, production identity storage and abuse/security tests before unrestricted
+public rollout. Keep generated private data out of distributable archives and client
+exports. Scope first validation to what was actually tested on this PC.

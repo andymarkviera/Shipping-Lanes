@@ -2109,3 +2109,38 @@ Release export and exported startup pass. Checkpoint: shared-gameplay-gauges;
 verified source backup ../output/checkpoints/shared-gameplay-gauges-2026-10-27.zip.
 Next requested follow-up: portable Windows LAN hosting package; Step 62 paid repairs
 remains the next numbered gameplay implementation.
+
+
+## Windows portable hosting preview — October 27, 2026
+
+User requests Windows LAN/internet hosting and a handoff to ChatGPT on the server PC.
+Built a relocatable runtime bundle with exported Godot game, Python/cryptography,
+PostgreSQL and Keycloak dependencies. No developer-PC account/save/key is included.
+Setup creates protected data and two random invited test accounts on the destination.
+Host settings select IPv4 bind, advertised hostname, HTTPS/game ports and local IP.
+One account issuer/server identity is retained between generated LAN/hostname client
+configs; native sign-in still happens through the server list. Bare arbitrary Direct
+Connect and public discovery are not implemented. Welcome email remains deferred.
+
+Added a bounded HTTPS front door: only realm login/resources and ticket issuance
+are exposed; authority mutations/admin/database stay private. Per-IP/global request
+budgets, bounded workers/body sizes/timeouts and temporary provider account lockout
+are enabled for hosted previews. No claim of production readiness: Google enrollment,
+public trusted-certificate lifecycle, production provider storage, and public abuse/
+reset testing remain rollout gates. No firewall/router/DNS/trust changes made here.
+
+27 real packaged-runtime checks passed: native browser PKCE login, DTLS join, drive,
+disconnect persistence, full stack restart, route isolation, Host/body rejection,
+rate limits ignoring spoofed forwarding headers and clean client logs. Evidence:
+../output/host-check/cc33cb55/hosting-summary.json. Eight client export checks passed
+in ../output/host-check/export-12dbb636: shared identity, LAN host, portable certificate
+paths, matching runtime and no private export. PowerShell syntax checks pass.
+Tests ran on this PC via IPv4 loopback; remote LAN/internet are NOT verified.
+Initial localhost proof exposed IPv6-first connection failure; preview is explicitly
+IPv4/A-record only. A rate-limit response race caused by unread rejected POST bodies
+was corrected and the full check passed. Original failed build copied unnecessary
+pgAdmin paths; final bundle includes only PostgreSQL runtime bin/lib/share/licenses.
+
+Transfer package: ../output/hosting/ShippingLanes-Windows-Host.zip.
+Setup and ChatGPT handoff guides are included. Next deployment work is configuration
+on the actual Windows server and the public-access gates; Step 62 repairs unstarted.
