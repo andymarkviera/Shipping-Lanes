@@ -10,7 +10,7 @@ var dock_readout: Label
 var dock_sent_ms: int = 0
 var dock_waiting: int = 0
 var cargo_panel = preload("res://features/network/public_cargo_panel.gd").new()
-var gauges = preload("res://features/feedback/vessel_gauges.gd").new()
+var gauges = preload("res://features/feedback/vessel_gauge_hud.gd").new()
 var readout: Label
 var pause_panel: PanelContainer
 var controls_enabled: bool = true
@@ -25,6 +25,7 @@ func configure(value: Node) -> void:
 
 func _ready() -> void:
 	add_child(throttle_display)
+	add_child(gauges)
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.command_requested.connect(func(action: StringName):
@@ -58,7 +59,6 @@ func _ready() -> void:
 	readout.add_theme_font_size_override("font_size", 18)
 	var hud_stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(hud_stack)
-	hud_stack.add_child(gauges)
 	hud_stack.add_child(readout)
 	dock_readout = Label.new()
 	dock_readout.custom_minimum_size.x = 350

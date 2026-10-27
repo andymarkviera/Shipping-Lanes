@@ -8,6 +8,7 @@ var session: LocalShipSession
 var ships: Dictionary = {}
 var parked: Dictionary = {}
 var throttle_display = preload("res://features/feedback/throttle_indicator.gd").new()
+var gauge_display = preload("res://features/feedback/vessel_gauge_hud.gd").new()
 var readout: Label
 var replication: ShipReplication
 var controls: PlayerControls
@@ -21,6 +22,8 @@ var automated_input: bool = false
 func _ready() -> void:
 	add_child(throttle_display)
 	throttle_display.hide()
+	add_child(gauge_display)
+	gauge_display.hide()
 	session = make_session()
 	session.name = "Session"
 	add_child(session)
@@ -167,6 +170,8 @@ func update_readout() -> void:
 		text += "\n%s · %s" % [id, "YOU" if record.peer_id == multiplayer.get_unique_id() else "OTHER PLAYER"]
 	var mine: String = replication.local_entity()
 	throttle_display.visible = ships.has(mine)
+	gauge_display.visible = ships.has(mine)
+	gauge_display.ship = ships.get(mine)
 	if ships.has(mine):
 		var ship: HandlingShip = ships[mine]
 		throttle_display.update_values(throttle_order, ship.velocity.length(), ship.forward_speed())

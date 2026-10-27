@@ -406,3 +406,14 @@ with lowering fill. Never degrade heavy-loader lifting machinery. Initial wear i
 10% wear-only floor. Low condition mildly reduces main propulsion only. Step 61
 must follow the single-meter design, and Step 62 will repair it. PUBLIC_CONDITION.md
 documents persistence, tuning, scope and tests. Synced source roadmap stays read-only.
+
+
+## D116 — Shared gauges and Windows hosting follow-up
+
+Gauges belong to all active gameplay, including local Port Test, both hull types and
+local/online multiplayer. Use an independent read-only overlay so dock services and
+throttle-panel visibility do not hide it. Keep icons unlabeled. Step 61 uses single
+condition/fuel feedback with configurable visual-only low thresholds; no separate
+machinery wear or damage/wear meters. Optional hull rust deferred to the art pass.
+Andy requests Windows LAN/internet hosting and secure sign-in; PUBLIC access must
+pass the security work recorded in WINDOWS_HOSTING_PLAN.md. Welcome email deferred.

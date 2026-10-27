@@ -2088,3 +2088,24 @@ Checkpoint tag: public-single-condition; source backup:
 ../output/checkpoints/public-single-condition-2026-10-26.zip.
 Next: Step 61 feedback polish should follow the new single-meter design; Step 62
 remains paid repairs. Never reintroduce machinery wear or separate wear/damage HUDs.
+
+
+## Step 61 — Shared condition feedback — October 27, 2026
+
+Corrected the online-only gauge scope. A shared bottom-left opaque icon HUD now
+follows the active ship in Port Test, other ShipHelm driving fixtures, local
+multiplayer and authenticated online play. It remains visible when dock services
+hide the throttle panel. Container/heavy tanks use their actual capacities. Local
+Port Test numeric fuel/condition duplicate removed; icons remain unlabeled.
+Condition <=25% changes amber to coral; fuel <=15% changes aqua to amber. Thresholds
+are configurable presentation values only. UI reads current/restored ship state and
+does not mutate statistics, materials, saves or machinery. Optional rust deferred.
+Seven real Port Test HUD checks pass across both hulls, including boat switching,
+service visibility and read-only thresholds. Rendered both views inspected.
+143-script/startup check passes. Hosting/sign-in requirements recorded separately
+in WINDOWS_HOSTING_PLAN.md; no public deployment or welcome email implemented.
+
+Release export and exported startup pass. Checkpoint: shared-gameplay-gauges;
+verified source backup ../output/checkpoints/shared-gameplay-gauges-2026-10-27.zip.
+Next requested follow-up: portable Windows LAN hosting package; Step 62 paid repairs
+remains the next numbered gameplay implementation.
