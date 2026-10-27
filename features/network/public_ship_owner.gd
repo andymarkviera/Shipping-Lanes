@@ -11,6 +11,10 @@ var cargo_records: Array = []
 var public_profile: Dictionary = {}
 var wallet_minor: int = 0
 var voyage_busy: bool = false
+var damage_pending: bool = false
+var recovery_placing: bool = false
+var placement_frame: int = 0
+var host_session: Node
 var departing: bool = false
 var checkpoint_busy: bool = false
 var save_at_ms: int = 0
@@ -18,7 +22,7 @@ var last_saved_ms: int = 0
 const SAVE_INTERVAL_MS: int = 10000
 
 func _process(_delta: float) -> void:
-	if ship == null or departing or not authority.active or checkpoint_busy or voyage_busy or authority.busy: return
+	if ship == null or departing or not authority.active or checkpoint_busy or voyage_busy or damage_pending or recovery_placing or authority.busy: return
 	if Time.get_ticks_msec() >= save_at_ms:
 		save_at_ms = Time.get_ticks_msec() + SAVE_INTERVAL_MS
 		checkpoint_current()
@@ -63,7 +67,9 @@ func restore_grant(result: Dictionary, activate: bool = true) -> void:
 	ship.position = Vector3.ZERO
 	ship.rotation.y = -deg_to_rad(geographic_anchor.heading)
 	install_profile(result)
-	ship.simulation_paused = not activate
+	ship.validated_impact.connect(on_impact)
+	ship.simulation_paused = not activate or recovery_required()
+	if recovery_required(): freeze_wreck()
 	departing = false
 	save_at_ms = Time.get_ticks_msec() + SAVE_INTERVAL_MS
 
@@ -81,7 +87,7 @@ func begin_transfer(data: Dictionary) -> Dictionary:
 		return {"ok": false, "code": "LOCAL_QUIESCED"}
 	departing = true
 	park()
-	while checkpoint_busy or voyage_busy or authority.busy: await get_tree().process_frame
+	while checkpoint_busy or voyage_busy or damage_pending or authority.busy: await get_tree().process_frame
 	var saved: Dictionary = await checkpoint_current()
 	if not saved.get("ok", false): return saved
 	var result: Dictionary = await authority.request(data)
@@ -115,7 +121,7 @@ func checkpoint_current() -> Dictionary:
 	return saved
 
 func helm(candidate: Dictionary, throttle: float, rudder: float, lateral: float = 0.0) -> bool:
-	if departing or not authority.permits(candidate) or ship == null or ship.docked: return false
+	if departing or not authority.permits(candidate) or ship == null or ship.docked or damage_pending or recovery_placing or recovery_required(): return false
 	if not is_finite(throttle) or not is_finite(rudder) or not is_finite(lateral): return false
 	ship.command_throttle(throttle)
 	ship.maneuver(rudder, lateral)
@@ -125,3 +131,59 @@ func install_profile(result: Dictionary) -> void:
 	public_profile = result.profile.duplicate(true)
 	cargo_records = public_profile.cargo.duplicate(true)
 	wallet_minor = int(result.get("money", 0))
+	if ship != null: ship.state.condition = int(public_profile.ship.get("condition_bp", 10000)) / 10000.0
+
+func recovery_required() -> bool:
+	return public_profile.get("recovery", {}).get("state") == "pending"
+
+func freeze_wreck() -> void:
+	ship.simulation_paused = true
+	ship.commanded_throttle = 0
+	ship.actual_throttle = 0
+	ship.velocity = Vector3.ZERO
+	ship.yaw_rate = 0
+	ship.maneuver(0, 0)
+	ship.collision_layer = 0
+	ship.collision_mask = 0
+
+func on_impact(damage_bp: int) -> void:
+	if departing or damage_pending or recovery_required() or not authority.active: return
+	damage_pending = true
+	var intent: Dictionary = {"action_id": "impact_" + Crypto.new().generate_random_bytes(16).hex_encode(), "expected_revision": -1, "damage_bp": damage_bp, "finished": false}
+	if host_session != null: host_session.pending_impacts[authority.binding.account] = intent
+	ship.simulation_paused = true
+	ship.commanded_throttle = 0
+	ship.actual_throttle = 0
+	ship.velocity = Vector3.ZERO
+	ship.yaw_rate = 0
+	ship.maneuver(0, 0)
+	# Capture physical evidence before a departing hull can be reparented.
+	var address: Dictionary = current_address()
+	var remaining_fuel: float = ship.state.fuel_liters
+	intent.fuel_liters = remaining_fuel
+	intent.position = {"latitude": address.latitude_deg, "longitude": address.longitude_deg, "heading": address.heading_deg}
+	while checkpoint_busy or voyage_busy or authority.busy: await get_tree().process_frame
+	if not authority.active:
+		intent.finished = true
+		damage_pending = false
+		return
+	voyage_busy = true
+	var current: Dictionary = await authority.request(authority.owned("inspect"))
+	var result: Dictionary = current
+	if current.get("ok", false):
+		intent.expected_revision = int(current.revision)
+		var request: Dictionary = intent.duplicate(true)
+		request.erase("finished")
+		result = await authority.request(authority.owned("impact", request))
+	if not result.get("ok", false): authority.quiesce()
+	elif authority.active:
+		var fresh: Dictionary = await authority.request(authority.owned("inspect"))
+		if fresh.get("ok", false):
+			install_profile(fresh)
+			if host_session != null and host_session.pending_impacts.get(authority.binding.account) == intent: host_session.pending_impacts.erase(authority.binding.account)
+			if recovery_required(): freeze_wreck()
+			elif not departing: ship.simulation_paused = false
+		else: authority.quiesce()
+	intent.finished = true
+	voyage_busy = false
+	damage_pending = false

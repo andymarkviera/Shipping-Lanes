@@ -14,6 +14,7 @@ var fuel_contents: VBoxContainer
 var fuel_amount: SpinBox
 var fuel_text: Label
 var fuel_buy: Button
+var recover_button: Button
 var displayed_quote: String = ""
 var services: VBoxContainer
 var selected: String = ""
@@ -51,6 +52,7 @@ func _ready() -> void:
 	add_child(stack)
 	heading = label(stack)
 	status = label(stack)
+	recover_button = button(stack, "Recover ship", recover_ship)
 	services = VBoxContainer.new()
 	stack.add_child(services)
 	button(services, "CARGO", func(): cargo_contents.show(); fuel_contents.hide())
@@ -86,6 +88,14 @@ func _ready() -> void:
 func send(action: String, abandon: bool = false) -> void:
 	if session == null or waiting > 0 or session.voyage_snapshot.get("busy", false): return
 	session.send_voyage(action, selected if action == "accept" else "", abandon)
+	waiting = session.voyage_sequence
+	sent_ms = Time.get_ticks_msec()
+
+func recover_ship() -> void:
+	if recover_button.disabled or waiting > 0: return
+	var recovery: Dictionary = session.voyage_snapshot.get("recovery", {})
+	if recovery.get("state") != "pending": return
+	session.send_recover(recovery.id)
 	waiting = session.voyage_sequence
 	sent_ms = Time.get_ticks_msec()
 
@@ -139,7 +149,12 @@ func _process(_delta: float) -> void:
 	var pending: bool = waiting > 0 or data.get("busy", false)
 	heading.text = "ONLINE VOYAGE · %.2f credits" % (int(data.get("wallet", 0)) / 100.0)
 	var docked: bool = session.dock_snapshot.get("state") == "docked"
-	services.visible = docked and fresh
+	var recovery: Dictionary = data.get("recovery", {})
+	var sunk: bool = recovery.get("state") == "pending"
+	recover_button.visible = sunk
+	recover_button.disabled = not fresh or pending
+	recover_button.text = "Recover ship — fee already recorded"
+	services.visible = docked and fresh and not sunk
 	refresh_choices(data.get("offers", []))
 	var quote: Dictionary = data.get("refuel", {})
 	displayed_quote = str(quote.get("id", ""))
@@ -172,9 +187,18 @@ func _process(_delta: float) -> void:
 		status.text += "\nJob payment: %.2f credits" % (job.reward_minor / 100.0)
 		if job.state == "loading": status.text += "\nLoading · %d s remaining. Stay docked." % ceili(int(data.get("remaining_ms", 0)) / 1000.0)
 		else: status.text += "\n" + ("Select Deliver cargo." if docked and data.get("port") == job.destination else "Sail to the destination, stop and dock.")
+	status.text += "\nHull: %.0f%%" % (int(data.get("condition_bp", 10000)) / 100.0)
+	var debt: int = int(data.get("recovery_debt_minor", 0))
+	if debt > 0: status.text += "\nRecovery balance: %.2f credits\nHalf of future delivery earnings repays this balance." % (debt / 100.0)
+	if sunk:
+		status.text = "SHIP SUNK · Cargo lost, ship ownership retained.\nRecovery fee: %.2f credits\nPaid: %.2f · Added to balance: %.2f\nRecovery includes hull restoration and at least 100 L propulsion fuel." % [int(recovery.fee_minor) / 100.0, int(recovery.paid_minor) / 100.0, int(recovery.debt_added_minor) / 100.0]
+		if debt > 0: status.text += "\nBalance owed: %.2f credits; half of future delivery earnings repays it." % (debt / 100.0)
+	elif data.get("recovery_placing", false): status.text += "\nWaiting for clear water before releasing the ship."
+	elif data.get("damage_pending", false): status.text += "\nImpact detected. Saving hull damage…"
 	if not fresh: status.text += "\nWaiting for current server voyage state…"
 	elif pending: status.text += "\n" + ("Request unconfirmed. Reconnect to recover safely." if waiting > 0 and Time.get_ticks_msec() - sent_ms > 8000 else "Waiting for server…")
 	elif not data.get("message", "").is_empty(): status.text += "\n" + data.message
 	var last: Dictionary = data.get("receipt", {})
 	receipt.visible = not last.is_empty()
 	if not last.is_empty(): receipt.text = "LAST DELIVERY RECEIPT\n%d containers · %s\nPaid %.2f credits" % [last.quantity, port_name(last.destination), last.amount / 100.0]
+	if not last.is_empty() and int(last.get("repaid", 0)) > 0: receipt.text += "\nRecovery balance repaid: %.2f credits" % (int(last.repaid) / 100.0)

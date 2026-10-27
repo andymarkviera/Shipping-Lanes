@@ -2053,3 +2053,20 @@ Validation: 58 HTTPS/payment checks, 28 final Release refueling peer checks,
 regression checks pass; 138-script/startup and Release export pass. Development
 stack restarted and test client reopened cleanly after preserving/rebuilding its
 shader cache. Manual feedback remains pending.
+
+
+## Step 59 — Online impact damage and paid recovery — October 26, 2026
+
+Server-observed hard impacts now save hull damage; gentle/glancing contact remains
+harmless. Sinking atomically loses cargo, fails affected jobs and records the full
+250-credit development recovery fee while retaining ship ownership. Insufficient
+funds create a persisted balance repaid from half of later earnings. Recovery
+restores the hull with usable propulsion fuel at an unoccupied approved return
+spot. Unconfirmed impacts reconcile across connection replacement; confirmed state
+survives restart. Game protocol 13. No shallow zones or local fixture changes.
+109 authority, 43 physics, 34 Release peer and 27 Release interruption checks pass;
+38 cargo and 28 refueling regression checks pass. 139-script/startup and Release
+export pass. See PUBLIC_RECOVERY.md for scope and evidence. Manual feedback pending.
+Recovery tag: public-impact-recovery; verified source backup:
+../output/checkpoints/public-impact-recovery-2026-10-26.zip.
+Next numbered step: 60 component wear, separate from immediate impact damage.

@@ -9,11 +9,13 @@ var spaces: Dictionary = {}
 var changed_frame: int = -1
 
 func can_place(owner: Node3D, others: Array) -> bool:
+	if owner.recovery_required(): return true # Inert wreck can always enter to request recovery.
 	var address: Dictionary = owner.current_address()
 	if not Ports.spawn_clear(address, owner.ship.definition.hull_size_m): return false
 	var size: Vector3 = owner.ship.definition.hull_size_m
 	var radius: float = Vector2(size.x, size.z).length() * 0.5
 	for other: Node3D in others:
+		if other == owner or other.recovery_required(): continue
 		var other_size: Vector3 = other.ship.definition.hull_size_m
 		var clearance: float = radius + Vector2(other_size.x, other_size.z).length() * 0.5 + 2.0
 		if Nav.separation(address, other.current_address()) < clearance: return false

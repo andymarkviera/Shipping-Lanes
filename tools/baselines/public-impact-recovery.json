@@ -1,0 +1,35 @@
+{
+  "step": 59,
+  "date": "2026-10-26",
+  "game_protocol": 13,
+  "authority_ticket_protocol": 7,
+  "recovery_fee_minor": 25000,
+  "minimum_recovery_fuel_liters": 100,
+  "repayment_share": 0.5,
+  "proofs": {
+    "authority": {
+      "checks": 109,
+      "evidence": "../output/handoff/628c74a7/recovery-summary.json"
+    },
+    "release_peers": {
+      "checks": 34,
+      "evidence": "../output/handoff/57a7142d/recovery-peer-summary.json"
+    },
+    "release_interruptions": {
+      "checks": 27,
+      "evidence": "../output/handoff/740c81ad/recovery-peer-summary.json"
+    },
+    "cargo_regression": {
+      "checks": 38,
+      "evidence": "../output/handoff/d13ee13d/cargo-peer-summary.json"
+    },
+    "refuel_regression": {
+      "checks": 28,
+      "evidence": "../output/handoff/e876ddec/refuel-peer-summary.json"
+    }
+  },
+  "physics_checks": 43,
+  "physics_evidence": "../output/shared-physics/98d02da7/summary.json",
+  "manual_online_feedback": "pending",
+  "scope": "online starter; local Port Test and heavy fixtures unchanged"
+}

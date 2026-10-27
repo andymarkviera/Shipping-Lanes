@@ -23,6 +23,7 @@ func remove(peer: int) -> void:
 func status(peer: int) -> Dictionary:
 	if not entries.has(peer): return {"port_id": "", "state": "unavailable", "eligible": false, "message": "Ship unavailable."}
 	var entry: Dictionary = entries[peer]
+	if entry.owner.recovery_required() or entry.owner.damage_pending or entry.owner.recovery_placing: return {"port_id": "", "state": "unavailable", "eligible": false, "message": "Hull recovery or damage save in progress."}
 	var port: Node3D = world.port_for(entry.owner, entry.port_id) if not entry.port_id.is_empty() else world.nearest_port(entry.owner)
 	if port == null: return {"port_id": "", "state": entry.state, "eligible": false, "message": "Sail toward a port to dock."}
 	if world.changed_frame == Engine.get_physics_frames(): return {"port_id": port.definition.id, "state": entry.state, "eligible": false, "message": "Updating port position…"}
@@ -64,6 +65,9 @@ func advance(delta: float) -> void:
 		var entry: Dictionary = entries[peer]
 		if not is_instance_valid(entry.owner) or not entry.owner.authority.active or entry.owner.departing:
 			remove(peer)
+			continue
+		if entry.owner.recovery_required():
+			release(peer)
 			continue
 		if entry.state == "underway": continue
 		var port: Node3D = world.port_for(entry.owner, entry.port_id)

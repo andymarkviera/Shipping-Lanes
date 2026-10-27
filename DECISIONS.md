@@ -381,3 +381,17 @@ and commit tank/payment/receipt together. Never automatically retry an uncertain
 purchase; reacquire canonical state on reconnect. Both port and berth must support
 the service. No profile reset or migration. The isolated local Port Test retains
 its labelled free fixture services. See PUBLIC_REFUELING.md.
+
+
+## D114 — Recoverable online hull damage without free starter recovery
+
+Use actual server collision closing speed, a configurable harmless threshold and
+bounded per-contact damage. No hidden shallow areas. Save an impact before reporting
+sinking; freeze/fence uncertain ownership rather than applying an unsaved penalty.
+Each sinking charges 250 credits provisionally, retaining the full unpaid amount as
+recovery debt. Half of future earnings repays it; the player keeps the rest. Paid
+recovery includes hull restoration and a minimum 100 L propulsion reserve, preserving
+ship identity. Cargo and active jobs are lost, not restored by reconnect. The fee
+is not waived for the starter. Reserve and recheck safe return positions, and
+reconcile pending impacts across connection replacement. Maintain the local fixture
+boundary; future online ships must participate in paid recovery. See PUBLIC_RECOVERY.md.
