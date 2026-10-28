@@ -1,4 +1,4 @@
-param([ValidateSet('LAN','Internet')][string]$Connection = 'LAN')
+param([ValidateSet('LAN','Internet')][string]$Connection = 'Internet')
 $ErrorActionPreference = 'Stop'
 $configPath = Join-Path $PSScriptRoot ($Connection.ToLowerInvariant() + '.json')
 if (-not (Test-Path -LiteralPath $configPath)) { throw 'This connection configuration is missing. Ask the host operator to generate it.' }
@@ -15,5 +15,7 @@ New-Item -ItemType Directory -Force -Path $target | Out-Null
 $originalAppData = $env:APPDATA
 try {
     $env:APPDATA = $clientData
-    Start-Process -FilePath (Join-Path $PSScriptRoot 'Game/ShippingLanes.exe') -WorkingDirectory $PSScriptRoot
+    $gameArguments = @('--', '--friends-client')
+    if ($Connection -eq 'LAN') { $gameArguments += '--lan' }
+    Start-Process -ArgumentList $gameArguments -FilePath (Join-Path $PSScriptRoot 'Game/ShippingLanes.exe') -WorkingDirectory $PSScriptRoot
 } finally { $env:APPDATA = $originalAppData }

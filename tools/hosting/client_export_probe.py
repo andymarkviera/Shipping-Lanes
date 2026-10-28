@@ -2,7 +2,7 @@ import argparse,json,sys,uuid
 from pathlib import Path
 SOURCE=Path(__file__).resolve().parents[2];WS=SOURCE.parent
 BUNDLE=WS/'output/hosting/ShippingLanes-Windows-Host'
-sys.path.insert(0,str(BUNDLE/'ShippingLanes/tools/hosting'))
+sys.path.insert(0,str(SOURCE/'tools/hosting'))
 import host
 folder=WS/'output/host-check'/('export-'+uuid.uuid4().hex[:8]);folder.mkdir()
 parser=argparse.ArgumentParser();parser.add_argument('--evidence',required=True);args=parser.parse_args()
@@ -23,4 +23,6 @@ assert not any(p.name in ('private.json','local-key.pem','login-info.txt') for p
 for p in client.glob('*.json'):assert 'MUST_NOT_COPY' not in p.read_text()
 assert not list(client.rglob('*.TMP'))
 (folder/'ready.json').unlink()
-print('CLIENT_EXPORT_PASS 8',folder)
+assert (client/'Game/friends-client.flag').exists()
+assert (client/'Launch-Client.ps1').exists() and (client/'Launch-Client.cmd').exists()
+print('CLIENT_EXPORT_PASS 10',folder)

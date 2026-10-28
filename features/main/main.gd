@@ -18,6 +18,10 @@ var catalog: DefinitionRegistry = DefinitionRegistry.new()
 @onready var menu: ApplicationMenu = $UI/Menu
 
 func _ready() -> void:
+	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--friends-menu-check") and not get_tree().has_meta("friends_menu_check"):
+		get_tree().set_meta("friends_menu_check", true)
+		get_tree().change_scene_to_file.call_deferred("res://tools/friends_client_probe.tscn")
+		return
 	if get_tree().current_scene == self and OS.get_cmdline_user_args().has("--sailing-save-check"):
 		get_tree().change_scene_to_file.call_deferred("res://tools/sailing_save_probe.tscn")
 		return
@@ -150,8 +154,9 @@ func _ready() -> void:
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_min_size(Vector2i(960, 640))
 		DisplayServer.window_set_title("Container Ship Sim")
-	developer_overlay = DeveloperOverlay.new()
-	add_child(developer_overlay)
+	if not ApplicationMenu.friends_client():
+		developer_overlay = DeveloperOverlay.new()
+		add_child(developer_overlay)
 	menu.selected.connect(navigate)
 	$UI/Settings.closed.connect(func() -> void: transition(settings_return))
 	controls.command_requested.connect(func(action: StringName) -> void:
@@ -163,6 +168,7 @@ func _ready() -> void:
 	print("Shipping Lanes: Main scene loaded successfully.")
 
 func navigate(action: String) -> void:
+	if ApplicationMenu.friends_client() and action not in ["servers", "settings", "title", "exit"]: return
 	match action:
 		"local_network": get_tree().change_scene_to_file("res://features/network/private_network_test.tscn")
 		"saves":
@@ -331,6 +337,7 @@ func _exit_tree() -> void:
 		continuation.authority.detach_clock(true)
 
 func refresh_save_status() -> void:
+	if ApplicationMenu.friends_client(): return
 	menu.slot_status.text = slots.status(menu.slot_picker.selected)
 	menu.play_button.text = "PLAY" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE & PLAY"
 	menu.save_notice.text = "Local slot %d: %s" % [active_slot + 1, slots.status(active_slot)]

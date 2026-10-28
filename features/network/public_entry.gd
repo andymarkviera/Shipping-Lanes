@@ -65,18 +65,32 @@ func _ready() -> void:
 	back.pressed.connect(func(): cancel_join(); get_tree().change_scene_to_file("res://features/main/main.tscn"))
 	stack.add_child(back)
 	back.grab_focus()
-	if FileAccess.file_exists("user://public_services.json"):
-		var file: FileAccess = FileAccess.open("user://public_services.json", FileAccess.READ)
+	var config_path: String = "user://public_services.json"
+	if ApplicationMenu.friends_client():
+		var client_root: String = OS.get_executable_path().get_base_dir().get_base_dir()
+		var connection: String = "lan.json" if OS.get_cmdline_user_args().has("--lan") else "internet.json"
+		config_path = client_root.path_join(connection)
+		notice = "Server connection files are missing. Ask your host for the configured friends client."
+	if FileAccess.file_exists(config_path):
+		var file: FileAccess = FileAccess.open(config_path, FileAccess.READ)
 		if file != null and file.get_length() <= 65536:
 			var data: Variant = JSON.parse_string(file.get_as_text())
-			if data is Dictionary: configure_services(data)
+			if data is Dictionary:
+				if ApplicationMenu.friends_client():
+					var certificate: String = config_path.get_base_dir().path_join("server-certificate.pem")
+					if data.get("login") is Dictionary: data.login["ca"] = certificate
+					data["authority_ca"] = certificate
+					if data.get("servers") is Array:
+						for server: Variant in data.servers:
+							if server is Dictionary: server["certificate"] = certificate
+				configure_services(data)
 
 func configure_services(data: Dictionary) -> bool:
 	cancel_join()
 	configuration.clear()
 	picker.clear()
 	if not data.get("login") is Dictionary or not data.get("servers") is Array or data.servers.is_empty() or data.servers.size() > 32:
-		notice = "Online configuration is incomplete. Local tests are still available."
+		notice = "Online configuration is incomplete. Ask your host for updated connection files."
 		return false
 	if not str(data.get("authority_endpoint", "")).begins_with("https://"):
 		notice = "Online service address is invalid."
