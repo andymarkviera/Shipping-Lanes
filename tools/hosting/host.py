@@ -33,7 +33,12 @@ def client_files(output=None):
     write(output/'internet.json',config)
     runtime=ROOT/'exports/windows-x86_64/release'
     target=output/'Game'
-    shutil.copytree(runtime,target,dirs_exist_ok=True)
+    target.mkdir(exist_ok=True)
+    for name in ('ShippingLanes.exe','ShippingLanes.pck','libgdsqlite.windows.template_release.x86_64.dll'):
+        shutil.copy2(runtime/name,target/name)
+    (target/'friends-client.flag').write_text('Friends menu; protocol unchanged.\n',encoding='utf-8')
+    for name in ('Launch-Client.ps1','Launch-Client.cmd'):
+        shutil.copy2(ROOT/'tools/hosting'/name,output/name)
     licenses=ROOT.parent/'Licenses'
     if licenses.exists():shutil.copytree(licenses,output/'Licenses',dirs_exist_ok=True)
     print('CLIENT_FILES_READY',output,flush=True)

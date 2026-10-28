@@ -429,3 +429,14 @@ Google sign-up and password-reset email are not claimed complete. Require public
 lifecycle, production identity storage and abuse/security tests before unrestricted
 public rollout. Keep generated private data out of distributable archives and client
 exports. Scope first validation to what was actually tested on this PC.
+
+
+## D118 — Friends-only menu and portable public connection files
+
+Andy's friends receive Servers, Settings and Quit; developer fixtures/local save
+controls stay out of this menu. Keep the existing authenticated server protocol.
+Client packaging must use the actual server's public config/certificate, never a
+made-up hostname, private key, copied account database or development credentials.
+An unconfigured template is explicitly identified and cannot silently fall back to
+another user:// server. Preserve the existing server and progress; deployment is
+not confirmed until a real off-LAN client connects. Welcome email stays deferred.

@@ -18,6 +18,9 @@ var slot_result: Label
 var recovery_confirmation: ConfirmationDialog
 var play_button: Button
 
+static func friends_client() -> bool:
+	return OS.get_cmdline_user_args().has("--friends-client") or FileAccess.file_exists(OS.get_executable_path().get_base_dir().path_join("friends-client.flag"))
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -37,7 +40,7 @@ func _ready() -> void:
 	title.add_theme_constant_override("shadow_offset_y", 3)
 	add_child(title)
 	var footer: Label = Label.new()
-	footer.text = "DEVELOPMENT BUILD   /   MENU & SESSION TEST"
+	footer.text = "FRIENDS PLAYTEST" if friends_client() else "DEVELOPMENT BUILD   /   MENU & SESSION TEST"
 	footer.add_theme_font_size_override("font_size", 13)
 	footer.modulate = Color("a5b9c2")
 	footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
@@ -46,16 +49,23 @@ func _ready() -> void:
 	var home: VBoxContainer = page("title")
 	home.position.y = 130
 	home.add_theme_constant_override("separation", 4)
-	play_button = button(home, "PLAY", "play")
-	button(home, "BOAT HANDLING TEST", "handling")
-	button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
-	button(home, "PORT TEST", "ports")
-	button(home, "LOCAL MULTIPLAYER TEST", "local_network")
-	continue_button = button(home, "CONTINUE TEST SESSION", "continue")
-	button(home, "SERVERS", "servers")
-	button(home, "SETTINGS", "settings")
-	button(home, "LOCAL SAVES", "saves")
-	button(home, "EXIT", "exit")
+	if friends_client():
+		home.position.y = 210
+		home.add_theme_constant_override("separation", 14)
+		button(home, "SERVERS", "servers")
+		button(home, "SETTINGS", "settings")
+		button(home, "QUIT", "exit")
+	else:
+		play_button = button(home, "PLAY", "play")
+		button(home, "BOAT HANDLING TEST", "handling")
+		button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
+		button(home, "PORT TEST", "ports")
+		button(home, "LOCAL MULTIPLAYER TEST", "local_network")
+		continue_button = button(home, "CONTINUE TEST SESSION", "continue")
+		button(home, "SERVERS", "servers")
+		button(home, "SETTINGS", "settings")
+		button(home, "LOCAL SAVES", "saves")
+		button(home, "EXIT", "exit")
 	for child: Node in home.get_children():
 		if child is Button: child.custom_minimum_size.y = 42
 	save_notice = Label.new()
@@ -65,6 +75,7 @@ func _ready() -> void:
 	save_notice.position = Vector2(420, 160)
 	save_notice.size = Vector2(440, 180)
 	add_child(save_notice)
+	if friends_client(): return
 	var saves: VBoxContainer = page("saves")
 	saves.position.y = 135
 	saves.add_theme_constant_override("separation", 6)
@@ -104,7 +115,7 @@ func _ready() -> void:
 	session_details = Label.new()
 	session_details.add_theme_font_size_override("font_size", 18)
 	playing.add_child(session_details)
-	test_load_button = button(playing, "LOAD TEST CONTAINER — 100 CREDITS", "test_load")
+	test_load_button = button(playing, "LOAD TEST CONTAINER â€” 100 CREDITS", "test_load")
 	session_result = Label.new()
 	session_result.add_theme_font_size_override("font_size", 16)
 	playing.add_child(session_result)
@@ -154,8 +165,8 @@ func button(parent: Control, text: String, action: String) -> Button:
 	return item
 
 func show_page(id: String, can_continue: bool) -> void:
-	save_notice.visible = id == "title"
-	continue_button.visible = can_continue
+	save_notice.visible = id == "title" and not friends_client()
+	if continue_button != null: continue_button.visible = can_continue
 	for key: String in pages:
 		pages[key].visible = key == id
 	if pages.has(id) and id != "playing":

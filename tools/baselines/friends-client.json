@@ -1,0 +1,16 @@
+{
+  "game_protocol": 13,
+  "ticket_protocol": 7,
+  "menu": [
+    "Servers",
+    "Settings",
+    "Quit"
+  ],
+  "menu_checks": 19,
+  "client_export_checks": 10,
+  "compatibility_checks": 27,
+  "compatibility_evidence": "../output/host-check/af43d27b",
+  "internet_verified": false,
+  "requires_host_public_configuration": true,
+  "zip_sha256": "2494cbea6dc47b20fe8a818936077bd6ea90f35d8419fb1d00b32963d3b784df"
+}

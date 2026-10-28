@@ -1,5 +1,5 @@
 """Isolated real bundled runtime, native login and gateway boundary checks."""
-import http.client,json,os,ssl,sys,time,uuid
+import argparse,http.client,json,os,ssl,sys,time,uuid
 from pathlib import Path
 SOURCE=Path(__file__).resolve().parents[2]; WS=SOURCE.parent
 BUNDLE=WS/'output/hosting/ShippingLanes-Windows-Host'; PROJECT=BUNDLE/'ShippingLanes'
@@ -8,7 +8,8 @@ import local_online as local
 from gateway import route,Limits
 sys.path.insert(0,str(SOURCE/'tools/public_handoff'))
 import login_probe
-login_probe.ROOT=PROJECT
+parser=argparse.ArgumentParser();parser.add_argument("--client-project",type=Path);args=parser.parse_args()
+login_probe.ROOT=args.client_project.resolve() if args.client_project else PROJECT
 from login_probe import LoginProof
 checks=[]
 def check(value,text):

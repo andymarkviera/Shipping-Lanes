@@ -13,7 +13,7 @@ copy(ROOT/'exports/windows-x86_64/release',project/'exports/windows-x86_64/relea
 copy(ROOT/'services/public_authority',project/'services/public_authority')
 copy(ROOT/'tools/auth_proof',project/'tools/auth_proof')
 copy(ROOT/'tools/public_handoff/local_online.py',project/'tools/public_handoff/local_online.py')
-for name in ['host.py','gateway.py']:copy(ROOT/'tools/hosting'/name,project/'tools/hosting'/name)
+for name in ['host.py','gateway.py','Launch-Client.ps1','Launch-Client.cmd']:copy(ROOT/'tools/hosting'/name,project/'tools/hosting'/name)
 copy(ROOT/'tools/hosting/Host.ps1',OUT/'Host.ps1')
 copy(ROOT/'tools/hosting/Launch-Client.ps1',OUT/'Client/Launch-Client.ps1')
 for name in ['README-WINDOWS-HOST.md','CHATGPT-SERVER-HANDOFF.md']:copy(ROOT/'tools/hosting'/name,OUT/name)

@@ -2144,3 +2144,40 @@ pgAdmin paths; final bundle includes only PostgreSQL runtime bin/lib/share/licen
 Transfer package: ../output/hosting/ShippingLanes-Windows-Host.zip.
 Setup and ChatGPT handoff guides are included. Next deployment work is configuration
 on the actual Windows server and the public-access gates; Step 62 repairs unstarted.
+
+
+## Friends client — October 27, 2026
+
+Requested distributable client with only Servers, Settings and Quit. A portable
+friends-client.flag beside the executable selects this menu even on direct launch;
+--friends-client supports the launcher. Development menu remains available in the
+normal build. Friends navigation excludes local fixtures/save actions and skips
+local save status reads. Settings returns to the correct menu. Servers uses the
+existing authenticated entry, with portable public internet.json/certificate paths
+resolved beside the Client folder (optional --lan uses lan.json). No protocol,
+authority, account, gameplay or save format changed.
+
+Added Internet-default double-click launcher and Configure-Friends-Client.ps1.
+On the actual host this script copies only its generated public connection files
+and creates a sharing ZIP that excludes PlayerData and all host credentials/saves.
+Host client exports now include the friends marker/launchers and only the three
+required runtime files, excluding transient Godot export .TMP files. Original
+already-delivered host ZIP is unchanged and remains compatible.
+
+Validation: 144-script/startup check, Release export, 9 unconfigured and 10 configured
+Release menu/config relocation checks; 10 public client export checks; Windows
+PowerShell 5.1 configuration/ZIP test excludes a PlayerData sentinel. New client
+against original packaged server passed 27 real login/drive/save/restart/gateway
+checks in ../output/host-check/af43d27b. Initial sandbox run could not connect to
+loopback Postgres; isolated elevated execution passed. Menu logs and packaging
+fixture live in ../output/friends-check. All test servers stopped normally.
+
+Delivered template: ../output/hosting/ShippingLanes-Friends-Template.zip (40,109,523
+bytes), every ZIP entry hash verified. SHA256:
+2494cbea6dc47b20fe8a818936077bd6ea90f35d8419fb1d00b32963d3b784df.
+This is NOT preconfigured for Andy's remote host: known LAN IP SERVER_LAN_IP only;
+no confirmed running host, final DuckDNS name or public certificate was supplied.
+Use included Configure-Friends-Client.ps1 on server PC to create Friends-Ready.zip.
+Actual internet reachability, browser trust and distinct enrolled accounts remain
+required before inviting friends. Existing preview has two accounts; no Google or
+open signup. Step 62 paid repairs remains unstarted.
