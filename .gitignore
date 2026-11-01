@@ -13,3 +13,17 @@
 # Python proof-runner caches.
 __pycache__/
 *.pyc
+
+# Generated cloud/test state and private operator data.
+/output/
+/Client/
+/PlayerData/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+private.json
+login-info.txt
