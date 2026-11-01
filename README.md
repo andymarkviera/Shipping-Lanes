@@ -1,10 +1,13 @@
 # Shipping Lanes
 
-A Windows shipping game built with typed GDScript and Godot 4.7.2, using the
-Compatibility renderer. The project currently opens an empty Main scene with
-separate World and UI children and a readable “Shipping Lanes / Project ready”
-screen. The starter ship is imported in a separate inspection scene; gameplay
-has not started.
+A Windows shipping game built with typed GDScript and Godot 4.7.2 using the
+Compatibility renderer. It includes playable local container/heavy-loader voyages
+and authenticated dedicated-server container gameplay.
+
+**New cloud task? Read [CLOUD_HANDOFF.md](CLOUD_HANDOFF.md) and [AGENTS.md](AGENTS.md)
+first.** Windows development is tested; cloud platform setup still needs validation.
+The source includes Blender models, runtime assets, backend services and tests.
+It excludes generated builds, engine downloads, live credentials and player saves.
 
 ## Open, run and check
 
@@ -28,8 +31,8 @@ automatically; ordinary Editor and Run modes stay open until closed. See
 isolated save paths, logs, measured hardware and current platform limits.
 
 Successful startup prints `Shipping Lanes: Main scene loaded successfully.`
-The project entry point is `res://features/main/main.tscn`. The World child is
-an empty Node3D; the UI child is a CanvasLayer containing the startup screen.
+The project entry point is `res://features/main/main.tscn`. The development menu exposes the implemented playtests; the friends build uses
+Servers, Settings and Quit. See PROGRESS.md for the current implementation.
 
 ## Feature layout
 
