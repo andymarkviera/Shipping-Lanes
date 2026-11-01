@@ -2181,3 +2181,27 @@ Use included Configure-Friends-Client.ps1 on server PC to create Friends-Ready.z
 Actual internet reachability, browser trust and distinct enrolled accounts remain
 required before inviting friends. Existing preview has two accounts; no Google or
 open signup. Step 62 paid repairs remains unstarted.
+
+## Cloud development environment — November 1, 2026
+
+Prepared a Linux x86_64 headless development baseline without advancing gameplay.
+Installed the official Godot 4.7.2 editor outside the repository, verified its
+published SHA-512 and exact `4.7.2.stable.official.ed1daf0bf` version/commit, and
+kept the existing Windows baseline and export records unchanged. Extended the
+pinned, checksum-verified godot-sqlite v4.9 dependency with its unmodified Linux
+debug/release libraries and recorded their hashes alongside the existing Windows
+DLLs. The dependency remains MIT licensed.
+
+Godot import and all five GLB imports pass. The repository check compiles all 144
+GDScripts; Main starts headlessly; Units (50), Catalog and Diagnostics (9) pass.
+The isolated SQLite proof passes initialization, WAL/full-sync transactions,
+rollback, migration, online backup/restore, two owned-process crash recoveries,
+reopen and integrity checks. Logs contain no engine or script errors. Cloud state
+uses workspace-local XDG config/cache/data paths because the managed home directory
+is read-only.
+
+Windows PowerShell runners, Windows export templates, Windows client/server builds,
+rendered visual checks and the PostgreSQL/Keycloak integration stack remain separate
+platform gates and were not claimed here. No live saves, accounts, server data,
+gameplay logic, protocols or recorded player requirements changed. Step 62 paid
+repairs remains the next gameplay step after this environment change is reviewed.
