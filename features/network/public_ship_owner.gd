@@ -63,6 +63,7 @@ func restore_grant(result: Dictionary, activate: bool = true) -> void:
 		ship.queue_free()
 	operating_seconds = 0.0
 	ship = Hull.instantiate()
+	ship.definition = preload("res://features/catalog/fleet_inspection.gd").definition(str(result.profile.ship.definition))
 	ship.condition_affects_propulsion = true
 	ship.simulation_paused = true
 	add_child(ship)

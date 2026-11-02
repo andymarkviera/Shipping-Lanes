@@ -4,6 +4,7 @@ Port IDs attest an authoritative docking check by the game server, not client in
 No peer-facing route is exposed here. Never wire this to an unrestricted RPC.
 """
 import copy
+from ship_purchase import CATALOG
 import uuid
 
 PORTS = ('port_brindle_quay', 'port_slatewater_works')
@@ -37,7 +38,7 @@ def transition(profile, request, now_ms, treasury):
         if not offer: return 'UNKNOWN_OFFER', profile, 0, None
         if request['port_id'] != offer['origin']: return 'WRONG_PORT', profile, 0, None
         if job: return 'JOB_ALREADY_ACTIVE', profile, 0, None
-        if data['ship']['definition'] != 'ship_starter_container_01': return 'WRONG_SHIP', profile, 0, None
+        if data['ship']['definition'] not in CATALOG: return 'WRONG_SHIP', profile, 0, None
         if any(j['offer_id'] == offer['offer_id'] and j['state'] in ('delivered', 'abandoned') for j in jobs):
             return 'OFFER_CLOSED', profile, 0, None
         if len(jobs) >= 1000: return 'HISTORY_LIMIT', profile, 0, None
