@@ -97,7 +97,7 @@ func run() -> void:
 	owner.ship.set_physics_process(false)
 	owner.ship.docked = true
 	owner.operating_seconds = 36.0
-	session.members[2] = {"hull": owner}
+	session.members[2] = {"hull": owner, "voyage_sequence": 0, "voyage_notice": ""}
 	ports.entries[2] = {"owner": owner, "state": "docked", "port_id": "port_brindle_quay"}
 	var rows: Array = service.ship_quotes(2)
 	check(rows.size() == 3, "three progression ships")
@@ -145,6 +145,19 @@ func run() -> void:
 	panel.ship_confirmation = ""
 	panel.buy_ship()
 	check(session.voyage_sequence == 0, "cancel requires a new review")
+	panel.open_inspection()
+	check(panel.inspection.visible and panel.ship_confirmation.is_empty() and session.voyage_sequence == 0, "opening comparison clears purchase confirmation without sending intent")
+	session.voyage_received_ms = Time.get_ticks_msec() - 3000
+	panel._process(0.0)
+	check(not panel.inspection.visible, "stale voyage state closes inspection")
+	session.voyage_received_ms = Time.get_ticks_msec()
+	panel._process(0.0)
+	panel.open_inspection()
+	session.binding = {}
+	panel._process(0.0)
+	check(not panel.inspection.visible and panel.inspection.choices.size() == 4, "disconnect clears owned inspection choices")
+	session.binding = {"ship": "fixture"}
+	panel._process(0.0)
 	panel.ship_rows[1].id = "changed_quote"
 	panel.buy_ship()
 	check(session.voyage_sequence == 0, "changed quote requires confirmation again")
@@ -168,6 +181,12 @@ func run() -> void:
 	result = await service.purchase_ship(2, quote.id)
 	check(result.code == "SHIP_PURCHASED" and owner.public_profile.stored_ships.size() == 2 and owner.wallet_minor == 120000, "second deliberate purchase has another stored instance")
 	check(owner.public_profile.stored_ships[0].id != owner.public_profile.stored_ships[1].id, "two purchases have distinct owned IDs")
+	var inspected: Dictionary = service.view(2)
+	check(inspected.fleet.size() == 3 and inspected.fleet[0].id == original_id, "owner voyage snapshot contains active and both stored purchases")
+	check(inspected.fleet[1].id != inspected.fleet[2].id, "inspection retains distinct same-definition owned IDs")
+	owner.ship.docked = false
+	check(service.view(2).fleet.is_empty(), "fleet is omitted outside dock services")
+	owner.ship.docked = true
 	authority.unknown = true
 	quote = service.ship_quotes(2)[0]
 	result = await service.purchase_ship(2, quote.id)

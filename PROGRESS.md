@@ -2345,3 +2345,98 @@ render-frame-dependent wear/gauge limits remain recorded above; those platform g
 are not closed by this purchase work. No physics or gauge behavior was changed.
 Deliver via draft PR against main; no secrets, databases, exports, caches or generated
 evidence are included. Step 63 implementation does not advance Steps 64–67.
+
+## Step 64 — Fleet inspection and comparison (draft) — November 2, 2026
+
+Task ID: `fleet-inspection-and-comparison`. Based on merged Step 63 main `9b4648b`;
+branch `fleet-inspection-and-comparison`. Only Step 64 implemented. Online dock
+services now expose FLEET / COMPARE with two independently selectable catalog/owned
+ships, cargo-family comparison and isolated visual previews. The left starts on
+the catalog selection and the right on the active owned ship. Names/default names,
+class, stable owned ID, ownership/storage, single condition, propulsion fuel,
+capacity units, acceleration, turn rate and full-output fuel burn are readable.
+
+Capacity comes from existing cargo IDs/pools: six container slots or one heavy
+module slot. DWT and hold count remain explicitly unspecified, not invented from
+geometry or tank size. Total capacity is distinguished from remaining space and
+propulsion fuel from cargo fuel. Bulk/gas/oil/cargo-fuel capability is not inferred.
+Heavy-lifter preview is marked local prototype with no online purchase/jobs.
+Purchasable, insufficient funds, full storage, temporarily unavailable and unavailable
+prototype states are distinct. Current server quotes supply displayed purchase
+prices; existing review/confirm/cancel remains the only purchase path.
+
+Only the authenticated owner's bounded active/stored projection enters docked voyage
+snapshots. It excludes accounts, jobs and other private profile fields. Inspection
+reads live active condition/fuel and canonical stored values; it never mutates
+saves, IDs, definitions, wallets or jobs. Missing stored arrays and definitions are
+handled without migration/reset. Preview worlds contain disabled visual scenes,
+never runtime ship authority. No new RPC or protocol version: game 15/ticket 7,
+Godot 4.7.2 retained. Existing UID sidecars unchanged; all three new scripts retain
+UIDs, and new runtime scripts are explicit in exports. D121 and FLEET_INSPECTION.md
+record behavior and limits. Switching, resale, renaming and subsequent steps remain
+unimplemented. All recorded player constraints remain unchanged.
+
+### Linux checks actually run
+
+Used the existing pinned `4.7.2.stable.official.ed1daf0bf` binary, not system 4.6.3.
+All fixture data, dependency installation and evidence are isolated outside the
+repository under `/workspace/work/step64`.
+
+- Editor/import and Main startup pass; all 149 GDScripts compile. Initial import
+  lacked socket permission; the permitted-network import rerun is clean.
+- 32 fleet inspection assertions pass: explicit cargo units, six families,
+  compatibility, all acquisition states, server quote price, legacy/unknown content,
+  active/stored condition and names, isolated previews, stable selection on refresh,
+  owner-field projection, clearing prior entries, read-only state and 101-row bound.
+- 35 purchase service/panel checks pass, including real panel opening without a
+  purchase, stale/disconnected cleanup, both distinct stored purchases appearing in
+  the owner's view and omission outside dock services. All 20 repair checks pass.
+  These use explicit in-memory authority doubles, not real PostgreSQL or login.
+- Catalog, controls, flow, starter assets, units (50), diagnostics (9), contracts
+  (66), geography (342), session (21), clocks (22), handling (134), camera (20), water
+  (59), feedback (24), world size (2,042), heavy lifter (39), fuel (42), economy (82),
+  compact snapshots (24) and voyage (101) pass. Diagnostics' intentional validation
+  message is expected. Save slots pass 38 checks after supplying the required
+  32-character proof ID; the initial shorthand proof argument was rejected.
+- All 28 SQLite storage/persistence/migration/recovery phases pass, including ten
+  owned-process kills at explicit ready markers, transaction rollback/reopen,
+  committed recovery, backup fallback and persistence UI.
+- Actual local host/client checks pass: network/reconnect and actions, plus both
+  normal and impaired replication, cargo-network and connected-world profiles
+  (16 successful process results). These are private local networking fixtures,
+  not authenticated public-fleet transmission proof.
+- All 20 Python repair/purchase tests pass; Python source compilation passes.
+  The first run lacked psycopg. The repository's pinned psycopg-binary hash targets
+  Windows and rejected the Linux wheel; installed the same version in an isolated
+  venv using the Linux wheel hash verified against PyPI metadata, preserving the
+  repository's dependency records. No database server was installed or configured.
+- Whitespace and existing UID preservation checks pass. No secrets, accounts,
+  databases, exports, caches or generated logs are included in the commit.
+
+### Existing Linux limitations reproduced
+
+Collision fails its lateral-contact assertion; composition fails its two side-course
+contact assertions. Ports prints 261 checks passed but emits two out-of-tree
+transform errors, so it is not a clean gate. Shared-gauge and wear probes reach
+3 and 10 headless assertions respectively, then time out waiting for rendered
+frames. These match the previously recorded Step 62/63 Linux limitations; no
+physics, ports, wear or gauge implementation changed in Step 64.
+
+### Unrun backlog gates — not blockers to this draft implementation
+
+- **Windows:** pinned PowerShell engine checks, Debug/Release client/server exports,
+  exported previews/resource inclusion, save/UID compatibility.
+- **PostgreSQL:** real HTTPS purchase/replay/concurrency/crash/restart and canonical
+  fleet reload. The existing configured Windows database stack is unavailable here.
+- **Keycloak/authenticated peers:** native login, two-account fleet privacy,
+  disconnect/reconnect/binding replacement and full-fleet snapshot bandwidth.
+- **Visual:** rendered preview framing/lighting, long-name/ID layout and scrolling,
+  supported resolutions/scaling, keyboard focus and HUD overlap. No display/Xvfb
+  runtime is installed; headless node assertions are not visual acceptance.
+- **Andy's playtest:** choose a container ship using the comparisons; distinguish
+  cargo units/DWT/holds/fuel; recognize unavailable acquisition; inspect two owned
+  ships of the same class; close without buying and verify retained state on reconnect.
+
+Deliver via DRAFT PR against main. No live server deployment or completed manual/
+production acceptance claimed. Follow-up gameplay remains Step 65, not part of this
+branch; backlog acceptance items above stay visible for later tracking.
