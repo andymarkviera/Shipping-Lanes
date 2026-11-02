@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=3 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[ext_resource type="Resource" path="res://features/ships/starter_container_01/container_layout.tres" id="2_layout"]
+[resource]
+script = ExtResource("1")
+container_layout = ExtResource("2_layout")
+id = "ship_swift_container_01"
+display_name = "Swift container ship"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
+cargo_type_ids = Array[String](["cargo_test_container"])
+forward_acceleration_mps2 = 0.96
+reverse_acceleration_mps2 = 0.5
+linear_drag_per_second = 0.08
+forward_throttle_limit = 1.0
+reverse_throttle_limit = 0.6
+command_rate_per_second = 0.5
+engine_ramp_up_per_second = 0.5
+engine_ramp_down_per_second = 1.0
+max_turn_rate_degrees = 3.0
+turn_acceleration_degrees = 2.0
+rudder_full_effect_speed_mps = 4.0
+thruster_acceleration_mps2 = 0.4
+lateral_drag_per_second = 0.4
+thruster_cutoff_speed_mps = 4.0
+cargo_capacities = {"container_slots": 6}
+fuel_full_output_lps = 0.6

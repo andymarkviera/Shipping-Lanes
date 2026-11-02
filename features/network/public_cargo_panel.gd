@@ -10,6 +10,14 @@ var accept: Button
 var deliver: Button
 var cancel: Button
 var cargo_contents: VBoxContainer
+var ship_contents: VBoxContainer
+var ship_list: ItemList
+var ship_preview: Label
+var ship_buy: Button
+var ship_rows: Array = []
+var ship_selected: int = 0
+var ship_confirmation: String = ""
+var ship_signature: String = ""
 var repair_contents: VBoxContainer
 var repair_text: Label
 var repair_buy: Button
@@ -59,7 +67,7 @@ func _ready() -> void:
 	recover_button = button(stack, "Recover ship", recover_ship)
 	services = VBoxContainer.new()
 	stack.add_child(services)
-	button(services, "CARGO", func(): cargo_contents.show(); fuel_contents.hide(); repair_contents.hide())
+	button(services, "CARGO", func(): ship_contents.hide(); ship_confirmation = ""; cargo_contents.show(); fuel_contents.hide(); repair_contents.hide())
 	cargo_contents = VBoxContainer.new()
 	services.add_child(cargo_contents)
 	list = ItemList.new()
@@ -73,7 +81,7 @@ func _ready() -> void:
 	accept = button(cargo_contents, "Accept selected job", func(): send("accept"))
 	deliver = button(cargo_contents, "Deliver cargo", func(): send("deliver"))
 	cancel = button(cargo_contents, "Cancel loading", cancel_job)
-	button(services, "REFUEL", func(): cargo_contents.hide(); fuel_contents.show(); repair_contents.hide())
+	button(services, "REFUEL", func(): ship_contents.hide(); ship_confirmation = ""; cargo_contents.hide(); fuel_contents.show(); repair_contents.hide())
 	fuel_contents = VBoxContainer.new()
 	services.add_child(fuel_contents)
 	fuel_contents.hide()
@@ -87,12 +95,23 @@ func _ready() -> void:
 	fuel_amount.update_on_text_changed = true
 	fuel_contents.add_child(fuel_amount)
 	fuel_buy = button(fuel_contents, "Buy propulsion fuel", buy_fuel)
-	button(services, "REPAIR", func(): cargo_contents.hide(); fuel_contents.hide(); repair_contents.show())
+	button(services, "REPAIR", func(): ship_contents.hide(); ship_confirmation = ""; cargo_contents.hide(); fuel_contents.hide(); repair_contents.show())
 	repair_contents = VBoxContainer.new()
 	services.add_child(repair_contents)
 	repair_contents.hide()
 	repair_text = label(repair_contents)
 	repair_buy = button(repair_contents, "Repair boat", buy_repair)
+	button(services, "SHIP CATALOG", func(): cargo_contents.hide(); fuel_contents.hide(); repair_contents.hide(); ship_contents.show())
+	ship_contents = VBoxContainer.new()
+	services.add_child(ship_contents)
+	ship_contents.hide()
+	ship_list = ItemList.new()
+	ship_list.custom_minimum_size.y = 76
+	ship_contents.add_child(ship_list)
+	ship_list.item_selected.connect(func(index: int): ship_selected = index; ship_confirmation = "")
+	ship_preview = label(ship_contents)
+	ship_buy = button(ship_contents, "Review purchase", buy_ship)
+	button(ship_contents, "Cancel purchase", func(): ship_confirmation = "")
 	receipt = label(stack)
 
 func send(action: String, abandon: bool = false) -> void:
@@ -108,6 +127,41 @@ func recover_ship() -> void:
 	session.send_recover(recovery.id)
 	waiting = session.voyage_sequence
 	sent_ms = Time.get_ticks_msec()
+
+func buy_ship() -> void:
+	if ship_buy.disabled or waiting > 0 or ship_selected >= ship_rows.size(): return
+	var row: Dictionary = ship_rows[ship_selected]
+	if ship_confirmation != str(row.id):
+		ship_confirmation = str(row.id)
+		return
+	session.send_ship_purchase(str(row.id))
+	ship_confirmation = ""
+	waiting = session.voyage_sequence
+	sent_ms = Time.get_ticks_msec()
+
+func refresh_ship_catalog(data: Dictionary, available: bool) -> void:
+	var rows: Array = data.get("ship_catalog", [])
+	var next: String = JSON.stringify(rows)
+	if next != ship_signature:
+		ship_signature = next
+		ship_confirmation = ""
+		ship_rows = rows.duplicate(true)
+		ship_list.clear()
+		for row: Dictionary in ship_rows:
+			ship_list.add_item("%s · %.2f cr" % [row.name, int(row.cost_minor) / 100.0])
+		ship_selected = mini(ship_selected, maxi(0, ship_rows.size() - 1))
+		if not ship_rows.is_empty(): ship_list.select(ship_selected)
+	ship_buy.disabled = not available or ship_rows.is_empty() or int(data.get("stored_ship_count", 0)) >= 100
+	ship_preview.text = "Catalog unavailable while loading or at this berth."
+	ship_buy.text = "Review purchase"
+	if not available: ship_confirmation = ""
+	if ship_rows.is_empty(): return
+	var row: Dictionary = ship_rows[ship_selected]
+	var affordable: bool = int(row.cost_minor) <= int(data.get("wallet", 0))
+	ship_buy.disabled = ship_buy.disabled or not affordable
+	ship_preview.text = "%s\n%s\nTank: %.0f L · New condition: 100%% · Fuel: empty\nStored after purchase; activation is not available yet.\nStored ships: %d / 100" % [row.name, row.description, row.fuel_capacity_liters, int(data.get("stored_ship_count", 0))]
+	if not affordable: ship_preview.text += "\nNot enough earned credits."
+	ship_buy.text = ("Confirm purchase — %.2f credits" if ship_confirmation == str(row.id) else "Review purchase — %.2f credits") % (int(row.cost_minor) / 100.0)
 
 func buy_repair() -> void:
 	if repair_buy.disabled or waiting > 0 or displayed_repair_quote.is_empty(): return
@@ -153,11 +207,13 @@ func _process(_delta: float) -> void:
 	visible = session != null and not session.binding.is_empty()
 	if not visible:
 		waiting = 0
+		ship_confirmation = ""
 		return
 	if installed_binding != session.binding:
 		installed_binding = session.binding.duplicate()
 		waiting = 0
 		confirm_job = ""
+		ship_confirmation = ""
 	var data: Dictionary = session.voyage_snapshot
 	var fresh: bool = not data.is_empty() and Time.get_ticks_msec() - session.voyage_received_ms < 2000
 	var job: Dictionary = data.get("job", {})
@@ -172,6 +228,7 @@ func _process(_delta: float) -> void:
 	recover_button.text = "Recover ship — fee already recorded"
 	services.visible = docked and fresh and not sunk
 	refresh_choices(data.get("offers", []))
+	refresh_ship_catalog(data, fresh and docked and not pending and not sunk)
 	var repair_terms: Dictionary = data.get("repair", {})
 	displayed_repair_quote = str(repair_terms.get("id", ""))
 	var repair_cost: int = int(repair_terms.get("cost_minor", 0))

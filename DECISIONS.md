@@ -456,3 +456,22 @@ and uncertain-outcome fencing. No schema migration or save reset. New repair RPC
 requires game protocol 14; ticket protocol 7 and Godot 4.7.2 stay unchanged.
 See PUBLIC_REPAIRS.md. Implementation is draft pending PostgreSQL/Windows/visual
 acceptance, not evidence of deployment or an accepted Step 62 gate.
+
+
+## D120 — Earned-credit catalog and separate stored ship ownership
+
+Step 63 adds starter/coastal/swift small container definitions at provisional
+500/900/1,200 earned credits; no new starter-money grant. Coastal uses 20% less
+full-output propulsion fuel; Swift has 20% stronger forward acceleration and higher
+fuel use. All retain six container slots, existing placeholder hull art and 1,000 L
+tanks. New purchases start stored, at full single condition with empty tanks.
+Pacing remains provisional pending Step 67 and Andy's feedback (U014).
+
+Preserve the active profile.ship and all existing IDs. Add stored_ships only on
+purchase, bounded to 100 records. Shared definitions contain no owned state. Bind
+confirmation to a server quote, consume before I/O, settle live state, and use the
+existing atomic profile/wallet/treasury/receipt/journal transaction. Account/action
+UUIDs distinguish deliberate purchases; duplicate intent returns the original ID.
+No player transfers, fleet switching, resale or new condition model. Game protocol
+15, ticket protocol 7, Godot 4.7.2. PUBLIC_SHIP_PURCHASE.md records semantics and
+pending real PostgreSQL/Windows/Keycloak/visual gates separately from Linux doubles.

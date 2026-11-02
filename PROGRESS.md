@@ -2281,3 +2281,67 @@ Deliver as a DRAFT PR against main, not a main push. Next: run the pending Step 
 acceptance gates on the configured isolated Windows stack and review provisional
 pricing; then Step 63 ship catalog and purchase. No secrets, databases, exports,
 caches or generated evidence are included in the commit.
+
+## Step 63 — Ship catalog and purchase (draft) — November 2, 2026
+
+Task ID: `ship-catalog-and-purchase`. Based on merged Step 62 main `706e73a`.
+Added an online dock catalog with three small earned-credit ships, shared preview
+and price data, affordability checks, review/confirm/cancel and stored purchase
+feedback. Starter/coastal/swift prices are provisionally 500/900/1,200 credits.
+Coastal and Swift have separate stable definitions and reuse starter placeholder
+art; see D120 and PUBLIC_SHIP_PURCHASE.md. Fleet comparison, activation/switching,
+resale and local-save UX remain later steps.
+
+Purchases create distinct owned records in additive profile.stored_ships, leaving
+the active ship ID, cargo and jobs intact. Empty stored fleet needs no migration;
+purchases start with full single condition and empty propulsion tanks. The server
+binds and consumes quotes, checkpoints live wear/fuel/pose, then commits through
+the existing canonical wallet/profile/treasury/receipt/journal transaction. Backend
+receipt replay returns the original owned ID and debit only once; mismatched intent
+is rejected. Unknown outcomes fence ownership without automatic purchase retry.
+
+Game protocol 14 → 15 for the added RPC; ticket protocol 7 and Godot 4.7.2 remain.
+Existing .gd.uid files and saves/IDs are preserved; the new probe has a UID sidecar.
+Export presets include catalog JSON and new definitions. No player trades/transfers/
+gifts, hidden shallows, cargo expiry, machinery wear or live server changes.
+
+### Linux checks actually run
+
+Exact official `4.7.2.stable.official.ed1daf0bf`, downloaded outside the repository
+and verified against published SHA-512. The system's Godot 4.6.3 was not used.
+Isolated XDG state and disposable fixture data/logs are under /workspace/work/step63.
+
+- Editor/import and Main startup pass; all 146 GDScripts compile. Catalog, controls,
+  flow, starter assets, units (50), diagnostics (9), contracts (66), geography (342),
+  session (21), clocks (22), handling (134), camera (20), water (59), feedback (24),
+  world size (2,042), heavy lifter (39), fuel (42), economy (82), compact snapshots
+  (24) and voyage (101) pass. Diagnostics' intentional validation message is expected.
+- 20 Python tests pass: 11 existing repair checks and 9 purchase checks, including
+  two distinct owned IDs, definition/instance independence, exact debit, rejection
+  cases, strict payloads, production receipt dispatch replay/conflict, failed receipt
+  replay, stale revision/recovery and stored-ship preservation during other services.
+  The SQL adapter is an explicit double, not actual PostgreSQL.
+- 29 real Godot purchase service/panel assertions pass with an explicit authority
+  double: preview/definition agreement, port/berth/loading/dock guards, expiry,
+  wallet changes/funds, review/confirm/cancel, changed-quote confirmation, pending
+  double-click guard, live-state checkpoint, two distinct stored IDs, consumed-quote
+  rejection and uncertain-outcome fencing. All 20 repair regression assertions pass.
+- SQLite storage, versioned persistence, migrations and durable economic recovery
+  pass all 28 harness phases, including ten owned-process kills at explicit crash
+  markers, rollback/reopen, committed recovery, backups/fallback and persistence UI.
+
+### Pending platform and acceptance gates
+
+PostgreSQL/HTTPS concurrent replay, restart and atomic crash tests are **not run**:
+no PostgreSQL runtime/stack is configured here, and the existing integration harness
+uses Windows binaries/process flags. Added tools/public_handoff/ship_purchase_probe.py
+for those checks; portable receipt-dispatch tests do not substitute for this gate.
+Windows engine checks/exports, Keycloak/native authentication, actual authenticated
+peer purchase/interruption/reconnect, rendered catalog/HUD and Andy's playtest remain
+**pending**. No public deployment or production acceptance is claimed.
+
+Prior Step 62 Linux collision/composition failures, non-clean ports results and
+render-frame-dependent wear/gauge limits remain recorded above; those platform gates
+are not closed by this purchase work. No physics or gauge behavior was changed.
+Deliver via draft PR against main; no secrets, databases, exports, caches or generated
+evidence are included. Step 63 implementation does not advance Steps 64–67.

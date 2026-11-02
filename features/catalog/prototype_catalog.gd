@@ -11,4 +11,6 @@ const RECORDS: Array[ContentDefinition] = [
 	preload("res://features/ports/brindle_quay_berth.tres"),
 	preload("res://features/ports/slatewater_works.tres"),
 	preload("res://features/ports/slatewater_works_berth.tres"),
+	preload("res://features/catalog/records/coastal_ship.tres"),
+	preload("res://features/catalog/records/swift_ship.tres"),
 ]
