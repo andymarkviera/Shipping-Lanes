@@ -10,6 +10,10 @@ var accept: Button
 var deliver: Button
 var cancel: Button
 var cargo_contents: VBoxContainer
+var repair_contents: VBoxContainer
+var repair_text: Label
+var repair_buy: Button
+var displayed_repair_quote: String = ""
 var fuel_contents: VBoxContainer
 var fuel_amount: SpinBox
 var fuel_text: Label
@@ -55,7 +59,7 @@ func _ready() -> void:
 	recover_button = button(stack, "Recover ship", recover_ship)
 	services = VBoxContainer.new()
 	stack.add_child(services)
-	button(services, "CARGO", func(): cargo_contents.show(); fuel_contents.hide())
+	button(services, "CARGO", func(): cargo_contents.show(); fuel_contents.hide(); repair_contents.hide())
 	cargo_contents = VBoxContainer.new()
 	services.add_child(cargo_contents)
 	list = ItemList.new()
@@ -69,7 +73,7 @@ func _ready() -> void:
 	accept = button(cargo_contents, "Accept selected job", func(): send("accept"))
 	deliver = button(cargo_contents, "Deliver cargo", func(): send("deliver"))
 	cancel = button(cargo_contents, "Cancel loading", cancel_job)
-	button(services, "REFUEL", func(): cargo_contents.hide(); fuel_contents.show())
+	button(services, "REFUEL", func(): cargo_contents.hide(); fuel_contents.show(); repair_contents.hide())
 	fuel_contents = VBoxContainer.new()
 	services.add_child(fuel_contents)
 	fuel_contents.hide()
@@ -83,6 +87,12 @@ func _ready() -> void:
 	fuel_amount.update_on_text_changed = true
 	fuel_contents.add_child(fuel_amount)
 	fuel_buy = button(fuel_contents, "Buy propulsion fuel", buy_fuel)
+	button(services, "REPAIR", func(): cargo_contents.hide(); fuel_contents.hide(); repair_contents.show())
+	repair_contents = VBoxContainer.new()
+	services.add_child(repair_contents)
+	repair_contents.hide()
+	repair_text = label(repair_contents)
+	repair_buy = button(repair_contents, "Repair boat", buy_repair)
 	receipt = label(stack)
 
 func send(action: String, abandon: bool = false) -> void:
@@ -96,6 +106,12 @@ func recover_ship() -> void:
 	var recovery: Dictionary = session.voyage_snapshot.get("recovery", {})
 	if recovery.get("state") != "pending": return
 	session.send_recover(recovery.id)
+	waiting = session.voyage_sequence
+	sent_ms = Time.get_ticks_msec()
+
+func buy_repair() -> void:
+	if repair_buy.disabled or waiting > 0 or displayed_repair_quote.is_empty(): return
+	session.send_repair(displayed_repair_quote)
 	waiting = session.voyage_sequence
 	sent_ms = Time.get_ticks_msec()
 
@@ -156,6 +172,15 @@ func _process(_delta: float) -> void:
 	recover_button.text = "Recover ship — fee already recorded"
 	services.visible = docked and fresh and not sunk
 	refresh_choices(data.get("offers", []))
+	var repair_terms: Dictionary = data.get("repair", {})
+	displayed_repair_quote = str(repair_terms.get("id", ""))
+	var repair_cost: int = int(repair_terms.get("cost_minor", 0))
+	repair_buy.disabled = pending or not fresh or not docked or repair_terms.is_empty() or int(repair_terms.get("restored_bp", 0)) <= 0 or repair_cost > int(data.get("wallet", 0))
+	repair_text.text = "Repair unavailable while loading or at this berth."
+	if not repair_terms.is_empty():
+		repair_text.text = "Boat condition: %.2f%% → 100%%\nRestore: %.2f%%\nTotal: %.2f credits" % [int(repair_terms.condition_bp) / 100.0, int(repair_terms.restored_bp) / 100.0, repair_cost / 100.0]
+		if int(repair_terms.restored_bp) == 0: repair_text.text = "Boat condition is full. No repair needed."
+	repair_buy.text = "Repair to full — %.2f credits" % (repair_cost / 100.0)
 	var quote: Dictionary = data.get("refuel", {})
 	displayed_quote = str(quote.get("id", ""))
 	var liters: int = int(fuel_amount.value)

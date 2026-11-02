@@ -440,3 +440,19 @@ made-up hostname, private key, copied account database or development credential
 An unconfigured template is explicitly identified and cannot silently fall back to
 another user:// server. Preserve the existing server and progress; deployment is
 not confirmed until a real off-LAN client connects. Welcome email stays deferred.
+
+
+## D119 — Full paid restoration of the single condition meter
+
+Step 62 follows D115: one repair quote for restoring missing boat condition to
+100%, with no separate components, machinery wear or player-to-player transfers.
+Use shared per-definition full-scale prices in repair_costs.json; initial starter
+price is 250 credits per 100 percentage points, provisional pending Andy's economy
+feedback. Round the proportional total upward once to integer minor credits.
+Full condition cannot charge; successful restoration clears fractional wear.
+Settle pending simulated wear before purchase and require accepted condition/price
+to match canonical state. Use existing lease/revision/receipt/journal transactions
+and uncertain-outcome fencing. No schema migration or save reset. New repair RPC
+requires game protocol 14; ticket protocol 7 and Godot 4.7.2 stay unchanged.
+See PUBLIC_REPAIRS.md. Implementation is draft pending PostgreSQL/Windows/visual
+acceptance, not evidence of deployment or an accepted Step 62 gate.

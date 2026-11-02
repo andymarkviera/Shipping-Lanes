@@ -47,7 +47,7 @@ func request(data: Dictionary) -> Dictionary:
 		if binding.is_empty() or Time.get_ticks_msec() >= deadline_ms: return {"ok": false, "code": "LOCAL_QUIESCED"}
 		for field: String in ["account", "epoch", "generation"]:
 			if data.get(field) != binding.get(field): return {"ok": false, "code": "LOCAL_QUIESCED"}
-		if (operation in ["purchase", "deliver", "refuel", "impact", "recover", "checkpoint", "begin"] or operation.begins_with("voyage_")) and not active:
+		if (operation in ["purchase", "deliver", "refuel", "repair", "impact", "recover", "checkpoint", "begin"] or operation.begins_with("voyage_")) and not active:
 			return {"ok": false, "code": "LOCAL_QUIESCED"}
 	# A new admission must not leave the previous hull live while ownership changes.
 	if operation in ["admit", "claim", "begin", "seal", "release"]: quiesce()
