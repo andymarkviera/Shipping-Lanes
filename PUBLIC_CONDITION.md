@@ -70,3 +70,11 @@ Local fixtures display their existing condition/fuel state; this UI change does 
 add online degradation or paid recovery to those fixtures. Visual warning thresholds
 (25% condition, 15% fuel) do not affect economic or handling rules. Hull rust remains
 optional later art work. Windows hosting/security follow-up is tracked separately.
+
+
+## Step 62 follow-up — paid repair implementation
+
+The draft Step 62 implementation repairs this same condition at compatible online
+dock services, with per-ship prices and atomic payment/restoration. See
+PUBLIC_REPAIRS.md for rounding, pending-wear settlement, game protocol 14 and the
+remaining PostgreSQL/Windows/visual acceptance gates. No machinery wear was added.

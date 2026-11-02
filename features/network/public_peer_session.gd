@@ -1,5 +1,5 @@
 extends Node
-## Protocol 13 DTLS admission and peer-bound helm. No arbitrary authority RPC.
+## Protocol 14 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const SnapshotCodec = preload("res://features/network/public_snapshot_codec.gd")
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
 const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
@@ -201,14 +201,14 @@ func connection_challenge(value: String, server: String) -> void:
 func submit_ticket(ticket: String) -> void:
 	if hosting or transport == null or nonce.is_empty() or ticket_sent: return
 	ticket_sent = true
-	join_public.rpc_id(1, 13, ticket)
+	join_public.rpc_id(1, 14, ticket)
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_public(version: int, ticket: String) -> void:
 	if not hosting or draining: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending.has(sender) or pending[sender].busy: return
-	if version != 13:
+	if version != 14:
 		reject_join(sender, "BUILD_MISMATCH")
 		return
 	if ticket.length() < 20 or ticket.length() > 128:
@@ -538,6 +538,25 @@ func refuel_order(ship: String, epoch: int, generation: int, sequence: int, quot
 	record.voyage_at = Time.get_ticks_msec()
 	record.voyage_sequence = sequence
 	var result: Dictionary = await voyages.refuel(peer, quote, liters)
+	if members.get(peer) == record: record.voyage_notice = voyages.message(result.get("code", "OUTCOME_UNKNOWN"))
+
+func send_repair(quote: String, candidate: Dictionary = {}) -> void:
+	var value: Dictionary = binding if candidate.is_empty() else candidate
+	if hosting or transport == null or value.is_empty(): return
+	voyage_sequence += 1
+	repair_order.rpc_id(1, str(value.ship), int(value.epoch), int(value.generation), voyage_sequence, quote)
+
+@rpc("any_peer", "call_remote", "reliable")
+func repair_order(ship: String, epoch: int, generation: int, sequence: int, quote: String) -> void:
+	if not hosting or draining: return
+	var peer: int = multiplayer.get_remote_sender_id()
+	if not members.has(peer): return
+	var record: Dictionary = members[peer]
+	if ship != record.ship or epoch != record.epoch or generation != record.generation or sequence <= record.voyage_sequence or sequence > 2147483647: return
+	if quote.length() > 80 or Time.get_ticks_msec() - record.voyage_at < 250: return
+	record.voyage_at = Time.get_ticks_msec()
+	record.voyage_sequence = sequence
+	var result: Dictionary = await voyages.repair(peer, quote)
 	if members.get(peer) == record: record.voyage_notice = voyages.message(result.get("code", "OUTCOME_UNKNOWN"))
 
 func send_recover(incident: String, candidate: Dictionary = {}) -> void:

@@ -2205,3 +2205,79 @@ rendered visual checks and the PostgreSQL/Keycloak integration stack remain sepa
 platform gates and were not claimed here. No live saves, accounts, server data,
 gameplay logic, protocols or recorded player requirements changed. Step 62 paid
 repairs remains the next gameplay step after this environment change is reviewed.
+
+## Step 62 — Paid online repairs (draft) — November 2, 2026
+
+Implemented `repair-service` on `feat/step-62-paid-repairs`, following D115's
+single boat condition. Online dock services now offer REPAIR with current condition,
+restored percentage and accepted total. Shared per-ship full-scale prices live in
+services/public_authority/repair_costs.json; starter tuning is provisionally 250
+credits per 100 percentage points. Integer arithmetic rounds the proportional total
+up once to minor credits. Full condition does not charge; repair sets condition to
+10000 and clears fractional wear, never exceeding maximum. No machinery/component
+wear, player transfers, local fixture changes or live save resets.
+
+The trusted server binds and consumes the quote, validates actual dock/service and
+peer ownership, settles pending simulated wear/fuel/pose, and buys against that
+canonical revision. The backend independently checks condition/price and uses the
+existing atomic profile/wallet/treasury/receipt/journal path. Canonical refresh updates
+the hull and gauge. Unknown outcomes fence authority without automatic purchase
+retry. D119 and PUBLIC_REPAIRS.md record pricing, tests and Andy's acceptance steps.
+Game protocol 13 → 14 is required by the new Godot repair RPC table; ticket protocol
+remains 7. Matching client/server/backend updates are required. Godot remains 4.7.2;
+no existing .gd.uid files changed, and the new probe's UID is retained. The shared
+price JSON is explicitly included in export_presets.cfg.
+
+### Linux checks actually run
+
+Used checksum-verified official 4.7.2.stable.official.ed1daf0bf and isolated
+workspace XDG state. The system's 4.6.3 executable was not used for project checks.
+Evidence logs remain outside the repository at /workspace/work/step62.
+
+- Clean editor/import, all 145 GDScripts, Main startup, catalog, controls, flow,
+  starter assets, units, diagnostics (its intentional validation message is expected),
+  contracts, geography, session, clocks, handling, camera, water, feedback, world
+  size, heavy lifter, fuel, economy, compact snapshots and voyage suite passed.
+- All 11 Python repair tests passed with psycopg installed, including strict request
+  validation, every damaged integer condition (1–9999), rounding, custom ship cost,
+  full/invalid condition, pending wear, loading, stale quote, funds and cargo retention.
+- 20 Godot repair checks passed: actual service quote/accept flow and actual panel
+  Buy button, expiry, services, dock/loading/funds checks, pending wear settlement,
+  consumed quote, full condition and unknown-outcome fencing. Authority is an
+  explicit in-memory double: this is not PostgreSQL or authenticated-peer proof.
+- SQLite storage, versioned persistence, migration and durable economic recovery
+  passed, including owned-process termination at their explicit crash markers,
+  reopen/rollback/committed recovery, backup fallback and UI phases. Isolated local
+  save-slot checks passed when invoked with the required proof argument.
+- Actual local host/client probes passed for network (44 host + 28 client checks),
+  cargo network, connected world and actions. Replication passed final host/client
+  checks (10 + 14); an earlier host ownership/epoch/bounds/sequence assertion failed
+  transiently. The unchanged baseline passed too. No replication code changed;
+  retain the earlier failure as timing sensitivity, not an all-green first run.
+- Python compilation and git diff whitespace checks passed.
+
+### Known Linux failures and unavailable gates
+
+Collision's lateral-contact assertion and composition's side-course contact
+assertions fail on both this branch and an unchanged archive of base 89cc8c7.
+They are pre-existing Linux failures; neither probe/physics implementation was
+changed. Ports printed PORTS_PASS (261 checks) on the working branch but emitted
+out-of-tree transform errors; the baseline also emitted these and failed additional
+service assertions. This is not a clean ports gate. Shared-gauge and wear probes
+reached their headless assertions (3 and 10 respectively) then timed out waiting
+for rendered frame signals; visual completion is unverified. Initial isolated
+editor import lacked socket permission; import rerun with network permission passed.
+Initial standalone replication/slots invocations lacked required harness arguments;
+final results above use the required peers/proof argument and isolated data.
+
+PostgreSQL/HTTPS repair/replay/crash tests are **pending**: the existing fixture stack
+requires Windows PostgreSQL binaries/process flags and is not configured here.
+Added tools/public_handoff/repair_probe.py for that gate; it was syntax-checked, not
+executed. Windows checks/exports, Keycloak/native login, real authenticated two-peer
+repair/interruption/reconnect tests, rendered Repair panel/HUD and Andy's playtest
+are also pending. No public internet deployment or production acceptance claimed.
+
+Deliver as a DRAFT PR against main, not a main push. Next: run the pending Step 62
+acceptance gates on the configured isolated Windows stack and review provisional
+pricing; then Step 63 ship catalog and purchase. No secrets, databases, exports,
+caches or generated evidence are included in the commit.
