@@ -54,7 +54,7 @@ static func details(entry: Dictionary, family: String, data: Dictionary, availab
 	var lines: Array[String] = []
 	if owned:
 		lines.append("Name: " + str(entry.get("name", "Unnamed ship")))
-		lines.append("Ownership: Yours · " + ("Active" if entry.get("active", false) else "Stored; activation unavailable"))
+		lines.append("Ownership: Yours · " + ("Active" if entry.get("active", false) else "Stored; activate at its storage port"))
 		lines.append("Owned ID: " + str(entry.id))
 		lines.append("Condition: %.2f%% · Propulsion fuel: %.1f L" % [int(entry.get("condition_bp", 10000)) / 100.0, float(entry.get("fuel_liters", 0.0))])
 		if not entry.get("active", false):

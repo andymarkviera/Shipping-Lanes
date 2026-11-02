@@ -2440,3 +2440,103 @@ physics, ports, wear or gauge implementation changed in Step 64.
 Deliver via DRAFT PR against main. No live server deployment or completed manual/
 production acceptance claimed. Follow-up gameplay remains Step 65, not part of this
 branch; backlog acceptance items above stay visible for later tracking.
+
+## Step 65 — Fleet spawn and switching (draft) — November 2, 2026
+
+Task ID: `fleet-spawn-and-switching`. Based on merged Step 64 main `fd2d2c9`;
+Steps 62–64 remain merged. Implemented only Step 65 on
+`feat/step-65-fleet-spawn-and-switching`. D122 and FLEET_LIFECYCLE.md record the
+explicit lifecycle policy, extending Step 54's loaded/job switch refusal.
+
+Fleet / Compare now selects and confirms an owned stored ship at its storage port.
+One active ship is exchanged atomically with storage through the existing
+lease/revision/receipt/journal path. Checkpoint live fuel, position, condition and
+fractional wear before exchange; preserve complete owned records and stable IDs.
+No active job/cargo can switch, transfer or disappear. Damaged afloat ships can
+be stored without healing; pending impacts and sunk/recovering ships block it.
+Unknown commits fence authority without automatic retry; departure waits for the
+canonical replacement before checkpointing, preventing an old-hull overwrite.
+
+New purchases use authored service-berth slots with retained berth ownership, so
+empty tanks can receive paid fuel. Previously used ships return to their exact
+saved latitude/longitude/heading without a fallback teleport. Clearance includes
+visible solids, other hull envelopes and in-flight reservations. After commit,
+the incoming hull remains inert until a two-frame clearance recheck permits it.
+Peer binding changes clear old owner views and set a server snapshot floor.
+
+Runtime initialization now installs the active catalog definition before creating
+the hull. The three existing purchasable classes participate in admission, cargo,
+paid refueling and paid repairs; the two additional classes provisionally use the
+same 250-credit full-scale repair price. Their handling/fuel differences remain.
+No resale, accounting, heavy-loader online activation or other later-step work.
+
+Game protocol 15 → 16 for the fleet RPC/binding update; ticket protocol remains 7.
+Godot remains 4.7.2. Save version/IDs and existing .gd.uid files are unchanged;
+new service/probe UIDs are retained and the shared slot JSON is explicitly exported.
+Single condition, one nonexpiring job, no player transfers, no hidden shallows and
+no machinery wear remain intact. No live saves or dedicated server were changed.
+
+### Linux checks actually run
+
+Exact existing `4.7.2.stable.official.ed1daf0bf`, with isolated XDG fixture state
+and evidence under `/workspace/work/step65`, outside the repository. Python uses
+an isolated venv with psycopg/psycopg-binary 3.2.10 for Linux, not a database server.
+
+- Final import/editor, all 151 GDScripts and Main startup pass without script errors.
+- 34 fleet bridge/hull/clearance/UI assertions pass: cargo/loading/damage/dock/port
+  guards, unowned IDs, both authored slots, reservations and an actual blocking hull,
+  unchanged state on failed placement, exact saved transform with no fallback,
+  class installation, empty tank, retained condition/fractional wear/live fuel,
+  damaged roundtrip, berth retention, inert placement, uncertain-result fencing,
+  stable-ID review/confirmation and cancellation when cargo arrives.
+- Public shared physics passes all 43 assertions. Two older physics/wear fixtures
+  omitted the class definition under the former starter-only runtime; they now
+  supply the explicit starter definition required by class-aware initialization.
+  The initial wear run exposed this fixture omission; the corrected run passes
+  all ten headless assertions before its existing rendered-frame wait.
+- All 28 Python tests pass (8 fleet, 9 purchase, 11 repair). Fleet tests exercise
+  exact roundtrips, unknown unfinished jobs, duplicate IDs, sunk/unknown targets,
+  strict payloads, stored-pose protection, production receipt dispatch replay and
+  conflicts, stale revision and pending recovery. Authority/SQL are explicit doubles,
+  not evidence of real PostgreSQL transactions or authenticated peers.
+- Fleet inspection (32), purchase (35), repair (20), catalog, controls, flow, starter
+  assets, units (50), diagnostics (9), contracts (66), geography (342), session (21),
+  clocks (22), handling (134), camera (20), water (59), feedback (24), world size
+  (2,042), heavy lifter (39), fuel (42), economy (82), compact snapshots (24), voyage
+  (101) and isolated save slots (38) pass. Diagnostics' intentional error is expected.
+- All 28 SQLite storage/persistence/migration/durable recovery phases pass, including
+  ten owned-process kills at explicit ready markers, rollback, committed recovery,
+  backup fallback and persistence UI. Initial harness absolute paths were correctly
+  rejected; rerun with the required user:// proof paths passed. Persistence UI first
+  shared the slots test's disposable XDG state; a fresh isolated UI run passes all
+  eight assertions. No gameplay saves were reset to fix tests.
+- Actual local host/client checks pass for network/reconnect and actions, plus normal
+  and impaired replication, cargo-network and connected-world (16 process results).
+  These are private networking regressions, not public fleet/authentication proof.
+- Python source compilation, whitespace and existing UID preservation checks pass.
+  Final targeted service/UI regressions were rerun after the last runtime changes.
+
+### Reproduced Linux limits and unavailable acceptance gates
+
+Collision fails lateral contact; composition fails its two side-course contacts.
+Ports reports 261 checks passed but emits two out-of-tree transform errors and is
+not a clean gate. Shared gauges and wear reach 3 and 10 assertions then time out
+waiting for rendered frames. These match the previously documented Linux limits.
+The first sweep also attempted the new fleet probe before its file was written;
+its final completed 34-check run passes. No initial-failure evidence is hidden.
+
+- **Windows:** PowerShell pinned-engine checks, Debug/Release client/server exports,
+  exported slot resource inclusion and save/UID compatibility remain unrun here.
+- **PostgreSQL/HTTPS:** real switch replay/concurrency, before/after-commit crash,
+  restart, canonical fleet reload and atomicity remain unrun; the configured database
+  stack and Windows integration runtime are unavailable in this environment.
+- **Keycloak/authenticated peers:** native login, two-account ownership/privacy,
+  in-flight disconnect/rebind, restart/reconnect, delayed A→B→A frames and contention
+  with another authenticated hull remain unrun; no identity stack is configured.
+- **Visual/Andy's playtest:** fleet confirmation/layout/focus/scaling, class handling,
+  empty-tank refueling at the retained berth, occupied-spawn waiting, damaged roundtrip
+  and HUD/camera/replica behavior require rendered testing. No display/Xvfb or manual
+  playtest was used. No deployment or public internet acceptance is claimed.
+
+Deliver as a DRAFT PR against main. No secrets, accounts, databases, exports,
+caches or generated evidence are included in the commit. Step 66 remains unstarted.

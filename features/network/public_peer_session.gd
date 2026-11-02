@@ -1,11 +1,12 @@
 extends Node
-## Protocol 15 DTLS admission and peer-bound helm. No arbitrary authority RPC.
+## Protocol 16 DTLS admission and peer-bound helm. No arbitrary authority RPC.
 const SnapshotCodec = preload("res://features/network/public_snapshot_codec.gd")
 const OwnerScene = preload("res://features/network/public_ship_owner.gd")
 const PhysicsWorld = preload("res://features/network/public_physics_world.gd")
 var physics_world: Node
 var pending_impacts: Dictionary = {}
 var port_authority = preload("res://features/network/public_port_authority.gd").new()
+var fleet = preload("res://features/network/public_fleet_service.gd").new()
 var recovery = preload("res://features/network/public_recovery_service.gd").new()
 var voyages = preload("res://features/network/public_voyage_service.gd").new()
 var voyage_snapshot: Dictionary = {}
@@ -57,6 +58,8 @@ func _ready() -> void:
 	add_child(physics_world)
 	port_authority.world = physics_world
 	add_child(port_authority)
+	fleet.session = self
+	add_child(fleet)
 	recovery.session = self
 	add_child(recovery)
 	voyages.session = self
@@ -201,14 +204,14 @@ func connection_challenge(value: String, server: String) -> void:
 func submit_ticket(ticket: String) -> void:
 	if hosting or transport == null or nonce.is_empty() or ticket_sent: return
 	ticket_sent = true
-	join_public.rpc_id(1, 15, ticket)
+	join_public.rpc_id(1, 16, ticket)
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_public(version: int, ticket: String) -> void:
 	if not hosting or draining: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending.has(sender) or pending[sender].busy: return
-	if version != 15:
+	if version != 16:
 		reject_join(sender, "BUILD_MISMATCH")
 		return
 	if ticket.length() < 20 or ticket.length() > 128:
@@ -348,8 +351,15 @@ static func failure_message(reason: String) -> String:
 	return "Could not connect to the server. Check that it is running and reachable, then sign in and try again."
 
 @rpc("authority", "call_remote", "reliable")
-func join_accepted(ship: String, epoch: int, generation: int) -> void:
+func join_accepted(ship: String, epoch: int, generation: int, snapshot_floor: int = -1) -> void:
 	if hosting or multiplayer.get_remote_sender_id() != 1 or ship.is_empty() or epoch <= 0 or generation <= 0: return
+	if not binding.is_empty() and binding.ship != ship:
+		world_view.clear()
+		world_view.tick = snapshot_floor
+		port_tick = maxi(port_tick, snapshot_floor)
+		voyage_snapshot.clear()
+		dock_snapshot.clear()
+		last_snapshot.clear()
 	binding = {"ship": ship, "epoch": epoch, "generation": generation}
 	notice = "Joined"
 	admitted.emit()
@@ -596,3 +606,26 @@ func recovery_order(ship: String, epoch: int, generation: int, sequence: int, in
 	record.voyage_sequence = sequence
 	var result: Dictionary = await recovery.execute(peer, incident)
 	if members.get(peer) == record: record.voyage_notice = voyages.message(result.get("code", "OUTCOME_UNKNOWN"))
+
+func send_fleet_switch(owned_ship_id: String, candidate: Dictionary = {}) -> void:
+	var value: Dictionary = binding if candidate.is_empty() else candidate
+	if hosting or transport == null or value.is_empty(): return
+	voyage_sequence += 1
+	fleet_switch_order.rpc_id(1, str(value.ship), int(value.epoch), int(value.generation), voyage_sequence, owned_ship_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func fleet_switch_order(ship: String, epoch: int, generation: int, sequence: int, owned_ship_id: String) -> void:
+	if not hosting or draining: return
+	var peer: int = multiplayer.get_remote_sender_id()
+	if not members.has(peer): return
+	var record: Dictionary = members[peer]
+	if ship != record.ship or epoch != record.epoch or generation != record.generation or sequence <= record.voyage_sequence or sequence > 2147483647: return
+	if owned_ship_id.length() > 80 or Time.get_ticks_msec() - record.voyage_at < 250: return
+	record.voyage_at = Time.get_ticks_msec()
+	record.voyage_sequence = sequence
+	var result: Dictionary = await fleet.execute(peer, owned_ship_id)
+	if members.get(peer) == record: record.voyage_notice = voyages.message(result.get("code", "OUTCOME_UNKNOWN"))
+
+
+func fleet_changed(peer: int, record: Dictionary) -> void:
+	join_accepted.rpc_id(peer, record.ship, record.epoch, record.generation, view_sequence)

@@ -496,3 +496,23 @@ Use isolated visual scenes for previews; never instantiate runtime hull authorit
 or modify shared resources. Stored activation, resale and customization stay later
 steps. No save migration, economy changes, new RPC, game/ticket protocol bump or
 Godot upgrade; the existing voyage dictionary gains an additive fleet field.
+
+
+## D122 — Dock-only atomic fleet exchange with retained owned state
+
+Step 65 resolves the switching/despawn portion of U015; resale/valuation remains
+Step 66. One active ship, same storage port only, no cargo or unfinished job on
+switch, no independent gameplay despawn button. Empty damaged afloat ships may be
+stored without healing; pending damage or sinking recovery blocks exchange. Save
+live fuel, fractional wear and geographic transform before moving the entire owned
+record between active/stored slots. Return previously active ships to their exact
+saved transform; use authored service-berth slots only for never-activated purchases.
+Keep berth ownership so an empty purchased tank can receive paid fuel. Reserve and
+recheck clearance; on occupied saved location retain the active ship without a
+teleport fallback. Unknown commits fence and reconnect restores canonical ownership.
+
+Use existing atomic revision/lease/receipt/journal persistence; no new save version,
+no grants/transfers/resale. Activate the three existing catalog classes with their
+own handling, existing six-slot cargo support, paid fuel and provisional equal
+250-credit full-scale condition repair. Game protocol 16, ticket 7, Godot 4.7.2.
+See FLEET_LIFECYCLE.md and PROGRESS.md for evidence and outstanding platform gates.

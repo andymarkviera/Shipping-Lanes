@@ -17,7 +17,7 @@ func clear_slot(owner: Node3D, slot: int) -> bool:
 		var other_size: Vector3 = other.ship.definition.hull_size_m
 		var clearance: float = (Vector2(size.x, size.z).length() + Vector2(other_size.x, other_size.z).length()) * .5 + 2.0
 		if session.Nav.separation(at, other.current_address()) < clearance: return false
-	return true
+	return session.physics_world.clear_address(at, size, session.live_owners(), owner)
 
 func execute(peer: int, incident: String) -> Dictionary:
 	if not session.members.has(peer): return {"ok": false, "code": "DISCONNECTED"}

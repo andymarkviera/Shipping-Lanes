@@ -13,7 +13,7 @@ func _ready() -> void:
 	owner.set_physics_process(false)
 	owner.authority.set_process(false)
 	owner.authority.active = true
-	owner.restore_grant({"profile":{"ship":{"id":"wear_fixture", "fuel_liters":800.0, "position":{"latitude":0.0,"longitude":0.0,"heading":0.0}},"cargo":[]}})
+	owner.restore_grant({"profile":{"ship":{"id":"wear_fixture", "definition":"ship_starter_container_01", "fuel_liters":800.0, "position":{"latitude":0.0,"longitude":0.0,"heading":0.0}},"cargo":[]}})
 	owner.ship.set_physics_process(false)
 	owner.ship.actual_throttle = 0.5
 	owner._physics_process(3600)

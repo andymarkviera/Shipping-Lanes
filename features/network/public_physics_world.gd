@@ -6,14 +6,22 @@ const LINK_M: float = 250.0
 const REBASE_M: float = 500.0
 const Ports = preload("res://features/network/public_port_catalog.gd")
 var spaces: Dictionary = {}
+var spawn_reservations: Dictionary = {}
 var changed_frame: int = -1
 
 func can_place(owner: Node3D, others: Array) -> bool:
 	if owner.recovery_required(): return true # Inert wreck can always enter to request recovery.
 	var address: Dictionary = owner.current_address()
 	if not Ports.spawn_clear(address, owner.ship.definition.hull_size_m): return false
-	var size: Vector3 = owner.ship.definition.hull_size_m
+	return clear_address(address, owner.ship.definition.hull_size_m, others, owner)
+
+func clear_address(address: Dictionary, size: Vector3, others: Array, owner: Node3D) -> bool:
 	var radius: float = Vector2(size.x, size.z).length() * 0.5
+	for reserved_owner: Node3D in spawn_reservations:
+		if reserved_owner == owner: continue
+		var reservation: Dictionary = spawn_reservations[reserved_owner]
+		var reserved_size: Vector3 = reservation.size
+		if Nav.separation(address, reservation.address) < radius + Vector2(reserved_size.x, reserved_size.z).length() * .5 + 2.0: return false
 	for other: Node3D in others:
 		if other == owner or other.recovery_required(): continue
 		var other_size: Vector3 = other.ship.definition.hull_size_m

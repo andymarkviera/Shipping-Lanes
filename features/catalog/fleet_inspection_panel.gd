@@ -1,6 +1,9 @@
 extends PanelContainer
 ## Isolated, read-only comparison. Preview instantiates visual scenes, never runtime hulls.
 const Inspection = preload("res://features/catalog/fleet_inspection.gd")
+signal activation_requested(ship_id: String)
+var activate: Button
+var confirmation: String = ""
 var choices: Array = []
 var choice_signature: String = ""
 var family: OptionButton
@@ -25,6 +28,10 @@ func _ready() -> void:
 	close.text = "Close fleet inspection / comparison"
 	close.pressed.connect(hide)
 	stack.add_child(close)
+	activate = Button.new()
+	activate.text = "Activate selected owned ship (left column)"
+	activate.pressed.connect(activate_selected)
+	stack.add_child(activate)
 	family = OptionButton.new()
 	for title: String in Inspection.FAMILIES: family.add_item(title)
 	family.item_selected.connect(func(_index: int): refresh_details())
@@ -110,12 +117,28 @@ func refresh(snapshot: Dictionary, usable: bool) -> void:
 	if visible: refresh_details()
 
 func open(definition_id: String) -> void:
+	confirmation = ""
 	for index: int in range(selectors[0].item_count):
 		if selectors[0].get_item_metadata(index) == "catalog:" + definition_id: selectors[0].select(index); break
 	show()
 	refresh_details()
 
+func activate_selected() -> void:
+	if activate.disabled: return
+	var entry: Dictionary = choices[selectors[0].selected]
+	if confirmation != str(entry.id):
+		confirmation = str(entry.id)
+		refresh_details()
+		return
+	confirmation = ""
+	activation_requested.emit(str(entry.id))
+
 func refresh_details() -> void:
+	var selected_entry: Dictionary = choices[selectors[0].selected] if selectors[0].selected >= 0 and selectors[0].selected < choices.size() else {}
+	var eligible: bool = available and selected_entry.has("id") and not selected_entry.get("active", false) and selected_entry.get("storage_port_id") == data.get("port") and int(data.get("cargo", 0)) == 0 and data.get("job", {}).is_empty()
+	activate.disabled = not eligible
+	if not eligible or confirmation != str(selected_entry.get("id", "")): confirmation = ""
+	activate.text = "Confirm activation — retain fuel and condition" if not confirmation.is_empty() else "Activate selected owned ship (left column)"
 	for index: int in range(2):
 		var selected: int = selectors[index].selected
 		if selected < 0 or selected >= choices.size(): continue

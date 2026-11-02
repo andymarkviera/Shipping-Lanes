@@ -14,6 +14,7 @@ import voyages
 import refueling
 import repairs
 import ship_purchase
+import fleet
 import recovery
 import wear
 from pathlib import Path
@@ -163,6 +164,7 @@ class Authority:
                   'renew': owned, 'release': owned, 'inspect': owned,
                   'checkpoint': owned | {'expected_revision', 'position', 'fuel_liters'},
                   'purchase': owned | {'action_id', 'expected_revision'},
+                  'fleet_switch': owned | {'action_id', 'expected_revision', 'port_id', 'ship_id', 'slot'},
                   'ship_purchase': owned | {'action_id', 'expected_revision', 'port_id', 'definition_id', 'cost_minor'},
                   'deliver': owned | {'action_id', 'expected_revision', 'cargo_id'},
                   'impact': owned | {'action_id', 'expected_revision', 'damage_bp', 'fuel_liters', 'position'},
@@ -186,12 +188,14 @@ class Authority:
         require(type(op) is str and op in fields and set(request) == base | fields[op], 'BAD_REQUEST')
         for name in ['epoch', 'generation', 'expected_revision']:
             if name in request: require(type(request[name]) is int and 0 <= request[name] <= MAX_INTEGER, 'BAD_INTEGER')
-        for name in ['account', 'ticket', 'nonce', 'transfer_id', 'destination', 'action_id', 'cargo_id', 'job_id', 'offer_id', 'port_id', 'incident_id', 'definition_id']:
+        for name in ['account', 'ticket', 'nonce', 'transfer_id', 'destination', 'action_id', 'cargo_id', 'job_id', 'offer_id', 'port_id', 'incident_id', 'definition_id', 'ship_id']:
             if name in request: require(type(request[name]) is str and 0 < len(request[name]) <= 128 and re.fullmatch(r'[A-Za-z0-9_-]+', request[name]) is not None, 'BAD_IDENTIFIER')
         if op == 'impact':
             require(type(request['damage_bp']) is int and 1 <= request['damage_bp'] <= 10000, 'BAD_DAMAGE')
         if op == 'recover':
             require(type(request['slot']) is int and 0 <= request['slot'] < len(recovery.SLOTS), 'BAD_SLOT')
+        if op == 'fleet_switch':
+            require(type(request['slot']) is int and -1 <= request['slot'] < max(map(len, fleet.SLOTS.values())), 'BAD_SLOT')
         if op == 'ship_purchase':
             require(type(request['cost_minor']) is int and 0 < request['cost_minor'] <= MAX_INTEGER, 'BAD_PRICE')
         if op == 'repair':
@@ -286,7 +290,7 @@ class Authority:
             profile['profile']['ship']['fuel_liters'] = request['fuel_liters']
             db.execute('UPDATE public_authority.profiles SET profile=%s,revision=revision+1 WHERE account=%s', (Jsonb(profile['profile']), account))
             return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']+1, 'condition_bp': profile['profile']['ship']['condition_bp']}
-        if op in voyages.OPERATIONS or op in recovery.OPERATIONS or op in ('refuel', 'repair', 'ship_purchase'):
+        if op in voyages.OPERATIONS or op in recovery.OPERATIONS or op in ('refuel', 'repair', 'ship_purchase', 'fleet_switch'):
             return self._voyage(db, account, profile, request)
         require(not recovery.pending(profile['profile']), 'RECOVERY_REQUIRED')
         # Only game-owned purchase/delivery; no peer economic operations exist.
@@ -338,6 +342,8 @@ class Authority:
             now_ms = int(self._now(db).timestamp()*1000)
             if request['op'] in recovery.OPERATIONS:
                 code, candidate, amount, job = recovery.transition(profile['profile'], request, profile['money'])
+            elif request['op'] == 'fleet_switch':
+                code, candidate, amount, job = fleet.transition(profile['profile'], request)
             elif request['op'] == 'ship_purchase':
                 code, candidate, amount, job = ship_purchase.transition(profile['profile'], request, profile['money'])
             elif request['op'] == 'repair':
@@ -346,7 +352,7 @@ class Authority:
                 code, candidate, amount, job = refueling.transition(profile['profile'], request, profile['money'])
             else:
                 code, candidate, amount, job = voyages.transition(profile['profile'], request, now_ms, game['money'])
-        ok = code in ('JOB_ACCEPTED', 'CARGO_LOADED', 'VOYAGE_DELIVERED', 'JOB_CLOSED', 'REFUELED', 'REPAIRED', 'SHIP_PURCHASED', 'HULL_DAMAGED', 'SHIP_SUNK', 'SHIP_RECOVERED')
+        ok = code in ('JOB_ACCEPTED', 'CARGO_LOADED', 'VOYAGE_DELIVERED', 'JOB_CLOSED', 'REFUELED', 'REPAIRED', 'SHIP_PURCHASED', 'FLEET_SWITCHED', 'HULL_DAMAGED', 'SHIP_SUNK', 'SHIP_RECOVERED')
         repayment = 0
         if ok:
             amount, repayment = recovery.repay(candidate, amount)

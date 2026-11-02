@@ -119,7 +119,15 @@ func _ready() -> void:
 	add_child(inspection_layer)
 	inspection = preload("res://features/catalog/fleet_inspection_panel.gd").new()
 	inspection_layer.add_child(inspection)
+	inspection.activation_requested.connect(switch_ship)
 	receipt = label(stack)
+
+func switch_ship(ship_id: String) -> void:
+	if waiting > 0 or session == null: return
+	session.send_fleet_switch(ship_id)
+	waiting = session.voyage_sequence
+	sent_ms = Time.get_ticks_msec()
+	inspection.hide()
 
 func open_inspection() -> void:
 	ship_confirmation = ""
@@ -171,7 +179,7 @@ func refresh_ship_catalog(data: Dictionary, available: bool) -> void:
 	var row: Dictionary = ship_rows[ship_selected]
 	var affordable: bool = int(row.cost_minor) <= int(data.get("wallet", 0))
 	ship_buy.disabled = ship_buy.disabled or not affordable
-	ship_preview.text = "%s\n%s\nTank: %.0f L · New condition: 100%% · Fuel: empty\nStored after purchase; activation is not available yet.\nStored ships: %d / 100" % [row.name, row.description, row.fuel_capacity_liters, int(data.get("stored_ship_count", 0))]
+	ship_preview.text = "%s\n%s\nTank: %.0f L · New condition: 100%% · Fuel: empty\nStored after purchase; activate at this port in Fleet / Compare.\nStored ships: %d / 100" % [row.name, row.description, row.fuel_capacity_liters, int(data.get("stored_ship_count", 0))]
 	if not affordable: ship_preview.text += "\nNot enough earned credits."
 	ship_buy.text = ("Confirm purchase — %.2f credits" if ship_confirmation == str(row.id) else "Review purchase — %.2f credits") % (int(row.cost_minor) / 100.0)
 
