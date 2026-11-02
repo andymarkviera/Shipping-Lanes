@@ -3,7 +3,8 @@ import copy
 import math
 
 PORTS = ('port_brindle_quay', 'port_slatewater_works')
-CAPACITIES = {'ship_starter_container_01': 1000.0}
+from ship_purchase import CATALOG
+CAPACITIES = {key: row['fuel_capacity_liters'] for key, row in CATALOG.items()}
 UNIT_PRICE_MINOR = 25  # Development economy: 0.25 credits per whole liter.
 
 

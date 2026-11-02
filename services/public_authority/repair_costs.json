@@ -1,3 +1,5 @@
 {
-  "ship_starter_container_01": 25000
+  "ship_starter_container_01": 25000,
+  "ship_coastal_container_01": 25000,
+  "ship_swift_container_01": 25000
 }

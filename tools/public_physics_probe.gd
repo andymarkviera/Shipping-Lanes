@@ -21,7 +21,7 @@ func check(value: bool, label: String) -> void:
 func make_owner(address: Dictionary) -> Node3D:
 	var owner: Node3D = Owner.new()
 	add_child(owner)
-	owner.restore_grant({"profile": {"ship": {"id": str(owner.get_instance_id()), "fuel_liters": 800.0, "position": {"latitude": address.latitude_deg, "longitude": address.longitude_deg, "heading": address.heading_deg}}, "cargo": []}})
+	owner.restore_grant({"profile": {"ship": {"id": str(owner.get_instance_id()), "definition": "ship_starter_container_01", "fuel_liters": 800.0, "position": {"latitude": address.latitude_deg, "longitude": address.longitude_deg, "heading": address.heading_deg}}, "cargo": []}})
 	return owner
 
 func mapping_case(latitude: float, longitude: float) -> void:
