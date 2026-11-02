@@ -475,3 +475,24 @@ UUIDs distinguish deliberate purchases; duplicate intent returns the original ID
 No player transfers, fleet switching, resale or new condition model. Game protocol
 15, ticket protocol 7, Godot 4.7.2. PUBLIC_SHIP_PURCHASE.md records semantics and
 pending real PostgreSQL/Windows/Keycloak/visual gates separately from Linux doubles.
+
+
+## D121 — Read-only fleet comparison with explicit cargo units
+
+Step 64 (`fleet-inspection-and-comparison`) compares catalog definitions and the
+owner's active/stored instances in online dock services. Derive cargo compatibility
+and total capacity from cargo IDs, capacity pools and quantity units, never hull
+geometry, DWT, hold count or propulsion tank volume. Current content defines six
+container slots or one heavy-module slot; DWT and hold count are unspecified and
+must remain visibly unknown. Bulk/gas/oil/cargo-fuel capability is not inferred.
+Heavy-lifter capability is a local prototype, explicitly unavailable for online
+purchase/jobs. Existing purchase quotes remain the authority for price and funds.
+
+Read names if present, otherwise show Unnamed ship; do not add rename mutations.
+Show owned IDs separately from shared class names, the live active single condition
+and fuel, and canonical stored condition/fuel/location. Project only those bounded
+fields to the authenticated owner while docked (active plus at most 100 stored).
+Use isolated visual scenes for previews; never instantiate runtime hull authority
+or modify shared resources. Stored activation, resale and customization stay later
+steps. No save migration, economy changes, new RPC, game/ticket protocol bump or
+Godot upgrade; the existing voyage dictionary gains an additive fleet field.

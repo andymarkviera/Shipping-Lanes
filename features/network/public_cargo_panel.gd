@@ -1,5 +1,6 @@
 extends PanelContainer
 ## Read-only online voyage state plus bounded commands; no local settlement.
+var inspection: PanelContainer
 var session: Node
 var installed_binding: Dictionary = {}
 var heading: Label
@@ -112,7 +113,18 @@ func _ready() -> void:
 	ship_preview = label(ship_contents)
 	ship_buy = button(ship_contents, "Review purchase", buy_ship)
 	button(ship_contents, "Cancel purchase", func(): ship_confirmation = "")
+	button(services, "FLEET / COMPARE", open_inspection)
+	var inspection_layer := CanvasLayer.new()
+	inspection_layer.layer = 20
+	add_child(inspection_layer)
+	inspection = preload("res://features/catalog/fleet_inspection_panel.gd").new()
+	inspection_layer.add_child(inspection)
 	receipt = label(stack)
+
+func open_inspection() -> void:
+	ship_confirmation = ""
+	var definition_id: String = str(ship_rows[ship_selected].definition) if not ship_rows.is_empty() else "ship_starter_container_01"
+	inspection.open(definition_id)
 
 func send(action: String, abandon: bool = false) -> void:
 	if session == null or waiting > 0 or session.voyage_snapshot.get("busy", false): return
@@ -208,8 +220,11 @@ func _process(_delta: float) -> void:
 	if not visible:
 		waiting = 0
 		ship_confirmation = ""
+		inspection.hide()
+		inspection.refresh({}, false)
 		return
 	if installed_binding != session.binding:
+		inspection.hide()
 		installed_binding = session.binding.duplicate()
 		waiting = 0
 		confirm_job = ""
@@ -227,6 +242,8 @@ func _process(_delta: float) -> void:
 	recover_button.disabled = not fresh or pending
 	recover_button.text = "Recover ship — fee already recorded"
 	services.visible = docked and fresh and not sunk
+	inspection.refresh(data, fresh and docked and not pending and not sunk)
+	if not docked or not fresh or sunk: inspection.hide()
 	refresh_choices(data.get("offers", []))
 	refresh_ship_catalog(data, fresh and docked and not pending and not sunk)
 	var repair_terms: Dictionary = data.get("repair", {})
