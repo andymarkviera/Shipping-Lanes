@@ -1,0 +1,23 @@
+[
+  {
+    "definition": "ship_starter_container_01",
+    "name": "Starter container ship",
+    "cost_minor": 50000,
+    "fuel_capacity_liters": 1000,
+    "description": "Six container slots; the familiar starter hull."
+  },
+  {
+    "definition": "ship_coastal_container_01",
+    "name": "Coastal container ship",
+    "cost_minor": 90000,
+    "fuel_capacity_liters": 1000,
+    "description": "Six container slots; efficient propulsion uses 20% less fuel at full output."
+  },
+  {
+    "definition": "ship_swift_container_01",
+    "name": "Swift container ship",
+    "cost_minor": 120000,
+    "fuel_capacity_liters": 1000,
+    "description": "Six container slots; 20% stronger forward acceleration with higher fuel use."
+  }
+]
