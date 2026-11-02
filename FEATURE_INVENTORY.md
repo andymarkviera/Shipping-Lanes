@@ -36,7 +36,7 @@ inventory's completion.
 | F012 | Core: propulsion fuel and paid refueling | 28 `fuel-simulation`; 58, 60, 67, 86 | U010; idle/reverse/thruster, pause/docked and empty-fuel behavior explicit. Cargo fuel is separate (F031). |
 | F013 | Core: safe ship spawning, berth eligibility, reservations and docking | 44 `spawn-clearance-and-recovery-anchors`; 43, 45–46, 56, 65 | U011; compatible services come from data, not decorative crane counts. |
 | F014 | Core: impact damage, sinking, cargo loss and paid recovery | 59 `impact-damage-and-recovery`; 44, 54, 62, 67 | U012; cargo removed/charge applied once, ownership retained, no free starter recovery. |
-| F015 | Core: engine/hull/machinery wear, rust and repair services | 60 `component-wear`; 61–62, 67, 86 | U013; long-term wear and immediate damage are separate. |
+| F015 | Core: one boat condition combining collision damage and active-use wear; paid repair services; optional rust art later | 60 `component-wear`; 61–62, 67, 86 | D115 supersedes the original component split: no machinery degradation. D119 records Step 62 pricing and pending acceptance; see PUBLIC_REPAIRS.md. |
 | F016 | Core: starter funds, ship catalog, purchase, inspection and upgrades | 63 `ship-catalog-and-purchase`; 10, 49, 57, 64–67, 86 | U014; first playable milestone uses two ports and two simple hulls, including the container starter; final catalog/prices/capacities are not fixed. |
 | F017 | Core: fleet spawning/switching, resale and voyage accounting | 65 `fleet-spawn-and-switching`; 54, 66–67 | U015; cargo/active-job restrictions; report net costs as well as gross revenue. |
 

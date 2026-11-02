@@ -12,6 +12,7 @@ import secrets
 import uuid
 import voyages
 import refueling
+import repairs
 import recovery
 import wear
 from pathlib import Path
@@ -164,6 +165,7 @@ class Authority:
                   'deliver': owned | {'action_id', 'expected_revision', 'cargo_id'},
                   'impact': owned | {'action_id', 'expected_revision', 'damage_bp', 'fuel_liters', 'position'},
                   'recover': owned | {'action_id', 'expected_revision', 'incident_id', 'slot'},
+                  'repair': owned | {'action_id', 'expected_revision', 'port_id', 'condition_bp', 'cost_minor'},
                   'refuel': owned | {'action_id', 'expected_revision', 'port_id', 'liters', 'unit_price_minor'},
                   'voyage_accept': owned | {'action_id', 'expected_revision', 'offer_id', 'port_id'},
                   'voyage_load': owned | {'action_id', 'expected_revision', 'job_id', 'port_id'},
@@ -188,6 +190,9 @@ class Authority:
             require(type(request['damage_bp']) is int and 1 <= request['damage_bp'] <= 10000, 'BAD_DAMAGE')
         if op == 'recover':
             require(type(request['slot']) is int and 0 <= request['slot'] < len(recovery.SLOTS), 'BAD_SLOT')
+        if op == 'repair':
+            require(type(request['condition_bp']) is int and 1 <= request['condition_bp'] <= 10000, 'BAD_CONDITION')
+            require(type(request['cost_minor']) is int and 0 <= request['cost_minor'] <= MAX_INTEGER, 'BAD_PRICE')
         if op == 'refuel':
             require(type(request['liters']) is int and 1 <= request['liters'] <= 1000, 'BAD_QUANTITY')
             require(type(request['unit_price_minor']) is int and 0 <= request['unit_price_minor'] <= MAX_INTEGER, 'BAD_PRICE')
@@ -277,7 +282,7 @@ class Authority:
             profile['profile']['ship']['fuel_liters'] = request['fuel_liters']
             db.execute('UPDATE public_authority.profiles SET profile=%s,revision=revision+1 WHERE account=%s', (Jsonb(profile['profile']), account))
             return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']+1, 'condition_bp': profile['profile']['ship']['condition_bp']}
-        if op in voyages.OPERATIONS or op in recovery.OPERATIONS or op == 'refuel':
+        if op in voyages.OPERATIONS or op in recovery.OPERATIONS or op in ('refuel', 'repair'):
             return self._voyage(db, account, profile, request)
         require(not recovery.pending(profile['profile']), 'RECOVERY_REQUIRED')
         # Only game-owned purchase/delivery; no peer economic operations exist.
@@ -329,11 +334,13 @@ class Authority:
             now_ms = int(self._now(db).timestamp()*1000)
             if request['op'] in recovery.OPERATIONS:
                 code, candidate, amount, job = recovery.transition(profile['profile'], request, profile['money'])
+            elif request['op'] == 'repair':
+                code, candidate, amount, job = repairs.transition(profile['profile'], request, profile['money'])
             elif request['op'] == 'refuel':
                 code, candidate, amount, job = refueling.transition(profile['profile'], request, profile['money'])
             else:
                 code, candidate, amount, job = voyages.transition(profile['profile'], request, now_ms, game['money'])
-        ok = code in ('JOB_ACCEPTED', 'CARGO_LOADED', 'VOYAGE_DELIVERED', 'JOB_CLOSED', 'REFUELED', 'HULL_DAMAGED', 'SHIP_SUNK', 'SHIP_RECOVERED')
+        ok = code in ('JOB_ACCEPTED', 'CARGO_LOADED', 'VOYAGE_DELIVERED', 'JOB_CLOSED', 'REFUELED', 'REPAIRED', 'HULL_DAMAGED', 'SHIP_SUNK', 'SHIP_RECOVERED')
         repayment = 0
         if ok:
             amount, repayment = recovery.repay(candidate, amount)
