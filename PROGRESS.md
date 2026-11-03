@@ -2834,3 +2834,113 @@ results. The explicit probe scene runs above establish the assertion counts.
 
 Deliver as a DRAFT PR against main. No deployment or completed manual/production
 acceptance claimed. Step 69 and deferred player requests remain unstarted.
+
+## Step 69 — Bulk earnings (draft) — November 3, 2026
+
+Task ID: `bulk-earnings`. Based on merged Step 68 main `5042661`, on
+`feat/step-69-bulk-earnings`. The resumed environment initially contained only
+Step 65 (`f56de62`) and no Step 69 edits/evidence. Fetched current main and
+implemented ONLY Step 69; did not claim to recover nonexistent previous checks.
+D126 and BULK_EARNINGS.md define the quote, quantity, partial and rounding rules.
+
+Added a bulk authority model extending the container offer registry and its
+one-active-job guard. It publishes nonexpiring quotes, accepts capacity-checked
+jobs, loads actual bulk manifests at the origin and discharges at the recorded
+destination. Frozen geographic direct distance, commodity rate and both configured
+port modifiers determine gross earnings. Sailing detours/time and later content
+changes cannot raise payout. Quote text includes every earnings modifier and
+explicitly distinguishes fuel/repair/recovery costs from the gross quote.
+
+Partial discharge pays floor(cumulative exact earnings) less prior payments;
+integer quotient/remainder arithmetic avoids intermediate overflow/rounding.
+Fragments retain provenance and the active job until final discharge; retries
+return the original receipt and zero new reward delta. Reject wrong owner/ship/
+port, undocked operations, malformed quantities, over-discharge, cargo mismatch,
+capacity failures and conflicting request IDs. Guard manifest signal reentry.
+The executable example quotes 122.22 credits for 123.456789 t over 1 NM at
+1 credit/t/NM with 1.10/0.90 modifiers, then pays 49.50 + 72.72 = 122.22.
+
+Scope is the in-memory bulk authority/settlement model and quote/receipt formatters
+using Step 68's data-only hull. Existing playable ships remain unchanged. No bulk
+panel, acquisition, public RPC/PostgreSQL wallet or durable bulk snapshot adapter
+is claimed; service presentation and crash/restart recovery remain Step 70. This
+is not an end-to-end authenticated bulk gameplay implementation. Existing container
+acceptance/loading/reward paths are regression-tested through the shared model.
+
+Godot stays at 4.7.2, game protocol 17 and ticket 7. Save versions, owned/content
+IDs and all existing .gd.uid files are preserved; two new UID sidecars are retained.
+The new runtime service is explicitly exported. Single condition, one active
+nonexpiring cargo job, no player trades/transfers/gifts, no hidden shallows and
+no machinery wear remain intact. No deferred player requests were implemented.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf` from the existing pinned tool directory.
+All generated logs, isolated XDG/SQLite data, virtualenv and metrics are under
+`/workspace/work/step69`, outside Git. No live accounts or saves were used/reset.
+
+- Final bulk probe: **330 passing assertions**, including the worked receipt,
+  million-metre detour comparison, full/partial delivery, 101 fragments, frozen
+  terms, replay/conflict, zero modifier, all four commodities, malformed requests,
+  capacity/provenance/ownership guards, container compatibility and signal reentry.
+  Includes **257 independently calculated exact Python-integer pricing vectors**.
+- Step 68 bulk capacity: **102 assertions** pass. Final **156-script** parse/load,
+  Main startup and editor/import pass. Initial editor invocation lacked a created
+  XDG config directory and logged settings-save errors; isolated rerun is clean.
+- Catalog, controls, flow, starter assets, units, diagnostics, contracts, geography,
+  session, clocks, handling, camera, water, feedback, world size, heavy lifter, fuel,
+  economy, compact snapshots, voyage, public shared physics, repair, purchase,
+  fleet inspection/switching and resale probes pass. Diagnostics intentionally
+  emits its validation error. Ports passes **261** clean checks. Sailing-save
+  passes **330 checkpoints** retaining one cargo batch.
+- All **45 Python tests** pass with psycopg/binary 3.2.10 installed in an isolated
+  venv. The production route benchmark and all three Step 67 progression scenarios
+  pass with per-request replay and serialized reload equivalence. These remain
+  explicit SQL doubles, not PostgreSQL transaction evidence.
+- All **28 SQLite phases** pass in the final fresh `verified-*` fixture run,
+  including **ten owned-process kills** at ready markers, rollback, committed
+  recovery, backup fallback and persistence UI. Slots and friends-client checks
+  pass. Initial harness attempts used an invalid short fixture ID and an incorrect
+  friends-menu flag; these failures are not passes. An overlapping corrected
+  harness also shared log/marker paths with the initial sweep; discarded that
+  evidence and reran the whole persistence suite in fresh isolated namespaces.
+- Local host/client reconnect and actions, impaired replication, normal/impaired
+  cargo-network and connected-world pass. Normal replication passes its client
+  but fails the host assertion requiring six rejected invalid requests, both in
+  the full sweep and an isolated rerun: **15/16** process results pass. A separate
+  archived checkout of merged Step 68 passes both processes for this case. The
+  difference is unresolved, not labeled a proven pre-existing failure or hidden
+  by the passing baseline. Its baseline editor import logged settings-save errors;
+  the two runtime process results themselves are clean.
+- Network capacity: **30/30** process results pass across 2/10/25/50/100 clients,
+  dispersed and crowded layouts. These are local headless fixtures, not an
+  authenticated production capacity guarantee.
+- Python AST compilation (**63 sources**), existing UID preservation and whitespace
+  checks pass. Final bulk/capacity/script/startup checks were repeated after the
+  last service changes. No generated evidence, caches or databases are committed.
+
+### Linux limits and unrun acceptance gates
+
+Collision fails its existing lateral-contact assertion; composition fails two
+side-course contacts. Shared gauges and wear pass 3 and 10 assertions respectively,
+then time out awaiting rendered frames. These reproduce prior recorded Linux
+limits; no physics/gauge/wear implementation changed. Normal replication also
+fails its host request-rejection-count assertion as recorded above; no networking
+implementation changed in this branch.
+
+- **Windows:** pinned PowerShell checks, native integration runners, Debug/Release
+  client/server exports, exported service/resource loading and save/UID compatibility.
+- **PostgreSQL/HTTPS:** real transaction concurrency/replay, before/after-commit
+  crashes, atomic cargo/wallet/receipt settlement, canonical reload and restart.
+  No DB server/client or configured integration stack is available; the new bulk
+  model does not yet have the Step 70 durable adapter.
+- **Keycloak/authenticated peers:** native sign-in, two-account isolation/ownership,
+  fencing, disconnect/rebind/reconnect and restart. Java exists, but no configured
+  identity stack/accounts or new bulk public endpoint are present.
+- **Visual/Andy playtest:** rendered quote/receipt layout, focus/scaling, docking,
+  bulk loading/discharge interaction and unchanged ship/HUD behavior. No display,
+  Xvfb or manual playtest; Step 70's bulk panel is intentionally not implemented.
+
+Deliver via DRAFT PR against main. No deployment, real SQL durability, manual
+acceptance or Step 70 completion claimed. No secrets, accounts, databases, exports
+or caches belong in this commit.
