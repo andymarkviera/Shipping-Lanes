@@ -565,3 +565,22 @@ with SQL doubles and serialized reloads verifies replay/cycle behavior; it does
 not replace real PostgreSQL/Keycloak/crash or collision-safe human voyage gates.
 Six finite nonexpiring seed offers are sufficient for this milestone; longer-term
 content/progression and deferred single-local-save UX remain separate work.
+
+
+## D125 — Explicit bulk grams and one commodity per authored hold
+
+Step 68 (`bulk-capacity-model`) defines grain, coal, ore and limestone as catalog
+resources using integer grams. Holds have stable IDs, independent positive mass
+capacities and explicit allowed commodity IDs. Author `single_commodity_per_hold`:
+same-commodity batches may share a hold; different commodities need separate holds.
+Reject unsupported policies, unknown/unassigned holds and per-hold overfill; do not
+silently split or relocate cargo. Emptying a hold clears its commodity assignment,
+with no cleaning or machinery mechanic. Preserve per-batch provenance.
+
+DWT is separately authored informational tonnes (zero unspecified), never inferred
+from hold count or used as the cargo capacity budget. The data-only two-hold fixture
+has 400/600 t capacities and a separate 1,500 t DWT rating. Container counts and other
+capacity pools stay independent; no existing ship gains bulk capacity or new limits.
+No online purchase/activation, payout, save/protocol migration or bulk service UI.
+Bulk earnings and settlement/partial-discharge policy remain Steps 69–70. See
+BULK_CAPACITY.md for units, bounds, data scope and validation.

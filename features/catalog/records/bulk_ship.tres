@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ship_bulk_prototype_01"
+display_name = "Two-hold bulk prototype"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
+cargo_type_ids = Array[String](["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone"])
+dwt_tonnes = 1500
+bulk_mixing_policy = "single_commodity_per_hold"
+bulk_holds = {
+"hold_forward": {"capacity_grams": 400000000, "cargo_type_ids": ["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone"]},
+"hold_aft": {"capacity_grams": 600000000, "cargo_type_ids": ["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone"]}
+}

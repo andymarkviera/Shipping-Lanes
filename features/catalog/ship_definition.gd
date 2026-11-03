@@ -3,6 +3,11 @@ extends ContentDefinition
 @export_file("*.tscn") var scene_path: String = ""
 @export var cargo_type_ids: Array[String] = []
 @export var cargo_capacities: Dictionary = {}
+## Independent metadata; zero means unspecified, never inferred from holds.
+@export var dwt_tonnes: int = 0
+## Stable hold IDs -> {capacity_grams, cargo_type_ids}; one commodity per hold.
+@export var bulk_holds: Dictionary = {}
+@export_enum("single_commodity_per_hold") var bulk_mixing_policy: String = "single_commodity_per_hold"
 @export var container_layout: ContainerLayout
 @export_file("*.tscn") var runtime_scene_path: String = ""
 @export_group("Composition")
@@ -40,7 +45,26 @@ extends ContentDefinition
 @export var fuel_thruster_lps: float = 0.05
 @export var fuel_burn_when_docked: bool = false
 
+func bulk_capacity_error() -> String:
+	if bulk_mixing_policy != "single_commodity_per_hold": return "Unsupported bulk mixing policy"
+	if dwt_tonnes < 0 or dwt_tonnes > 1000000000: return "Invalid DWT rating"
+	if bulk_holds.size() > 256: return "Too many bulk holds"
+	if cargo_capacities.has("bulk_holds"): return "Bulk capacity must be authored per hold"
+	for hold_id: Variant in bulk_holds:
+		if not hold_id is String or hold_id.strip_edges().is_empty() or hold_id.length() > 128: return "Invalid bulk hold ID"
+		var hold: Variant = bulk_holds[hold_id]
+		if not hold is Dictionary or hold.size() != 2 or not hold.has("capacity_grams") or not hold.has("cargo_type_ids"): return "Invalid bulk hold"
+		if not hold.capacity_grams is int or hold.capacity_grams <= 0 or hold.capacity_grams > 1000000000: return "Invalid bulk hold capacity"
+		if not hold.cargo_type_ids is Array or hold.cargo_type_ids.is_empty(): return "Missing bulk hold compatibility"
+		var seen: Array = []
+		for cargo_id: Variant in hold.cargo_type_ids:
+			if not cargo_id is String or not cargo_type_ids.has(cargo_id) or seen.has(cargo_id): return "Invalid bulk hold compatibility"
+			seen.append(cargo_id)
+	return ""
+
 func handling_error() -> String:
+	var bulk_error: String = bulk_capacity_error()
+	if not bulk_error.is_empty(): return bulk_error
 	for pool: Variant in cargo_capacities:
 		if not pool is String or pool.strip_edges().is_empty(): return "Invalid cargo capacity pool"
 		var capacity: Variant = cargo_capacities[pool]
