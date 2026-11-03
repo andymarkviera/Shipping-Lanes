@@ -539,3 +539,29 @@ Only additive profile/receipt data; preserve IDs/save version/UIDs, Godot 4.7.2 
 ticket 7. New resale RPC requires game protocol 17. PUBLIC_RESALE_ACCOUNTING.md
 records the cash boundary and pending platform gates. No Step 67 economy tuning,
 player transfers, cargo expiry, hidden shallows, machinery wear or deferred work.
+
+
+## D124 — Measured small progression and a fueled first-upgrade target
+
+Step 67 (`economy-gate`) targets 10–15 minutes from the existing public new-player
+terms to a purchased, activated Coastal ship with 250 L paid fuel when taking the
+large first contract. Target 25–35 minutes for smaller contracts or one halfway
+sinking. These are human acceptance targets; the fixed-input benchmark measures
+9.12 / 28.99 / 26.96 simulated minutes respectively, with explicit scope/allowances
+and unrun playtest gates in ECONOMY_GATE.md.
+
+Tune only Coastal price from 900 to 800 credits. Existing 500/1,200 alternatives,
+250/500/750 cargo rewards, fuel/repair/recovery rates and resale formula remain.
+Keep starting 200 credits/800 L, empty new-purchase tanks, stable IDs and acquired
+cost records. A formerly 900-credit Coastal is now capped to current 800-credit
+basis for resale (480 maximum), without a refund or save rewrite. No new currency
+source, offer regeneration, expanded catalog, save/protocol migration or player
+transfers. Godot 4.7.2, game protocol 17 and ticket protocol 7 remain unchanged.
+
+Gate economics include replacing consumed prepaid fuel, repairing wear and funding
+the upgrade tank; gross rewards alone are not profit. Benchmark both directions
+and a failed half-voyage, including recovery debt repayment. Production dispatch
+with SQL doubles and serialized reloads verifies replay/cycle behavior; it does
+not replace real PostgreSQL/Keycloak/crash or collision-safe human voyage gates.
+Six finite nonexpiring seed offers are sufficient for this milestone; longer-term
+content/progression and deferred single-local-save UX remain separate work.

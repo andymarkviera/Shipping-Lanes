@@ -2638,3 +2638,104 @@ previous Step 62–65 records; no related physics/ports/gauge implementation cha
 Deliver as a DRAFT PR against main. No deployment, manual/production acceptance,
 Step 67 completion, or cleanup/reset of live data is claimed. No secrets, databases,
 exports, caches or generated evidence are included in the commit.
+
+## Step 67 — Economy gate (draft) — November 2, 2026
+
+Task ID: `economy-gate`. Started from merged Step 66 main `5fd2739`; Steps 62–66
+remain merged. Implemented ONLY Step 67 on `feat/step-67-economy-gate`. D124 and
+ECONOMY_GATE.md record the target, measured costs, method, tuning and pending gates.
+
+First useful upgrade means purchased, activated and fueled with 250 L, retaining
+the starter. Target 10–15 minutes with a large first contract; 25–35 minutes with
+smaller contracts or one halfway sinking. Tune only Coastal catalog cost 900 →
+800 credits. Existing class properties, alternatives, rewards, fees and starting
+funds/fuel remain. At 900, the largest first reward could buy the hull but could
+not fund the benchmark's next-voyage fuel reserve; same-policy baseline required
+two deliveries / 20.29 minutes. At 800 it takes one / 9.12 simulated minutes,
+with 46.15 credits after purchase/fuel. No imported research-price table.
+
+Added fixed-step Godot production handling/fuel route benchmark and Python
+production authority progression scenarios using an explicit SQL double. Starter
+outbound/return measured 530.18/653.22 s and 163.58/214.42 L; Coastal uses about
+19.4% less fuel on the same routes. Smaller contracts reach the fueled upgrade in
+28.99 minutes (three deliveries); halfway sinking/retry in 26.96 (two deliveries
+plus failed half-voyage and 120 s assumed recovery approach). Costs include all
+consumed fuel replacement, wear repair, 250 recovery credits including debt repayment,
+800 acquisition and 62.50 upgrade fuel. Wallets reconcile exactly. These simulated
+route/controller measurements exclude collision/docking admission, UI time and
+network service latency; they are not manual/authenticated playtest evidence.
+
+Every request replays without further writes; each scenario also runs with serialized
+profile/receipt/journal reload and a fresh Authority after each operation/checkpoint.
+Added 24 purchase/resale cycles over all classes, 150,000 valuation cases, repeated
+cancel/deliver/recovery, conflicting intent and finite-offer exhaustion checks.
+All tested resale cycles lose money; consumed ships/jobs cannot pay again after
+reload. Recovery preserves ownership and adds charges/debt on each incident. No
+unlimited-money loop found in the tested surface; real SQL race/crash gates remain.
+
+Acquisition records, saves/IDs, existing .gd.uid files, Godot 4.7.2, game protocol
+17 and ticket 7 preserved. New probe UID retained. Shared catalog JSON was already
+explicitly exported; no new runtime resources require export changes. Prior
+900-credit acquisitions are not rewritten; current-price resale cap now gives
+480 maximum Coastal resale. Single condition, one active nonexpiring cargo job,
+no machinery wear, hidden shallows or player trades/transfers/gifts remain intact.
+No live service, account or save was used or changed; no deferred request implemented.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf` downloaded into isolated
+`/workspace/work/step67`; the installed 4.6.3 engine was not used. All generated
+logs, metrics, virtualenv and isolated XDG/SQLite evidence remain outside Git.
+
+- Editor/import, all 153 GDScripts and Main startup pass. Initial sandbox import
+  lacked socket access; the rerun with permitted local sockets and isolated XDG
+  configuration passes. Initial route probe had a typed-array assignment error;
+  corrected before measurement. Final two route runs are byte-identical, as are
+  their complete progression reports (including pre-tuning price comparison).
+- All **45 Python tests** pass (existing 39 plus six economy-gate cases). Three
+  progression scenarios pass both normally and with serialized reload after every
+  operation/checkpoint; every request is replayed. SQL/clock/lease/docking are
+  explicit test boundaries, not real PostgreSQL proof.
+- Resale (26), purchase (35), fleet switching (34), inspection (32), repair (20)
+  pass. Initial purchase/resale UI tests retained old literal prices/wallets;
+  updated expectations to 800/240 and reran both cleanly. The legacy 900-credit
+  acquisition fixture remains, proving the new current-price resale cap.
+- Catalog, controls, flow, starter assets, units (50), diagnostics (9), contracts
+  (66), geography (342), session (21), clocks (22), handling (134), camera (20),
+  water (59), feedback (24), world size (2,042), heavy lifter (39), fuel (42),
+  economy (82), compact snapshots (24), voyage (101), public shared physics (43)
+  and isolated save slots (38) pass. Diagnostics' intentional validation error is
+  expected. No prior-step physics or persistence implementation changed.
+- All **28 SQLite storage/persistence/migration/durable recovery phases** pass,
+  including ten owned-process kills at explicit ready markers, rollback/reopen,
+  committed recovery, backup fallback and persistence UI.
+- Actual local host/client network/reconnect and actions pass, plus normal/impaired
+  replication, cargo-network and connected-world: **16 clean process results**.
+  Private networking fixtures do not substitute for public authenticated evidence.
+- Python AST compilation (63 sources), whitespace and existing UID preservation
+  checks pass. No secrets, accounts, databases, exports, caches or generated
+  evidence are included in the commit.
+
+### Reproduced Linux limits and unrun acceptance gates
+
+Collision fails lateral contact; composition fails its two side-course contacts.
+Ports reports 261 checks but emits two out-of-tree transform errors. Shared gauges
+and wear reach 3 and 10 passing assertions then time out awaiting rendered frames.
+These reproduce the Step 62–66 limits and are not clean passes.
+
+- **Windows:** PowerShell pinned-engine checks, Debug/Release client/server exports,
+  exported prices/UI/resources and save/UID compatibility remain unrun.
+- **PostgreSQL/HTTPS:** real transaction concurrency, replay, before/after-commit
+  crashes, canonical checkpoint/reload and server restart remain unrun; no DB
+  server/client or configured integration stack is available.
+- **Keycloak/authenticated peers:** native sign-in, two-account privacy/ownership,
+  fencing, disconnect/rebind/reconnect and restart progression remain unrun. Java
+  is present but no configured identity stack or accounts were used.
+- **Visual/Andy playtest:** actual collision-safe voyages and docking, recovery
+  placement, contract choice/discoverability, price/confirmation/refueling UI,
+  focus/scaling and class feel; confirm the recorded 10–15/25–35 minute targets.
+  No display/Xvfb or manual playtest. The 120 s recovery approach is an assumption.
+
+Deliver as a DRAFT PR against main. No live deployment, production gate completion
+or manual acceptance claimed. Step 68 and the deferred local-save UX remain out
+of scope.

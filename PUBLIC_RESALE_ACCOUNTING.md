@@ -1,8 +1,8 @@
 # Step 66 — Resale and voyage accounting
 
 Task ID: `resale-and-voyage-accounting`. D123. Online game-shop resale and
-cash-basis voyage reporting only; Step 67 tuning/gates and deferred requests remain
-separate. Godot 4.7.2, ticket protocol 7, game protocol **17** (new resale RPC).
+cash-basis voyage reporting. Step 67 tuning and measured gates are recorded in
+ECONOMY_GATE.md; deferred requests remain separate. Godot 4.7.2, ticket protocol 7, game protocol **17** (new resale RPC).
 Deploy matching client/server/backend builds together; no live deployment here.
 
 ## Resale policy

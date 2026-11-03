@@ -9,7 +9,7 @@
   {
     "definition": "ship_coastal_container_01",
     "name": "Coastal container ship",
-    "cost_minor": 90000,
+    "cost_minor": 80000,
     "fuel_capacity_liters": 1000,
     "description": "Six container slots; efficient propulsion uses 20% less fuel at full output."
   },

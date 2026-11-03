@@ -25,13 +25,13 @@ class ResaleAccountingTest(unittest.TestCase):
         result = self.a._voyage(self.db, ACCOUNT, copy.deepcopy(self.row), r)
         return result, r
     def sale(self):
-        return self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='stored', value_minor=27000)
+        return self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='stored', value_minor=24000)
     def test_sale_reconciles_debt_and_replay(self):
         self.row['profile']['recovery_debt_minor'] = 20000
         first, req = self.sale()
         self.assertTrue(first['ok'])
-        self.assertEqual(first['resale'], dict(ship_id='stored', gross_minor=27000, recovery_repaid_minor=13500,
-                         wallet_delta_minor=13500, wallet_before_minor=300000, wallet_after_minor=313500))
+        self.assertEqual(first['resale'], dict(ship_id='stored', gross_minor=24000, recovery_repaid_minor=12000,
+                         wallet_delta_minor=12000, wallet_before_minor=300000, wallet_after_minor=312000))
         self.assertEqual(self.row['profile']['ship'], self.p['ship'])
         self.assertFalse(self.row['profile']['stored_ships'])
         replay = self.a._voyage(self.db, ACCOUNT, copy.deepcopy(self.row), req)
@@ -61,15 +61,15 @@ class ResaleAccountingTest(unittest.TestCase):
         self.row['profile']['ship']['fuel_liters'] = 0
         self.row['profile']['stored_ships'][0]['condition_bp'] = 1
         self.row['money'] = 0
-        result, _ = self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='stored', value_minor=5)
+        result, _ = self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='stored', value_minor=4)
         self.assertEqual(result['code'], 'KEEP_USABLE_SHIP')
         self.assertEqual(len(self.row['profile']['stored_ships']), 1)
         self.row['money'] = 25
-        result, _ = self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='stored', value_minor=5)
+        result, _ = self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='stored', value_minor=4)
         self.assertTrue(result['ok'])
     def test_active_and_last_ship_never_sold(self):
         self.row['profile']['stored_ships'] = []
-        result, _ = self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='active', value_minor=27000)
+        result, _ = self.call('ship_resale', port_id=voyages.PORTS[0], ship_id='active', value_minor=24000)
         self.assertEqual(result['code'], 'ACTIVE_SHIP_RETAINED')
         self.assertEqual(self.row['profile']['ship'], self.p['ship'])
     def test_price_treasury_stale_strict_and_failed_replay(self):
@@ -85,13 +85,13 @@ class ResaleAccountingTest(unittest.TestCase):
     def test_valuation_rounding_cap_legacy_and_configuration(self):
         ship = self.p['stored_ships'][0]
         for condition in range(1,10001):
-            self.assertEqual(resale.value(dict(ship, condition_bp=condition)),90000*6000*condition//100000000)
+            self.assertEqual(resale.value(dict(ship, condition_bp=condition)),80000*6000*condition//100000000)
         self.assertEqual(resale.value(dict(ship, acquisition_cost_minor=10000)), 3000)
         legacy = dict(ship);legacy.pop('acquisition_cost_minor')
-        self.assertEqual(resale.value(legacy),27000)
+        self.assertEqual(resale.value(legacy),24000)
         key = ship['definition'];old=resale.VALUATION[key]
         try:
-            resale.VALUATION[key]=5000;self.assertEqual(resale.value(ship),22500)
+            resale.VALUATION[key]=5000;self.assertEqual(resale.value(ship),20000)
             resale.VALUATION[key]=10001;self.assertIsNone(resale.value(ship))
         finally: resale.VALUATION[key]=old
     def start_loaded(self):
