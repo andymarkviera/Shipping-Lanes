@@ -119,8 +119,16 @@ func _ready() -> void:
 	add_child(inspection_layer)
 	inspection = preload("res://features/catalog/fleet_inspection_panel.gd").new()
 	inspection_layer.add_child(inspection)
+	inspection.resale_requested.connect(sell_ship)
 	inspection.activation_requested.connect(switch_ship)
 	receipt = label(stack)
+
+func sell_ship(quote_id: String) -> void:
+	if session == null or waiting > 0: return
+	session.send_ship_resale(quote_id)
+	waiting = session.voyage_sequence
+	sent_ms = Time.get_ticks_msec()
+	inspection.hide()
 
 func switch_ship(ship_id: String) -> void:
 	if waiting > 0 or session == null: return
@@ -308,3 +316,17 @@ func _process(_delta: float) -> void:
 	receipt.visible = not last.is_empty()
 	if not last.is_empty(): receipt.text = "LAST DELIVERY RECEIPT\n%d containers · %s\nPaid %.2f credits" % [last.quantity, port_name(last.destination), last.amount / 100.0]
 	if not last.is_empty() and int(last.get("repaid", 0)) > 0: receipt.text += "\nRecovery balance repaid: %.2f credits" % (int(last.repaid) / 100.0)
+	var report: Dictionary = data.get("voyage_report", {})
+	if not report.is_empty():
+		receipt.visible = true
+		receipt.text = "VOYAGE CASH REPORT — " + str(report.get("outcome", "in progress"))
+		receipt.text += "\nAcceptance to close; purchases during this window only. Prepaid fuel/ships excluded."
+		if report.get("partial", false): receipt.text += "\nPartial legacy voyage: earlier costs unavailable."
+		receipt.text += "\nGross revenue %.2f · Acquisition %.2f · Fuel %.2f · Repair %.2f" % [int(report.gross_revenue_minor)/100.0, int(report.acquisition_cost_minor)/100.0, int(report.fuel_minor)/100.0, int(report.repair_minor)/100.0]
+		receipt.text += "\nRecovery paid %.2f · Debt repaid %.2f · Other cash %+.2f" % [int(report.recovery_paid_minor)/100.0, int(report.recovery_repaid_minor)/100.0, int(report.other_cash_minor)/100.0]
+		receipt.text += "\nNet cash %+.2f · Wallet %.2f → %.2f" % [int(report.net_minor)/100.0, int(report.wallet_start_minor)/100.0, int(report.wallet_end_minor)/100.0]
+	var sale: Dictionary = data.get("resale_receipt", {})
+	if not sale.is_empty():
+		if not receipt.visible: receipt.text = ""
+		receipt.visible = true
+		receipt.text += "\nLAST SHIP SALE — %s\nGross %.2f · Debt repaid %.2f · Wallet %+.2f (%.2f → %.2f)" % [sale.ship_id, int(sale.gross_minor)/100.0, int(sale.recovery_repaid_minor)/100.0, int(sale.wallet_delta_minor)/100.0, int(sale.wallet_before_minor)/100.0, int(sale.wallet_after_minor)/100.0]

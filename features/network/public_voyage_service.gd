@@ -70,7 +70,7 @@ func view(peer: int) -> Dictionary:
 	for offer: Dictionary in preload("res://features/cargo/container_offers.gd").new().list_at(port):
 		if not closed.has(offer.id): rows.append({"id": offer.id, "quantity": offer.quantity, "destination": offer.destination_port_id, "reward": offer.reward_minor})
 	var remaining: int = maxi(0, int(job.get("ready_ms", 0)) - int(Time.get_unix_time_from_system() * 1000)) if job.get("state") == "loading" else 0
-	return {"fuel_capacity": owner.ship.definition.fuel_capacity_liters, "condition_bp": int(owner.public_profile.ship.get("condition_bp", 10000)), "recovery": owner.public_profile.get("recovery", {}), "recovery_debt_minor": int(owner.public_profile.get("recovery_debt_minor", 0)), "damage_pending": owner.damage_pending, "recovery_placing": owner.recovery_placing, "refuel": fuel_quote(peer), "repair": repair_quote(peer), "ship_catalog": ship_quotes(peer), "stored_ship_count": owner.public_profile.get("stored_ships", []).size(), "fleet": preload("res://features/catalog/fleet_inspection.gd").fleet(owner) if not port.is_empty() else [], "job": job, "offers": rows, "wallet": owner.wallet_minor, "cargo": count(owner), "remaining_ms": remaining, "busy": owner.voyage_busy or owner.damage_pending or owner.recovery_placing, "port": port, "receipt": receipt, "ack": record.voyage_sequence, "message": record.voyage_notice}
+	return {"fuel_capacity": owner.ship.definition.fuel_capacity_liters, "condition_bp": int(owner.public_profile.ship.get("condition_bp", 10000)), "recovery": owner.public_profile.get("recovery", {}), "recovery_debt_minor": int(owner.public_profile.get("recovery_debt_minor", 0)), "damage_pending": owner.damage_pending, "recovery_placing": owner.recovery_placing, "refuel": fuel_quote(peer), "repair": repair_quote(peer), "ship_catalog": ship_quotes(peer), "stored_ship_count": owner.public_profile.get("stored_ships", []).size(), "resale_quotes": resale_quotes(peer), "voyage_report": owner.public_profile.get("voyage_accounting", owner.public_profile.get("last_voyage_report", {})), "resale_receipt": owner.public_profile.get("last_resale_receipt", {}), "fleet": preload("res://features/catalog/fleet_inspection.gd").fleet(owner) if not port.is_empty() else [], "job": job, "offers": rows, "wallet": owner.wallet_minor, "cargo": count(owner), "remaining_ms": remaining, "busy": owner.voyage_busy or owner.damage_pending or owner.recovery_placing, "port": port, "receipt": receipt, "ack": record.voyage_sequence, "message": record.voyage_notice}
 
 func _process(_delta: float) -> void:
 	if session == null or not session.hosting or session.draining: return
@@ -111,6 +111,11 @@ static func message(code: String) -> String:
 		"JOB_CLOSED": return "Job closed. No payment."
 		"DOCK_FIRST": return "Dock before using port services."
 		"REFUELED": return "Propulsion fuel purchased and saved."
+		"SHIP_SOLD": return "Stored ship sold; active ship retained. Receipt saved."
+		"FLEET_LOADED": return "Finish or cancel cargo/jobs before selling or switching."
+		"ACTIVE_SHIP_RETAINED": return "The active ship cannot be sold. Activate another ship first."
+		"KEEP_USABLE_SHIP": return "Retain fuel or enough credits to refuel the active ship before selling."
+		"RESALE_UNAVAILABLE": return "This ship has no valid resale valuation."
 		"SHIP_PURCHASED": return "Ship purchased and saved in storage."
 		"FLEET_SWITCHED": return "Active ship changed and saved. Fuel and condition retained."
 		"FLEET_LOADED": return "Finish or cancel your job and unload cargo before switching."
@@ -337,5 +342,83 @@ func purchase_ship(peer: int, quote_id: String) -> Dictionary:
 		if fresh.get("ok", false): owner.install_profile(fresh)
 		else: owner.authority.quiesce()
 	record.erase("ship_quotes")
+	owner.voyage_busy = false
+	return result
+
+# Basis points against acquisition/catalog cap and the single stored condition.
+var resale_values: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://services/public_authority/resale_values.json"))
+
+func resale_quotes(peer: int) -> Array:
+	var record: Dictionary = session.members[peer]
+	var owner: Node3D = record.hull
+	# Reuse physical service/ownership/loading guards; cargo offers themselves never expire.
+	if ship_quotes(peer).is_empty() or not owner.cargo_records.is_empty():
+		record.erase("resale_quotes")
+		return []
+	for job: Dictionary in owner.public_profile.get("jobs", []):
+		if job.get("state") not in ["delivered", "abandoned", "cancelled", "canceled", "failed"]:
+			record.erase("resale_quotes")
+			return []
+	var port: String = docked_port(peer)
+	var rows: Array = []
+	for ship: Dictionary in owner.public_profile.get("stored_ships", []):
+		if ship.get("storage_port_id") != port or not ship.get("cargo", []).is_empty() or not ship.get("jobs", []).is_empty(): continue
+		var condition: int = int(ship.get("condition_bp", 10000))
+		var rate: int = int(resale_values.get(ship.definition, -1))
+		if condition <= 0 or condition > 10000 or rate < 0 or rate > 10000: continue
+		for entry: Dictionary in ship_catalog:
+			if entry.definition != ship.definition: continue
+			var basis: int = mini(int(ship.get("acquisition_cost_minor", entry.cost_minor)), int(entry.cost_minor))
+			if basis < 0: continue
+			@warning_ignore("integer_division")
+			var value: int = basis * rate * condition / 100000000
+			rows.append({"ship_id": ship.id, "value_minor": value})
+	var key: Array = [port, rows, owner.wallet_minor, owner.public_profile.get("recovery_debt_minor", 0)]
+	var cached: Dictionary = record.get("resale_quotes", {})
+	if cached.get("key") != key or Time.get_ticks_msec() >= int(cached.get("until", 0)):
+		cached = {"key": key.duplicate(true), "until": Time.get_ticks_msec() + 30000, "rows": rows.duplicate(true)}
+		for row: Dictionary in cached.rows: row.id = Crypto.new().generate_random_bytes(16).hex_encode()
+		record.resale_quotes = cached
+	return cached.rows.duplicate(true)
+
+func sell_ship(peer: int, quote_id: String) -> Dictionary:
+	if not session.members.has(peer): return {"ok": false, "code": "DISCONNECTED"}
+	var record: Dictionary = session.members[peer]
+	var owner: Node3D = record.hull
+	if owner.departing or not owner.authority.active: return {"ok": false, "code": "DISCONNECTED"}
+	if owner.voyage_busy or owner.checkpoint_busy or owner.damage_pending or owner.recovery_placing or owner.authority.busy: return {"ok": false, "code": "BUSY"}
+	var port: String = docked_port(peer)
+	if port.is_empty(): return {"ok": false, "code": "DOCK_FIRST"}
+	var quote: Dictionary = {}
+	for row: Dictionary in resale_quotes(peer):
+		if row.id == quote_id: quote = row
+	if quote.is_empty(): return {"ok": false, "code": "QUOTE_CHANGED"}
+	owner.voyage_busy = true
+	record.erase("resale_quotes")
+	# Preserve all unsettled live state before installing the canonical purchase.
+	var current: Dictionary = await owner.authority.request(owner.authority.owned("inspect"))
+	if not current.get("ok", false):
+		owner.authority.quiesce()
+		owner.voyage_busy = false
+		return current
+	var address: Dictionary = owner.current_address()
+	var elapsed: float = owner.operating_seconds
+	var saved: Dictionary = await owner.authority.request(owner.authority.owned("checkpoint", {"operating_seconds": elapsed, "expected_revision": int(current.revision), "position": {"latitude": address.latitude_deg, "longitude": address.longitude_deg, "heading": address.heading_deg}, "fuel_liters": owner.ship.state.fuel_liters}))
+	if not saved.get("ok", false):
+		owner.authority.quiesce()
+		owner.voyage_busy = false
+		return saved
+	owner.operating_seconds = maxf(0.0, owner.operating_seconds - elapsed)
+	owner.public_profile.ship.condition_bp = int(saved.condition_bp)
+	owner.ship.state.condition = int(saved.condition_bp) / 10000.0
+	if owner.departing or not owner.authority.active or owner.damage_pending or owner.recovery_placing or docked_port(peer) != port:
+		owner.voyage_busy = false
+		return {"ok": false, "code": "DISCONNECTED"}
+	var result: Dictionary = await owner.authority.request(owner.authority.owned("ship_resale", {"action_id": "resale_" + quote_id, "expected_revision": int(saved.revision), "port_id": port, "ship_id": str(quote.ship_id), "value_minor": int(quote.value_minor)}))
+	if owner.authority.active:
+		var fresh: Dictionary = await owner.authority.request(owner.authority.owned("inspect"))
+		if fresh.get("ok", false): owner.install_profile(fresh)
+		else: owner.authority.quiesce()
+	record.erase("resale_quotes")
 	owner.voyage_busy = false
 	return result

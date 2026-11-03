@@ -27,7 +27,7 @@ def transition(profile, request, wallet):
     if owned_id == profile['ship']['id'] or any(s['id'] == owned_id for s in stored):
         return reject('OWNED_ID_CONFLICT')
     owned = dict(id=owned_id, definition=definition['definition'], condition_bp=10000,
-                 wear_fraction_bp=0.0, fuel_liters=0.0, storage_port_id=request['port_id'])
+                 wear_fraction_bp=0.0, fuel_liters=0.0, acquisition_cost_minor=definition['cost_minor'], storage_port_id=request['port_id'])
     candidate = copy.deepcopy(profile)
     candidate.setdefault('stored_ships', []).append(owned)
     return 'SHIP_PURCHASED', candidate, -definition['cost_minor'], owned

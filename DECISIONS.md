@@ -516,3 +516,26 @@ no grants/transfers/resale. Activate the three existing catalog classes with the
 own handling, existing six-slot cargo support, paid fuel and provisional equal
 250-credit full-scale condition repair. Game protocol 16, ticket 7, Godot 4.7.2.
 See FLEET_LIFECYCLE.md and PROGRESS.md for evidence and outstanding platform gates.
+
+
+## D123 — Stored-only resale and explicit cash-basis voyage receipts
+
+Step 66 resolves U015 resale: retain the active hull and reject cargo/unfinished
+jobs, wrong-port storage and pending recovery. Sell an empty stored ship only at
+its current service port, with explicit quote review/confirm/cancel. Preserve an
+afloat supported active ship with fuel or funds for at least 1 L; never mint a
+replacement or free fuel. Provisional valuation is 60% of the lower of acquisition
+cost/current catalog price, scaled by the single stored condition and floored once.
+Configure basis points per definition; legacy ships use catalog fallback without
+rewriting saves. Fuel is not reimbursed. Existing recovery debt repayment applies
+to proceeds; show gross, debt repayment and wallet credit separately.
+
+Report cash from job acceptance to delivery/cancel/sinking: gross revenue,
+acquisition purchases during the window, paid fuel, repairs, recovery and net cash.
+Prepaid fuel/ships and future repairs are explicitly excluded, not called profit;
+legacy active jobs have a marked partial window. Net reconciles to start/end wallet
+inside the same atomic receipt transaction; replay never adds costs/revenue twice.
+Only additive profile/receipt data; preserve IDs/save version/UIDs, Godot 4.7.2 and
+ticket 7. New resale RPC requires game protocol 17. PUBLIC_RESALE_ACCOUNTING.md
+records the cash boundary and pending platform gates. No Step 67 economy tuning,
+player transfers, cargo expiry, hidden shallows, machinery wear or deferred work.

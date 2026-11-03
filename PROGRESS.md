@@ -2540,3 +2540,101 @@ its final completed 34-check run passes. No initial-failure evidence is hidden.
 
 Deliver as a DRAFT PR against main. No secrets, accounts, databases, exports,
 caches or generated evidence are included in the commit. Step 66 remains unstarted.
+
+## Step 66 — Resale and voyage accounting (draft) — November 2, 2026
+
+Task ID: `resale-and-voyage-accounting`. Based on merged Step 65 main `f56de62`;
+Steps 62–65 remain merged. Implemented ONLY Step 66 on
+`feat/step-66-resale-and-voyage-accounting`. D123 and PUBLIC_RESALE_ACCOUNTING.md
+record the lifecycle, provisional configurable valuation and cash reporting boundary.
+
+Fleet / Compare now reviews/confirms/cancels sale of an empty stored ship at its
+storage port. The active/last ship cannot be sold; cargo and any unfinished job
+(including unknown states) block sale. Nested target cargo/jobs, pending damage,
+recovery, stale quotes and concurrent service work are refused. Retain a supported
+afloat active ship with fuel or enough post-sale money for at least 1 L. No orphan
+manifests, automatic cancellation, player transfers, replacement ship or free fuel.
+
+Shared per-definition valuation defaults to 60% of the lower of actual acquisition
+cost/current catalog price, scaled by stored single condition and floored once.
+New purchases retain their cost; legacy ships use catalog fallback without save
+rewrites. Fuel is not reimbursed. Existing debt repayment applies to proceeds;
+receipts show gross resale, debt repaid, actual wallet credit and before/after funds.
+The trusted server consumes quotes, checkpoints live pose/fuel/wear, and commits
+through the existing canonical revision/lease/profile/wallet/treasury/receipt/journal
+transaction. Replay returns the original result; unknown outcomes fence authority.
+
+Voyage cash reports start at acceptance and close at delivery/cancel/abandon/sinking.
+They separate gross revenue, acquisition purchases, fuel, repair, recovery paid/debt
+repaid, other cash and net cash. Net must equal ending minus starting wallet or the
+transaction aborts. Failed/replayed operations add nothing. Current and last closed
+reports persist in additive profile fields and settlement receipts. Existing active
+voyages start a clearly marked partial window. The UI explicitly excludes prepaid
+fuel/ships and future repairs: this is cash reporting, never gross revenue labeled
+as profit. No Step 67 progression tuning or deferred local-save/visual work.
+
+Game protocol 16 → 17 for the resale RPC; ticket protocol 7 and Godot 4.7.2 remain.
+Existing save version, owned IDs and .gd.uid files are preserved; the new probe UID
+is retained. Export includes shared resale valuation JSON. Single condition, one
+nonexpiring job, no machinery wear, no hidden shallows and no player trades/gifts/
+transfers remain intact. No live saves, accounts or dedicated server were changed.
+
+### Linux checks actually run
+
+Used existing `4.7.2.stable.official.ed1daf0bf`, not the system engine, with isolated
+XDG state and disposable evidence under `/workspace/work/step66`, outside Git.
+
+- Final editor/import, all 152 GDScripts and Main startup pass. New UID generated
+  through editor import; existing UID preservation and git whitespace checks pass.
+- All 39 Python tests pass: 11 resale/accounting, 8 fleet, 9 purchase, 11 repair.
+  New coverage includes exact debt-adjusted sale/replay/conflict receipts, loaded/
+  unknown-job/last-ship/port/duplicate-ID refusal, fuel-poor account protection,
+  configurable valuation and every integer condition 1–10000, legacy valuation,
+  treasury/stale/strict payload failures, acquisition/fuel/repair/delivery cash
+  reconciliation, replayed delivery, cancellation/sinking, partial legacy/restart
+  retention, failed charges and deliberate ledger-mismatch rejection. Tests use
+  the production dispatch with an explicit SQL double, not real PostgreSQL.
+- All 26 Godot resale assertions pass against actual quote/service/panel code with
+  an explicit authority double: guards, expiry/condition changes, review/cancel/
+  confirm, duplicate click, revenue/net wording, checkpoint/reload, stable active
+  ID, wallet credit, retained wear, removed stored ID and unknown-outcome fencing.
+  Fleet switch (34), inspection (32), purchase (35) and repair (20) regressions pass.
+- Catalog, controls, flow, starter assets, units (50), diagnostics (9), contracts
+  (66), geography (342), session (21), clocks (22), handling (134), camera (20), water
+  (59), feedback (24), world size (2,042), heavy lifter (39), fuel (42), economy (82),
+  compact snapshots (24), voyage (101), public shared physics (43) and isolated save
+  slots (38) pass. Diagnostics' intentional validation error remains expected.
+- All 28 SQLite storage/persistence/migration/durable recovery phases pass, including
+  ten owned-process terminations at explicit ready markers, rollback/reopen,
+  committed recovery, backup fallback and isolated persistence UI.
+- Actual local host/client network/reconnect and actions pass, plus normal/impaired
+  replication, cargo-network and connected-world profiles: 16 clean process results.
+  These private fixtures do not substitute for authenticated public resale tests.
+- Python source compilation passes. The initial Python run lacked psycopg; installed
+  psycopg/psycopg-binary 3.2.10 in the isolated evidence venv, then all tests passed.
+  Initial Godot import and Git fetch lacked network/socket access; permitted-network
+  reruns passed. No runtime dependency records or engine baseline were changed.
+
+### Reproduced Linux limits and unrun acceptance gates
+
+Collision fails its existing lateral-contact assertion; composition fails two
+side-course assertions. Ports reports 261 checks passed but emits two out-of-tree
+transform errors, so it is not a clean gate. Shared gauges and wear reach 3 and 10
+headless assertions then time out waiting for rendered frames. These match the
+previous Step 62–65 records; no related physics/ports/gauge implementation changed.
+
+- **Windows:** pinned PowerShell engine check, Debug/Release client/server exports,
+  exported valuation resource inclusion and save/UID compatibility remain unrun.
+- **PostgreSQL/HTTPS:** real sale/delivery concurrency, replay, before/after-commit
+  crash, restart, canonical reload and transaction atomicity remain unrun. No
+  PostgreSQL server/client or configured Windows integration stack is available.
+- **Keycloak/authenticated peers:** native sign-in, two-account ownership/privacy,
+  interrupted sale/disconnect/rebind, reconnect/server restart and matching protocol
+  17 deployment remain unrun; no configured identity stack is available.
+- **Visual/Andy's playtest:** rendered review/confirm/cancel, receipt layout/scrolling,
+  focus/scaling, loaded/damaged restrictions and fuel-poor account scenarios remain
+  unrun. No display/Xvfb or manual playtest; headless UI checks are not visual proof.
+
+Deliver as a DRAFT PR against main. No deployment, manual/production acceptance,
+Step 67 completion, or cleanup/reset of live data is claimed. No secrets, databases,
+exports, caches or generated evidence are included in the commit.
