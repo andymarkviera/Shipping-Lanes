@@ -101,7 +101,7 @@ func run() -> void:
 	owner.public_profile.stored_ships = [{"id": "stored", "definition": "ship_coastal_container_01", "condition_bp": 5000, "fuel_liters": 123.0, "storage_port_id": "port_brindle_quay"}]
 	authority.snapshot.profile.stored_ships = owner.public_profile.stored_ships.duplicate(true)
 	var quote: Dictionary = service.resale_quotes(2)[0]
-	check(int(quote.value_minor) == 27000, "condition-scaled legacy valuation")
+	check(int(quote.value_minor) == 24000, "condition-scaled legacy valuation")
 	check(service.resale_quotes(2)[0].id == quote.id, "stable quotes")
 	port.berth.service_ids = []
 	check(service.resale_quotes(2).is_empty(), "service berth required")
@@ -141,7 +141,7 @@ func run() -> void:
 	var inspection = panel.inspection
 	inspection.selectors[0].select(5)
 	inspection.refresh_details()
-	check(not inspection.sell.disabled and "270.00" in inspection.sell.text, "actual fleet sale control shows quote")
+	check(not inspection.sell.disabled and "240.00" in inspection.sell.text, "actual fleet sale control shows quote")
 	inspection.sell_selected()
 	check(session.voyage_sequence == 0 and "Confirm" in inspection.sell.text, "review does not sell")
 	inspection.sale_confirmation = ""
@@ -160,7 +160,7 @@ func run() -> void:
 	var result: Dictionary = await service.sell_ship(2, quote.id)
 	check(result.code == "SHIP_SOLD", "accepted valuation sells")
 	check(authority.calls == ["inspect", "checkpoint", "ship_resale", "inspect"], "checkpoint then sale then canonical reload")
-	check(owner.wallet_minor == 327000 and owner.public_profile.ship.id == original_id, "wallet credit and retained active hull")
+	check(owner.wallet_minor == 324000 and owner.public_profile.ship.id == original_id, "wallet credit and retained active hull")
 	check(owner.operating_seconds == 0.0 and owner.public_profile.ship.condition_bp == 7554, "pending wear retained")
 	check(owner.public_profile.stored_ships.is_empty(), "stored ship removed")
 	check((await service.sell_ship(2, quote.id)).code == "QUOTE_CHANGED", "consumed sale quote rejected")

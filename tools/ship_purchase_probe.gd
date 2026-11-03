@@ -139,7 +139,7 @@ func run() -> void:
 	panel._process(0.0)
 	panel.ship_selected = 1
 	panel._process(0.0)
-	check(not panel.ship_buy.disabled and "900.00" in panel.ship_buy.text, "actual catalog button shows accepted price")
+	check(not panel.ship_buy.disabled and "800.00" in panel.ship_buy.text, "actual catalog button shows accepted price")
 	panel.buy_ship()
 	check(session.voyage_sequence == 0, "review does not purchase")
 	panel.ship_confirmation = ""
@@ -174,12 +174,12 @@ func run() -> void:
 	var result: Dictionary = await service.purchase_ship(2, quote.id)
 	check(result.code == "SHIP_PURCHASED", "accepted quote executes purchase")
 	check(authority.calls == ["inspect", "checkpoint", "ship_purchase", "inspect"], "live state checkpoint precedes purchase and canonical refresh")
-	check(owner.wallet_minor == 210000 and owner.public_profile.ship.id == original_id, "canonical debit preserves active ship identity")
+	check(owner.wallet_minor == 220000 and owner.public_profile.ship.id == original_id, "canonical debit preserves active ship identity")
 	check(owner.operating_seconds == 0.0 and owner.public_profile.ship.condition_bp == 7554, "purchase preserves settled single condition")
 	check((await service.purchase_ship(2, quote.id)).code == "QUOTE_CHANGED", "consumed quote cannot replay with new sequence")
 	quote = service.ship_quotes(2)[1]
 	result = await service.purchase_ship(2, quote.id)
-	check(result.code == "SHIP_PURCHASED" and owner.public_profile.stored_ships.size() == 2 and owner.wallet_minor == 120000, "second deliberate purchase has another stored instance")
+	check(result.code == "SHIP_PURCHASED" and owner.public_profile.stored_ships.size() == 2 and owner.wallet_minor == 140000, "second deliberate purchase has another stored instance")
 	check(owner.public_profile.stored_ships[0].id != owner.public_profile.stored_ships[1].id, "two purchases have distinct owned IDs")
 	var inspected: Dictionary = service.view(2)
 	check(inspected.fleet.size() == 3 and inspected.fleet[0].id == original_id, "owner voyage snapshot contains active and both stored purchases")
