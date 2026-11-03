@@ -584,3 +584,30 @@ capacity pools stay independent; no existing ship gains bulk capacity or new lim
 No online purchase/activation, payout, save/protocol migration or bulk service UI.
 Bulk earnings and settlement/partial-discharge policy remain Steps 69–70. See
 BULK_CAPACITY.md for units, bounds, data scope and validation.
+
+
+## D126 — Frozen direct-distance bulk gross quote and cumulative partial rounding
+
+Step 69 (`bulk-earnings`) uses authoritative geographic port separation on the
+existing world radius, rounded to nearest metre once at quote publication.
+Nonexpiring quotes freeze direct metres, commodity rate and both configurable
+port basis-point modifiers. Every earnings modifier is included in the displayed
+gross quote; fuel/repair/recovery are separate costs, not hidden quote deductions.
+Reject same-port/zero-distance routes and missing terms. Sailing detours, elapsed
+time and later content changes never increase the accepted payout.
+
+Load one explicitly allocated bulk batch in full; allow destination discharge in
+positive integer grams. Pay the floor of cumulative exact earnings in minor credits
+minus prior payments, preserving fractional progress across partials. Final payout
+is floored once; fragmenting cannot change it. Keep the job active until all cargo
+is discharged. Preserve manifest provenance and reject mismatch/over-discharge.
+Replay returns the original receipt with zero additional award; conflicting intent
+fails. No player transfers, machinery wear, condition changes or cargo expiry.
+
+Reuse the container offer registry and one-job guard. Step 69 supplies an in-memory
+bulk authority model and quote/receipt formatters using Step 68's data-only hull;
+no playable hull acquisition, public RPC/wallet integration or save migration.
+Step 70 remains responsible for service presentation and durable recovery. Do not
+mistake process-local replay coverage for crash/restart/SQL guarantees. The worked
+123.456789 t / 1 NM / 1 credit / 1.10 / 0.90 example pays 49.50 + 72.72 = 122.22
+credits, matching the quote. See BULK_EARNINGS.md for bounds and exact arithmetic.
