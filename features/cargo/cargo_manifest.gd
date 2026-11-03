@@ -23,13 +23,22 @@ func usage() -> Dictionary:
 		totals[pool] = totals.get(pool, 0) + row.quantity
 	return totals
 
+func hold_usage() -> Dictionary:
+	var totals: Dictionary = {}
+	for row: Dictionary in _lines:
+		if row.has("hold_id"): totals[row.hold_id] = totals.get(row.hold_id, 0) + row.quantity
+	return totals
+
 func validate(candidate: Array[Dictionary]) -> String:
+	if not _ship.bulk_capacity_error().is_empty(): return "Invalid ship capacity definition."
 	if candidate.size() > 256: return "Too many cargo batches."
 	var units: Dictionary = {}
 	var ids: Dictionary = {}
 	var totals: Dictionary = {}
+	var hold_commodities: Dictionary = {}
+	var hold_totals: Dictionary = {}
 	for row: Dictionary in candidate:
-		if row.size() != FIELDS.size(): return "Incomplete cargo batch."
+		if row.size() != FIELDS.size() + (1 if row.has("hold_id") else 0): return "Incomplete cargo batch."
 		for field: String in FIELDS:
 			if not row.has(field): return "Incomplete cargo batch."
 			if field != "quantity" and (not row[field] is String or row[field].length() > 128): return "Invalid cargo reference."
@@ -41,6 +50,18 @@ func validate(candidate: Array[Dictionary]) -> String:
 		if not cargo is CargoDefinition or not _ship.cargo_type_ids.has(row.cargo_id): return "Cargo is incompatible with this ship."
 		if row.unit != cargo.quantity_unit: return "Cargo quantity uses the wrong unit."
 		if not _definitions.get(row.origin_port_id) is PortDefinition or not _definitions.get(row.destination_port_id) is PortDefinition: return "Unknown origin or destination."
+		if cargo.capacity_pool == "bulk_holds":
+			if cargo.quantity_unit != "gram": return "Bulk quantities must use grams."
+			if not row.get("hold_id") is String or not _ship.bulk_holds.has(row.hold_id): return "Bulk cargo needs a valid hold."
+			var hold: Dictionary = _ship.bulk_holds[row.hold_id]
+			if not hold.cargo_type_ids.has(row.cargo_id): return "Commodity is incompatible with this hold."
+			if hold_commodities.has(row.hold_id) and hold_commodities[row.hold_id] != row.cargo_id: return "A bulk hold cannot mix commodities."
+			hold_commodities[row.hold_id] = row.cargo_id
+			var used_grams: int = hold_totals.get(row.hold_id, 0)
+			if row.quantity > hold.capacity_grams - used_grams: return "Cargo exceeds bulk hold capacity."
+			hold_totals[row.hold_id] = used_grams + row.quantity
+			continue
+		if row.has("hold_id"): return "Only bulk cargo can specify a hold."
 		var capacity: Variant = _ship.cargo_capacities.get(cargo.capacity_pool)
 		if not capacity is int or capacity < 0 or capacity > LIMIT: return "Ship has no valid capacity for this cargo."
 		if units.has(cargo.capacity_pool) and units[cargo.capacity_pool] != row.unit: return "Capacity pool mixes incompatible units."
