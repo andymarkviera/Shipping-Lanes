@@ -2944,3 +2944,110 @@ implementation changed in this branch.
 Deliver via DRAFT PR against main. No deployment, real SQL durability, manual
 acceptance or Step 70 completion claimed. No secrets, accounts, databases, exports
 or caches belong in this commit.
+
+## Step 70 — Bulk service presentation and recovery (draft) — November 3, 2026
+
+Task ID: `bulk-service-presentation-and-recovery`. Started from merged Step 69
+main `4ea9b72` on `feat/step-70-bulk-service-presentation-and-recovery`. Implemented
+ONLY Step 70. D127 and BULK_SERVICE_RECOVERY.md document the lifecycle and scope.
+
+Added developer-menu Bulk Port Test with explicit commodity/hold selection,
+all-in gross quote, positive integer-gram partial discharge, receipts and a
+read-only crane/progress presentation. Both loading and unloading use the existing
+shared timed operation service. The separate private fixture reuses starter
+presentation/handling with the authored bulk holds and copied bulk-compatible
+berths; existing playable/public catalog ships do not gain bulk capacity.
+
+The bulk adapter stages changes and commits frozen acquisition origin/destination,
+quote inputs, hold allocation, cumulative discharge, receipts, wallet and operation
+state together through the existing SQLite store before publishing success. Restore
+validates bounded object-free history against reconstructed manifest/wallet/terminal
+operations. Pending service resumes from its durable progress without offline time;
+partial voyages retain pose, fuel and single condition and restart in neutral.
+Cancel/berth loss stops unfinished work only. Stale/failed/unknown commits fence the
+fixture until reopen, preserving the database. Crane drawing has no economic or
+clock callback. Repeated operation completion/receipt replay cannot award twice.
+
+The store gains optional codec callbacks with unchanged container/heavy defaults.
+Bulk uses a separate private realm/version 1; no prior save migration or reset.
+Godot remains **4.7.2**, game protocol **17**, ticket **7**, existing IDs and all
+**156 existing .gd.uid files** are unchanged. Four new script UIDs are retained;
+new runtime resources are explicitly exported. Single condition, one nonexpiring
+active job, no player transfers/trades/gifts, no machinery wear and no hidden
+shallows remain. No Step 71, deferred request, live deployment or live-save change.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf`, downloaded into isolated
+`/workspace/work/step70`. Logs, engine, virtualenv, XDG fixtures and databases remain
+outside Git. Installed 4.6.3 was not used for project checks.
+
+- Bulk service suite: **65 assertions**; actual bulk panel/scene: **16 assertions**.
+  Covers every commodity/hold pair, duplicate acceptance/completion, cumulative
+  payout, malformed snapshots, frozen terms, hold mismatch, partial cancellation,
+  stale writer fencing and 100 artificial visual-progress updates against an
+  unfinished operation without changing cargo/wallet/authority progress.
+- Portable `tools/check_bulk_service.py` passes all **15 process phases**, including
+  **four owned-process kills** at before/after load and unload COMMIT markers.
+  Reopen verifies rollback/committed recovery, lost-reply zero-delta receipt replay,
+  partial and final settlement, and repeated final reopen. Actual scene checks
+  verify destination partial discharge, hidden panel, berth loss, then restart at
+  saved sailing position/fuel with remaining hold cargo and prior wallet intact.
+- Bulk earnings **330** and capacity **102** assertions pass. All **160 scripts**
+  parse/load; Main and editor/import pass. Initial imports lacked a writable cache
+  directory and emitted settings/cache errors; rerun with isolated XDG data/config/
+  cache is clean. Initial new probe parse issues and inherited container layout on
+  the bulk fixture were corrected before the passing runs.
+- Catalog, controls, application flow, starter assets, units, diagnostics, contracts,
+  geography, session/clocks, handling, camera, water/feedback, world size, heavy
+  lifter, fuel, economy, compact snapshots, public physics, repair, purchase,
+  inspection/switching/resale pass. Diagnostics emits its intentional validation
+  error. Ports passes **261**, voyage **101**, and sailing-save **330 checkpoints**.
+  Slots and friends-client menu/configuration also pass.
+- All **28 existing SQLite storage/persistence/migration/durable-recovery phases**
+  pass, including **ten owned-process kills**, rollback/reopen, backup fallback and
+  persistence UI. Existing voyage additionally passes nine ordered recovery phases
+  with four intentional self-kills around loading/delivery commits. The scratch
+  classifier initially labeled those four signal exits failures; verified each
+  exact ready marker, signal exit, error-free log and subsequent recovered state.
+- All **45 Python tests** pass with isolated psycopg/binary 3.2.10. Production route
+  benchmark and all three Step 67 progression scenarios pass with request replay
+  and serialized reload equivalence. SQL doubles are not PostgreSQL evidence.
+- Local host/client reconnect/actions and normal/impaired replication, cargo-network
+  and connected-world pass: **16/16 process results**. Step 69's normal replication
+  rejection-count failure did not reproduce in this run.
+- Python AST compilation (**64 sources**), whitespace, existing UID byte comparison
+  and presence of all script sidecars pass. No secrets, accounts, databases,
+  exports, caches or generated evidence are included in the commit.
+
+### Linux limits and unrun acceptance gates
+
+Collision fails lateral contact; composition fails its two side-course contacts.
+Shared gauges and wear reach 3 and 10 passing assertions then time out waiting for
+rendered frames. These reproduce the previously recorded Linux limits and are not
+clean passes. Capacity fixtures cover 2/10/25/50/100 clients, dispersed and crowded:
+**27/30 process results** pass. Observers fail `Observer has no unbounded motion
+jump` for 10 dispersed, 25 dispersed and 25 crowded; all server/bot processes and
+other observers pass. These are recorded failures, not a production capacity claim;
+no networking implementation changed.
+
+- **Windows:** pinned PowerShell check suite, native identity/integration runners,
+  Debug/Release client/server exports, exported bulk scene/resource inclusion,
+  Windows execution of the portable recovery probe and save/UID compatibility.
+- **PostgreSQL/HTTPS:** real bulk cargo/wallet/receipt transaction concurrency,
+  replay, before/after-commit crashes, canonical checkpoint/reload and server
+  restart. No DB client/server or configured stack is present. Bulk public RPC/
+  PostgreSQL wallet integration is not implemented by this private fixture;
+  SQLite proof does not close that boundary.
+- **Keycloak/authenticated peers:** native sign-in, two-account isolation/ownership,
+  lease fencing, disconnect/rebind/reconnect, server handoff and authenticated
+  partial-voyage restart. Java exists; no configured Keycloak stack/accounts or
+  public bulk endpoint is present. No remote internet deployment was tested.
+- **Visual/Andy playtest:** rendered crane/load/unload behavior, quote/receipt
+  readability, scrolling/focus/scaling, helm suppression and reopening services,
+  real collision-safe sailing/docking, bulk fixture appearance, unchanged ship/
+  HUD behavior and retained progression targets. No display/Xvfb or manual playtest;
+  headless scene assertions do not establish visual acceptance.
+
+Deliver as a **DRAFT PR against main**. Step 71 remains unstarted. No complete
+Windows/public-authenticated/rendered acceptance or live deployment is claimed.

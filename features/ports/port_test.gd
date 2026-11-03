@@ -179,6 +179,9 @@ func ship_key() -> String:
 func can_switch() -> bool:
 	return not loading.busy() and offers.active_job("preview_captain").is_empty() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
 
+func create_ship() -> HandlingShip:
+	return preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate() if heavy_mode else preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
+
 func select_port(index: int, restoring: bool = false) -> bool:
 	if index < 0 or index >= world_ports.size(): return false
 	if is_instance_valid(ship) and not restoring and not can_switch():
@@ -186,7 +189,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 		offer_notice = "Finish or cancel your current job before changing ships."
 		return false
 	var next_port: Node3D = world_ports[index]
-	var next_ship: HandlingShip = preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate() if heavy_mode else preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
+	var next_ship: HandlingShip = create_ship()
 	var allocation: Dictionary = next_port.reserve_spawn(next_ship.definition.hull_size_m)
 	if not allocation.ok:
 		next_ship.free()
