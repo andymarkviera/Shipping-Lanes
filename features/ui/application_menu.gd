@@ -60,6 +60,7 @@ func _ready() -> void:
 		button(home, "BOAT HANDLING TEST", "handling")
 		button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
 		button(home, "PORT TEST", "ports")
+		button(home, "BULK PORT TEST", "bulk_ports")
 		button(home, "LOCAL MULTIPLAYER TEST", "local_network")
 		continue_button = button(home, "CONTINUE TEST SESSION", "continue")
 		button(home, "SERVERS", "servers")
