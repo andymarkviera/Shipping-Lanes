@@ -2739,3 +2739,98 @@ These reproduce the Step 62–66 limits and are not clean passes.
 Deliver as a DRAFT PR against main. No live deployment, production gate completion
 or manual acceptance claimed. Step 68 and the deferred local-save UX remain out
 of scope.
+
+## Step 68 — Bulk capacity model (draft) — November 2, 2026
+
+Task ID: `bulk-capacity-model`. Started from merged Step 67 main `629820b` on
+`feat/step-68-bulk-capacity-model`. Implemented ONLY Step 68. D125 and
+BULK_CAPACITY.md record quantities, compatibility, mixing and scope.
+
+Added grain, coal, ore and limestone catalog resources using integer grams.
+Ships can author stable bulk holds with individual gram limits and commodity
+allowlists. The explicit single-commodity-per-hold policy allows same-commodity
+batches to share a hold and different commodities in separate holds. Bulk batches
+must identify their hold; overfill, invalid quantities/units/holds, incompatible
+commodities and mixing fail atomically. An emptied hold releases its assignment.
+Per-hold and aggregate usage retain separate units from container slot counts.
+
+A data-only two-hold fixture carries 400 t forward and 600 t aft, supporting all
+sixteen ordered commodity pairs. Its independently authored DWT is 1,500 t;
+DWT is metadata, not capacity or a derived hold count. No existing ship gains
+bulk support. The fixture is not added to the playable/purchasable fleet catalog.
+Existing container batch shape, six-slot capacity and other pool checks remain.
+All five new data resources are explicitly included in export_presets.cfg.
+
+Godot remains 4.7.2; game protocol 17, ticket 7, save versions, existing stable IDs
+and existing .gd.uid files are preserved. The new probe UID is retained. No bulk
+income, port loading/delivery UI, online acquisition, bulk persistence/reconnect,
+partial-discharge settlement or Step 69–70 work. No deferred requests, live saves,
+accounts or dedicated service deployment were changed.
+
+### Linux checks actually run
+
+Pinned `4.7.2.stable.official.ed1daf0bf`, with isolated XDG fixtures, logs and
+virtualenv under `/workspace/work/step68`, outside Git. Installed psycopg/binary
+3.2.10 in that venv; no PostgreSQL service was installed or contacted.
+
+- Editor/import, 154-script parse/load check and Main startup pass. Initial import
+  lacked local socket access and a created XDG config directory; rerun with local
+  network permission and explicit isolated directories passes without errors.
+- All **102 bulk assertions** pass: every two-hold commodity pairing at exact
+  capacity, one-gram overfill, same-commodity batching, empty-hold reuse, forbidden
+  mixing, hold-specific compatibility, invalid/unknown inputs and policy, DWT/hold
+  independence, mixed container/bulk budgets, copy isolation and catalog rejection.
+- Catalog, controls, flow, starter assets; units (50), diagnostics (9), contracts
+  (66), geography (342), session (21), clocks (22), handling (134), camera (20),
+  water (59), feedback (24), world size (2,042), heavy lifter (39), fuel (42),
+  economy (82), compact network (24), voyage (101), public physics (43), slots (38),
+  repair (20), purchase (35), fleet inspection (32), fleet switching (34), resale
+  (26) and the Step 67 route benchmark pass.
+- Ports passes **261 checks cleanly** in this run. The initial sweep exposed an
+  overly broad new manifest call to handling validation, affecting the existing
+  mixed container/liquid fixture. Separated bulk-definition validation from handling
+  and reran ports, bulk, catalog and all scripts successfully. Previously recorded
+  ports transform warnings did not reproduce in the final run.
+- All **45 Python tests** pass. Step 67's three progression scenarios pass with
+  per-request replay and serialized reload equivalence using this run's route
+  measurements. These use SQL doubles, not a database transaction proof.
+- All **28 SQLite phases** pass: storage, persistence, migration and durable action
+  recovery, including ten owned-process kills at explicit ready markers, rollback,
+  committed recovery, backup fallback and persistence UI. Sailing save passes 330
+  checkpoints with one retained cargo batch.
+- Local host/client reconnect/actions and normal/impaired replication, cargo-network
+  and connected-world profiles pass: **16 clean process results**. Private local
+  networking does not establish public authenticated compatibility.
+- Network-capacity fixtures ran dispersed and crowded layouts at 2, 10, 25, 50
+  and 100 clients: 29 of 30 process results pass. The 25-client dispersed observer
+  fails `Observer has no unbounded motion jump`; its server/bots and all other
+  cases pass. This is an additional observed Linux limitation, not a clean capacity
+  gate or a measured production capacity claim. No network implementation changed.
+- Friends-client menu/configuration passes with `--friends-client`. An initial
+  invocation omitted that required mode and tested the developer menu instead;
+  its failures/time-out are retained in scratch evidence, not counted as a pass.
+- Python AST compilation of 63 sources, whitespace and existing UID preservation
+  checks pass. No generated evidence, caches, exports or databases are committed.
+
+### Linux limits and unrun acceptance gates
+
+Collision fails lateral contact; composition fails its two side-course contacts.
+Shared gauges and wear pass 3 and 10 headless assertions respectively, then time out
+waiting for rendered frames. These reproduce previously recorded limits. The first
+sweep invoked gauge/wear flags not routed by Main; those idle timeouts are not test
+results. The explicit probe scene runs above establish the assertion counts.
+
+- **Windows:** pinned PowerShell suite, native identity/integration runners,
+  Debug/Release client/server exports, new resource inclusion and save/UID compatibility.
+- **PostgreSQL/HTTPS:** actual transaction concurrency/replay, before/after-commit
+  crash recovery, canonical checkpoint/reload and server restart. No DB client/server
+  or configured integration stack is available.
+- **Keycloak/authenticated peers:** native sign-in, two-account isolation, fencing,
+  disconnect/rebind/reconnect and restart progression. Java is present; no configured
+  identity stack or accounts were used.
+- **Visual/Andy playtest:** rendered client/ship/UI regression, focus/scaling,
+  navigation/docking and retained Step 67 progression targets. No display/Xvfb or
+  manual playtest was used. This capacity step introduces no new playable bulk UI.
+
+Deliver as a DRAFT PR against main. No deployment or completed manual/production
+acceptance claimed. Step 69 and deferred player requests remain unstarted.

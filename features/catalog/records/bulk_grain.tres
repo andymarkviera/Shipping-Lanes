@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="CargoDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/cargo_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "cargo_bulk_grain"
+display_name = "Grain"
+unit_label = "gram"
+quantity_unit = "gram"
+capacity_pool = "bulk_holds"
