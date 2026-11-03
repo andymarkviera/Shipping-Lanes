@@ -13,7 +13,7 @@ Local Port Test and private fixture economies are unchanged.
 | Shared definition | Earned-credit price | Preview |
 | --- | ---: | --- |
 | `ship_starter_container_01` | 500 | Familiar starter; six container slots |
-| `ship_coastal_container_01` | 900 | Six slots; 20% lower full-output propulsion fuel consumption |
+| `ship_coastal_container_01` | 800 | Six slots; 20% lower full-output propulsion fuel consumption |
 | `ship_swift_container_01` | 1,200 | Six slots; 20% stronger forward acceleration, higher fuel consumption |
 
 All three use the existing small starter hull as placeholder art, a 1,000 L tank,
@@ -28,8 +28,8 @@ JSON are included in exports. Restart matching backend/server after changing pri
 
 Prices are provisional earned-money targets, not a new starter grant: the existing
 200-credit fixture wallet cannot immediately buy. Existing 250/500/750-credit cargo
-rewards can fund the first purchase. Net progression pacing remains Step 67 and
-Andy's playtest. No real-money currency or player transfers are introduced.
+rewards can fund the first purchase. Step 67 tunes Coastal to 800 credits; see ECONOMY_GATE.md for
+measured first-upgrade scenarios and the remaining Andy playtest gate. No real-money currency or player transfers are introduced.
 
 ## Identity and transaction rules
 
