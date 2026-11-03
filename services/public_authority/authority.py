@@ -14,6 +14,8 @@ import voyages
 import refueling
 import repairs
 import ship_purchase
+import resale
+import voyage_accounting
 import fleet
 import recovery
 import wear
@@ -164,6 +166,7 @@ class Authority:
                   'renew': owned, 'release': owned, 'inspect': owned,
                   'checkpoint': owned | {'expected_revision', 'position', 'fuel_liters'},
                   'purchase': owned | {'action_id', 'expected_revision'},
+                  'ship_resale': owned | {'action_id', 'expected_revision', 'port_id', 'ship_id', 'value_minor'},
                   'fleet_switch': owned | {'action_id', 'expected_revision', 'port_id', 'ship_id', 'slot'},
                   'ship_purchase': owned | {'action_id', 'expected_revision', 'port_id', 'definition_id', 'cost_minor'},
                   'deliver': owned | {'action_id', 'expected_revision', 'cargo_id'},
@@ -196,6 +199,8 @@ class Authority:
             require(type(request['slot']) is int and 0 <= request['slot'] < len(recovery.SLOTS), 'BAD_SLOT')
         if op == 'fleet_switch':
             require(type(request['slot']) is int and -1 <= request['slot'] < max(map(len, fleet.SLOTS.values())), 'BAD_SLOT')
+        if op == 'ship_resale':
+            require(type(request['value_minor']) is int and 0 <= request['value_minor'] <= MAX_INTEGER, 'BAD_PRICE')
         if op == 'ship_purchase':
             require(type(request['cost_minor']) is int and 0 < request['cost_minor'] <= MAX_INTEGER, 'BAD_PRICE')
         if op == 'repair':
@@ -290,7 +295,7 @@ class Authority:
             profile['profile']['ship']['fuel_liters'] = request['fuel_liters']
             db.execute('UPDATE public_authority.profiles SET profile=%s,revision=revision+1 WHERE account=%s', (Jsonb(profile['profile']), account))
             return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']+1, 'condition_bp': profile['profile']['ship']['condition_bp']}
-        if op in voyages.OPERATIONS or op in recovery.OPERATIONS or op in ('refuel', 'repair', 'ship_purchase', 'fleet_switch'):
+        if op in voyages.OPERATIONS or op in recovery.OPERATIONS or op in ('refuel', 'repair', 'ship_purchase', 'fleet_switch', 'ship_resale'):
             return self._voyage(db, account, profile, request)
         require(not recovery.pending(profile['profile']), 'RECOVERY_REQUIRED')
         # Only game-owned purchase/delivery; no peer economic operations exist.
@@ -316,6 +321,7 @@ class Authority:
             else:
                 profile['profile']['cargo'] = [item for item in cargo if item['id'] != request['cargo_id']]
                 profile['profile']['delivered'].append(request['cargo_id'])
+            voyage_accounting.record(profile['profile'], profile['profile'], op, code, profile['money'], amount, repayment)
             db.execute('UPDATE public_authority.profiles SET money=money+%s,revision=revision+1,profile=%s WHERE account=%s', (amount, Jsonb(profile['profile']), account))
             self.fault('after_profile_write', request)
             db.execute('UPDATE public_authority.game SET money=money-%s,stock=stock+%s WHERE id=1', (amount, -1 if op == 'purchase' else 1))
@@ -344,6 +350,8 @@ class Authority:
                 code, candidate, amount, job = recovery.transition(profile['profile'], request, profile['money'])
             elif request['op'] == 'fleet_switch':
                 code, candidate, amount, job = fleet.transition(profile['profile'], request)
+            elif request['op'] == 'ship_resale':
+                code, candidate, amount, job = resale.transition(profile['profile'], request, game['money'], profile['money'])
             elif request['op'] == 'ship_purchase':
                 code, candidate, amount, job = ship_purchase.transition(profile['profile'], request, profile['money'])
             elif request['op'] == 'repair':
@@ -352,13 +360,18 @@ class Authority:
                 code, candidate, amount, job = refueling.transition(profile['profile'], request, profile['money'])
             else:
                 code, candidate, amount, job = voyages.transition(profile['profile'], request, now_ms, game['money'])
-        ok = code in ('JOB_ACCEPTED', 'CARGO_LOADED', 'VOYAGE_DELIVERED', 'JOB_CLOSED', 'REFUELED', 'REPAIRED', 'SHIP_PURCHASED', 'FLEET_SWITCHED', 'HULL_DAMAGED', 'SHIP_SUNK', 'SHIP_RECOVERED')
+        ok = code in ('JOB_ACCEPTED', 'CARGO_LOADED', 'VOYAGE_DELIVERED', 'JOB_CLOSED', 'REFUELED', 'REPAIRED', 'SHIP_PURCHASED', 'SHIP_SOLD', 'FLEET_SWITCHED', 'HULL_DAMAGED', 'SHIP_SUNK', 'SHIP_RECOVERED')
         repayment = 0
+        report = None
         if ok:
             amount, repayment = recovery.repay(candidate, amount)
             if job is not None and code == 'VOYAGE_DELIVERED':
                 job['paid_minor'] = amount
                 job['recovery_repaid_minor'] = repayment
+            report = voyage_accounting.record(profile['profile'], candidate, request['op'], code, profile['money'], amount, repayment)
+            if code == 'SHIP_SOLD':
+                job.update(recovery_repaid_minor=repayment, wallet_delta_minor=amount, wallet_before_minor=profile['money'], wallet_after_minor=profile['money']+amount)
+                candidate['last_resale_receipt'] = job
             require(candidate.get('recovery_debt_minor', 0) <= MAX_INTEGER, 'OVERFLOW')
             require(0 <= profile['money']+amount <= MAX_INTEGER, 'OVERFLOW')
             db.execute('UPDATE public_authority.profiles SET profile=%s,money=money+%s,revision=revision+1 WHERE account=%s', (Jsonb(candidate), amount, account))
@@ -366,8 +379,9 @@ class Authority:
             require(0 <= game['money']-amount <= MAX_INTEGER, 'OVERFLOW')
             if amount: db.execute('UPDATE public_authority.game SET money=money-%s WHERE id=1', (amount,))
         result = dict(ok=ok, code=code, action_id=request['action_id'], revision=profile['revision']+int(ok), amount=amount)
+        if report is not None: result['voyage_report'] = report
         if repayment: result['recovery_repaid_minor'] = repayment
-        if job is not None: result['owned_ship' if request['op'] == 'ship_purchase' else 'job'] = job
+        if job is not None: result['owned_ship' if request['op'] == 'ship_purchase' else 'resale' if request['op'] == 'ship_resale' else 'job'] = job
         db.execute('INSERT INTO public_authority.receipts VALUES(%s,%s,%s,%s)', (account, request['action_id'], fingerprint, Jsonb(result)))
         if ok: db.execute('INSERT INTO public_authority.journal VALUES(%s,%s,%s)', (account, request['action_id'], amount))
         return result

@@ -1,6 +1,9 @@
 extends PanelContainer
 ## Isolated, read-only comparison. Preview instantiates visual scenes, never runtime hulls.
 const Inspection = preload("res://features/catalog/fleet_inspection.gd")
+signal resale_requested(quote_id: String)
+var sell: Button
+var sale_confirmation: String = ""
 signal activation_requested(ship_id: String)
 var activate: Button
 var confirmation: String = ""
@@ -32,6 +35,17 @@ func _ready() -> void:
 	activate.text = "Activate selected owned ship (left column)"
 	activate.pressed.connect(activate_selected)
 	stack.add_child(activate)
+	sell = Button.new()
+	sell.pressed.connect(sell_selected)
+	stack.add_child(sell)
+	var cancel_sale := Button.new()
+	cancel_sale.text = "Cancel sale review"
+	cancel_sale.pressed.connect(func(): sale_confirmation = ""; refresh_details())
+	stack.add_child(cancel_sale)
+	var sale_policy := Label.new()
+	sale_policy.text = "Sell empty stored ships at this port only. Finish all cargo/jobs first. Active ship retained. Fuel has no resale value."
+	sale_policy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stack.add_child(sale_policy)
 	family = OptionButton.new()
 	for title: String in Inspection.FAMILIES: family.add_item(title)
 	family.item_selected.connect(func(_index: int): refresh_details())
@@ -118,6 +132,7 @@ func refresh(snapshot: Dictionary, usable: bool) -> void:
 
 func open(definition_id: String) -> void:
 	confirmation = ""
+	sale_confirmation = ""
 	for index: int in range(selectors[0].item_count):
 		if selectors[0].get_item_metadata(index) == "catalog:" + definition_id: selectors[0].select(index); break
 	show()
@@ -136,6 +151,16 @@ func activate_selected() -> void:
 func refresh_details() -> void:
 	var selected_entry: Dictionary = choices[selectors[0].selected] if selectors[0].selected >= 0 and selectors[0].selected < choices.size() else {}
 	var eligible: bool = available and selected_entry.has("id") and not selected_entry.get("active", false) and selected_entry.get("storage_port_id") == data.get("port") and int(data.get("cargo", 0)) == 0 and data.get("job", {}).is_empty()
+	var terms: Dictionary = selected_sale()
+	sell.disabled = not available or terms.is_empty()
+	if sell.disabled or sale_confirmation != str(terms.get("id", "")): sale_confirmation = ""
+	sell.text = "Select an eligible stored ship to sell"
+	if not terms.is_empty():
+		var gross: int = int(terms.value_minor)
+		var debt: int = int(data.get("recovery_debt_minor", 0))
+		@warning_ignore("integer_division")
+		var repaid: int = mini(debt, maxi(1, gross / 2)) if gross > 0 else 0
+		sell.text = ("Confirm sale" if not sale_confirmation.is_empty() else "Review sale") + " — gross %.2f · debt %.2f · wallet +%.2f" % [gross / 100.0, repaid / 100.0, (gross - repaid) / 100.0]
 	activate.disabled = not eligible
 	if not eligible or confirmation != str(selected_entry.get("id", "")): confirmation = ""
 	activate.text = "Confirm activation — retain fuel and condition" if not confirmation.is_empty() else "Activate selected owned ship (left column)"
@@ -155,3 +180,22 @@ func refresh_details() -> void:
 		models[index] = scene.instantiate() as Node3D
 		models[index].process_mode = Node.PROCESS_MODE_DISABLED
 		previews[index].add_child(models[index])
+
+func selected_sale() -> Dictionary:
+	if selectors[0].selected < 0 or selectors[0].selected >= choices.size(): return {}
+	var entry: Dictionary = choices[selectors[0].selected]
+	for quote: Dictionary in data.get("resale_quotes", []):
+		if quote.ship_id == entry.get("id", ""): return quote
+	return {}
+
+func sell_selected() -> void:
+	if sell.disabled: return
+	var terms: Dictionary = selected_sale()
+	if terms.is_empty(): return
+	if sale_confirmation != str(terms.id):
+		sale_confirmation = str(terms.id)
+		refresh_details()
+		return
+	sale_confirmation = ""
+	sell.disabled = true
+	resale_requested.emit(str(terms.id))
