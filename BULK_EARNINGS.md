@@ -104,3 +104,7 @@ wrong port/ship/owner, tampered cargo, shared container jobs and callback reentr
 
 Run using the pinned Godot 4.7.2 after editor import. PROGRESS.md records the Linux
 sweep and remaining Windows/PostgreSQL/Keycloak/rendered acceptance gates.
+
+Step 70 follow-through: [Bulk service presentation and recovery](BULK_SERVICE_RECOVERY.md)
+adds the private service panel, shared operations and atomic SQLite recovery around
+this model. Public RPC/PostgreSQL integration remains outside that fixture.

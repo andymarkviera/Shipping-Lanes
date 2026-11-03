@@ -611,3 +611,28 @@ Step 70 remains responsible for service presentation and durable recovery. Do no
 mistake process-local replay coverage for crash/restart/SQL guarantees. The worked
 123.456789 t / 1 NM / 1 credit / 1.10 / 0.90 example pays 49.50 + 72.72 = 122.22
 credits, matching the quote. See BULK_EARNINGS.md for bounds and exact arithmetic.
+
+## D127 — Bulk service authority commits before visual publication
+
+Step 70 (`bulk-service-presentation-and-recovery`) connects the existing bulk model
+to the shared timed operation service, a commodity/hold panel and a separate local
+bulk voyage fixture. Keep the two-hold prototype out of the public purchasable fleet;
+reuse the starter presentation without giving existing ships bulk capacity.
+Choose a finite authored commodity/hold quote, load in full, and unload positive
+integer grams at its destination. Five seconds per service is provisional fixture
+pacing, independent of grams; neither the crane nor UI completion calls settlement.
+
+Persist frozen origin/destination/quote inputs, allocation, cumulative partials,
+receipts, wallet and operation state as one private SQLite checkpoint before
+publishing success. Validate bounded history by replay into isolated objects.
+Existing voyage schema/codecs remain defaults; use a new explicit private bulk
+realm/version 1 without migrating/resetting container/heavy saves. Preserve Godot
+4.7.2, game protocol 17, ticket 7, existing UIDs and online single-condition rules.
+
+On interruption resume the last durable progress, with no offline advance; restore
+sailing in neutral. Cancel/berth loss releases pending loading or stops pending
+unloading without removing previously loaded cargo or prior partial receipts.
+Failed/uncertain commits and stale revisions fence until reopen. No receipt eviction,
+automatic reset, new public RPC or PostgreSQL bulk wallet is implied. See
+BULK_SERVICE_RECOVERY.md for lifecycle boundaries and PROGRESS.md for evidence.
+Step 71 and all deferred player requests remain out of scope.
