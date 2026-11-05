@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BerthDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/berth_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "berth_gas_prototype"
+display_name = "Gas pipeline definition fixture"
+port_id = "port_gas_prototype"
+cargo_type_ids = Array[String](["cargo_gas_lng", "cargo_gas_nitrogen", "cargo_gas_oxygen", "cargo_gas_argon"])
+gas_pipelines = {
+"pipe_lng": {"cargo_type_ids": ["cargo_gas_lng"], "pipeline_type": "lng", "can_load": true, "can_unload": true},
+"pipe_industrial": {"cargo_type_ids": ["cargo_gas_nitrogen", "cargo_gas_oxygen", "cargo_gas_argon"], "pipeline_type": "industrial_cryogenic", "can_load": true, "can_unload": true}
+}
