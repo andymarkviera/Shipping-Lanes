@@ -3155,3 +3155,127 @@ The timer/replication first-run failures are retained above.
 
 Deliver as a **DRAFT PR against main**. No complete Windows/public-authenticated/
 rendered acceptance, Step 72 work or live deployment is claimed.
+
+## Step 72 — Gas delivery and persistence (draft) — November 5, 2026
+
+Task ID: `gas-delivery-and-persistence`. Branch
+`feat/step-72-gas-delivery-and-persistence`, based on merged Step 71 / PR #10,
+main `e2e1b8d`. Read AGENTS.md, CLOUD_HANDOFF.md, latest progress/decisions,
+FEATURE_INVENTORY.md, DEFERRED_PLAYER_REQUESTS.md, GAS_CAPACITY.md and original
+roadmap Step 72 before implementation. Initial checkout was Step 70; fetched the
+merged base after enabling workspace network access to the configured proxy.
+Implemented ONLY Step 72. D129 and GAS_DELIVERY_PERSISTENCE.md record the contract.
+
+Gas now shares the bulk quote/settlement, service/panel, timed operations and SQLite
+checkpoint path. Trusted family configuration retains existing bulk defaults and
+serialized field names; gas uses integer m³, explicit tank allocation and minor
+credits/m³/NM. Freeze direct distance, rate and both port modifiers. Positive
+whole-m³ partials pay cumulative exact earnings less prior payments. The documented
+123 m³ LNG / 1,500 m / 1.10 / 0.90 quote is **98.62 credits**, paid **40.09 + 58.53**.
+Fragmenting the remainder cannot increase or reduce final payment. Gas has no oil
+market, buy/sell lots, resale price or propulsion-fuel conversion.
+
+Added developer-menu Gas Port Test using the gas capacity fixture and explicitly
+compatible copied berths. Commodity/tank selection, pipeline label, frozen gross
+quote (also visible during service), whole-m³ unload amount, progress and receipts
+reuse the bulk UI. Gas draws pipeline progress without economic callbacks. The
+shared five-second authority operation loads a whole batch or unloads a requested
+partial. Pipeline compatibility/direction and manifest/job eligibility are checked
+at admission and completion. Unsupported delivery, over-discharge, wrong owner/ship/
+port, provenance mismatch, conflicting replay and repeat final settlement fail.
+
+New private gas realm/version 1 preserves acquisition/origin/destination, tank,
+frozen terms, operation history, cumulative receipts, cargo, wallet, pose, fuel and
+single condition atomically before publishing success. Exact replay returns the
+historical receipt with zero new award. Cancel/berth or pipeline loss stops only
+unfinished work; completed cargo/partials remain. Resume durable progress without
+offline advance and sailing in neutral. Failed/uncertain commits and stale writers
+fence until reopen. Unknown/corrupt saves are preserved, not reset. Loaded-job
+abandonment, public gas RPC/wallet/handoff/sinking integration are not introduced;
+the lifecycle table explicitly records these private-fixture boundaries.
+
+Godot remains **4.7.2**, game protocol **17**, ticket **7**. All **162 existing
+.gd.uid files** are byte-identical, with no new scripts requiring sidecars. The new
+runtime scene is explicitly exported. Existing bulk/container/heavy save versions,
+IDs and paths remain unchanged. One active nonexpiring job, single condition, no
+player trades/transfers/gifts, no machinery wear and no hidden shallows remain.
+No Step 73, deferred requests, live-save change or deployment.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf`, downloaded under `/workspace/work/step72`.
+Installed 4.6.3 was not used. Engine, virtualenv, logs, generated compatibility
+sources, XDG fixtures and databases remain outside Git.
+
+- Gas service suite: **221 assertions**; actual panel/scene: **16 assertions**.
+  Includes all compatible pairs in both directions, 40 independent Python-integer
+  arithmetic vectors (finite and overflow), whole-m³ input rejection, cumulative
+  fragments, provenance, origin/owner/ship/port rejection, stale writers, malformed
+  saves, terminal permission/interface changes at admission and completion, and
+  100 visual refreshes that cannot advance authority. Accepted quote remains visible.
+- Gas portable recovery runner: all **15 process phases** pass, including **four
+  owned-process kills** before/after loading and unloading COMMIT. Reopen verifies
+  rollback, committed recovery, lost-reply zero-delta replay, partial/final payout
+  and repeated final reopen. Actual scene restores loaded and partial voyages,
+  cancels unfinished unloading on berth loss, and resumes saved pose/fuel in neutral.
+- Bulk shared-path regression: **90 service assertions**, **16 scene assertions**,
+  all **15 recovery phases** (four more owned-process kills), **330 earnings** and
+  **102 capacity** assertions pass. Gas capacity retains **108** passing assertions.
+- Generated isolated fixtures from the **pre-Step-72 main service and earnings
+  sources**: current code restores pending loading/unloading, opens its partially
+  paid SQLite save and completes the original 98.99-credit bulk quote unchanged.
+- Editor/import and all **162 scripts** load; Main startup passes. Catalog, controls,
+  flow, starter assets, units, diagnostics, contracts, geography, session/clocks,
+  handling, camera, water/feedback, world size, heavy lifter, fuel, economy, compact
+  snapshots, public physics, repair, purchase, inspection/switching/resale pass.
+  Diagnostics emits its intentional validation error. Container voyage **101**,
+  sailing-save **330 checkpoints**, slots **38**, and friends-client menu checks pass.
+- All **28 existing SQLite storage/persistence/migration/durable-recovery phases**
+  pass, including **ten owned-process kills**, rollback, backup fallback and UI.
+  Container voyage additionally passes ten ordered recovery runs, including four
+  intentional self-kills and two final reopens without duplicate payment.
+- All **45 Python tests** pass with isolated psycopg/binary 3.2.10. Production route
+  benchmark and all three progression scenarios pass with request replay and
+  serialized reload equivalence. SQL doubles are not PostgreSQL evidence.
+- Local reconnect/actions and normal/impaired replication, cargo-network and
+  connected-world pass **16/16 process results**. Capacity fixtures pass **30/30**
+  process results across 2/10/25/50/100 clients, dispersed and crowded. These local
+  synthetic fixtures are not authenticated public-network or production capacity proof.
+- Python AST compilation, whitespace, existing UID byte comparison and presence of
+  every script sidecar pass. No secrets, accounts, databases, exports, caches or
+  generated evidence are included.
+
+Initial new-code failures were fixed before the passing focused runs: restore used
+live changed terminal permissions too early to cancel unfinished service; capturing
+self in store codec callbacks retained resources; the shared model constructor
+needed explicit parent initialization to retain container offers. The original bulk
+probe caught all three container failures and passes after that fix. Initial slots
+invocation used the wrong proof option; corrected isolated invocation passes.
+
+### Linux limits and unrun acceptance gates
+
+Collision fails lateral contact; composition fails two side-course contacts. Ports
+reaches **261 assertions** but emits two out-of-tree transform errors. Shared gauges
+and wear reach **3/10 passing assertions**, then time out waiting for rendered frames.
+These reproduce recorded Linux limitations and are not clean passes.
+
+- **Windows:** pinned PowerShell suite; native identity/integration runners;
+  Debug/Release client/server exports, exported gas resource inclusion; portable gas
+  recovery runner and Windows save/UID compatibility. No Windows/PowerShell runtime.
+- **PostgreSQL/HTTPS:** actual gas cargo/wallet/receipt transaction concurrency,
+  replay, before/after-commit crashes, canonical reload and server restart. No
+  configured PostgreSQL client/server/HTTPS integration stack or public gas endpoint;
+  private SQLite proof does not close that boundary.
+- **Keycloak/authenticated peers:** native sign-in, two-account isolation/ownership,
+  lease fencing, disconnect/rebind/reconnect, server handoff and authenticated gas
+  restart. Java exists; configured identity stack/accounts and public gas integration
+  are absent. No remote internet deployment was tested.
+- **Visual:** rendered pipeline progress, quote/receipt readability, small-screen
+  scrolling/focus/scaling, helm suppression, placeholder hull/terminal appearance
+  and unchanged HUD/ship presentation. No display/Xvfb or manual visual acceptance.
+- **Andy playtest:** real collision-safe sailing/docking, gas-service usability,
+  interruption/reopen and retained progression targets. Headless scene tests do not
+  establish human voyage or visual acceptance.
+
+Deliver as a **DRAFT PR against main**. Step 73 remains unstarted. No complete
+Windows/public-authenticated/rendered acceptance or live deployment is claimed.
