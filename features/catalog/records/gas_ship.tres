@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ship_gas_prototype_01"
+display_name = "Segregated gas prototype"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
+cargo_type_ids = Array[String](["cargo_gas_lng", "cargo_gas_nitrogen", "cargo_gas_oxygen", "cargo_gas_argon"])
+gas_tanks = {
+"tank_lng": {"capacity_cubic_meters": 400, "cargo_type_ids": ["cargo_gas_lng"], "pipeline_type": "lng"},
+"tank_forward": {"capacity_cubic_meters": 600, "cargo_type_ids": ["cargo_gas_nitrogen", "cargo_gas_oxygen", "cargo_gas_argon"], "pipeline_type": "industrial_cryogenic"},
+"tank_aft": {"capacity_cubic_meters": 600, "cargo_type_ids": ["cargo_gas_nitrogen", "cargo_gas_oxygen", "cargo_gas_argon"], "pipeline_type": "industrial_cryogenic"}
+}

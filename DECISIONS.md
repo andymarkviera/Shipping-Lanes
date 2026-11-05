@@ -636,3 +636,25 @@ Failed/uncertain commits and stale revisions fence until reopen. No receipt evic
 automatic reset, new public RPC or PostgreSQL bulk wallet is implied. See
 BULK_SERVICE_RECOVERY.md for lifecycle boundaries and PROGRESS.md for evidence.
 Step 71 and all deferred player requests remain out of scope.
+
+## D128 — Explicit launch gas set, segregated cubic-meter tanks and pipelines
+
+Step 71 (`gas-capacity-and-terminal-compatibility`) selects LNG, nitrogen, oxygen
+and argon as our launch definitions, resolving U027's research five/seven/six-list
+conflict through an authored subset. LNG represents methane-based cargo; no separate
+methane duplicate. Helium/hydrogen require future containment definitions. This is
+a game design choice, not a verified current source-game catalog.
+
+Use bounded positive integer cubic meters (1 m³ precision), stable per-tank IDs and
+explicit commodity allowlists. One commodity per tank; same-commodity batches may
+share remaining space, and emptying releases assignment. Separate LNG and industrial
+cryogenic pipeline interfaces; terminals explicitly allow loading/unloading per
+pipeline. Reject malformed, unsupported and mismatched definitions/combinations.
+No pressure/temperature simulation, cleaning, machinery wear or gas oil market.
+
+Container counts, bulk grams, propulsion fuel and DWT remain independent. Fixtures
+are data-only and grant no existing ship/port new capabilities. Step 72 owns quotes,
+physical service integration, timed transfers, save/lifecycle rules and settlement;
+whole-m3 precision is the current contract and must be deliberately revised before
+fractional gas quantities are introduced. GAS_CAPACITY.md documents the validation
+API and its authority boundary. Godot 4.7.2, game protocol 17 and ticket 7 remain.

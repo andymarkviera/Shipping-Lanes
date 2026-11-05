@@ -3051,3 +3051,107 @@ no networking implementation changed.
 
 Deliver as a **DRAFT PR against main**. Step 71 remains unstarted. No complete
 Windows/public-authenticated/rendered acceptance or live deployment is claimed.
+
+## Step 71 — Gas capacity and terminal compatibility (draft) — November 5, 2026
+
+Task ID: `gas-capacity-and-terminal-compatibility`. Branch
+`feat/step-71-gas-capacity-and-terminal-compatibility` starts at merged Step 70
+main `271f214`. Initial checkout ended at Step 68; fetching origin revealed
+Steps 69–70, which were read before implementation. Implemented ONLY Step 71.
+D128 and GAS_CAPACITY.md record the launch set, precision and authority boundary.
+
+Added LNG, nitrogen, oxygen and argon definitions using bounded integer cubic meters
+(1 m³ precision). LNG covers methane-based cargo; no duplicate methane commodity,
+helium or hydrogen launch support. Explicit tank IDs/capacities/commodity allowlists
+and single-commodity segregation reject mixing, overfill and unsupported allocations
+atomically. Same-gas batches may share space; emptying releases assignment.
+Container counts, bulk grams and gas m³ keep independent budgets, including when
+hold/tank names collide. No existing ship gains gas capacity.
+
+Berth pipelines explicitly select compatible commodities, LNG or industrial cryogenic
+interface, and loading/unloading directions. Catalog validation rejects malformed
+and mismatched definitions transactionally. Read-only `GasRules.transfer_error`
+rejects unsupported ship/tank/commodity/terminal/pipeline/direction combinations.
+It does not grant docking, ownership, stock or economic authority. Step 72 must use
+this query and manifest checks at admission/completion; no gas transfer, quote,
+service UI or persistence is activated here. Gas gets no oil market.
+
+Data-only fixtures provide one 400 m³ LNG tank, two 600 m³ industrial tanks and a
+terminal with two bidirectional pipelines. Fixtures are not playable/purchasable
+or spawned in the world. All new runtime resources are explicitly exported.
+Godot **4.7.2**, protocol **17**, ticket **7**, save schemas and all **160 existing
+.gd.uid files** remain unchanged; two new script sidecars are retained. Single
+condition, one active nonexpiring job, no trades/transfers/gifts, no hidden shallows
+and no machinery wear remain. No deferred work, live-save change or deployment.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf`; installed 4.6.3 was not used. Engine, logs,
+virtualenv and isolated XDG/SQLite fixtures remain under `/workspace/work/step71`,
+outside Git. Initial editor import lacked local socket access; rerun with local
+network permission and isolated XDG directories passes cleanly.
+
+- Gas probe: **108 assertions** pass, covering launch commodities, exact capacity,
+  one-m³ overfill, invalid inputs, exclusions, all segregated industrial pairs
+  alongside LNG, batching, tank reuse, malformed definitions, catalog rollback,
+  pipeline interfaces/directions, simultaneous full container/bulk/gas budgets,
+  colliding hold/tank IDs and copy isolation. Initial probe issues (StringName
+  fixture key and array context after typing a manifest as RefCounted) were fixed;
+  final variables use the concrete preloaded script type and pass all assertions.
+- Bulk capacity **102**, earnings **330**, service **65**, actual bulk scene **16**
+  assertions pass. Portable service recovery passes all **15 phases**, including
+  four owned-process kills at load/unload commit markers.
+- Editor/import, **162-script** load check and Main startup pass. Catalog, controls,
+  flow, starter assets, units (50), diagnostics (9), contracts (66), geography (342),
+  session (21), handling (134), camera (20), water (59), feedback (24), world size
+  (2,042), heavy lifter (39), fuel (42), economy (82), compact snapshots (24), public
+  physics (43), repair (20), purchase (35), inspection (32), switching (34), resale
+  (26) pass. Diagnostics emits its intentional validation error. Clocks initially
+  failed its hosted-settings timer assertion during the concurrent sweep; isolated
+  rerun passes all **22** checks.
+- Voyage **101**, sailing-save **330 checkpoints**, friends-client configuration
+  and isolated slots **38** pass. Initial slots invocation omitted its required
+  proof argument; the corrected isolated invocation passes.
+- All **28 SQLite storage/persistence/migration/durable-recovery phases** pass,
+  including ten owned-process kills, rollback/reopen, backup and persistence UI.
+  Container voyage additionally passes ten ordered recovery runs including four
+  self-kills at verified fault markers and two final reopens without duplicate pay.
+- All **45 Python tests** pass with isolated psycopg/binary 3.2.10. Production route
+  benchmark and all three progression scenarios pass with request replay and
+  serialized reload equivalence. SQL doubles are not PostgreSQL evidence.
+- Local reconnect/actions and normal/impaired replication, cargo-network and
+  connected-world initially pass **15/16 process results**. Normal replication
+  client fails its buffered-motion bound (87.86 m/s maximum presentation speed);
+  isolated rerun of the same host/client pair passes both. Preserve this initial
+  timing failure; local fixtures are not public authenticated network proof.
+- Capacity fixtures pass **30/30 process results** across 2/10/25/50/100 clients
+  in dispersed and crowded layouts. These local synthetic loads do not establish
+  production capacity or authenticated public-network acceptance.
+- Python AST compilation (**64 sources**), whitespace and existing UID byte/presence
+  checks pass. No secrets, accounts, databases, exports or caches are committed.
+
+### Linux limits and unrun acceptance gates
+
+Collision fails lateral contact; composition fails two side-course contacts.
+Ports reaches **261** assertions but emits two out-of-tree transform errors.
+Shared gauges/wear reach **3/10** passing assertions, then time out awaiting rendered
+frames. These reproduce recorded Linux limitations and are not clean passes.
+The timer/replication first-run failures are retained above.
+
+- **Windows:** pinned PowerShell suite, native identity/integration runners,
+  Debug/Release client/server exports, gas resource inclusion and Windows save/UID
+  compatibility. PowerShell/Windows runtime is unavailable.
+- **PostgreSQL/HTTPS:** real transaction concurrency/replay, before/after-commit
+  crashes, canonical checkpoint/reload and restart. No PostgreSQL client/server
+  or configured integration stack. Gas persistence is Step 72; SQLite regressions
+  do not establish public gas durability.
+- **Keycloak/authenticated peers:** native sign-in, two-account privacy/ownership,
+  lease fencing, disconnect/rebind/reconnect, handoff and authenticated restart.
+  Java exists; no configured identity stack/accounts or gas endpoint is present.
+- **Visual:** rendered ship/HUD/port regression, resource appearance, focus/scaling
+  and existing bulk loading presentation. No display/Xvfb or manual visual review.
+- **Andy playtest:** collision-safe sailing/docking, cargo-service usability and
+  retained progression targets. Gas has no playable service in this definition step.
+
+Deliver as a **DRAFT PR against main**. No complete Windows/public-authenticated/
+rendered acceptance, Step 72 work or live deployment is claimed.
