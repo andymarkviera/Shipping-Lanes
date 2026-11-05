@@ -701,3 +701,22 @@ existing saves. Full history reconstruction validates the derived state.
 No playable oil hull/UI/public endpoint, shared market, price expiry or variable
 pricing is introduced. These remain Steps 74–76; no Step 74 work is started.
 LIQUID_TRADING_INVENTORY.md records the API, example and lifecycle boundaries.
+
+## D131 — Bounded oil model and explicit quote lifetime before service wiring
+
+Step 74 (`oil-market-simulation`) adds a dependency-free Python model at the
+existing Python authority boundary. A single public owner supplies all public
+views; private hosts instantiate distinct markets through the same model contract.
+Missing public authority fails closed. Port offsets, cadence-based signed supply
+recovery, bounded quantity/supply effects and hard price limits are configurable.
+Use whole barrels and integer minor credits; trusted authority time only.
+
+Quotes freeze terms until the explicit exclusive expiry boundary, even across
+market updates. Expired quotes require a new request; no silent repricing. Consumed,
+changed or foreign quotes cannot change pressure again. This is simulation only:
+Step 75 owns durable centralized transport, quote/account binding, idempotent
+settlement and cross-process evidence. Preserve Step 73's historical fixed-price
+save codec until that deliberate adapter exists. No public market endpoint or
+private inventory price substitution is enabled by this model. Step 75 unstarted.
+OIL_MARKET_SIMULATION.md records formulas, defaults, failures and scope. Existing
+cargo offers/jobs do not expire; no feed, real-money or player-transfer dependency.

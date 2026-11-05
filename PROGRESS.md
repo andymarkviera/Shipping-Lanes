@@ -3392,3 +3392,100 @@ implementation changed. Local synthetic fixtures do not prove public capacity.
 
 Deliver as a **DRAFT PR against main**. No complete Windows/public-authenticated/
 rendered acceptance or live deployment is claimed. Step 74 remains unstarted.
+
+## Step 74 — Oil market simulation (draft) — November 5, 2026
+
+Task ID: `oil-market-simulation`. Branch `feat/step-74-oil-market-simulation`
+is based on merged Step 73 main `1226e27`. Read AGENTS.md, CLOUD_HANDOFF.md,
+latest progress/decisions, FEATURE_INVENTORY.md, DEFERRED_PLAYER_REQUESTS.md and
+original roadmap Step 74. Initial checkout was stale; fetched current main with
+workspace network access to the configured proxy before implementation.
+Implemented ONLY Step 74; Step 75 remains unstarted. D131 and
+OIL_MARKET_SIMULATION.md document the authority contract and limitations.
+
+Added a dependency-free Python market model alongside the existing Python service
+sources. Configuration controls cadence, quote lifetime, base/port offsets, hard
+price bounds, bounded signed supply pressure/recovery and bounded quantity effect.
+All prices/quantities use integer minor credits/whole barrels. Authority time is
+monotonic; catch-up is constant-time and agrees with regular ticks. No live feed,
+real-money dependency or random price source. Snapshots/configuration are copied.
+
+Two public views share the same owner, prices and ordered state; views cannot
+instantiate fallback markets. Missing authority fails MARKET_UNAVAILABLE. Private
+hosts instantiate isolated markets using the same model; cross-market quotes and
+binding a private owner to a public view fail. Issued quotes freeze their terms
+across updates until the exclusive expiry boundary. Expiry returns QUOTE_EXPIRED
+without a trade effect; callers must explicitly request new terms. Modified,
+unknown or consumed quotes cannot produce another pressure change. Issued quote
+storage is bounded and expired entries are pruned.
+
+This is **model-level in-process evidence**, not two networked public servers or
+live public deployment. The trusted simulation transition changes market pressure
+only; it does not settle cargo or money. Durable centralized storage/transport,
+authenticated quote ownership, account settlement and durable retry receipts are
+Step 75. No public route is enabled. Step 73's fixed-price version-1 SQLite codec
+and private inventory remain unchanged pending that deliberate integration; no
+variable-price history is inserted into existing saves. Step 76 UI is untouched.
+
+Godot stays **4.7.2**, game/ticket protocols **17/7**. All **164 existing .gd.uid**
+files are byte-identical; no new GDScripts or exported runtime resources were added.
+Existing saves/IDs, single condition, one active nonexpiring cargo job, nonexpiring
+cargo offers, no player trades/transfers/gifts, no machinery wear and no hidden
+shallows remain unchanged. No secrets/accounts/databases/exports/caches committed.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf` downloaded under `/workspace/work/step74`;
+installed 4.6.3 was not used for checks. Engine, virtualenv, logs, XDG directories
+and SQLite fixtures remain outside Git.
+
+- **13 market unit tests pass:** shared public views/port differences, private-host
+  isolation and cross-market rejection, unavailable public authority, worked integer
+  prices, bounds, catch-up/backward clocks, expiry boundary/requote, frozen terms,
+  forged/consumed quotes, copy isolation, invalid config/quantities and quote limit.
+  Includes 500 updates across eight threads and 100 concurrent attempts to consume
+  one quote, with exactly one pressure effect. Threads are not multi-server proof.
+- **45 existing Python authority tests pass**, with isolated psycopg/binary 3.2.10.
+  Production route benchmark and all three progression scenarios pass with replay
+  and serialized reload equivalence. SQL doubles are not PostgreSQL evidence.
+- Liquid inventory portable runner: **13 process phases pass**, including **153
+  suite assertions** and **four owned-process kills** around purchase/sale COMMIT,
+  rollback/reopen, partial/final accounting and repeated final reopen.
+- Bulk and gas portable runners: **15 phases each pass**, including **90/221 suite
+  assertions**, actual scene checks and **four owned-process kills each**. Bulk
+  capacity **102**, earnings **330**, gas capacity **108** assertions pass.
+- Editor/import, all **164-script** loading and Main startup pass. Catalog, controls,
+  application flow, starter assets, units, contracts, geography, session/clocks,
+  handling, camera, water/feedback, world size, heavy lifter, fuel, economy, compact
+  snapshots, public physics, repair, purchase, inspection, switching and resale
+  pass. Diagnostics passes with its intentional validation error. Voyage **101**,
+  sailing-save **330 checkpoints**, slots **38**, unconfigured friends menu pass.
+- Python AST parsing (**67 sources**), existing UID comparison/sidecar presence and
+  whitespace checks pass. No game or account service route was modified.
+
+### Failures, limits and unrun gates
+
+Collision fails its lateral-contact assertion; composition fails two side-course
+contacts. Ports reaches **261 checks** but emits two out-of-tree transform errors.
+Shared gauges and wear pass **3/10 assertions**, respectively, then hit the
+65-second harness timeout awaiting rendered frames. These match prior recorded
+Linux limitations and are not clean passes. No changed physics/UI code is involved.
+The full legacy 28-phase SQLite sweep and network/capacity fixtures were not rerun;
+focused oil/bulk/gas durable recovery and the regressions above were run.
+
+- **Windows:** pinned PowerShell suite, native integration runners, Debug/Release
+  client/server exports and Windows save/UID/resource compatibility. No Windows or
+  PowerShell runtime available.
+- **PostgreSQL/HTTPS:** durable shared market concurrency/restart, quote/account
+  binding, atomic market/cargo/wallet/receipt settlement and retries after uncertain
+  commits. No configured PostgreSQL/HTTPS stack; these are Step 75 integration gates.
+- **Keycloak/authenticated peers:** native sign-in, two-account ownership/isolation,
+  fencing, reconnect/handoff and two public-server market consistency/outage tests.
+  No configured identity stack/accounts or public oil endpoint; an in-process
+  facade test is not this acceptance gate.
+- **Visual/Andy playtest:** rendered ship/HUD/port regressions, future oil quote
+  countdown/refresh/receipt presentation, focus/scaling and actual sailing/docking.
+  No manual visual acceptance; the oil player interface remains Step 76.
+
+Deliver as a **DRAFT PR against main**. No deployment, full platform acceptance,
+public settlement, actual cross-server market operation or Step 75 work is claimed.
