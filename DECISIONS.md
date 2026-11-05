@@ -658,3 +658,25 @@ physical service integration, timed transfers, save/lifecycle rules and settleme
 whole-m3 precision is the current contract and must be deliberately revised before
 fractional gas quantities are introduced. GAS_CAPACITY.md documents the validation
 API and its authority boundary. Godot 4.7.2, game protocol 17 and ticket 7 remain.
+
+## D129 — Gas uses the shared delivery authority with whole-m³ settlement
+
+Step 72 (`gas-delivery-and-persistence`) reuses bulk's quote, cumulative settlement,
+timed service, UI and atomic SQLite checkpoint engine. Keep D128's integer m³
+precision and segregated tanks. Gas rates are minor credits per m³ per NM, with
+both explicit port modifiers frozen in the gross quote; no oil market or cargo
+purchase/resale. Whole batch loading and positive whole-m³ partial unloading each
+use provisional five-second service. Revalidate authored gas pipeline direction /
+commodity / tank compatibility at admission and completion.
+
+Preserve tank, acquisition and origin/destination records, cumulative volume/payment
+and durable operation receipts. Exact replay has zero new reward; conflicts and
+incompatible deliveries fail. Cancel stops only unfinished service; loaded remainder
+and prior payments persist. Resume last committed progress with no offline advance,
+restore sailing in neutral, and fence failed/uncertain/stale saves until reopen.
+
+Use a separate developer-menu private gas fixture and version-1 realm; existing
+bulk/container/heavy saves and public IDs/protocols remain unchanged. Public gas
+RPC/PostgreSQL/authenticated handoff/sinking integration is not implied by private
+SQLite proof. GAS_DELIVERY_PERSISTENCE.md defines the lifecycle boundaries, finite
+fixture rates and worked 98.62-credit voyage. No Step 73 or deferred player work.
