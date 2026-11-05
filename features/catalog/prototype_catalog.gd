@@ -17,4 +17,8 @@ const RECORDS: Array[ContentDefinition] = [
 	preload("res://features/catalog/records/bulk_coal.tres"),
 	preload("res://features/catalog/records/bulk_ore.tres"),
 	preload("res://features/catalog/records/bulk_limestone.tres"),
+	preload("res://features/catalog/records/gas_lng.tres"),
+	preload("res://features/catalog/records/gas_nitrogen.tres"),
+	preload("res://features/catalog/records/gas_oxygen.tres"),
+	preload("res://features/catalog/records/gas_argon.tres"),
 ]

@@ -1,5 +1,6 @@
 class_name BerthDefinition
 extends ContentDefinition
+@export var gas_pipelines: Dictionary = {}
 @export var port_id: String = ""
 @export var cargo_type_ids: Array[String] = []
 
@@ -13,6 +14,8 @@ extends ContentDefinition
 @export var clearance_margin_m: float = 1.0
 
 func eligibility_error() -> String:
+	var gas_error: String = GasRules.berth_error(self)
+	if not gas_error.is_empty(): return gas_error
 	if not envelope_m.is_finite() or minf(envelope_m.x, minf(envelope_m.y, envelope_m.z)) <= 0: return "Invalid berth envelope"
 	if not position_m.is_finite() or not is_finite(heading_degrees): return "Invalid berth pose"
 	if not is_finite(max_docking_speed_mps) or max_docking_speed_mps < 0: return "Invalid docking speed"

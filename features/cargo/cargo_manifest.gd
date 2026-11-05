@@ -29,16 +29,24 @@ func hold_usage() -> Dictionary:
 		if row.has("hold_id"): totals[row.hold_id] = totals.get(row.hold_id, 0) + row.quantity
 	return totals
 
+func tank_usage() -> Dictionary:
+	var totals: Dictionary = {}
+	for row: Dictionary in _lines:
+		if row.has("tank_id"): totals[row.tank_id] = totals.get(row.tank_id, 0) + row.quantity
+	return totals
+
 func validate(candidate: Array[Dictionary]) -> String:
-	if not _ship.bulk_capacity_error().is_empty(): return "Invalid ship capacity definition."
+	if not _ship.bulk_capacity_error().is_empty() or not GasRules.ship_error(_ship).is_empty(): return "Invalid ship capacity definition."
 	if candidate.size() > 256: return "Too many cargo batches."
 	var units: Dictionary = {}
 	var ids: Dictionary = {}
 	var totals: Dictionary = {}
 	var hold_commodities: Dictionary = {}
 	var hold_totals: Dictionary = {}
+	var tank_commodities: Dictionary = {}
+	var tank_totals: Dictionary = {}
 	for row: Dictionary in candidate:
-		if row.size() != FIELDS.size() + (1 if row.has("hold_id") else 0): return "Incomplete cargo batch."
+		if row.size() != FIELDS.size() + (1 if row.has("hold_id") else 0) + (1 if row.has("tank_id") else 0): return "Incomplete cargo batch."
 		for field: String in FIELDS:
 			if not row.has(field): return "Incomplete cargo batch."
 			if field != "quantity" and (not row[field] is String or row[field].length() > 128): return "Invalid cargo reference."
@@ -50,6 +58,19 @@ func validate(candidate: Array[Dictionary]) -> String:
 		if not cargo is CargoDefinition or not _ship.cargo_type_ids.has(row.cargo_id): return "Cargo is incompatible with this ship."
 		if row.unit != cargo.quantity_unit: return "Cargo quantity uses the wrong unit."
 		if not _definitions.get(row.origin_port_id) is PortDefinition or not _definitions.get(row.destination_port_id) is PortDefinition: return "Unknown origin or destination."
+		if not GasRules.cargo_error(cargo).is_empty(): return "Invalid gas commodity definition."
+		if cargo.capacity_pool == "gas_tanks":
+			if row.has("hold_id"): return "Gas cannot use a bulk hold."
+			if not row.get("tank_id") is String: return "Gas cargo needs a valid tank."
+			var gas_error: String = GasRules.tank_error(_ship, cargo, row.tank_id)
+			if not gas_error.is_empty(): return gas_error
+			if tank_commodities.has(row.tank_id) and tank_commodities[row.tank_id] != row.cargo_id: return "A gas tank cannot mix commodities."
+			tank_commodities[row.tank_id] = row.cargo_id
+			var used_m3: int = tank_totals.get(row.tank_id, 0)
+			if row.quantity > _ship.gas_tanks[row.tank_id].capacity_cubic_meters - used_m3: return "Cargo exceeds gas tank capacity."
+			tank_totals[row.tank_id] = used_m3 + row.quantity
+			continue
+		if row.has("tank_id"): return "Only gas cargo can specify a tank."
 		if cargo.capacity_pool == "bulk_holds":
 			if cargo.quantity_unit != "gram": return "Bulk quantities must use grams."
 			if not row.get("hold_id") is String or not _ship.bulk_holds.has(row.hold_id): return "Bulk cargo needs a valid hold."
