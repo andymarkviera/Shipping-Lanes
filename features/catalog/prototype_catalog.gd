@@ -21,4 +21,5 @@ const RECORDS: Array[ContentDefinition] = [
 	preload("res://features/catalog/records/gas_nitrogen.tres"),
 	preload("res://features/catalog/records/gas_oxygen.tres"),
 	preload("res://features/catalog/records/gas_argon.tres"),
+	preload("res://features/catalog/records/oil.tres"),
 ]

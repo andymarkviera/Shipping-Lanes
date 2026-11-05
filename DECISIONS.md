@@ -680,3 +680,24 @@ bulk/container/heavy saves and public IDs/protocols remain unchanged. Public gas
 RPC/PostgreSQL/authenticated handoff/sinking integration is not implied by private
 SQLite proof. GAS_DELIVERY_PERSISTENCE.md defines the lifecycle boundaries, finite
 fixture rates and worked 98.62-credit voyage. No Step 73 or deferred player work.
+
+## D130 — Fixed-price whole-barrel oil lots before market simulation
+
+Step 73 (`liquid-trading-inventory`) introduces an isolated private inventory API,
+using whole barrels and a separate authored capacity pool. Use one unsold lot at a
+time, explicit lot selection for partial sales, and retain acquisition ID, quantity,
+unit/total cost and cumulative sold cost/proceeds/profit. Exact integer allocation
+makes fragmentation neutral. Charge purchase once; sale credits proceeds without
+charging the already-paid cost again. Reject rather than clamp excess quantities.
+
+The first fixture buys at Brindle Quay for 125 minor credits/barrel and sells at
+Slatewater Works for 175, with 20,000 starting minor credits and 200-barrel capacity.
+These version-1 fixture constants are not production balancing or a market model.
+Commit wallet/manifest/lots/history/receipts through the existing SQLite checkpoint
+before success; exact action replay has zero delta, conflicting replay fails, and
+stale/uncertain commits fence until reopen. A separate private realm preserves all
+existing saves. Full history reconstruction validates the derived state.
+
+No playable oil hull/UI/public endpoint, shared market, price expiry or variable
+pricing is introduced. These remain Steps 74–76; no Step 74 work is started.
+LIQUID_TRADING_INVENTORY.md records the API, example and lifecycle boundaries.

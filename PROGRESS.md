@@ -3279,3 +3279,116 @@ These reproduce recorded Linux limitations and are not clean passes.
 
 Deliver as a **DRAFT PR against main**. Step 73 remains unstarted. No complete
 Windows/public-authenticated/rendered acceptance or live deployment is claimed.
+
+## Step 73 — Liquid trading inventory (draft) — November 5, 2026
+
+Task ID: `liquid-trading-inventory`. Branch
+`feat/step-73-liquid-trading-inventory` starts at merged Step 72 main `bb26589`.
+Read AGENTS.md, CLOUD_HANDOFF.md, latest progress/decisions, FEATURE_INVENTORY.md,
+DEFERRED_PLAYER_REQUESTS.md and original roadmap Step 73. Initial checkout was
+Step 70; fetched current main with workspace network access before implementation.
+Implemented ONLY Step 73. D130 and LIQUID_TRADING_INVENTORY.md define the contract.
+
+Added whole-barrel oil, an independent 200-barrel data-only hull capacity and a
+private durable trading API. Brindle Quay sells to the captain at 125 minor credits
+per barrel; Slatewater Works buys at 175. Custom positive integer quantities are
+rejected atomically if cash or capacity is insufficient. One unsold lot at a time
+retains acquisition ID, origin, owner/ship, original quantity, unit/total cost,
+remaining quantity and cumulative sold cost/proceeds/profit. Partial sales name
+that lot explicitly. Purchase cost is charged once; sale credits proceeds and
+reports the already-paid cost basis without charging it again.
+
+The existing SQLite checkpoint store commits wallet, manifest, lots, action history
+and receipts together before publishing success. Exact retry returns the historical
+receipt with zero new delta; conflicting retries fail. Bounded history replay
+validates all derived state. Failed/uncertain commits and stale writers fence until
+a fresh instance reopens. A separate private version-1 realm preserves existing
+bulk/gas/container/heavy saves. No new public endpoint, playable oil hull, UI or
+market simulation is implied; Steps 74–76 remain separate and Step 74 is unstarted.
+
+Godot remains **4.7.2**, game protocol **17**, ticket **7**. All **162 existing
+.gd.uid files** are byte-identical; two new script sidecars are included. Runtime
+resources are explicitly exported. Existing catalog indices and IDs are preserved.
+Single condition, one active nonexpiring job, no player trades/transfers/gifts,
+no machinery wear and no hidden shallows remain unchanged. No deferred requests,
+live-save changes, live deployment, secrets, accounts, databases, exports or caches.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf`; installed 4.6.3 was not used. Downloaded
+engine, virtualenv, logs and isolated XDG/SQLite fixtures are outside Git under
+`/workspace/work/step73`.
+
+- Final oil suite: **153 assertions** pass, including exact cash/capacity limits,
+  malformed/fractional/overflow input, wrong owner/ship/port, docking, caller price
+  rejection, conflicting replay, explicit partial cost basis, 107 one-barrel
+  fragments, sold lot-ID reuse rejection, copy isolation, malformed save quarantine
+  and stale-writer fencing with no published mutation.
+- Portable oil recovery runner: **13 process phases** pass, including **four
+  owned-process kills** before/after purchase and sale COMMIT. Reopen proves buy
+  rollback/one debit, sale rollback/one credit, durable zero-delta retries,
+  partial/final accounting and repeated final reopen. Worked 123-barrel lot ends
+  with 6,150 minor-credit profit and 26,150 wallet, exactly as documented.
+- Existing gas and bulk portable service runners each pass **15 process phases**,
+  including their suites, actual scene checks and four owned-process kills each.
+  Gas capacity **108**, bulk capacity **102**, bulk earnings **330** assertions pass.
+- Editor/import, Main startup and **164-script** load check pass. Catalog, controls,
+  application flow, starter assets, units, diagnostics, contracts, geography,
+  session/clocks, handling, camera, water/feedback, world size, heavy lifter, fuel,
+  economy, compact snapshots, public physics, repair, purchase, inspection,
+  switching and resale pass. Diagnostics emits its intentional validation error.
+  Ports passes **261** checks; voyage **101**, sailing-save **330 checkpoints**,
+  isolated slots **38** and unconfigured friends-client menu checks pass.
+- Existing SQLite storage/persistence/migration/recovery: all **28 phases** pass,
+  including **ten owned-process kills**, rollback/reopen, backup fallback and UI.
+  Container voyage additionally passes **14 runs**, including round-trip/repeated
+  reopen and four self-kills around loading/delivery commits.
+- All **45 Python tests** pass with isolated psycopg/binary 3.2.10. Production route
+  benchmark and all three progression scenarios pass with per-request replay and
+  serialized reload equivalence. SQL doubles are not real PostgreSQL evidence.
+- Local network reconnect/actions, replication, cargo-network and connected-world
+  pass **15/16 process results**. Impaired replication client fails its buffered
+  motion bound (42.46 m/s maximum presentation speed); recorded below, not a pass.
+- Capacity fixtures: **29/30 process results** pass across 2/10/25/50/100 clients,
+  dispersed and crowded. The 25-client crowded observer fails `Observer has no
+  unbounded motion jump`; all server/bot processes and other observers pass.
+  These local synthetic fixtures are not authenticated production capacity proof.
+- Python AST parsing (**65 sources**), whitespace, existing UID byte comparison and
+  every script's sidecar presence pass. Generated evidence remains outside Git.
+
+Initial catalog insertion shifted positional references used by existing probes;
+fixed by appending oil after all existing records. Affected catalog, script load,
+bulk/gas capacity/earnings, diagnostics and handling checks pass on rerun. Initial
+editor import lacked socket permission; network-enabled import passes cleanly.
+Initial Python tests lacked psycopg and friends-menu invocation lacked the friends
+flag; corrected isolated runs pass. The usage-limit approval failure interrupted
+one import attempt; no command was executed by that failed approval review.
+
+### Linux limits and unrun acceptance gates
+
+Collision fails lateral contact; composition fails two side-course contacts.
+Shared gauges/wear reach **3/10 passing assertions** then time out awaiting rendered
+frames. These match the prior recorded Linux limitations and are not clean passes.
+Impaired replication's buffered-motion failure is retained above; no networking
+implementation changed. Local synthetic fixtures do not prove public capacity.
+
+- **Windows:** pinned PowerShell suite, native identity/integration runners,
+  Debug/Release client/server exports, oil resource inclusion, portable oil recovery
+  runner on Windows, Windows save/UID compatibility. No Windows/PowerShell runtime.
+- **PostgreSQL/HTTPS:** real concurrent oil cargo/wallet/receipt transactions,
+  retries, before/after-commit crashes, canonical reload and server restart. No
+  configured PostgreSQL/HTTPS stack or public oil endpoint. SQLite results do not
+  establish public settlement; centralized market integration remains Step 75.
+- **Keycloak/authenticated peers:** native sign-in, two-account isolation/ownership,
+  lease fencing, disconnect/rebind/reconnect, handoff and authenticated oil restart.
+  Java exists, but no configured identity stack/accounts or public oil integration.
+- **Visual:** rendered trade quantity/receipt/cost-basis UI, focus/scaling/scrolling,
+  exported oil resource appearance and unchanged ship/HUD presentation. No display,
+  Xvfb or visual acceptance; the oil interface is Step 76, not part of this API step.
+- **Andy playtest:** collision-safe sailing/docking, future oil-service usability,
+  interruption/reopen and retained progression targets. Headless proofs do not
+  establish human voyage acceptance. Public oil handoff/sinking/recovery and ship
+  switching/resale remain explicit integration gates outside this isolated fixture.
+
+Deliver as a **DRAFT PR against main**. No complete Windows/public-authenticated/
+rendered acceptance or live deployment is claimed. Step 74 remains unstarted.
