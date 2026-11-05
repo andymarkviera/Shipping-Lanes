@@ -1,6 +1,7 @@
 extends "res://features/ports/port_test.gd"
-## Separate private fixture: bulk capacity with the starter's placeholder presentation.
+## Separate private fixtures: bulk/gas capacity with the starter's placeholder presentation.
 const BulkService = preload("res://features/cargo/bulk_service.gd")
+@export_enum("bulk", "gas") var cargo_family: String = "bulk"
 var bulk = BulkService.new()
 var bulk_panel: VBoxContainer
 var cargo_scroll: ScrollContainer
@@ -10,29 +11,36 @@ var booted: bool = false
 func create_ship() -> HandlingShip:
 	var body: HandlingShip = super.create_ship()
 	body.definition = body.definition.duplicate(true)
-	body.definition.id = BulkService.Ship.id
-	body.definition.display_name = BulkService.Ship.display_name
-	body.definition.cargo_type_ids = BulkService.Ship.cargo_type_ids.duplicate()
+	body.definition.id = bulk.ship_definition.id
+	body.definition.display_name = bulk.ship_definition.display_name
+	body.definition.cargo_type_ids = bulk.ship_definition.cargo_type_ids.duplicate()
 	body.definition.cargo_capacities = {}
 	body.definition.container_layout = null
-	body.definition.bulk_holds = BulkService.Ship.bulk_holds.duplicate(true)
-	body.definition.bulk_mixing_policy = BulkService.Ship.bulk_mixing_policy
-	body.definition.dwt_tonnes = BulkService.Ship.dwt_tonnes
+	body.definition.bulk_holds = bulk.ship_definition.bulk_holds.duplicate(true)
+	body.definition.bulk_mixing_policy = bulk.ship_definition.bulk_mixing_policy
+	body.definition.gas_tanks = bulk.ship_definition.gas_tanks.duplicate(true)
+	body.definition.gas_mixing_policy = bulk.ship_definition.gas_mixing_policy
+	body.definition.dwt_tonnes = bulk.ship_definition.dwt_tonnes
 	return body
 
 func _ready() -> void:
+	bulk = BulkService.new(cargo_family)
 	save_enabled = false
 	super._ready()
 	for place: Node3D in world_ports:
 		place.definition = place.definition.duplicate(true)
 		place.berth = place.berth.duplicate(true)
-		place.definition.service_ids.append("bulk_transfer")
-		place.berth.service_ids.append("bulk_transfer")
-		place.berth.cargo_type_ids.append_array(BulkService.Ship.cargo_type_ids)
+		place.definition.service_ids.append(cargo_family + "_transfer")
+		place.berth.service_ids.append(cargo_family + "_transfer")
+		place.berth.cargo_type_ids.append_array(bulk.ship_definition.cargo_type_ids)
+		if cargo_family == "gas":
+			place.berth.gas_pipelines = bulk.terminals[place.definition.id].gas_pipelines.duplicate(true)
+			bulk.terminals[place.definition.id] = place.berth
 	switch_button.hide()
 	# Existing cargo controls belong to container/heavy fixtures, not this authority.
 	jobs_panel.hide()
 	bulk_panel = preload("res://features/cargo/bulk_service_panel.gd").new()
+	bulk_panel.family = cargo_family
 	cargo_scroll = ScrollContainer.new()
 	cargo_scroll.custom_minimum_size = Vector2(460, 350)
 	services.add_child(cargo_scroll)
@@ -40,19 +48,19 @@ func _ready() -> void:
 	cargo_scroll.add_child(bulk_panel)
 	for child: Node in services.get_child(0).get_children():
 		if child is Button and child.text in ["CARGO", "Close services"]: child.hide()
-	button(services.get_child(0), "Show / hide bulk cargo", func(): cargo_scroll.visible = not cargo_scroll.visible)
+	button(services.get_child(0), "Show / hide " + cargo_family + " cargo", func(): cargo_scroll.visible = not cargo_scroll.visible)
 	bulk_panel.load_requested.connect(func(id: String):
 		sync_context()
 		if bulk.start_loading(id): elapsed = 0
 		publish_state())
-	bulk_panel.discharge_requested.connect(func(grams: int):
+	bulk_panel.discharge_requested.connect(func(quantity: int):
 		sync_context()
-		if bulk.start_discharge(grams): elapsed = 0
+		if bulk.start_discharge(quantity): elapsed = 0
 		publish_state())
 	bulk_panel.cancel_requested.connect(func(): bulk.cancel(); publish_state())
 	ship.simulation_paused = true
 	controls.set_menu_open(true)
-	if not bulk.open("user://worlds/private_bulk_voyage/voyage.db"):
+	if not bulk.open("user://worlds/private_" + cargo_family + "_voyage/voyage.db"):
 		booted = true
 		return
 	if bulk.store.revision == 1 and bulk.pose == Transform3D.IDENTITY:
@@ -77,9 +85,9 @@ func _ready() -> void:
 	publish_state()
 	get_tree().auto_accept_quit = false
 
-func service_id() -> String: return "bulk_transfer"
-func cargo_id() -> String: return "cargo_bulk_grain"
-func ship_key() -> String: return BulkService.SHIP
+func service_id() -> String: return cargo_family + "_transfer"
+func cargo_id() -> String: return "cargo_gas_lng" if cargo_family == "gas" else "cargo_bulk_grain"
+func ship_key() -> String: return bulk.ship_id
 func can_switch() -> bool: return false
 
 func sync_context() -> void:
@@ -118,7 +126,7 @@ func _process(_delta: float) -> void:
 	jobs_panel.hide()
 	cargo_scroll.custom_minimum_size.y = clampf(get_viewport().get_visible_rect().size.y - 240, 180, 420)
 	services.visible = docking.state(1) == "docked" or bulk.blocked
-	details.text = "Bulk voyage fixture · %s\nWallet: %.2f credits" % [port.definition.display_name, bulk.credits / 100.0]
+	details.text = "%s voyage fixture · %s\nWallet: %.2f credits" % [cargo_family.capitalize(), port.definition.display_name, bulk.credits / 100.0]
 	dock_button.disabled = bulk.blocked or not bulk.active.is_empty() or dock_button.disabled
 	refuel_button.disabled = bulk.blocked or not bulk.active.is_empty()
 	repair_button.disabled = refuel_button.disabled
