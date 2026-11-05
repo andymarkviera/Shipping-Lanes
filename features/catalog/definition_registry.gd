@@ -24,6 +24,7 @@ func load_definitions(records: Array[ContentDefinition]) -> PackedStringArray:
 			continue
 		candidate[record.id] = record.duplicate(true)
 	for record: ContentDefinition in candidate.values():
+		GasRules.validate_references(record, candidate, errors)
 		if record is ShipDefinition:
 			if not record.handling_error().is_empty():
 				errors.append(record.id + ": " + record.handling_error())
@@ -39,7 +40,7 @@ func load_definitions(records: Array[ContentDefinition]) -> PackedStringArray:
 			if record.runtime_scene_path.is_empty() or not ResourceLoader.exists(record.runtime_scene_path, "PackedScene"):
 				errors.append("Missing runtime ship scene: " + record.id)
 		elif record is CargoDefinition:
-			if record.quantity_unit not in ["count", "gram", "milliliter"] or record.capacity_pool.strip_edges().is_empty(): errors.append("Invalid cargo capacity rule: " + record.id)
+			if record.quantity_unit not in ["count", "gram", "milliliter", "cubic_meter"] or record.capacity_pool.strip_edges().is_empty(): errors.append("Invalid cargo capacity rule: " + record.id)
 			if record.capacity_pool == "bulk_holds" and record.quantity_unit != "gram": errors.append("Bulk quantities must use grams: " + record.id)
 			if record.unit_label.strip_edges().is_empty():
 				errors.append("Missing cargo unit: " + record.id)

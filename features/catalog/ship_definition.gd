@@ -8,6 +8,8 @@ extends ContentDefinition
 ## Stable hold IDs -> {capacity_grams, cargo_type_ids}; one commodity per hold.
 @export var bulk_holds: Dictionary = {}
 @export_enum("single_commodity_per_hold") var bulk_mixing_policy: String = "single_commodity_per_hold"
+@export var gas_tanks: Dictionary = {}
+@export_enum("single_commodity_per_tank") var gas_mixing_policy: String = "single_commodity_per_tank"
 @export var container_layout: ContainerLayout
 @export_file("*.tscn") var runtime_scene_path: String = ""
 @export_group("Composition")
@@ -63,6 +65,8 @@ func bulk_capacity_error() -> String:
 	return ""
 
 func handling_error() -> String:
+	var gas_error: String = GasRules.ship_error(self)
+	if not gas_error.is_empty(): return gas_error
 	var bulk_error: String = bulk_capacity_error()
 	if not bulk_error.is_empty(): return bulk_error
 	for pool: Variant in cargo_capacities:
