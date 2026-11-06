@@ -3996,3 +3996,130 @@ These attempts are not counted as successful checks and required no game changes
 
 Deliver as a **DRAFT PR against main**, not a push to main. Step 79 remains unstarted;
 no complete Windows/Keycloak/rendered acceptance or live deployment is claimed.
+
+## Step 79 — Cargo fuel transport and sale — November 6, 2026
+
+Task ID: `cargo-fuel-transport-and-sale`.
+Status: implemented and verified in the shared transaction service and private
+Godot voyage fixture; Windows, public-game/authentication and visual gates below
+remain open. Based on merged Step 78 (`7dfed8f`), on feature branch
+`feature/cargo-fuel-transport-and-sale`. No Step 80 or deferred feature work.
+
+Added atomic partial loading of Step 78 refinery collections into canonical
+`cargo_fuel` aboard lots, and partial sales through Brindle's eligible pipeline.
+Slatewater retains uncollected fractions. The fixture hull has a separate 200000
+millibarrel cargo capacity and one aboard commodity lot. Acquisition records retain
+refinery/collection/ship provenance, quantity, allocated handling cost and a frozen
+prototype sale price of 220 minor credits/barrel. Cumulative integer rounding
+conserves gross proceeds and allocated handling fees across partial sales. Crude
+production costs remain in processing records, never presented as handling cost or
+claimed net profit. Recovery debt repayment is separate from sale gross/wallet change.
+
+Stock custody, cargo, wallet/treasury, receipt and public journal use the existing
+fenced transaction. Exact retries survive changed berth, restart and account handoff;
+changed action intent conflicts. New actions fail closed on stale revision, bad
+quantity, capacity/ownership/recovery errors or bounded history exhaustion. Cargo
+fuel operations never modify the ship's propulsion tank. Existing collection rows
+need no reset; terminal loaded state requires compatible service versions.
+
+The actual Godot fixture has a crude/cargo-fuel commodity selector, fractional
+quantity input, quote review/acceptance, load/sell choices, authoritative stock and
+aboard summary, and explicit identical-request retry. Private position/yaw/fuel/
+condition checkpoints resume in neutral, stopped and undocked, without offline
+motion. Corrupt/unavailable resume fences the fixture. The new `--cargo-fuel` launcher
+uses a new isolated shared-stock file; existing Step 77 fixtures are not converted.
+See D136 and CARGO_FUEL_TRANSPORT.md for arithmetic, API/lifecycle and reproduction.
+
+### Linux checks actually run
+
+Pinned **4.7.2.stable.official.ed1daf0bf**, isolated psycopg/binary **3.2.10**,
+cryptography and extracted PostgreSQL **17.11**. All engines, scratch harnesses,
+logs, isolated settings/saves, fixture identities, keys and databases are under
+`/workspace/work/step79`, outside Git. No live service or player save was touched.
+
+- **51 refinery/oil Python tests pass:** six new cargo-fuel tests plus all 45 existing
+  tests. New tests cover the full 20000 → 22330 wallet example, fragmented sales,
+  partial loads and fee conservation, unchanged propulsion quantity, reopen/replay,
+  ownership/port/capacity/invalid quantity rejection, recovery/debt, corrupted lot
+  rejection, history exhaustion and private navigation validation/reopen. Concurrent
+  identical load/sale requests have one effect. Rollback at profile/refinery writes
+  and COMMIT preserves prior state. Four owned SQLite subprocess deaths immediately
+  before/after load/sale COMMIT recover exactly once.
+- **Actual Godot/HTTP/SQLite cargo-fuel voyage passes across two processes:** first
+  launch 9 assertions loads and saves underway; second launch 16 assertions restores
+  position/propulsion/aboard quantity, performs partial sales, injects a lost committed
+  response and retries after berth loss. Final wallet adds exactly 462 minor credits
+  to the saved post-purchase/fee balance for 2100 millibarrels sold. Propulsion fuel
+  is unchanged by both sales. The probe sets berth/underway positions; it does not
+  claim manual sailing, rendering or public full-voyage acceptance.
+- Existing actual oil/refinery Godot panels each pass **26 assertions**.
+- **New real PostgreSQL/HTTPS cargo-fuel runner passes:** two service replicas,
+  approved-server identities and canonical account lease. Four forced service deaths
+  before/after load/sale COMMIT prove atomic rollback or durable receipt recovery.
+  Concurrent identical retries retain one public journal entry, another server is
+  fenced, wallet receives exactly 154 for 700 millibarrels, and propulsion stays
+  321.5 liters. Database outage/restart and account handoff/replay pass.
+- **Existing Step 78 real PostgreSQL refinery runner passes**, including shared
+  stock/ownership, private isolation, contention, six service COMMIT crashes,
+  processing while services are stopped, database outage/restart, handoff fencing,
+  treasury conservation and missing-state rejection. **Existing real SQL oil runner
+  passes**, including two-server settlement, four write/COMMIT deaths, retry/handoff,
+  outage/restart, contiguous history and conserved money.
+- All **45 existing Python authority tests** pass. Production route benchmark and
+  all three progression scenarios pass with replay/serialized-reload equivalence.
+- Oil inventory **13**, bulk **15**, gas **15** portable recovery phases pass,
+  including four owned-process deaths per family. Bulk capacity **102**, earnings
+  **330**, gas capacity **108** pass. All **28** storage/persistence/migration/
+  durable-action recovery phases pass, with ten owned-process deaths and backup/UI.
+- Voyage suite **101**, round trip plus two reopens, and all ten ordered crash/
+  recovery phases pass (four intentional self-kills). Sailing-save **330 checkpoints**,
+  slots **38**, and unconfigured friends menu pass.
+- Editor/import, all **171 scripts**, and Main startup pass. Catalog, controls,
+  flow, starter assets, units, contracts, geography, session/clocks, handling, camera,
+  water/feedback, world size, heavy lifter, fuel, economy, compact snapshots, public
+  physics, repairs, purchase, fleet inspection/switching and resale pass. Diagnostics
+  passes with its deliberately invalid reference message.
+- Local reconnect/actions and normal/impaired replication, cargo-network and
+  connected-world: **16/16 process results pass**. Capacity at 2/10/25/50/100 clients,
+  dispersed/crowded: **30/30 process results pass**. These are local headless fixture
+  results, not production authenticated-player capacity evidence.
+- Python AST parsing (**86 sources**), all **169 existing UID** byte comparisons,
+  new script sidecars and whitespace checks pass. Runtime panel is an explicit export
+  root. No caches, databases, credentials, binaries or exports are committed.
+
+### Remaining failures and unrun gates
+
+Collision still fails the lateral-contact assertion; composition still fails its
+two side-course contacts. Shared gauges and wear reach the 65-second headless
+rendered-frame wait timeout. Ports has 261 passing checks but emits two out-of-tree
+transform errors. These match the prior recorded Linux limitations and are **not**
+clean passes. No physics, condition, gauges or network implementation was changed.
+
+- **Windows:** pinned PowerShell/native suites; Debug/Release client/server exports;
+  exported panel/resource loading; hosting bundle/launcher; Windows clock, save and
+  resume compatibility. This environment has no Windows runtime.
+- **PostgreSQL/deployment:** local real SQL checks ran. Production upgrade, compatible
+  mixed-version rollout, backup/restore/failover, provider-managed storage, WAN TLS,
+  external multi-host operation and long-history/load behavior remain unrun. The
+  10000-action bound is an explicit prototype limit, not production retention.
+- **Keycloak/public game:** no configured identity stack or native account sign-in.
+  OIDC enrollment/login, authenticated public Godot oil/fuel hull admission, actual
+  public pipeline RPC routing, two-player rendered voyage/reconnect/handoff and fuel
+  hull sinking/recovery remain gates. Approved-server HTTPS fixtures are not real
+  Keycloak players; no new public playable hull is claimed.
+- **Visual/Andy playtest:** commodity menu layout/scroll/focus/scaling, fractional
+  quantity and fee/price/retry readability, actual sailing/docking, resumed placement,
+  input release, unchanged HUD/ship behavior and pacing. Headless boundary probes
+  do not constitute a manual rendered playtest.
+
+Corrected harness attempts: initial sandbox import lacked socket/settings access;
+rerun with isolated settings and loopback access passed. The first Godot sale
+assertion assumed a fixed crude purchase price; the market had moved, so it now
+checks the accepted saved balance plus exact sale proceeds. The first legacy
+recovery invocation used `recovery-proof` rather than required `action-recovery`;
+corrected eight phases passed. Friends-menu attempts omitted the actual
+`--friends-client` flag; corrected invocation passed. These initial attempts are
+not counted as passes and required no legacy game behavior changes.
+
+Delivery: feature-branch commit and **draft PR against main**. No push to main,
+live deployment, Step 80 completion, or Windows/Keycloak/visual acceptance claimed.

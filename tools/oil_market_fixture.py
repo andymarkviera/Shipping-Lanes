@@ -6,6 +6,7 @@ Only the owned Godot child receives the ephemeral loopback bearer credential.
 import argparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import math
 import os
 from pathlib import Path
 import secrets
@@ -18,9 +19,40 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from services.oil_market.private import PrivateStore
 from services.refinery.processing import RefineryStore, Config
+from services.refinery.private import SharedPrivateStore
+from services.refinery.shared import OPERATIONS
 
 REALM = 'private:oil-interface'
 ACCOUNT = 'oil-fixture-captain'
+
+
+def validate_navigation(navigation):
+    if type(navigation) is not dict or set(navigation) != {'position', 'yaw', 'fuel_liters', 'condition'}:
+        raise ValueError('Invalid navigation')
+    position = navigation['position']
+    if type(position) is not list or len(position) != 3:
+        raise ValueError('Invalid position')
+    if not all(type(v) in (int, float) and math.isfinite(v) and abs(v) <= 1000000
+               for v in [*position, navigation['yaw']]): raise ValueError('Invalid coordinates')
+    for key, maximum in [('fuel_liters', 1000000), ('condition', 1)]:
+        v = navigation[key]
+        if type(v) not in (int, float) or not math.isfinite(v) or not 0 <= v <= maximum:
+            raise ValueError('Invalid ship state')
+
+
+def voyage_checkpoint(store, navigation=None):
+    """Trusted private host only; bounded active position, never a public API."""
+    with store.connect() as db:
+        db.execute('BEGIN IMMEDIATE')
+        row = db.execute('SELECT profile FROM profiles WHERE account=?', (ACCOUNT,)).fetchone()
+        if row is None: raise ValueError('Missing fixture profile')
+        profile = json.loads(row['profile'])
+        if 'fixture_navigation' in profile: validate_navigation(profile['fixture_navigation'])
+        if navigation is not None:
+            validate_navigation(navigation)
+            profile['fixture_navigation'] = navigation
+            db.execute('UPDATE profiles SET profile=? WHERE account=?', (json.dumps(profile), ACCOUNT))
+        return dict(ok=True, code='FIXTURE_VOYAGE', navigation=profile.get('fixture_navigation', {}))
 
 
 def dispatch(store, payload):
@@ -30,6 +62,21 @@ def dispatch(store, payload):
     request, context = payload['request'], payload['context']
     if type(request) is not dict or type(context) is not dict:
         return dict(ok=False, code='BAD_REQUEST')
+    if isinstance(store, SharedPrivateStore) and request.get('op') in ('fixture_resume', 'fixture_checkpoint'):
+        return voyage_checkpoint(store, request.get('navigation') if request['op'] == 'fixture_checkpoint' else None)
+    if isinstance(store, SharedPrivateStore) and request.get('op') in OPERATIONS:
+        data = dict(request, realm=REALM, account=ACCOUNT, epoch=1, generation=1)
+        replay = False
+        if 'action_id' in request:
+            with store.connect() as db:
+                replay = db.execute('SELECT 1 FROM receipts WHERE account=? AND action_id=?',
+                                    (ACCOUNT, request['action_id'])).fetchone() is not None
+        if request['op'] != 'refinery_snapshot' and not replay and (
+                context.get('docked') is not True or context.get('port_id') != request.get('port_id')):
+            return dict(ok=False, code='DOCK_REQUIRED')
+        if not replay and request['op'] != 'refinery_snapshot' and 'navigation' in context:
+            voyage_checkpoint(store, context['navigation'])
+        return store.refinery(ACCOUNT, data)
     if request.get('op') in ('refinery_snapshot', 'refinery_submit'):
         if not isinstance(store, RefineryStore): return dict(ok=False, code='REFINERY_UNAVAILABLE')
         return store.refinery(ACCOUNT, request, docked=context.get('docked') is True,
@@ -57,21 +104,29 @@ def main():
     p.add_argument('--probe', action='store_true', help='Run the real scene headlessly through its UI callbacks')
     p.add_argument('--refinery', action='store_true', help='Enable Step 77 in a new refinery-capable fixture or reopen one')
     p.add_argument('--refinery-config', type=Path, help='Operator JSON Config, only with --create --refinery')
+    p.add_argument('--cargo-fuel', action='store_true', help='Step 79 shared-stock fixture; new file only')
+    p.add_argument('--cargo-fuel-probe', action='store_true')
     p.add_argument('--refinery-probe', action='store_true')
     args = p.parse_args()
+    if args.cargo_fuel_probe and not args.cargo_fuel: p.error('--cargo-fuel-probe needs --cargo-fuel')
+    if args.cargo_fuel and args.refinery: p.error('Choose one fixture storage format')
     if args.refinery_probe and not args.refinery: p.error('--refinery-probe needs --refinery')
     if args.refinery_config and not (args.create and args.refinery): p.error('Config is frozen at creation')
     config = Config(**json.loads(args.refinery_config.read_text())) if args.refinery_config else Config()
-    store = (RefineryStore if args.refinery else PrivateStore)(args.db, REALM)
+    store = (SharedPrivateStore if args.cargo_fuel else RefineryStore if args.refinery else PrivateStore)(args.db, REALM)
     if args.create:
         store.initialize(config) if args.refinery else store.initialize()
         store.provision(ACCOUNT, dict(ship=dict(id='oil-ship', definition='ship_oil_prototype_01',
-                                              condition_bp=10000), cargo=[], jobs=[], delivered=[]), 20000)
+                                              condition_bp=10000, fuel_ml=1000000), cargo=[], jobs=[], delivered=[]), 20000)
     # Fail before launch if unavailable; never initialize on a failed open.
     with store.connect() as db:
         if not db.execute('SELECT 1 FROM profiles WHERE account=?', (ACCOUNT,)).fetchone():
             raise RuntimeError('Oil fixture account missing; preserve the file')
         if args.refinery: store.read(db)
+    if args.cargo_fuel:
+        checked = store.refinery(ACCOUNT, dict(op='refinery_snapshot', refinery_id='refinery_slatewater_01', realm=REALM, account=ACCOUNT, epoch=1, generation=1))
+        if not checked['ok']: raise RuntimeError('Cargo-fuel store unavailable; preserve the file')
+        voyage_checkpoint(store)
     token = secrets.token_hex(32)
     stop_clock = threading.Event()
     clock_failed = threading.Event()
@@ -89,7 +144,7 @@ def main():
                 clock_failed.set()
                 return
 
-    worker = threading.Thread(target=process_clock, daemon=True) if args.refinery else None
+    worker = threading.Thread(target=process_clock, daemon=True) if args.refinery or args.cargo_fuel else None
     if worker: worker.start()
 
     class Handler(BaseHTTPRequestHandler):
@@ -121,11 +176,13 @@ def main():
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     env = dict(os.environ, SHIPPING_OIL_FIXTURE_URL=f'http://127.0.0.1:{server.server_port}/oil',
-               SHIPPING_OIL_FIXTURE_TOKEN=token, SHIPPING_REFINERY_FIXTURE='1' if args.refinery else '0')
+               SHIPPING_OIL_FIXTURE_TOKEN=token, SHIPPING_REFINERY_FIXTURE='1' if args.refinery else '0',
+               SHIPPING_CARGO_FUEL_FIXTURE='1' if args.cargo_fuel else '0')
     scene = 'tools/oil_interface_probe.tscn' if args.probe else 'features/ports/oil_port_test.tscn'
+    if args.cargo_fuel_probe: scene = 'tools/cargo_fuel_probe.tscn'
     if args.refinery_probe: scene = 'tools/refinery_probe.tscn'
     command = [args.godot, '--path', str(ROOT), scene]
-    if args.probe or args.refinery_probe:
+    if args.probe or args.refinery_probe or args.cargo_fuel_probe:
         command.insert(1, '--headless')
     try:
         return subprocess.call(command, env=env)

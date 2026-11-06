@@ -1,6 +1,6 @@
-"""Step 78 transaction model. Public storage owns time, stock and collection records.
+"""Transactional refinery stock and cargo-fuel collection/loading/sale.
 
-Collection records are refinery custody, NOT aboard cargo or saleable goods (79).
+Unloaded collection quantities remain refinery custody, never saleable aboard cargo.
 No client credit/import/tick operation exists. Call inside the fenced account tx.
 """
 import copy
@@ -10,8 +10,9 @@ from dataclasses import asdict
 from services.oil_market.model import MarketError, integer
 from services.oil_market.settlement import encode, consume_lot, remaining_units, MAX_MONEY
 from .processing import Config, REFINERY_ID, PORT_ID
+from . import cargo_fuel
 
-OPERATIONS = ('refinery_snapshot', 'refinery_submit', 'refinery_quote', 'refinery_withdraw')
+OPERATIONS = ('refinery_snapshot', 'refinery_submit', 'refinery_quote', 'refinery_withdraw', *cargo_fuel.MUTATIONS)
 LIMIT = 10000
 
 
@@ -30,11 +31,13 @@ def validate_request(request):
     extra = {'refinery_snapshot': set(),
              'refinery_submit': {'action_id', 'expected_revision', 'lot_id', 'input_millibarrels', 'port_id'},
              'refinery_quote': {'millibarrels', 'port_id'},
-             'refinery_withdraw': {'action_id', 'expected_revision', 'quote_id', 'port_id'}}
+             'refinery_withdraw': {'action_id', 'expected_revision', 'quote_id', 'port_id'},
+             'refinery_load': {'action_id', 'expected_revision', 'collection_id', 'millibarrels', 'port_id'},
+             'refinery_sell': {'action_id', 'expected_revision', 'lot_id', 'millibarrels', 'port_id'}}
     op = request.get('op')
     require(type(op) is str and op in extra and set(request) == base | extra[op], 'BAD_REQUEST')
     require(request['refinery_id'] == REFINERY_ID, 'UNKNOWN_REFINERY')
-    for field in ('account', 'action_id', 'lot_id', 'quote_id', 'port_id'):
+    for field in ('account', 'action_id', 'lot_id', 'quote_id', 'port_id', 'collection_id'):
         if field in request:
             require(type(request[field]) is str and 0 < len(request[field]) <= 128, 'BAD_IDENTIFIER')
     for field in ('epoch', 'generation', 'expected_revision', 'input_millibarrels', 'millibarrels'):
@@ -52,6 +55,7 @@ def validate(state, realm):
         require(type(state['schema']) is int and state['schema'] == 2 and state['realm'] == realm and
                 state['refinery_id'] == REFINERY_ID, 'REFINERY_STATE_INVALID')
         config = Config(**state['config'])
+        require(integer(state.get('fuel_action_count', 0), 0, LIMIT), 'REFINERY_STATE_INVALID')
         require(integer(state['time_ms'], 0, MAX_MONEY) and integer(state['fee_minor_per_barrel'], 0, 10**6), 'REFINERY_STATE_INVALID')
         require(type(state['jobs']) is list and len(state['jobs']) <= config.max_submissions and
                 type(state['withdrawals']) is list and len(state['withdrawals']) <= LIMIT and
@@ -89,7 +93,10 @@ def validate(state, realm):
             require(all(type(v) is str and 0 < len(v) <= 128 for v in key) and key not in identities, 'REFINERY_STATE_INVALID')
             identities.add(key)
             require(item['account'] in rebuilt and integer(item['millibarrels'], 1, config.output_capacity_millibarrels) and
-                    integer(item['cost_minor'], 0, MAX_MONEY) and item['status'] == 'awaiting_loading', 'REFINERY_STATE_INVALID')
+                    integer(item['cost_minor'], 0, MAX_MONEY) and item['status'] in ('awaiting_loading', 'loaded'), 'REFINERY_STATE_INVALID')
+            loaded = item.get('loaded_millibarrels', 0)
+            require(integer(loaded, 0, item['millibarrels']) and
+                    (item['status'] == 'loaded') == (loaded == item['millibarrels']), 'REFINERY_STATE_INVALID')
             quote = state['quotes'][item['quote_id']]
             require(quote['account'] == item['account'] and quote['millibarrels'] == item['millibarrels'] and
                     quote['cost_minor'] == item['cost_minor'] and quote['consumed'] and
@@ -131,7 +138,7 @@ def execute(tx, realm, profile, request, clock, fault=lambda *_: None):
     require(request['realm'] == realm, 'WRONG_REALM')
     op, account = request['op'], request['account']
     fingerprint = hashlib.sha256(encode({k: v for k, v in request.items() if k not in ('epoch', 'generation')}).encode()).hexdigest()
-    if op in ('refinery_submit', 'refinery_withdraw'):
+    if op in ('refinery_submit', 'refinery_withdraw', *cargo_fuel.MUTATIONS):
         prior = tx.receipt(account, request['action_id'])
         if prior:
             require(prior['fingerprint'] == fingerprint, 'ID_CONFLICT')
@@ -141,22 +148,34 @@ def execute(tx, realm, profile, request, clock, fault=lambda *_: None):
     config = validate(state, realm)
     advance(state, clock())  # Read central clock AFTER row lock; never sum server ticks.
     candidate = copy.deepcopy(profile['profile'])
+    for lot in candidate['cargo']:
+        if lot.get('definition') == 'cargo_fuel': cargo_fuel.validate_lot(lot)
     if op == 'refinery_snapshot':
         result = dict(ok=True, code='REFINERY', refinery_id=REFINERY_ID, config=state['config'],
                       time_ms=state['time_ms'], revision=profile['revision'], money=profile['money'],
                       owner=copy.deepcopy(state['owners'].get(account, owner())),
                       stock_millibarrels=sum(v['stock_millibarrels'] for v in state['owners'].values()),
                       jobs=[j for j in state['jobs'] if j['account'] == account][-1:],
-                      collections=[w for w in state['withdrawals'] if w['account'] == account][-1:])
+                      collections=[w for w in state['withdrawals'] if w['account'] == account and w['status'] == 'awaiting_loading'][:32],
+                      cargo_fuel=[c for c in candidate['cargo'] if c.get('definition') == 'cargo_fuel'],
+                      crude_lots=[dict(c, remaining_millibarrels=remaining_units(c)) for c in candidate['cargo'] if c.get('definition') == 'cargo_oil'],
+                      cargo_fuel_capacity=cargo_fuel.CAPACITIES.get(candidate['ship']['definition'], 0),
+                      sale_port=cargo_fuel.SALE_PORT, price_minor_per_barrel=cargo_fuel.PRICE)
     else:
         # Docking is attested by the approved server, as for oil services. Never
         # expose this authority credential or accept player-supplied context.
-        require(request['port_id'] == PORT_ID, 'DOCK_REQUIRED')
+        require(request['port_id'] == (cargo_fuel.SALE_PORT if op == 'refinery_sell' else PORT_ID), 'DOCK_REQUIRED')
         require(candidate.get('recovery', {}).get('state') != 'pending' and candidate['ship'].get('condition_bp', 10000) > 0, 'RECOVERY_REQUIRED')
         if op != 'refinery_quote': require(profile['revision'] == request['expected_revision'], 'STALE_REVISION')
         own = state['owners'].get(account, owner())
         amount = 0
-        if op == 'refinery_submit':
+        if op in cargo_fuel.MUTATIONS:
+            require(state.get('fuel_action_count', 0) < LIMIT, 'REFINERY_LEDGER_FULL')
+            state['fuel_action_count'] = state.get('fuel_action_count', 0) + 1
+            amount, result = cargo_fuel.transfer(state, candidate, account, request)
+            require(0 <= profile['money'] + amount <= MAX_MONEY, 'WALLET_LIMIT')
+            result['ok'] = True
+        elif op == 'refinery_submit':
             require(len(state['jobs']) < config.max_submissions, 'REFINERY_LEDGER_FULL')
             require(not state['jobs'] or state['jobs'][-1]['status'] == 'complete', 'REFINERY_BUSY')
             units = request['input_millibarrels']
@@ -207,6 +226,6 @@ def execute(tx, realm, profile, request, clock, fault=lambda *_: None):
     validate(state, realm)
     tx.save_refinery(REFINERY_ID, state)
     fault('after_refinery_write', request)
-    if op in ('refinery_submit', 'refinery_withdraw'):
+    if op in ('refinery_submit', 'refinery_withdraw', *cargo_fuel.MUTATIONS):
         tx.save_receipt(account, request['action_id'], fingerprint, result)
     return result
