@@ -1,6 +1,7 @@
 extends "res://features/ports/port_test.gd"
 ## Private operator fixture only. The launcher owns durable market/profile storage.
 var oil_panel: VBoxContainer
+var refinery_panel: VBoxContainer
 var oil_scroll: ScrollContainer
 var endpoint: String
 var token: String
@@ -43,6 +44,12 @@ func _ready() -> void:
 	if endpoint.begins_with("http://127.0.0.1:") and not token.is_empty():
 		oil_panel.send = market_request
 		oil_panel.inspect()
+		if OS.get_environment("SHIPPING_REFINERY_FIXTURE") == "1":
+			refinery_panel = preload("res://features/cargo/refinery_panel.gd").new()
+			oil_panel.add_child(refinery_panel)
+			refinery_panel.port_context = context
+			refinery_panel.send = market_request
+			refinery_panel.inspect()
 	else:
 		oil_panel.notice.text = "Launch with tools/oil_market_fixture.py and an explicitly provisioned private database. No public or local price fallback."
 
@@ -50,12 +57,17 @@ func context() -> Dictionary:
 	return {"docked": docking.state(1) == "docked" and ship.docked, "port_id": port.definition.id}
 
 func market_request(request: Dictionary) -> Dictionary:
+	var refinery_request: bool = str(request.op).begins_with("refinery_")
+	if refinery_request and (oil_panel.busy or not oil_panel.pending.is_empty()):
+		return {"ok": false, "code": "SERVICE_BUSY"}
+	if not refinery_request and is_instance_valid(refinery_panel) and (refinery_panel.busy or not refinery_panel.pending.is_empty()):
+		return {"ok": false, "code": "SERVICE_BUSY"}
 	var http := HTTPRequest.new()
 	http.timeout = 6
 	http.body_size_limit = 262144
 	http.max_redirects = 0
 	add_child(http)
-	var result: Dictionary = {"ok": false, "code": "MARKET_UNAVAILABLE", "uncertain": request.op == "oil_accept"}
+	var result: Dictionary = {"ok": false, "code": "MARKET_UNAVAILABLE", "uncertain": request.op in ["oil_accept", "refinery_submit"]}
 	var error: Error = http.request(endpoint, ["Content-Type: application/json", "Authorization: Bearer " + token], HTTPClient.METHOD_POST, JSON.stringify({"request": request, "context": context()}))
 	if error == OK:
 		var response: Array = await http.request_completed
@@ -70,6 +82,7 @@ func _physics_process(delta: float) -> void:
 	services.hide()
 	# Do not lose berth eligibility while a consequential request is in flight.
 	if is_instance_valid(oil_panel) and (oil_panel.busy or not oil_panel.pending.is_empty()): dock_button.disabled = true
+	if is_instance_valid(refinery_panel) and (refinery_panel.busy or not refinery_panel.pending.is_empty()): dock_button.disabled = true
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(oil_panel): return
@@ -86,5 +99,6 @@ func _process(_delta: float) -> void:
 	heavy_controls.hide()
 
 func leave() -> void:
+	if is_instance_valid(refinery_panel) and refinery_panel.busy: return
 	if is_instance_valid(oil_panel) and oil_panel.busy: return
 	super.leave()

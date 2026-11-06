@@ -761,3 +761,39 @@ against Step 75 SQLite. Keep the oil hull fixture-only; no new public Godot RPC,
 public fleet capability, old save conversion, refinery work or deferred features.
 OIL_MARKET_INTERFACE.md defines the lifecycle, bridge trust boundary and remaining
 full-voyage/public/visual gates. Godot 4.7.2 and protocols 17/7 remain unchanged.
+
+## D134 — Private refinery uses exact fractional carry and atomic crude custody
+
+Step 77 (`refinery-processing`) adds one private fixture refinery, stable ID
+`refinery_slatewater_01`, at Slatewater Works. Use integer millibarrels (1000 per
+barrel) and an immutable saved rational yield. Proposed fixture defaults are 7/10,
+1000 millibarrels/active second, 200000 input and 1000000 output millibarrels;
+these are configurable prototype values, not accepted pricing/balance targets.
+No submission fee, refund, expiry or withdrawal. Step 78 owns shared public stock
+and withdrawal transactions; Step 79 owns cargo-fuel transport/sale. Cargo fuel
+never fills the propulsion tank.
+
+One processing slot reserves its entire output before accepting crude. Consume
+owned crude, allocate its cost, save the job and record its idempotent action in
+one SQLite transaction. Output is credited only at completion in another atomic
+transaction. Carry `divmod(input * numerator + prior_remainder, denominator)` per
+account/facility, including zero-output submissions; never round each fraction up.
+Configuration is frozen with the save. No cancellation after custody transfer.
+Exact replay returns the original submission without another debit or credit;
+changed intent conflicts. Bound retained jobs/receipt identities; reject new work
+when full rather than evicting deduplication history.
+
+Only the trusted private host advances active monotonic time. Persist integer
+elapsed milliseconds; restart resumes the durable checkpoint with no offline
+catch-up. UI progress, panel visibility, timestamps and client requests cannot
+advance work. Unknown clock/storage outcomes fence the running fixture until
+reopen. Validate conservation by reconstructing saved stock/remainders from jobs;
+missing/incompatible data fails closed without reset or migration.
+
+Retain whole-barrel oil trading with additive refined quantity/cost fields. Derive
+exact remaining millibarrels; market sales may take only the whole-barrel portion.
+Allocate cost cumulatively over sold plus refined quantity, so remaining cost,
+sold cost and refined cost always reconcile. Residual fractions remain aboard for
+refining. Existing lots without refinery fields retain their historical behavior.
+Enable only via the operator's `--refinery` fixture flag and a new isolated save;
+no public refinery RPC, deployment, playable fleet or old-save migration.
