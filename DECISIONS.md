@@ -720,3 +720,21 @@ save codec until that deliberate adapter exists. No public market endpoint or
 private inventory price substitution is enabled by this model. Step 75 unstarted.
 OIL_MARKET_SIMULATION.md records formulas, defaults, failures and scope. Existing
 cargo offers/jobs do not expire; no feed, real-money or player-transfer dependency.
+
+## D132 — Oil market and account settlement share one durable transaction
+
+Step 75 (`shared-public-oil-market-service`) places the Step 74 market owner in
+the existing public authority PostgreSQL database. Serialize public updates with
+one market-row lock, after the account lease/profile locks; commit market history,
+quote consumption, canonical cargo, wallet/treasury, revision, receipt and journal
+atomically. Separate durable sequence from model price version. Never coordinate
+market acceptance and wallet settlement through independent commits.
+
+Bind quotes to account and active ship, retain frozen terms until expiry, and use
+the existing account/action ledger for exact retry recovery across rebind/handoff.
+Missing state, unavailable storage and uncertain replies never seed local public
+prices. Private hosts use the same settlement contract with isolated SQLite state;
+no public/private quote or account import. Preserve Step 73's historical save codec.
+The authored oil prototype remains fixture-only; no existing public hull gains
+capacity, no new player UI/RPC or Step 76 work. SHARED_PUBLIC_OIL_MARKET.md records
+migration, transport, trusted-server docking attestation and platform gates.

@@ -1,5 +1,9 @@
 # Oil market simulation — Step 74
 
+Step 75 now supplies the durable service described in
+[SHARED_PUBLIC_OIL_MARKET.md](SHARED_PUBLIC_OIL_MARKET.md). The scope and evidence
+below describe the original Step 74 model milestone.
+
 Task ID: `oil-market-simulation`. `services/oil_market/model.py` is the pure
 Python authority model for the existing Python service boundary. It has no feed,
 real-money, account, database, Godot export or third-party package dependency.
