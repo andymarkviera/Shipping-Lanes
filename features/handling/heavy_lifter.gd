@@ -4,6 +4,9 @@ const DECK = preload("res://features/ships/heavy_lifter_01/lift_deck.glb")
 const PAYLOAD = preload("res://features/ships/heavy_lifter_01/industrial_payload.glb")
 const RAISED: float = 2.6
 const LOWERED: float = -1.0
+# Centre-over-platform tolerance; heading deliberately remains unrestricted.
+const PICKUP_TOLERANCE: Vector3 = Vector3(9, 2, 24)
+const STOP_YAW_RATE: float = 0.001
 var deck_height: float = RAISED
 var deck_target: float = RAISED
 var deck_visual: Node3D
@@ -58,19 +61,19 @@ func _exit_tree() -> void:
 	if is_instance_valid(payload_body): payload_body.queue_free()
 
 func stopped() -> bool:
-	return velocity.length() < 0.05 and absf(actual_throttle) < 0.01 and absf(commanded_throttle) < 0.01
+	return velocity.length() < 0.05 and absf(yaw_rate) < STOP_YAW_RATE and absf(lateral_order) < 0.01 and absf(actual_throttle) < 0.01 and absf(commanded_throttle) < 0.01
 
 func operating() -> bool:
 	return absf(deck_target - deck_height) > 0.001
 
 func request_height(target: float) -> bool:
-	if not stopped() or operating():
+	if simulation_paused or not stopped() or operating():
 		notice = "Come to a complete stop with the engine neutral first."
 		return false
 	if target not in [RAISED, LOWERED]: return false
-	if target == RAISED and not attached and absf(deck_height - LOWERED) <= .001 and payload_body.collision_layer != 0:
-		var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, -8)
-		if absf(offset.x) < 25 and absf(offset.z) < 50 and not attach_payload(): return false
+	if target == RAISED and not attached and absf(deck_height - LOWERED) <= .001 and is_instance_valid(payload_body) and payload_body.is_inside_tree() and payload_body.collision_layer != 0:
+		# Validate every staged load, including distant ones, before changing the target.
+		if not attach_payload(): return false
 	if target == LOWERED and attached and release_guard.is_valid() and not release_guard.call():
 		notice = "Take this load to its ocean drop-off before lowering it."
 		return false
@@ -89,7 +92,7 @@ func space_clear(at: Transform3D, query_shape: Shape3D) -> bool:
 	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 func align_test_payload() -> bool:
-	if attached or operating() or not stopped() or absf(deck_height - LOWERED) > 0.001:
+	if simulation_paused or attached or operating() or not stopped() or absf(deck_height - LOWERED) > 0.001:
 		notice = "Lower the empty deck while stopped before staging the test load."
 		return false
 	var pose: Transform3D = global_transform
@@ -104,7 +107,7 @@ func align_test_payload() -> bool:
 	return true
 
 func attach_payload() -> bool:
-	if attached or operating() or not stopped() or absf(deck_height - LOWERED) > 0.001:
+	if simulation_paused or attached or operating() or not stopped() or absf(deck_height - LOWERED) > 0.001:
 		notice = "Stop with the platform fully lowered, then press Raise."
 		return false
 	if not pickup_position_ready():
@@ -134,11 +137,11 @@ func detach_payload() -> bool:
 	payload_shape.disabled = true
 	payload_body.collision_layer = CollisionRules.HULL
 	attached = false
-	notice = "Payload floating freely. Move clear before raising an empty deck."
+	notice = "Payload floating freely. Raise will attempt another pickup."
 	return true
 
 func advance_deck(delta: float) -> void:
-	if not operating(): return
+	if simulation_paused or not is_finite(delta) or delta <= 0 or not operating(): return
 	var next: float = move_toward(deck_height, deck_target, delta * 1.2)
 	var deck_pose: Transform3D = global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 - 0.3, -8))
 	var swept: BoxShape3D = BoxShape3D.new()
@@ -178,7 +181,7 @@ func pickup_position_ready() -> bool:
 	if not is_instance_valid(payload_body) or not payload_body.is_inside_tree() or payload_body.collision_layer == 0: return false
 	var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, -8)
 	# The load centre must be over the platform. Heading is deliberately unrestricted.
-	return absf(offset.x) <= 9 and absf(offset.z) <= 24 and absf(offset.y) <= 2
+	return offset.is_finite() and absf(offset.x) <= PICKUP_TOLERANCE.x and absf(offset.z) <= PICKUP_TOLERANCE.z and absf(offset.y) <= PICKUP_TOLERANCE.y
 
 func alignment_hint() -> String:
 	if attached: return "Load aboard. Raise to sail; Lower at the ocean drop-off to deliver."

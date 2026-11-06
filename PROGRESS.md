@@ -4243,3 +4243,103 @@ This tests existing private identity, not a public heavy-job or physical integra
 Delivery: feature-branch commit and **draft PR against main**, no push to main.
 No live deployment, Step 81–83 completion, Windows/Keycloak/visual acceptance or
 public heavy-job adapter is claimed.
+
+## Step 81 — Lifter submerge controls (draft) — November 6, 2026
+
+Task ID: `lifter-submerge-controls`. Branch
+`feat/step-81-lifter-submerge-controls`, based on merged Step 80 main **6e97cd7**.
+Read AGENTS.md, CLOUD_HANDOFF.md, latest progress/decisions, FEATURE_INVENTORY.md,
+DEFERRED_PLAYER_REQUESTS.md and original roadmap Step 81. Implemented only Step 81.
+
+Extended the existing test lifter's Lower/Raise controls and controlled attachment.
+Pickup now rejects residual yaw, active thrusters and paused simulation as well as
+motion, throttle, an operating deck and a deck above its lower stop. Every staged
+payload is validated on Raise from the lower stop, including distant payloads:
+out-of-tolerance raises provide feedback without changing the deck target,
+attachment or collision ownership. Previously, distant payloads silently allowed
+an empty raise. Inactive/delivered payloads still allow empty raising. Updated
+release feedback to match this deliberate behavior.
+
+Preserved inclusive local-frame centre tolerances (9/24/2 m lateral/longitudinal/
+vertical) and unrestricted heading for crooked loads. Successful pickup uses the
+existing fixed cargo mount and sole carrier collision shape; floating collision
+is disabled, with no unconstrained stacked rigid bodies. Existing swept-clearance
+checks and visible controls remain. Deck advancement ignores invalid time deltas
+and paused simulation. D138 records these rules and the Step 82 boundary.
+
+Godot remains **4.7.2**, game/ticket protocols **17/7**. All **171 .gd.uid** files
+are byte-identical and all script sidecars are present. No new resource/export root,
+new hull, machinery wear, player transfer, expiry, hidden shallows, save migration,
+public endpoint or Step 82 work. Step 80's durable HeavyStore is not wired to this
+physical fixture here; full heavy transport lifecycle remains a separate gate.
+
+### Linux checks actually run
+
+Exact **4.7.2.stable.official.ed1daf0bf**, isolated Python environment with
+psycopg/binary **3.2.10**. Downloaded engine, test harnesses, logs, settings and
+isolated databases remain in `/workspace/work/step81`, outside Git.
+
+- **65 lifter assertions pass**, including six just-outside tolerance faces,
+  distant payload rejection without mutation, inclusive boundaries, translated/
+  rotated carrier frames, residual yaw/thruster rejection, pause, invalid deltas,
+  busy-deck reversal, manual stern-first pickup, crooked Raise, duplicate prevention,
+  single collision ownership, obstruction/resume, fixed attachment through real
+  sailing/turning, release and visible Lower/staging/Raise controls.
+- **61 Python service tests pass** (10 heavy plus 51 oil/refinery/cargo-fuel),
+  including existing contention, retry, rollback and owned-process crash cases.
+  All **45 Python authority tests pass**; SQL doubles are not real PostgreSQL proof.
+- Editor import, all **171 script loads**, Main startup, catalog, controls,
+  application flow and starter asset checks pass. Units **50**, contracts **66**,
+  geography **342**, session **21**, clocks **22**, handling **134**, camera **20**,
+  water **59**, feedback **24**, world-size **2042**, fuel **42**, economy **82**,
+  compact snapshots **24** and public physics **43** pass.
+- Historical voyage suite **101**, sailing-save **330 checkpoints**, slots **38**,
+  bulk capacity **102**, bulk earnings **330**, gas capacity **108**, repairs **20**,
+  purchase **35**, fleet inspection **32**, fleet switch **34** and resale **26** pass.
+- Portable oil inventory **13**, bulk **15** and gas **15** recovery phases pass,
+  including each family's four owned-process kills and subsequent reopen checks.
+- Python AST parsing **88 sources**, UID byte preservation, sidecar presence and
+  `git diff --check` pass. No engine, generated evidence, secret, account, database,
+  export or cache is included in the commit.
+
+Local network sweep: **14/16 process results pass**. Reconnect identity agreement,
+actions, normal/impaired heavy-cargo replication and normal/impaired connected-world
+checks pass. Both replication hosts pass; normal and impaired replication clients
+fail `Buffered remote motion stays bounded`. This matches prior replication timing
+instability, but this sweep is not clean and no rerun is substituted for its results.
+No networking implementation changed. These are loopback fixtures, not authenticated
+public heavy support or production capacity. The large-client capacity sweep,
+legacy Windows persistence orchestration and full service/HTTPS interface runners
+were not rerun for this control-only change.
+
+### Failures, harness corrections and unrun gates
+
+Collision fails its lateral-contact assertion; composition fails two side-course
+contacts. Ports reports **261** passing assertions but emits two out-of-tree
+transform errors. Shared gauges passes three assertions and wear passes ten before
+both reach the **65-second** headless rendered-frame timeout. These match the
+previously recorded Linux limitations and are **not clean passes**.
+
+Initial sandbox import reported socket/settings errors; rerunning with loopback
+permission and precreated isolated settings passed. Initial Python service discovery
+found zero tests (namespace directories); explicit module selection ran all 61.
+Initial authority discovery lacked psycopg; isolated dependency installation and
+rerun passed all 45. These initial attempts are not counted as successful checks.
+
+- **Windows:** pinned PowerShell/native suite, Debug/Release client/server exports,
+  exported lifter resource loading, launcher/hosting bundle, save/UID compatibility
+  and controls on Windows remain unrun; no Windows runtime or PowerShell here.
+- **PostgreSQL:** no PostgreSQL server/client or configured integration stack here;
+  real SQL/HTTPS regression runners were not rerun. Heavy-job public SQL adapter,
+  production migration, backup/restore/failover, multi-host deployment and live
+  recovery remain unimplemented/unrun. No live database/server was touched.
+- **Keycloak/public peers:** no configured OIDC stack/accounts; native enrollment,
+  sign-in, authenticated public heavy admission, two-player pickup/reconnect and
+  server handoff remain unrun. Local fixtures cannot close this gate.
+- **Visual/Andy playtest:** rendered Lower/Raise feedback, crooked block placement,
+  keyboard/mouse focus, scaling, obstruction readability, sailing/docking and
+  subjective tolerances/pacing still need manual acceptance. Headless assertions
+  do not establish visual acceptance.
+
+Deliver as a **draft PR against main** from the feature branch. No push to main,
+live deployment, Step 82 completion or full Windows/SQL/Keycloak/visual acceptance.

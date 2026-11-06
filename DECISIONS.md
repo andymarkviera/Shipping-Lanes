@@ -887,3 +887,28 @@ attachment, release, sinking/despawn recovery and voyage integration, Step 83 ow
 presentation/variants. Historical Port Test and saves remain unchanged. No public
 endpoint, new public hull or global offshore stock in this step. See
 HEAVY_LOAD_JOBS.md for the explicit lifecycle, API and remaining gates.
+
+## D138 — Stationary, local-frame lifter pickup controls (Step 81)
+
+Build on the existing test lifter's moving deck and controlled cargo mount. A
+pickup requires the deck fully lowered and idle, an unpaused simulation, speed
+below 0.05 m/s, absolute yaw rate below 0.001 rad/s, and neutral throttle/thruster
+orders (absolute values below 0.01). Retain centre-over-platform tolerances of
+9 m lateral, 24 m longitudinal and 2 m vertical, inclusive, in the carrier frame.
+Heading remains unrestricted: crooked placement is deliberately accepted. These
+are prototype tolerances, not a requirement to fit the entire block footprint.
+
+When a staged payload exists, Raise from the lower stop attempts validated pickup
+at every distance. Rejection provides alignment feedback and leaves the deck
+target, visual parent and collision ownership unchanged. It no longer silently
+starts an empty raise when the staged load is far away. An absent/inactive payload
+still permits an empty raise, including after historical Port Test delivery.
+Successful pickup retains the fixed cargo-anchor child and one carrier collision
+shape, with the floating body's collision disabled; no stacked rigid bodies.
+Deck travel retains swept obstacle checks, pauses with simulation, and ignores
+nonpositive/nonfinite time deltas. Existing visible buttons remain the controls.
+
+This is test-lifter control validation, not the Step 80 HeavyStore physical bridge.
+Durable attachment, mass/draft effects, sinking/despawn reconciliation, public
+transport and full heavy voyage persistence remain Step 82. No machinery wear,
+new player hull, protocol/save migration or deferred feature is introduced.
