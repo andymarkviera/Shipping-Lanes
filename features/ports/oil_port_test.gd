@@ -5,6 +5,9 @@ var refinery_panel: VBoxContainer
 var oil_scroll: ScrollContainer
 var endpoint: String
 var token: String
+var voyage_ready: bool = false
+var checkpoint_busy: bool = false
+var checkpoint_seconds: float = 0.0
 
 func create_ship() -> HandlingShip:
 	var body: HandlingShip = super.create_ship()
@@ -50,17 +53,69 @@ func _ready() -> void:
 			refinery_panel.port_context = context
 			refinery_panel.send = market_request
 			refinery_panel.inspect()
+		if OS.get_environment("SHIPPING_CARGO_FUEL_FIXTURE") == "1":
+			refinery_panel = preload("res://features/cargo/cargo_fuel_panel.gd").new()
+			oil_panel.add_child(refinery_panel)
+			refinery_panel.port_context = context
+			refinery_panel.send = market_request
+			var commodity := OptionButton.new()
+			commodity.add_item("Crude oil market")
+			commodity.add_item("Refined cargo fuel")
+			oil_panel.add_child(commodity)
+			oil_panel.move_child(commodity, 0)
+			refinery_panel.hide()
+			commodity.item_selected.connect(func(index: int):
+				for child: Node in oil_panel.get_children():
+					if child is Control and child != commodity: child.visible = (child == refinery_panel) == (index == 1)
+				if index == 1: refinery_panel.inspect())
+			refinery_panel.inspect()
+			await resume_cargo_voyage()
 	else:
 		oil_panel.notice.text = "Launch with tools/oil_market_fixture.py and an explicitly provisioned private database. No public or local price fallback."
 
+func navigation_state() -> Dictionary:
+	return {"position": [ship.global_position.x, ship.global_position.y, ship.global_position.z], "yaw": ship.rotation.y, "fuel_liters": ship.state.fuel_liters, "condition": ship.state.condition}
+
 func context() -> Dictionary:
-	return {"docked": docking.state(1) == "docked" and ship.docked, "port_id": port.definition.id}
+	return {"docked": docking.state(1) == "docked" and ship.docked, "port_id": port.definition.id, "navigation": navigation_state()}
+
+func resume_cargo_voyage() -> void:
+	# Resume is isolated from market busy guards and never orders movement.
+	var result: Dictionary = await market_request({"op": "fixture_resume"})
+	if not result.get("ok", false):
+		oil_panel.notice.text = "Voyage unavailable; reopen the fixture."
+		oil_panel.send = Callable()
+		refinery_panel.send = Callable()
+		ship.set_physics_process(false)
+		return
+	var saved: Dictionary = result.navigation
+	if not saved.is_empty():
+		docking.disconnect_owner(1)
+		ship.global_position = Vector3(float(saved.position[0]), float(saved.position[1]), float(saved.position[2]))
+		ship.rotation.y = float(saved.yaw)
+		ship.state.fuel_liters = float(saved.fuel_liters)
+		ship.state.condition = float(saved.condition)
+		ship.zero_throttle()
+		ship.velocity = Vector3.ZERO
+		for place: Node3D in world_ports:
+			if ship.global_position.distance_to(place.berth_anchor.global_position) < ship.global_position.distance_to(port.berth_anchor.global_position): port = place
+		bind_port()
+	voyage_ready = true
+
+func checkpoint_cargo_voyage() -> void:
+	if not voyage_ready or checkpoint_busy: return
+	checkpoint_busy = true
+	var result: Dictionary = await market_request({"op": "fixture_checkpoint", "navigation": navigation_state()})
+	checkpoint_busy = false
+	if not result.get("ok", false):
+		oil_panel.notice.text = "Voyage checkpoint unavailable; last durable position retained."
+
 
 func market_request(request: Dictionary) -> Dictionary:
 	var refinery_request: bool = str(request.op).begins_with("refinery_")
 	if refinery_request and (oil_panel.busy or not oil_panel.pending.is_empty()):
 		return {"ok": false, "code": "SERVICE_BUSY"}
-	if not refinery_request and is_instance_valid(refinery_panel) and (refinery_panel.busy or not refinery_panel.pending.is_empty()):
+	if not refinery_request and not str(request.op).begins_with("fixture_") and is_instance_valid(refinery_panel) and (refinery_panel.busy or not refinery_panel.pending.is_empty()):
 		return {"ok": false, "code": "SERVICE_BUSY"}
 	var http := HTTPRequest.new()
 	http.timeout = 6
@@ -85,6 +140,11 @@ func _physics_process(delta: float) -> void:
 	if is_instance_valid(refinery_panel) and (refinery_panel.busy or not refinery_panel.pending.is_empty()): dock_button.disabled = true
 
 func _process(_delta: float) -> void:
+	if voyage_ready:
+		checkpoint_seconds += _delta
+		if checkpoint_seconds >= 1.0:
+			checkpoint_seconds = 0
+			checkpoint_cargo_voyage()
 	if not is_instance_valid(oil_panel): return
 	services.hide()
 	jobs_panel.hide()
@@ -101,4 +161,5 @@ func _process(_delta: float) -> void:
 func leave() -> void:
 	if is_instance_valid(refinery_panel) and refinery_panel.busy: return
 	if is_instance_valid(oil_panel) and oil_panel.busy: return
+	if voyage_ready: await checkpoint_cargo_voyage()
 	super.leave()

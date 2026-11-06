@@ -37,7 +37,7 @@ class SharedPrivateStore(PrivateStore):
         except MarketError as error:
             return dict(ok=False, code=str(error))
         except sqlite3.Error:
-            return dict(ok=False, code='REFINERY_UNAVAILABLE', uncertain=request.get('op') in ('refinery_submit', 'refinery_withdraw'))
+            return dict(ok=False, code='REFINERY_UNAVAILABLE', uncertain=request.get('op') in ('refinery_submit', 'refinery_withdraw', 'refinery_load', 'refinery_sell'))
 
     def advance(self, elapsed_ms, *, fault=lambda *_: None):
         if not integer(elapsed_ms, 0, 1000): raise MarketError('BAD_REFINERY_TICK')
