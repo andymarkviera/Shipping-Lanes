@@ -41,7 +41,7 @@ def economic_view(market):
                                for p, row in market['ports'].items()})
 
 
-def main():
+def main(scenario=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--postgres-bin', type=Path, required=True)
     parser.add_argument('--work', type=Path, required=True)
@@ -105,6 +105,15 @@ def main():
             return req(n, 'oil_accept', action_id=action, expected_revision=revision,
                        quote_id=q['id'], quote_version=q['version'], port_id=q['port'])
         start(0); start(1)
+        if scenario is not None:
+            def database_control(mode):
+                if mode == 'stop':
+                    command([bindir/'pg_ctl', '-D', cluster, '-m', 'fast', '-w', 'stop'])
+                else:
+                    command([bindir/'pg_ctl', '-D', cluster, '-l', work/'postgres.log', '-o',
+                             f'-h 127.0.0.1 -p {dbport} -k {work}', '-w', 'start'])
+            scenario(authority, clients, accounts, owners, start, stop, children, work, database_control)
+            return
         with concurrent.futures.ProcessPoolExecutor(max_workers=2) as pool:
             def pair(requests):
                 jobs=[pool.submit(remote, clients[n], requests[n]) for n in range(2)]

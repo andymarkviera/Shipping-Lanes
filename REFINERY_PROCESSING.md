@@ -1,5 +1,9 @@
 # Refinery processing — Step 77
 
+Step 78 adds a separate public authority and new private stock adapter; see
+[Shared refinery stock](SHARED_REFINERY_STOCK.md). This document describes the
+unchanged Step 77 private UI/save fixture.
+
 Task ID: `refinery-processing`. One private refinery at Slatewater Works, built on
 Step 76's oil fixture and SQLite account/lot transaction. Shared public stock,
 concurrent withdrawal/pricing and fuel cargo loading/transport/sale remain Steps

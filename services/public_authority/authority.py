@@ -24,6 +24,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from services.oil_market import settlement as oil, postgres as oil_postgres
 from services.oil_market.model import MarketError
+from services.refinery import shared as refinery, postgres as refinery_postgres
 
 import psycopg
 from psycopg.rows import dict_row
@@ -62,6 +63,7 @@ class Authority:
             else:
                 db.execute((Path(__file__).parent / 'schema.sql').read_text(encoding='utf-8'))
             oil_postgres.initialize(db, int(self._now(db).timestamp()))
+            refinery_postgres.initialize(db)
 
     def register_server(self, server, fingerprint):
         credential = secrets.token_urlsafe(32)
@@ -167,6 +169,9 @@ class Authority:
         require(type(request) is dict and request.get('realm') == 'public', 'WRONG_REALM')
         if request.get('op') in oil.OPERATIONS:
             oil.validate(request)
+            return
+        if request.get('op') in refinery.OPERATIONS:
+            refinery.validate_request(request)
             return
         base = {'realm', 'op'}
         owned = {'account', 'epoch', 'generation'}
@@ -298,6 +303,9 @@ class Authority:
         if op in oil.OPERATIONS:
             return oil.execute(oil_postgres.Transaction(db), 'public', profile, request,
                                lambda: int(self._now(db).timestamp()), self.fault)
+        if op in refinery.OPERATIONS:
+            return refinery.execute(refinery_postgres.Transaction(db), 'public', profile, request,
+                                    lambda: int(self._now(db).timestamp() * 1000), self.fault)
         if op == 'checkpoint':
             if recovery.pending(profile['profile']): return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']}
             require(profile['revision'] == request['expected_revision'], 'STALE_REVISION')

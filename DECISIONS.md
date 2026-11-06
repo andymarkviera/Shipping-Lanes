@@ -797,3 +797,34 @@ sold cost and refined cost always reconcile. Residual fractions remain aboard fo
 refining. Existing lots without refinery fields retain their historical behavior.
 Enable only via the operator's `--refinery` fixture flag and a new isolated save;
 no public refinery RPC, deployment, playable fleet or old-save migration.
+
+## D135 — Public refinery row ownership, deadline clock and atomic withdrawal custody
+
+Step 78 (`shared-refinery-stock`) persists one public refinery inventory per stable
+physical ID in the same PostgreSQL database as canonical profiles and receipts.
+Keep account-owned subbalances from D134, visible consistently across servers;
+no account can withdraw another's output. Scene unload, server shutdown and lease
+handoff do not own or delete inventory. Private files remain separate and cannot
+be imported or used as a public fallback. Additive initialization preserves data
+and fails on missing/corrupt established state.
+
+Lock account then refinery then treasury. Submission consumes owned crude and
+records its job/receipt atomically. A saved database-time deadline completes the
+job/stock/fraction once, including public downtime; clamp backward clock changes
+to durable high water. Never add independent game-server elapsed ticks. Private
+hosts retain active-time-only processing. No client time/credit/import endpoints.
+
+Withdraw only owned stock with a frozen account/ship/port/quantity quote. Quotes
+are nonexpiring and do not reserve stock; acceptance rechecks funds, stock and
+revision. Proposed handling fee: 1 minor credit per barrel, ceiling once per
+withdrawal; no submission fee or second crude purchase. Pricing remains prototype
+tuning for Andy's review. Commit stock removal, wallet/treasury, consumed quote,
+collection allocation, receipt and journal together. Changed action reuse conflicts;
+replay survives reconnect/handoff without applying the receipt again.
+
+The durable `awaiting_loading` collection allocation is still refinery custody,
+not aboard or saleable cargo. Step 79 must consume it atomically when loading is
+implemented. No transport, sale, propulsion refill, transfer/gift or public playable
+oil hull in Step 78. Bounded retained jobs/quotes/withdrawals reject at exhaustion
+without erasing replay history. SHARED_REFINERY_STOCK.md records the API, clock,
+rounding, lifecycle and remaining integration boundaries.
