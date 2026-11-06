@@ -7,6 +7,10 @@ from .settlement import OPERATIONS
 
 
 class PublicClient:
+    operations = OPERATIONS
+    mutations = ('oil_accept',)
+    unavailable_code = 'MARKET_UNAVAILABLE'
+
     def __init__(self, endpoint, server, credential, cafile=None, timeout=5):
         url = urlsplit(endpoint)
         if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment:
@@ -16,7 +20,7 @@ class PublicClient:
         self.timeout = timeout
 
     def execute(self, request):
-        if request.get('realm') != 'public' or request.get('op') not in OPERATIONS:
+        if request.get('realm') != 'public' or request.get('op') not in self.operations:
             return dict(ok=False, code='BAD_REQUEST')
         connection = http.client.HTTPSConnection(self.url.hostname, self.url.port,
                                                 context=self.context, timeout=self.timeout)
@@ -35,6 +39,6 @@ class PublicClient:
         except (OSError, ValueError, http.client.HTTPException):
             # A failed response can follow a committed trade. Retain original
             # action_id/quote/revision and retry after rebind; never reprice here.
-            return dict(ok=False, code='MARKET_UNAVAILABLE', uncertain=request['op'] == 'oil_accept')
+            return dict(ok=False, code=self.unavailable_code, uncertain=request['op'] in self.mutations)
         finally:
             connection.close()

@@ -12,6 +12,7 @@ project=OUT/'ShippingLanes'
 copy(ROOT/'exports/windows-x86_64/release',project/'exports/windows-x86_64/release')
 copy(ROOT/'services/public_authority',project/'services/public_authority')
 copy(ROOT/'services/oil_market',project/'services/oil_market')
+copy(ROOT/'services/refinery',project/'services/refinery')
 copy(ROOT/'tools/auth_proof',project/'tools/auth_proof')
 copy(ROOT/'tools/public_handoff/local_online.py',project/'tools/public_handoff/local_online.py')
 for name in ['host.py','gateway.py','Launch-Client.ps1','Launch-Client.cmd']:copy(ROOT/'tools/hosting'/name,project/'tools/hosting'/name)
