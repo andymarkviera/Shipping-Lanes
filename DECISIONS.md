@@ -863,3 +863,27 @@ transaction; a crash may restore an older navigation checkpoint, never older mon
 Retain at most 10000 cargo-fuel mutations per facility; exhaustion fails closed
 without pruning replay receipts. Snapshot shows the first 32 waiting collections;
 fully loading one exposes the next. No existing file is reset or converted.
+
+## D137 — Private-world heavy claims and atomic rewards (Step 80)
+
+Resolve U030's initial job scope as one durable private world, one simple block
+payload and the existing heavy-lifter type. Multiple lifter instances share one
+payload authority/database. Claims never expire or move on disconnect. Reserve
+both stable offshore zones through the carrying state. Cancel only before pickup,
+release both reservations without payment, and retain the cancelled attempt's
+identity. A delivered payload cannot be offered again. No player transfer/gift.
+
+Use the existing Python private profile/wallet contract with a new explicitly
+provisioned HeavyStore. Atomically commit claims, canonical jobs, reservations,
+wallet/debt and durable exact-intent receipts. Reconnect reads state; it does not
+apply receipts. Keep at most 10000 action identities and reject new work at the
+bound, never prune deduplication evidence. Definition/realm changes fail closed.
+Initial gross reward 70000 minor credits and 100000 kg block are prototype tuning.
+Apply existing recovery-debt allocation; cargo never alters propulsion fuel.
+
+Host-only pickup/delivery attestation is an internal integration boundary, not a
+client position proof. Step 81 owns controls/alignment, Step 82 owns physical
+attachment, release, sinking/despawn recovery and voyage integration, Step 83 owns
+presentation/variants. Historical Port Test and saves remain unchanged. No public
+endpoint, new public hull or global offshore stock in this step. See
+HEAVY_LOAD_JOBS.md for the explicit lifecycle, API and remaining gates.

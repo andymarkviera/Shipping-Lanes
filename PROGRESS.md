@@ -4123,3 +4123,123 @@ not counted as passes and required no legacy game behavior changes.
 
 Delivery: feature-branch commit and **draft PR against main**. No push to main,
 live deployment, Step 80 completion, or Windows/Keycloak/visual acceptance claimed.
+
+## Step 80 — Heavy-load jobs (draft) — November 6, 2026
+
+Task ID: `heavy-load-jobs`. Branch `feat/step-80-heavy-load-jobs`, based on merged
+Step 79 main **4cf4c73**. Read AGENTS.md, CLOUD_HANDOFF.md, current progress and
+decisions, FEATURE_INVENTORY.md, DEFERRED_PLAYER_REQUESTS.md, U030/dependencies and
+original roadmap Step 80. Fetched current main before implementation. Only Step 80
+is implemented; D137 and HEAVY_LOAD_JOBS.md record scope, API and lifecycle.
+
+Added `services/heavy_load/private.py`: a durable private-world job authority using
+the existing private SQLite profile/wallet contract. One stable simple block,
+one allowed lifter type (`ship_heavy_lifter_01`), immutable reward/zone terms,
+nonexpiring account/ship claims and exclusive pickup/delivery reservations.
+Competing lifter instances share one world database; different private worlds
+remain isolated. No global public payload ownership is inferred from shared oil.
+
+Claim, canonical profile job, zone reservations, cancellation, terminal delivery,
+wallet/recovery debt and exact-intent receipt share one transaction. Cancel before
+pickup releases without payment; carrying cancellation rejects. Delivered payloads
+remain consumed. Retry/reconnect returns receipts/state without another reward.
+Changed action reuse conflicts; stale cancellations cannot release a newer claim.
+Missing storage, incompatible realm/definition or exhausted bounded history fails
+closed. Explicit creation cannot overwrite an existing file. No live saves touched.
+
+This is a callable job-authority slice, **not a new playable heavy voyage**.
+Historical Port Test heavy jobs/saves remain unchanged and do not yet call this
+adapter. Pickup/delivery take trusted-host attestation; clients cannot put it in
+intent. Physical validation/controls remain Step 81; attachment, release,
+sinking/despawn reconciliation and integration remain Step 82; presentation and
+variants remain Step 83. No new public endpoint, player hull, machinery wear,
+player transfer, expiring offer, hidden shallows or deferred feature. Godot remains
+4.7.2; game/ticket protocols remain 17/7. No GDScript, UID, resource/export root or
+original reference file changed.
+
+### Linux checks actually run
+
+Exact **4.7.2.stable.official.ed1daf0bf**, isolated Python psycopg/binary **3.2.10**,
+cryptography and extracted PostgreSQL **17.11**. Engines, databases, private fixture
+credentials, settings, scratch runners and logs are under `/workspace/work/step80`,
+outside Git. The preinstalled Godot 4.6.3 was inspected but not used for checks.
+
+- **10 new heavy authority tests pass.** 32 competing requests and **12 separate
+  host processes** yield one claim; 32 identical delivery retries yield one payment.
+  Covers cancellation/reclaim/stale actions, reconnect, zone contention, allowed
+  hull/ownership/account/realm/revision checks, unchanged propulsion fuel, recovery
+  debt, history bounds, missing storage and incompatible saved definitions.
+  Rollback at job/profile writes and before COMMIT leaves state unchanged. **Eight
+  owned subprocess exits** before/after claim, cancel, pickup and delivery COMMIT
+  prove durable recovery; a committed lost reply recovers the original receipt.
+- All **51 existing oil/refinery Python tests** and **45 authority tests** pass.
+  Production route benchmark and all three progression/reload scenarios pass.
+- All three **real PostgreSQL/HTTPS** regression runners pass: oil settlement,
+  shared refinery and cargo-fuel voyage. Includes multi-service contention,
+  transaction/service deaths, outage/restart, fencing/handoff, exact replay,
+  conserved settlement and unchanged cargo-fuel propulsion. These exercise existing
+  public adapters; they do not establish public heavy-job support.
+- Actual Godot/HTTP/private SQLite interfaces: oil **26**, refinery **26**,
+  cargo-fuel first process **9** and resumed sale process **16** assertions pass.
+- Oil inventory **13**, bulk **15**, gas **15** portable phases pass, including
+  their owned-process crash/recovery cases. Bulk capacity **102**, earnings **330**,
+  gas capacity **108** pass. All **28** legacy storage/persistence/migration/action
+  recovery phases pass, including ten owned-process terminations and backup/UI.
+- Voyage suite **101**, round trip with two reopens, and ten ordered recovery
+  phases pass (four intentional self-kills verified by fault files and subsequent
+  recovery). Sailing-save **330 checkpoints**, slots **38**, friends menu pass.
+- Editor/import, all **171 scripts**, Main startup, catalog, controls, application
+  flow, starter assets, units, contracts, geography, session/clocks, handling,
+  camera, water/feedback, world size, heavy lifter, fuel, economy, compact snapshots,
+  public physics, repairs, purchase, fleet inspection/switching and resale pass.
+  Diagnostics passes with its intentionally invalid-reference error.
+- Python AST parsing **88 sources**, existing UID/reference preservation and
+  whitespace checks pass. No databases, binaries, caches, exports or secrets added.
+
+### Remaining platform and integration gates
+
+Collision fails its lateral-contact assertion; composition fails two side-course
+contacts. Shared gauges and wear reach the 65-second headless rendered-frame wait
+timeout. Ports reaches **261** passing assertions but emits two out-of-tree transform
+errors. These reproduce previously recorded limitations and are **not clean passes**.
+No physics, condition, gauge or networking implementation changed in this branch.
+
+- **Windows:** pinned PowerShell/native suite, Debug/Release exports, launcher and
+  hosting bundle, runtime/save compatibility. No Windows runtime is available.
+- **PostgreSQL:** existing local SQL regressions ran. A heavy-job PostgreSQL/public
+  adapter is not implemented or tested. Production migration, mixed-version rollout,
+  backup/restore/failover, multi-host/WAN deployment and long-history/load behavior
+  remain unrun. Private-world SQLite evidence cannot close these gates.
+- **Keycloak/public peers:** no configured native OIDC enrollment/sign-in stack;
+  public heavy admission/RPC, two-player heavy reconnect and public server handoff
+  remain unrun/unimplemented. Trusted service HTTPS fixtures are not Keycloak players.
+- **Visual/Andy playtest:** no rendered manual acceptance. Physical block placement,
+  lifter pickup/attachment, sailing, release, waypoint/UI readability and pacing
+  remain the later control/lifecycle/presentation gates. This service-only step
+  does not assert a complete player voyage or upgrade historical Port Test saves.
+
+Harness corrections: initial sandbox import could not open its editor socket;
+rerun with loopback permission and isolated settings passed. Initial authority
+unittest discovery pointed at the source directory and discovered zero tests;
+corrected discovery ran all 45. Initial storage runner supplied a short fixture ID
+instead of the required 32 hexadecimal characters; all 28 corrected phases passed.
+The generic exit-code summary marked intentional voyage SIGKILL cases as false;
+the original runner's fault-marker/recovery criteria confirm all four expected
+kills. None of those initial attempts is counted as a clean pass.
+
+Network results: initial reconnect/actions plus normal/impaired replication,
+cargo-network and connected-world run passed **13/16** process results. Normal
+replication failed host guard and client motion assertions; impaired replication
+failed client motion/acknowledgement timing. Initial capacity sweep (2/10/25/50/100,
+dispersed/crowded) passed **28/30**: both 50-client observers failed motion bounds;
+all server/bot processes passed. These ran alongside other Linux regressions.
+After those finished, rerunning both replication profiles and both 50-client layouts
+passed **10/10** process results. Retain the initial failures as timing instability;
+do not label the initial sweeps clean or claim production capacity. No network code
+was changed to obtain the rerun results. Private authenticated identity/reconnect
+also passes **70 starter / 74 heavy** assertions using isolated loopback processes.
+This tests existing private identity, not a public heavy-job or physical integration.
+
+Delivery: feature-branch commit and **draft PR against main**, no push to main.
+No live deployment, Step 81–83 completion, Windows/Keycloak/visual acceptance or
+public heavy-job adapter is claimed.
