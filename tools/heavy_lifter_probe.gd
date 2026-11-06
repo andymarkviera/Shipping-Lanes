@@ -45,6 +45,31 @@ func run() -> void:
 	for tick: int in range(240): ship.advance_deck(1.0 / 60.0)
 	check(is_equal_approx(ship.deck_height, Heavy.LOWERED), "Deck reaches exact lower stop")
 	check(not ship.attach_payload(), "Off-center load rejected")
+	# Rejected raises must leave deck, visual parent and collision ownership intact.
+	for offset: Vector3 in [Vector3(9.01, 0, 0), Vector3(-9.01, 0, 0), Vector3(0, 0, 24.01), Vector3(0, 0, -24.01), Vector3(0, 2.01, 0), Vector3(0, -2.01, 0), Vector3(1000, 0, 1000)]:
+		ship.payload_body.global_position = ship.to_global(Vector3(0, Heavy.LOWERED, -8) + offset)
+		check(not ship.request_height(Heavy.RAISED) and ship.notice.contains("underneath"), "Out-of-tolerance Raise gives alignment feedback: %s" % offset)
+		check(not ship.attached and ship.deck_target == Heavy.LOWERED and ship.payload_visual.get_parent() == ship.payload_body and ship.payload_shape.disabled and ship.payload_body.collision_layer == CollisionRules.HULL, "Rejected pickup has no attachment or deck side effects")
+	ship.payload_body.global_position = ship.to_global(Vector3(0, Heavy.LOWERED, -8))
+	ship.yaw_rate = 0.01
+	check(not ship.request_height(Heavy.RAISED) and not ship.attach_payload(), "Residual turning rejects both pickup entry points")
+	ship.yaw_rate = 0
+	ship.lateral_order = 1
+	check(not ship.request_height(Heavy.RAISED) and not ship.attach_payload(), "Active thruster rejects pickup even before velocity increases")
+	ship.lateral_order = 0
+	ship.simulation_paused = true
+	check(not ship.request_height(Heavy.RAISED) and not ship.attach_payload(), "Paused controls cannot attach")
+	ship.simulation_paused = false
+	for offset: Vector3 in [Vector3(9, 0, 24), Vector3(-9, 0, -24), Vector3(0, 2, 0), Vector3(0, -2, 0)]:
+		ship.payload_body.global_position = ship.to_global(Vector3(0, Heavy.LOWERED, -8) + offset)
+		check(ship.pickup_position_ready(), "Inclusive alignment boundary: %s" % offset)
+	var original_pose: Transform3D = ship.global_transform
+	ship.global_transform = Transform3D(Basis(Vector3.UP, 1.1), Vector3(400, 0, -300))
+	ship.payload_body.global_position = ship.to_global(Vector3(8, Heavy.LOWERED, 15))
+	check(ship.pickup_position_ready(), "Alignment uses translated and rotated carrier frame")
+	ship.payload_body.global_position = ship.to_global(Vector3(10, Heavy.LOWERED, -8))
+	check(not ship.request_height(Heavy.RAISED), "Rotated carrier rejects local lateral misalignment")
+	ship.global_transform = original_pose
 	# Reproduce the player's stern-first approach without the staging shortcut.
 	ship.payload_body.global_transform = Transform3D(Basis.IDENTITY, Vector3(0, Heavy.LOWERED, -80))
 	await get_tree().physics_frame
@@ -76,6 +101,14 @@ func run() -> void:
 	ship.payload_body.rotation.y = 0.2
 	check(ship.pickup_position_ready(), "Crooked load over platform is eligible without angle matching")
 	check(ship.request_height(Heavy.RAISED) and ship.attached, "Raise automatically picks up crooked load")
+	var start_height: float = ship.deck_height
+	check(not ship.request_height(Heavy.LOWERED), "Busy deck rejects reverse command")
+	for invalid_delta: float in [-1.0, 0.0, NAN, INF]: ship.advance_deck(invalid_delta)
+	check(ship.deck_height == start_height, "Invalid clock deltas cannot move or corrupt deck")
+	ship.simulation_paused = true
+	ship.advance_deck(1.0)
+	check(ship.deck_height == start_height, "Pause freezes deck travel")
+	ship.simulation_paused = false
 	ship.deck_target = ship.deck_height
 	check(not ship.attach_payload(), "Duplicate attachment rejected")
 	check(ship.payload_body.collision_layer == 0 and not ship.payload_shape.disabled, "Exactly one active cargo collision owner")
@@ -134,6 +167,7 @@ func run() -> void:
 	ship.zero_throttle()
 	ship.actual_throttle = 0
 	ship.maneuver(0, 0)
+	ship.yaw_rate = 0
 	ship.request_height(Heavy.LOWERED)
 	for tick: int in range(240): ship.advance_deck(1.0 / 60.0)
 	var release_pose: Transform3D = ship.payload_visual.global_transform
