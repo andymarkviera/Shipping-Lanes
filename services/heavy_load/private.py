@@ -4,6 +4,7 @@ No player RPC, public fallback, timer expiry or physics implementation. The host
 supplies pickup/delivery evidence after checking its authoritative simulation.
 """
 import json
+import math
 import sqlite3
 from services.oil_market.private import PrivateStore
 from services.oil_market.model import MarketError, integer
@@ -61,14 +62,22 @@ class HeavyStore(PrivateStore):
         with self.connect() as db:
             db.execute('BEGIN')
             self._world(db)
-            row = db.execute('SELECT money, revision FROM profiles WHERE account=?', (account,)).fetchone()
+            row = db.execute('SELECT money, revision, profile FROM profiles WHERE account=?', (account,)).fetchone()
             require(row is not None, 'UNKNOWN_ACCOUNT')
             jobs = [dict(r, terms=json.loads(r['terms'])) for r in db.execute('SELECT * FROM heavy_jobs WHERE account=? ORDER BY rowid', (account,))]
             occupied = db.execute("SELECT 1 FROM heavy_jobs WHERE payload=? AND state!='cancelled'", (PAYLOAD,)).fetchone()
+            profile = json.loads(row['profile'])
+            navigation = profile.get('heavy_navigation')
+            if navigation is not None:
+                validate_navigation(navigation)
+                require(navigation['attached'] == any(j['state'] == 'carrying' for j in jobs), 'ATTACHMENT_MISMATCH')
+                require(navigation['condition_bp'] == profile['ship']['condition_bp'], 'CONDITION_MISMATCH')
             return dict(terms=json.loads(encode(TERMS)), available=not occupied, jobs=jobs,
-                        zones=[dict(r) for r in db.execute('SELECT * FROM heavy_zones ORDER BY zone')], **dict(row))
+                        zones=[dict(r) for r in db.execute('SELECT * FROM heavy_zones ORDER BY zone')],
+                        money=row['money'], revision=row['revision'],
+                        navigation=navigation)
 
-    def heavy(self, account, request, *, evidence=None, fault=lambda *_: None):
+    def heavy(self, account, request, *, evidence=None, navigation=None, fault=lambda *_: None):
         """Intent has op/action_id/ship_id/payload_id/job_id/expected_revision/realm.
 
         claim uses job_id == action_id (account-qualified internally). Later
@@ -79,7 +88,7 @@ class HeavyStore(PrivateStore):
             require(type(request) is dict and set(request) == {'op', 'action_id', 'ship_id', 'payload_id', 'job_id', 'expected_revision', 'realm'}, 'BAD_REQUEST')
             require(identity(account) and all(identity(request[k]) for k in ('action_id', 'ship_id')) and type(request['job_id']) is str and 0 < len(request['job_id']) <= 2048, 'BAD_ID')
             require(request['realm'] == self.realm, 'WRONG_REALM')
-            require(request['op'] in ('claim', 'pickup', 'cancel', 'deliver'), 'BAD_OPERATION')
+            require(request['op'] in ('claim', 'pickup', 'cancel', 'deliver', 'destroy'), 'BAD_OPERATION')
             require(request['payload_id'] == PAYLOAD and integer(request['expected_revision'], 0, MAX_MONEY), 'BAD_REQUEST')
             intent = encode(request)
             with self.connect() as db:
@@ -96,7 +105,14 @@ class HeavyStore(PrivateStore):
                 profile = json.loads(row['profile'])
                 ship = profile['ship']
                 require(ship['id'] == request['ship_id'] and ship['definition'] in TERMS['allowed_lifters'], 'WRONG_LIFTER')
-                require(integer(ship['condition_bp'], 1, 10000), 'SHIP_UNAVAILABLE')
+                require(integer(ship['condition_bp'], 0 if request['op'] == 'destroy' else 1, 10000), 'SHIP_UNAVAILABLE')
+                require('heavy_navigation' not in profile or navigation is not None, 'NAVIGATION_REQUIRED')
+                if navigation is not None:
+                    validate_navigation(navigation)
+                    require(navigation['condition_bp'] == 0 if request['op'] == 'destroy' else navigation['condition_bp'] > 0, 'SHIP_UNAVAILABLE')
+                    profile['heavy_navigation'] = navigation
+                    ship['condition_bp'] = navigation['condition_bp']
+                    ship['fuel_liters'] = navigation['fuel_liters']
                 op = request['op']
                 gross = repayment = 0
                 if op == 'claim':
@@ -123,6 +139,11 @@ class HeavyStore(PrivateStore):
                         require(job['state'] == 'pickup', 'NOT_AT_PICKUP')
                         self._evidence(evidence, job_id, TERMS['pickup_zone'], ship['id'])
                         state = 'carrying'
+                    elif op == 'destroy':
+                        require(job['state'] in ('pickup', 'carrying'), 'JOB_TERMINAL')
+                        self._evidence(evidence, job_id, 'destroyed', ship['id'])
+                        require(navigation is not None and navigation['condition_bp'] == 0, 'HULL_NOT_DESTROYED')
+                        state = 'failed'
                     else:
                         require(job['state'] == 'carrying', 'NOT_CARRYING')
                         self._evidence(evidence, job_id, TERMS['delivery_zone'], ship['id'])
@@ -137,6 +158,8 @@ class HeavyStore(PrivateStore):
                     db.execute('UPDATE heavy_jobs SET state=? WHERE id=?', (state, job_id))
                     if state in TERMINAL:
                         db.execute('DELETE FROM heavy_zones WHERE job=?', (job_id,))
+                if navigation is not None:
+                    profile['heavy_navigation'] = dict(navigation, attached=state == 'carrying')
                 fault('after_job_write', request)
                 money = row['money'] + gross - repayment
                 require(integer(money, 0, MAX_MONEY), 'WALLET_LIMIT')
@@ -154,7 +177,45 @@ class HeavyStore(PrivateStore):
         except (sqlite3.Error, ValueError, KeyError, TypeError):
             return dict(ok=False, code='HEAVY_UNAVAILABLE', uncertain=True)
 
+    def checkpoint(self, account, revision, navigation):
+        """Host-only navigation CAS. Never overwrite an economic transition."""
+        try:
+            validate_navigation(navigation)
+            require(integer(revision, 0, MAX_MONEY), 'BAD_REVISION')
+            with self.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                self._world(db)
+                row = db.execute('SELECT * FROM profiles WHERE account=?', (account,)).fetchone()
+                require(row is not None, 'UNKNOWN_ACCOUNT')
+                require(row['revision'] == revision, 'STALE_REVISION')
+                profile = json.loads(row['profile'])
+                require(profile['ship']['definition'] == LIFTER, 'WRONG_LIFTER')
+                carrying = db.execute("SELECT 1 FROM heavy_jobs WHERE account=? AND state='carrying'", (account,)).fetchone() is not None
+                require(navigation['attached'] == carrying, 'ATTACHMENT_MISMATCH')
+                # Destruction must commit through destroy, with job cleanup.
+                active = db.execute("SELECT 1 FROM heavy_jobs WHERE account=? AND state IN ('pickup','carrying')", (account,)).fetchone()
+                require(navigation['condition_bp'] > 0 or not active, 'RECOVERY_REQUIRED')
+                require(profile['ship']['condition_bp'] > 0 or navigation['condition_bp'] == 0, 'SHIP_UNAVAILABLE')
+                profile['heavy_navigation'] = navigation
+                profile['ship']['condition_bp'] = navigation['condition_bp']
+                profile['ship']['fuel_liters'] = navigation['fuel_liters']
+                db.execute('UPDATE profiles SET profile=?,revision=revision+1 WHERE account=?', (encode(profile), account))
+            return dict(ok=True, revision=revision+1)
+        except MarketError as error:
+            return dict(ok=False, code=str(error))
+        except (sqlite3.Error, ValueError, KeyError, TypeError):
+            return dict(ok=False, code='HEAVY_UNAVAILABLE', uncertain=True)
+
     @staticmethod
     def _evidence(evidence, job, zone, ship):
         require(evidence == dict(job_id=job, payload_id=PAYLOAD, zone_id=zone,
                                  ship_id=ship, validated=True), 'HOST_VALIDATION_REQUIRED')
+
+
+def validate_navigation(value):
+    require(type(value) is dict and set(value) == {'position', 'yaw', 'deck_height', 'deck_target', 'fuel_liters', 'condition_bp', 'attached'}, 'BAD_NAVIGATION')
+    def finite(n, low, high):
+        return type(n) in (int, float) and low <= n <= high and math.isfinite(n)
+    require(type(value['position']) is list and len(value['position']) == 3 and all(finite(n, -1000000, 1000000) for n in value['position']), 'BAD_NAVIGATION')
+    require(finite(value['yaw'], -math.tau, math.tau) and finite(value['deck_height'], -1, 2.6) and finite(value['deck_target'], -1, 2.6), 'BAD_NAVIGATION')
+    require(finite(value['fuel_liters'], 0, 2000) and integer(value['condition_bp'], 0, 10000) and type(value['attached']) is bool, 'BAD_NAVIGATION')

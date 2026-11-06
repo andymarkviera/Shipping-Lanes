@@ -912,3 +912,26 @@ This is test-lifter control validation, not the Step 80 HeavyStore physical brid
 Durable attachment, mass/draft effects, sinking/despawn reconciliation, public
 transport and full heavy voyage persistence remain Step 82. No machinery wear,
 new player hull, protocol/save migration or deferred feature is introduced.
+
+## D139 — Durable private heavy transport and failure tombstones (Step 82)
+
+Connect the Step 80 private HeavyStore to the Step 81 lifter through an explicitly
+provisioned owned-process fixture, with no public endpoint or Port Test migration.
+Commit custody/navigation before applying attachment or release. Reconnect uses
+canonical snapshots, not receipt deltas. Checkpoint revision guards prevent stale
+navigation from undoing a transition. Persist the same payload/job IDs and deck
+state; resume stopped and neutral. Unknown outcomes fence the ship for exact retry.
+
+A carried 100000 kg block scales acceleration against 1000000 kg prototype empty
+displacement and adds 0.5 m visual hull draft. Keep fixed cargo mount/carrier-only
+collision, no free payload physics, depth rules or machinery wear. These values
+are explicit prototype tuning, pending Andy's handling/visual acceptance.
+
+Delivery needs the lowered, stopped cargo anchor within 30 m horizontally of the
+immutable offshore destination; reward and release commit once. Requested despawn
+rejects active jobs. Scene teardown/disconnect preserves the last committed voyage.
+Hull destruction at zero condition permanently fails/consumes that job/payload,
+releases reservations and pays nothing. Preserve zero-condition hull ownership;
+no implicit repair/replacement or free recovery. A failed tombstone never reoffers
+the block. This resolves payload recovery only; public hull admission/paid recovery
+integration stays outside the private fixture. See HEAVY_TRANSPORT_LIFECYCLE.md.

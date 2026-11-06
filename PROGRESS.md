@@ -4343,3 +4343,118 @@ rerun passed all 45. These initial attempts are not counted as successful checks
 
 Deliver as a **draft PR against main** from the feature branch. No push to main,
 live deployment, Step 82 completion or full Windows/SQL/Keycloak/visual acceptance.
+
+## Step 82 — Heavy transport lifecycle (draft) — November 6, 2026
+
+Task ID: `heavy-transport-lifecycle`. Feature branch
+`feat/step-82-heavy-transport-lifecycle`, based on merged Step 81 **c9463e1**.
+Read AGENTS.md, CLOUD_HANDOFF.md, latest progress/decisions, FEATURE_INVENTORY.md,
+DEFERRED_PLAYER_REQUESTS.md, U030/dependencies and original roadmap Step 82.
+Fetched current main before implementation. Only Step 82 is implemented.
+
+Connected Step 80's private HeavyStore to the actual Step 81 lifter via an explicit
+owned-process Godot/loopback HTTP/private SQLite fixture. Pickup commits custody
+and navigation before attaching; lowered/stationary offshore delivery commits the
+reward, job, release and receipt together. Unknown replies freeze play for exact
+retry; canonical snapshots rebuild the scene without applying receipt money again.
+Periodic revision-guarded navigation persists position/yaw, fuel, single condition
+and deck height/target. Reconnect retains the same stable job/payload, stopped and
+neutral, with no offline motion. Corrupt/missing/inconsistent state fails closed.
+
+Added opt-in loaded acceleration scaling (100 t block / 1000 t empty prototype)
+and 0.5 m visual hull draft. Retain fixed cargo mount, disabled floating collision
+and the sole carrier payload shape; no unconstrained rigid-body stacking. Historical
+fixtures keep zero mass tuning and existing saves. Requested despawn rejects active
+jobs; disconnect/scene teardown retains the last committed voyage. Destruction at
+zero condition atomically fails and permanently consumes the payload, releases zones
+and pays zero. Hull ownership/zero condition remain; no free repair or replacement.
+D139 and HEAVY_TRANSPORT_LIFECYCLE.md document this policy and reproduction.
+
+No public heavy endpoint/admission, Step 83 variants/guidance/presentation, old-save
+conversion, machinery wear, hidden shallows, expiry or player transfer. One active
+nonexpiring job. Godot remains **4.7.2**, game/ticket protocols **17/7**. All **171
+existing UID files** are byte-identical; two new script sidecars are included and
+the new runtime scene is an explicit export root. Original references unchanged.
+No database, credential, engine, export, cache or evidence artifact is committed.
+
+### Linux checks actually run
+
+Pinned **4.7.2.stable.official.ed1daf0bf**, isolated Python psycopg/binary **3.2.10**
+and cryptography. Scratch harnesses, binaries, settings, logs and disposable saves
+are in `/workspace/work/step82`, outside Git. Preinstalled Godot 4.6.3 was not used.
+
+- **65 Python service tests pass:** 14 heavy (10 existing + 4 lifecycle), plus all
+  51 oil/refinery/cargo-fuel tests. All **45 authority tests pass**. After the final
+  navigation consistency guard, all 14 heavy tests were rerun and pass. Covers
+  atomic navigation/custody, 16 concurrent delivery retries, stale checkpoints,
+  invalid numbers/fields, rollback, no healthy resurrection and six new owned
+  subprocess exits before/after pickup, delivery and destruction commits, alongside
+  Step 80's contention and eight process-death cases.
+- Actual new Godot/HTTP/SQLite lifecycle probes: **11 carry / 9 deliver / 4 terminal
+  reopen** checks pass across three processes, including an intentionally lost
+  committed delivery reply, frozen custody and exact retry. Separate new world:
+  **11 carry / 4 destroy / 5 failed-reopen** pass. Proves stable IDs, saved loaded
+  position, constrained attachment, loaded handling/draft, off-target release and
+  active despawn rejection, terminal cleanup and no duplicate payment/respawn.
+- Editor import, **173 script loads**, Main startup, catalog, controls, application
+  flow, starter assets, units, contracts, geography, session/clocks, handling,
+  camera, water/feedback, world size, **65 lifter assertions**, fuel, economy,
+  compact snapshots and public physics pass. Diagnostics passes its intentional
+  invalid-reference diagnostic. Bulk capacity/earnings, gas capacity, repairs,
+  purchase, fleet inspection/switching, resale and friends menu pass.
+- Historical voyage suite **101**, round trip with two reopens, and ten ordered
+  crash/recovery phases pass (four expected SIGKILLs verified by fault markers).
+  Sailing save **330 checkpoints**, corrected slots **38**, production route
+  benchmark, and all **28** legacy storage/persistence/migration/action-recovery
+  phases pass (ten owned-process terminations). Existing authority economy tests
+  include progression/reload scenarios.
+- Portable oil inventory **13**, bulk **15**, gas **15** recovery phases pass,
+  including four owned-process kills per family. Actual existing Godot/HTTP/private
+  SQLite interfaces pass: oil **26**, refinery **26**, cargo-fuel **9** first-process
+  and **16** resumed-sale assertions.
+- Local network sweep **16/16 process results pass**: identity rounds/actions,
+  normal/impaired replication, cargo-network and connected-world. This is private
+  loopback replication, not new public heavy-job support.
+- Capacity sweep **30/30 process results pass** for 2/10/25/50/100 clients in
+  dispersed/crowded layouts. These are headless local experiment checks, not
+  production capacity or Windows CPU/memory acceptance.
+- Python AST parsing, UID byte preservation/sidecar presence, reference preservation
+  and `git diff --check` pass.
+
+### Failures, harness corrections and unrun gates
+
+Collision still fails lateral contact; composition fails its two side-course
+contacts. Ports reaches **261** passing assertions but emits two out-of-tree
+transform errors. Shared gauges passes three assertions and wear passes ten, then
+both hit the **65-second** headless rendered-frame timeout. These match recorded
+Linux limitations and are **not clean passes**; no shared physics/network/gauge
+implementation was changed to hide them.
+
+The first slots invocation omitted its required isolated-test proof flag; corrected
+`--slots-proof` invocation passes. The first gauges/wear invocation incorrectly used
+`--script` for Node scripts; corrected scene wrappers reach the timeouts above.
+Neither initial harness attempt is counted as a pass. Initial private identity
+starter run completed host assertions but emitted TLS handshake error **-30464**;
+a second run with precreated settings directories passes **70 starter** assertions,
+then the heavy host emits the same TLS error after its assertions and the strict
+runner stops before recovery. Retain both errors; heavy authenticated identity is
+**not a clean pass** and no public identity acceptance is claimed.
+
+- **Windows:** PowerShell/native checks, Debug/Release client/server exports,
+  exported resource loading, launcher/hosting bundle and Windows save/control/UID
+  compatibility remain unrun; no Windows runtime here.
+- **PostgreSQL:** no installed PostgreSQL server/client or configured integration
+  stack. The three real SQL/HTTPS runners were not run; Python authority doubles
+  and private SQLite do not substitute for them. Public heavy SQL adapter,
+  production migration, mixed-version rollout, backup/restore/failover, live
+  recovery and multi-host/WAN deployment remain unimplemented/unrun.
+- **Keycloak/public peers:** no configured OIDC stack/accounts. Native sign-in,
+  enrollment, authenticated public heavy admission/RPC, two-player heavy pickup/
+  reconnect and public server handoff remain unrun. No live server touched.
+- **Visual/Andy acceptance:** manual Lower/Raise/release and crooked pickup,
+  visual draft/collision alignment, loaded handling/pacing, camera/input/focus,
+  saved mid-deck travel and failure/retry readability remain unrun. Probe placement
+  and fixed-step motion do not establish a manually sailed/rendered voyage.
+
+Delivery is a feature-branch commit and **draft PR against main**, not a push to
+main or live deployment. Step 83 and the platform/visual acceptance gates remain open.
