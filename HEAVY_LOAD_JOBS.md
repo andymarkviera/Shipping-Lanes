@@ -99,3 +99,14 @@ wrong ship/account/realm, payload/revision validation, debt and propulsion
 preservation, rollback, bounded history, and eight owned subprocess exits before
 and after claim/cancel/pickup/delivery commits. PROGRESS.md records the broader
 Linux run and Windows/PostgreSQL/Keycloak/visual gates.
+
+## Step 82 follow-through
+
+HEAVY_TRANSPORT_LIFECYCLE.md supersedes the Step 82 future-work cells above for the
+new private transport fixture. HeavyStore now supports trusted `destroy` (failed,
+permanently consumed block; zones released, zero reward), optional atomic host
+navigation on transitions, and revision-guarded navigation checkpoints. A profile
+already containing heavy navigation requires it on new economic transitions;
+identical retries still recover the original receipt before physical checks.
+The original Step 80 service-only API remains compatible for profiles without
+navigation. Public heavy support and historical Port Test conversion remain absent.

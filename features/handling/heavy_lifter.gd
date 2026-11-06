@@ -17,6 +17,12 @@ var payload_visual: Node3D
 var payload_shape: CollisionShape3D
 var attached: bool = false
 var release_guard: Callable
+# Optional durable private-host bridge. Returning false retains physical custody.
+var pickup_commit_guard: Callable
+var release_commit_guard: Callable
+var payload_mass_kg: float = 0.0
+var empty_accelerations: Array[float] = []
+var loaded_draft_m: float = 0.0
 var assembly: ShipAssembly
 var notice: String = "Lower the platform, move underneath the load, stop and press Raise."
 
@@ -31,6 +37,7 @@ func helm_available() -> bool:
 
 func _ready() -> void:
 	super._ready()
+	empty_accelerations = [definition.forward_acceleration_mps2, definition.reverse_acceleration_mps2, definition.thruster_acceleration_mps2, definition.turn_acceleration_degrees]
 	assembly = ShipAssembly.new()
 	add_child(assembly)
 	assembly.configure(self)
@@ -116,11 +123,13 @@ func attach_payload() -> bool:
 	if not space_clear(cargo_mount.global_transform.translated_local(Vector3(0, 4, 0)), payload_shape.shape):
 		notice = "Cannot secure cargo inside an obstacle."
 		return false
+	if pickup_commit_guard.is_valid() and not pickup_commit_guard.call(): return false
 	payload_body.collision_layer = 0
 	payload_visual.reparent(cargo_mount, false)
 	payload_visual.transform = Transform3D.IDENTITY
 	payload_shape.disabled = false
 	attached = true
+	apply_payload_effects()
 	notice = "Payload secured. Raise the deck, then sail."
 	return true
 
@@ -131,12 +140,14 @@ func detach_payload() -> bool:
 	if not attached or operating() or not stopped() or absf(deck_height - LOWERED) > 0.001:
 		notice = "Lower the deck and stop before releasing cargo."
 		return false
+	if release_commit_guard.is_valid() and not release_commit_guard.call(): return false
 	payload_body.global_transform = cargo_mount.global_transform
 	payload_visual.reparent(payload_body, false)
 	payload_visual.transform = Transform3D.IDENTITY
 	payload_shape.disabled = true
 	payload_body.collision_layer = CollisionRules.HULL
 	attached = false
+	apply_payload_effects()
 	notice = "Payload floating freely. Raise will attempt another pickup."
 	return true
 
@@ -187,3 +198,30 @@ func alignment_hint() -> String:
 	if attached: return "Load aboard. Raise to sail; Lower at the ocean drop-off to deliver."
 	if pickup_position_ready(): return "Platform is under the load. Stop in neutral and press Raise."
 	return "Lower the platform and reverse underneath the centre of the load.\nCrooked is fine — no angle matching required."
+
+func apply_payload_effects() -> void:
+	# Prototype 1,000 t displacement plus 100 t block; never mutate the catalog.
+	var ratio: float = 1000000.0 / (1000000.0 + (payload_mass_kg if attached else 0.0))
+	definition.forward_acceleration_mps2 = empty_accelerations[0] * ratio
+	definition.reverse_acceleration_mps2 = empty_accelerations[1] * ratio
+	definition.thruster_acceleration_mps2 = empty_accelerations[2] * ratio
+	definition.turn_acceleration_degrees = empty_accelerations[3] * ratio
+	loaded_draft_m = 0.5 * payload_mass_kg / 100000.0 if attached else 0.0
+	# Visible hull draft only: fixed cargo anchor/collision remain in the planar frame.
+	assembly.visual.position.y = -loaded_draft_m
+
+func restore_heavy_payload(carrying: bool, active: bool, pickup: Vector3) -> void:
+	# Caller has loaded a committed host snapshot; no pickup guard or reward here.
+	attached = carrying
+	payload_visual.reparent(cargo_mount if carrying else payload_body, false)
+	payload_visual.transform = Transform3D.IDENTITY
+	payload_visual.visible = active
+	payload_body.visible = active and not carrying
+	payload_body.global_position = pickup
+	payload_body.collision_layer = CollisionRules.HULL if active and not carrying else 0
+	payload_shape.disabled = not carrying
+	deck_visual.position.y = deck_height - RAISED
+	deck_shape.position.y = deck_height - 0.45
+	cargo_mount.position.y = deck_height
+	payload_shape.position.y = deck_height + 4
+	apply_payload_effects()
