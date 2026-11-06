@@ -20,6 +20,10 @@ import fleet
 import recovery
 import wear
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from services.oil_market import settlement as oil, postgres as oil_postgres
+from services.oil_market.model import MarketError
 
 import psycopg
 from psycopg.rows import dict_row
@@ -57,6 +61,7 @@ class Authority:
                 require(db.execute('SELECT version FROM public_authority.version').fetchall() == [{'version': 1}], 'SCHEMA_VERSION')
             else:
                 db.execute((Path(__file__).parent / 'schema.sql').read_text(encoding='utf-8'))
+            oil_postgres.initialize(db, int(self._now(db).timestamp()))
 
     def register_server(self, server, fingerprint):
         credential = secrets.token_urlsafe(32)
@@ -155,11 +160,14 @@ class Authority:
                     require(lease['expires'] > self._now(db), 'STALE_AUTHORITY')
             self.fault('after_commit', request)
             return result
-        except Rejected as error:
+        except (Rejected, MarketError) as error:
             return {'ok': False, 'code': str(error)}
 
     def _validate(self, request):
         require(type(request) is dict and request.get('realm') == 'public', 'WRONG_REALM')
+        if request.get('op') in oil.OPERATIONS:
+            oil.validate(request)
+            return
         base = {'realm', 'op'}
         owned = {'account', 'epoch', 'generation'}
         fields = {'admit': {'ticket', 'nonce'}, 'claim': {'ticket', 'nonce', 'transfer_id'},
@@ -287,6 +295,9 @@ class Authority:
             db.execute("UPDATE public_authority.leases SET phase='SEALED' WHERE account=%s", (account,))
             return {'ok': True, 'code': 'SEALED', 'transfer_id': transfer['id'], 'revision': snapshot['revision']}
         profile = self._profile(db, account)
+        if op in oil.OPERATIONS:
+            return oil.execute(oil_postgres.Transaction(db), 'public', profile, request,
+                               lambda: int(self._now(db).timestamp()), self.fault)
         if op == 'checkpoint':
             if recovery.pending(profile['profile']): return {'ok': True, 'code': 'SAVED', 'revision': profile['revision']}
             require(profile['revision'] == request['expected_revision'], 'STALE_REVISION')
@@ -310,7 +321,7 @@ class Authority:
         cargo = profile['profile']['cargo']
         if profile['revision'] != request['expected_revision']: code = 'STALE_REVISION'
         elif op == 'purchase' and (profile['money'] < 10000 or game['stock'] < 1): code = 'INSUFFICIENT_RESOURCES'
-        elif op == 'deliver' and not any(item['id'] == request['cargo_id'] and 'job_id' not in item for item in cargo): code = 'CARGO_NOT_OWNED'
+        elif op == 'deliver' and not any(item['id'] == request['cargo_id'] and 'job_id' not in item and item.get('definition') != 'cargo_oil' for item in cargo): code = 'CARGO_NOT_OWNED'
         elif op == 'deliver' and game['money'] < 5000: code = 'INSUFFICIENT_RESOURCES'
         if code == 'COMMITTED':
             amount = -10000 if op == 'purchase' else 5000

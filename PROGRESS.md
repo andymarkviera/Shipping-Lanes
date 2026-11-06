@@ -3489,3 +3489,113 @@ focused oil/bulk/gas durable recovery and the regressions above were run.
 
 Deliver as a **DRAFT PR against main**. No deployment, full platform acceptance,
 public settlement, actual cross-server market operation or Step 75 work is claimed.
+
+## Step 75 — Shared public oil market service (draft) — November 5, 2026
+
+Task ID: `shared-public-oil-market-service`. Based on merged main **4b48613**
+(Step 74), branch `feat/step-75-shared-public-oil-market-service`. Read AGENTS.md,
+CLOUD_HANDOFF.md, latest progress/decisions, FEATURE_INVENTORY.md,
+DEFERRED_PLAYER_REQUESTS.md and original roadmap Step 75. Implemented ONLY Step 75;
+Step 76 remains unstarted. D132 and SHARED_PUBLIC_OIL_MARKET.md document the contract.
+
+The existing authenticated HTTPS authority now dispatches market snapshot, quote
+and acceptance requests under its server/account lease fences. An additive
+PostgreSQL adapter persists the Step 74 model/configuration, identity, clock,
+versions and account/ship-bound quotes. A singleton row lock orders public updates;
+each successful operation appends a durable sequence. Acceptance atomically commits
+market/history, cargo, wallet/treasury, debt repayment, revision, receipt and journal.
+Exact action replay returns the original outcome after disconnect/rebind/handoff;
+changed intent conflicts, foreign/consumed/expired quotes cannot settle again.
+Missing existing market state cannot be reseeded by initialization.
+
+A verified-HTTPS public-server client fails closed on outages and labels uncertain
+acceptance, preserving original retry intent. No local public simulation/pricing
+fallback. Private hosts use the same settlement contract with separately provisioned
+SQLite files and serialized writes. Canonical oil lots retain their acquisition
+terms and partial-sale basis; existing sinking/fleet cargo guards apply. Generic
+fixture delivery cannot redeem oil. Only the authored oil prototype has capacity;
+no new playable/public catalog hull, Godot oil RPC/UI, Step 76 work or historical
+Step 73 save migration. Existing server-side docking attestation remains required.
+
+The Windows host builder now includes the market package. No new Godot runtime
+resources/scripts were added. Godot remains **4.7.2**, game/ticket protocols **17/7**;
+all **164 existing .gd.uid files** are byte-identical. Existing saves/IDs, one
+condition, nonexpiring cargo jobs/offers, no player transfers/trades/gifts, no
+machinery wear and no hidden shallows are preserved.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf`, isolated psycopg/binary 3.2.10, cryptography
+and PostgreSQL **17.11** under `/workspace/work/step75`. All dependencies, evidence,
+certificates, credentials, caches and fixture databases stay outside Git.
+
+- **21 market tests pass:** 13 Step 74 tests plus eight durable contract tests.
+  Covers private isolation, restart/replay, conflicting intent, expiry, ownership,
+  frozen prices, revision/ship/capacity validation, rollback boundaries, lost reply,
+  cumulative sale costs, debt repayment and 32 concurrent attempts with one effect.
+- **Real PostgreSQL/HTTPS integration passes:** two distinct public-server worker
+  processes and two authority service processes share one database/history. Tests
+  concurrent separate-account trades, same-account/same-quote contention through
+  both services, retry storms, account isolation, stale generation rejection,
+  disconnect/rebind and server handoff. Four owned service crashes after profile
+  write, market write, before COMMIT and after COMMIT recover atomically. Temporary
+  database and complete service outages return unavailable, then recover the same
+  market. Seven successful settlements produce exactly seven journal entries;
+  one rejected generic-delivery intent is also recorded. History is contiguous;
+  wallet plus game balances reconcile. Missing singleton initialization refuses.
+- **Windows host source packaging smoke passes on Linux:** executes the builder's
+  actual copy function and service allowlist calls in an isolated folder, compares
+  copied source bytes, then imports the relocated authority/market adapters and
+  checks the packaged SQL resource. This is not a Windows executable/build pass.
+- **45 existing Python authority tests pass.** Production route benchmark and all
+  three progression scenarios pass with replay and serialized reload equivalence.
+- Liquid inventory **13 phases**, bulk **15 phases**, gas **15 phases** pass,
+  including four owned-process commit-boundary kills per family. Bulk capacity,
+  bulk earnings and gas capacity pass. All **28** legacy SQLite storage,
+  persistence, migration and durable-recovery phases pass, with ten owned-process
+  kills. Voyage suite **101** and its ten recovery phases (four self-kills) pass;
+  sailing-save **330 checkpoints**, ports **261**, slots **38** pass.
+- Editor/import, **164-script** load and Main startup pass. Catalog, controls,
+  application flow, starter assets, units, contracts, geography, session/clocks,
+  handling, camera, water/feedback, world size, heavy lifter, fuel, economy,
+  compact snapshots, public physics, repair, purchase, inspection, switching,
+  resale and unconfigured friends menu pass. Diagnostics passes with its intended
+  validation error.
+- Network reconnect/actions and normal/impaired replication, cargo-network and
+  connected-world: **16/16 process results pass**. Capacity at 2/10/25/50/100
+  clients, dispersed/crowded: **30/30 process results pass**. These are local
+  headless fixtures, not production capacity or authenticated Godot oil peers.
+- Python AST parsing (**73 sources**), UID/sidecar preservation and whitespace
+  checks pass. No secrets, accounts, databases, exports or caches are committed.
+
+Initial harness attempts had denied loopback sockets, PostgreSQL SQL_ASCII/default
+restart options, wrong private fixture roots, a missing slots authorization flag,
+and a Node probe invoked as a script. Corrected these and reran in isolated
+namespaces; those attempts are not counted as passes. The final editor import uses
+network-enabled execution to avoid editor socket errors.
+
+### Remaining failures and unrun gates
+
+Collision still fails lateral contact; composition fails its two side-course
+contacts. Shared gauges/wear reach **3/10 assertions** then the 65-second timeout
+waiting for rendered frames. These match previously recorded Linux limits and are
+not clean passes; no physics/HUD implementation changed in this step.
+
+- **Windows:** pinned PowerShell suite, native integration runners, full Windows
+  host-builder execution with actual dependencies, Debug/Release client/server
+  exports, packaged service launch, save/UID/resource compatibility. Linux source
+  packaging/import proof does not replace these checks.
+- **PostgreSQL/production HTTPS:** local real SQL concurrency/crash/outage proof
+  passed. Production deployment/upgrade on the existing host, backup/restore,
+  failover/replication, operational load, external-network TLS/certificate lifecycle
+  and real-server recovery are unrun. No live database or server was touched.
+- **Keycloak/authenticated Godot peers:** native OIDC sign-in, real account/provider
+  enrollment, in-game two-server oil requests, docking/ship admission and peer
+  handoff/reconnect. Tests used operator-issued fixture tickets and approved server
+  credentials; they do not prove Keycloak or an oil gameplay UI/RPC integration.
+- **Visual/Andy playtest:** rendered ship/HUD/port regression, actual sailing and
+  docking, future quote/receipt/quantity UI focus/scaling. No manual visual playtest;
+  the oil interface remains Step 76.
+
+Deliver via **DRAFT PR against main**. No deployment, Windows/Keycloak/rendered
+acceptance, or Step 76 completion is claimed.
