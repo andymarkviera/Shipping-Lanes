@@ -120,7 +120,8 @@ class Market:
         with self._lock:
             self._advance(now)
             return dict(market_id=self.market_id, version=self._version, tick=self._tick,
-                        ports={p: dict(pressure_barrels=v, reference_minor=self._price(p, 'buy', 0))
+                        ports={p: dict(pressure_barrels=v, reference_minor=self._price(p, 'buy', 0),
+                                      observed_at=now)
                                for p, v in self._pressure.items()})
 
     def quote(self, port, side, barrels, now):

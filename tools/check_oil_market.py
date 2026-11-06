@@ -35,6 +35,12 @@ def remote(config, requests):
     return os.getpid(), [client.execute(r) for r in requests]
 
 
+def economic_view(market):
+    # Observation timestamps legitimately differ between serialized readers.
+    return dict(market, ports={p: {k: v for k, v in row.items() if k != 'observed_at'}
+                               for p, row in market['ports'].items()})
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--postgres-bin', type=Path, required=True)
@@ -106,7 +112,7 @@ def main():
                 assert results[0][0] != results[1][0], 'two distinct server processes required'
                 return [r[1] for r in results]
             snapshots = pair([[req(n, 'oil_snapshot')] for n in range(2)])
-            assert snapshots[0][0]['market'] == snapshots[1][0]['market']
+            assert economic_view(snapshots[0][0]['market']) == economic_view(snapshots[1][0]['market'])
             assert snapshots[0][0]['market']['market_id'] == identity
             quoted = pair([[req(n, 'oil_quote', port_id='port_brindle_quay', side='buy', barrels=50, lot_id='')] for n in range(2)])
             quotes=[quoted[n][0]['quote'] for n in range(2)]
@@ -119,7 +125,7 @@ def main():
                 assert all(r['ok'] for r in group), group
                 assert sum(not r.get('duplicate',False) for r in group)==1
             snapshots=pair([[req(n,'oil_snapshot')] for n in range(2)])
-            assert snapshots[0][0]['market'] == snapshots[1][0]['market']
+            assert economic_view(snapshots[0][0]['market']) == economic_view(snapshots[1][0]['market'])
             assert snapshots[0][0]['market']['ports']['port_brindle_quay']['pressure_barrels']==100
             print('PASS two public server processes: ordered shared market and concurrent retry settlement', flush=True)
             # Rebind after disconnect; old generation fenced, same durable receipt recovered.
@@ -169,8 +175,17 @@ def main():
             assert all(g[0]['code']=='MARKET_UNAVAILABLE' and 'market' not in g[0] for g in unavailable)
             start(0); start(1)
             recovered=pair([[req(n,'oil_snapshot')] for n in range(2)])
-            assert recovered[0][0]['market']==recovered[1][0]['market']
+            assert economic_view(recovered[0][0]['market'])==economic_view(recovered[1][0]['market'])
             print('PASS temporary service outage: no invented prices, shared restart recovery',flush=True)
+            for n in range(2):
+                view = recovered[n][0]
+                lot = view['lots'][0]
+                assert lot['sold_cost_minor'] + lot['remaining_cost_minor'] == lot['acquisition_cost_minor']
+                assert lot['remaining_barrels'] == (45 if n == 0 else 50)
+                assert view['last_receipt']['quote']['id'] == (quote['id'] if n == 0 else quotes[1]['id'])
+                assert view['last_receipt']['wallet_minor'] == view['money']
+                assert all(p['observed_at'] == view['server_time'] for p in view['market']['ports'].values())
+            print('PASS per-account lot costs, wallet, last receipt and per-port timestamps survive SQL/service restart', flush=True)
             # Same action after handoff to the other approved game server.
             source=clients[0]
             authority.execute(source['server'],source['credential'],req(0,'release'))

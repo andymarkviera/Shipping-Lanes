@@ -83,6 +83,11 @@ class Transaction:
         row = self.db.execute('SELECT * FROM receipts WHERE account=? AND action_id=?', (account, action)).fetchone()
         return dict(fingerprint=row['fingerprint'], result=json.loads(row['result'])) if row else None
 
+    def latest_receipt(self, account):
+        row = self.db.execute("SELECT result FROM receipts WHERE account=? "
+                              "ORDER BY rowid DESC LIMIT 1", (account,)).fetchone()
+        return json.loads(row['result']) if row else {}
+
     def settle(self, account, candidate, amount):
         money = self.db.execute('SELECT money FROM game WHERE id=1').fetchone()['money']
         if not 0 <= money - amount <= MAX_MONEY:
