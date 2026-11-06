@@ -3599,3 +3599,131 @@ not clean passes; no physics/HUD implementation changed in this step.
 
 Deliver via **DRAFT PR against main**. No deployment, Windows/Keycloak/rendered
 acceptance, or Step 76 completion is claimed.
+
+## Step 76 — Oil market interface and lot accounting (draft) — November 5, 2026
+
+Task ID: `oil-market-interface-and-lot-accounting`. Based on merged Step 75 main
+`4d10928`, on `feat/step-76-oil-market-interface-and-lot-accounting`. Read AGENTS.md,
+CLOUD_HANDOFF.md, latest progress/decisions, FEATURE_INVENTORY.md,
+DEFERRED_PLAYER_REQUESTS.md and original roadmap Step 76. The initial cloud
+checkout ended at Step 70; fetched current main before implementation. ONLY Step
+76 is implemented. D133 and OIL_MARKET_INTERFACE.md specify policy and boundaries.
+
+Added a reusable Godot panel with underway inspection of both ports, per-port UTC
+observation timestamps, separate exact-quote review, custom whole-barrel controls,
+monotonic expiry feedback, current lot cost and durable trade receipt. Reference
+prices are explicitly indicative. Selection changes invalidate quotes; responses
+for changed selections are discarded. Refresh does not replace an executable
+quote or its captured revision. Accept sends the displayed ID/version/port and
+original revision. Expiry/rejection never auto-requotes. An uncertain reply locks
+new trading until explicit retry of the same action and quote resolves it.
+
+Retained the existing one-current-lot cumulative allocation policy: floor original
+cost times cumulative sold quantity divided by original quantity, less previously
+allocated cost. Remaining cost is the complement. Receipts separate gross,
+allocated acquisition cost, realized profit, recovery-debt repayment and wallet
+change. Final sale retains its receipt with zero remaining cost. PostgreSQL and
+SQLite snapshots now return account-scoped lots/wallet/revision/last oil receipt;
+new receipt fields are additive and historical receipt fields remain readable.
+No separate wallet mutation, double charge, FIFO change or save migration.
+
+Added a separately launched private oil sailing fixture using the existing port,
+docking and starter presentation with copied oil-compatible definitions. The
+operator-only Python launcher explicitly creates a NEW isolated Step 75 SQLite
+store or reopens the supplied file, uses a child-only ephemeral loopback bearer,
+and shuts down its owned service on exit. The trusted local scene attests docking;
+this is not a public player RPC or local public-market fallback. No normal/friends
+menu, playable public oil hull or public Godot oil peer routing is introduced.
+Market/wallet/lots/receipts persist; fixture sailing pose/fuel restart at spawn.
+Full oil voyage/sinking/handoff integration is not claimed by this interface step.
+
+Godot stays **4.7.2**, game/ticket protocols **17/7**; all **164 existing .gd.uid
+files** are byte-identical, with three new sidecars retained. New runtime resources
+are explicit export roots. Existing saves/IDs, one condition, nonexpiring cargo
+jobs/offers, no player transfers/gifts/trades, no machinery wear and no hidden
+shallows remain. No Step 77, deferred request, live save or server deployment.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf`, isolated psycopg/binary **3.2.10**,
+cryptography and PostgreSQL **17.11** under `/workspace/work/step76`. Engines,
+logs, credentials, certificates, XDG/APPDATA fixtures and databases remain outside
+Git. Installed 4.6.3 was not used for project checks.
+
+- **26 actual interface assertions pass:** live Godot panel/HTTP/private SQLite,
+  both timestamped ports underway, actual dock admission at both ports, custom
+  quantity, changed selection and late response rejection, unchanged quote after
+  price refresh, local and authority expiry rejection without automatic quote,
+  real committed purchase with an injected lost reply, identical retry even after
+  berth loss/local expiry, partial-sale cost conservation, panel reopen restoring
+  canonical inventory/wallet/receipt, final sale and helm release after closing.
+- **25 Python market/interface tests pass:** 13 model, eight settlement and four
+  new presentation/accounting tests. Covers per-account receipt privacy, timestamps,
+  frozen quote across another captain's trade, exclusive expiry with no mutation,
+  partial/reopen/final cost reconciliation and synthetic fractional allocation
+  3+3+4=10 across separate durable sales. All **45 existing Python authority tests**
+  pass. Route benchmark and all three progression/replay/reload scenarios pass.
+- **Real PostgreSQL/HTTPS integration passes:** two authority service processes
+  and two public-server worker processes, concurrent trades/retry storms, account
+  isolation, stale fencing, disconnect/rebind/handoff, four owned service crashes
+  around profile/market writes and COMMIT, database/service outage and restart,
+  contiguous history and exactly seven settlements. New per-account lot costs,
+  wallet, latest receipt and timestamps are checked after actual database/service
+  restart. Observation timestamps are excluded only from cross-reader price
+  equality; each must equal its own authority observation time. Missing singleton
+  initialization still refuses rather than reseeding.
+- Oil inventory **13**, bulk **15**, gas **15** recovery phases pass, including
+  four owned-process commit-boundary kills per family. All **28** legacy SQLite
+  storage/persistence/migration/recovery phases pass, including ten owned-process
+  kills. Container voyage suite **101** plus round-trip/reopen and nine ordered
+  crash/recovery phases pass, including four intentional self-kills. Sailing-save
+  **330 checkpoints**, ports **261**, slots **38** pass.
+- Clean editor/import, **167-script** load and Main startup pass. Catalog, controls,
+  application flow, starter assets, units, contracts, geography, session/clocks,
+  diagnostics (its intentional validation error), handling, camera, water/feedback,
+  world size, heavy lifter, fuel, economy, compact snapshots, public physics,
+  repair, purchase, fleet inspection/switching/resale and unconfigured friends
+  menu pass. Bulk capacity **102**, earnings **330**, gas capacity **108** pass.
+- Network reconnect/actions and normal/impaired replication, cargo-network and
+  connected-world: **16/16 process results pass**. These remain local headless
+  fixtures, not authenticated public Godot oil peers or internet deployment.
+  Capacity at 2/10/25/50/100 clients, dispersed/crowded, passes **30/30 process
+  results**; this is not a production capacity guarantee.
+- Python AST parsing (**75 sources**), all existing UID byte comparisons, script
+  sidecar presence and whitespace checks pass. No generated evidence, secret,
+  account, database, cache, engine or export is included in the commit.
+
+Initial harness attempts are retained in scratch logs: the import without network
+permission reported editor socket errors; the persistence sweep used roots rejected
+by the probes' explicit safety patterns; the friends-menu run omitted its mode
+flag. Corrected those invocations and reran successfully. The first interface run
+checked helm release before the next process callback; awaiting the completed
+frame resolves that probe ordering error. These attempts are not counted as passes.
+
+### Remaining failures and unrun gates
+
+Collision fails its lateral-contact assertion; composition fails two side-course
+contacts. Shared gauges/wear pass **3/10 assertions** then hit the 60-second
+headless rendered-frame wait timeout. These match recorded prior Linux limits;
+no physics/condition/gauge code changed. They are not reported as clean passes.
+
+- **Windows:** pinned PowerShell checks, native integration runners, Debug/Release
+  client/server exports, exported oil scene/resource loading, launcher behavior
+  and save/UID compatibility. No Windows engine or configured Windows runner here.
+- **PostgreSQL/production HTTPS:** local real SQL acceptance passed. Existing-host
+  deployment/upgrade, backup/restore, failover, operational load, external TLS/
+  certificate lifecycle and production recovery remain unrun. No live database
+  or server was touched.
+- **Keycloak/authenticated Godot oil peers:** native OIDC enrollment/sign-in,
+  in-game public oil requests, real account/ship/docking admission, public peer
+  reconnect and handoff. No configured identity stack/accounts; the local HTTPS
+  runner uses operator-issued fixture tickets. Public Godot oil routing remains
+  an implementation/integration gate, not a passed UI test.
+- **Visual/Andy playtest:** rendered quote/receipt/lot layout, scrolling, keyboard
+  focus and scaling, expiry/retry readability, real sailing/docking, input release,
+  ship/HUD regression and pacing. No manual visual playtest; headless assertions
+  do not establish rendered acceptance. The new fixture does not claim full oil
+  voyage-position, sinking or public scene-handoff persistence.
+
+Deliver as a **DRAFT PR against main**, not a push to main. No Step 77, live
+deployment or full Windows/public-authenticated/rendered acceptance is claimed.
