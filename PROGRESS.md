@@ -3862,3 +3862,137 @@ recorded legacy physics/rendering limitations.
 
 Deliver as a **DRAFT PR against main**, not a push to main. No Step 78 completion,
 live deployment or full Windows/public-authenticated/rendered acceptance claimed.
+
+## Step 78 — Shared refinery stock (draft) — November 6, 2026
+
+Task ID: `shared-refinery-stock`. Based on merged Step 77 main **fca60e2**, branch
+`feat/step-78-shared-refinery-stock`. Read AGENTS.md, CLOUD_HANDOFF.md, latest
+progress/decisions, FEATURE_INVENTORY.md, DEFERRED_PLAYER_REQUESTS.md and original
+roadmap Step 78. The initial checkout stopped at Step 70; fetched current main
+before implementation. Implemented ONLY Step 78. D135 and SHARED_REFINERY_STOCK.md
+record ownership, durable transactions, clock/restart policy, quotes and boundaries.
+
+Added an additive PostgreSQL `public_authority.refineries` table keyed by stable
+physical refinery ID. Public replicas share this database alongside canonical
+profiles, receipts, leases and treasury. Account-owned stock and fractional carry
+remain isolated within the shared facility; no player transfers/gifts. Submission
+atomically consumes owned canonical crude and saves its job/cost/receipt. A saved
+central-database completion deadline credits output once, including public downtime;
+multiple servers never add independent ticks. Clock rollback clamps to saved high
+water. Scene unload, account release/handoff and process death do not own stock.
+
+Withdrawal uses a frozen, nonexpiring account/ship/port/quantity quote, with no stock
+reservation. Proposed handling fee is 1 minor credit/barrel, ceiling once per
+withdrawal; pricing is prototype tuning. Acceptance rechecks stock/funds/revision
+and atomically commits stock removal, wallet/treasury, quote consumption, durable
+`awaiting_loading` collection allocation, receipt and journal. Retry returns the
+original receipt; changed intent conflicts. Reconnect/handoff may change authority
+generation without changing action identity. Public transport fails closed with
+uncertain mutation outcomes; no local fallback, private import or client credit API.
+
+Collection allocations remain refinery custody. They are not aboard/saleable cargo
+and have no loading/transport/sale/refund endpoint. Step 79 must consume them
+atomically when loading is implemented. The Step 77 private UI/save fixture remains
+unchanged; a new explicitly created private stock adapter shares the transaction
+model but uses isolated SQLite and host-active time only. No save reset/conversion,
+public playable oil hull, new public Godot RPC, deferred feature or deployment.
+Bounded ledgers retain deduplication identities and reject at exhaustion. Missing or
+corrupt established refinery state fails rather than reseeding. The hosting bundle
+now includes the refinery package/schema needed by the authority import.
+
+Godot remains **4.7.2**, game/ticket protocols **17/7**. All **169 existing .gd.uid**
+files are byte-identical; no new Godot resources or export roots are needed. Preserve
+one condition, nonexpiring cargo jobs, no player transfers/trades/gifts, no machinery
+wear and no hidden shallows.
+
+### Linux checks actually run
+
+Exact `4.7.2.stable.official.ed1daf0bf`, psycopg/binary **3.2.10**, cryptography and
+isolated PostgreSQL **17.11**. PostgreSQL packages were downloaded/extracted into
+`/workspace/work/step78`, without installing/replacing system services. All databases,
+engine, dependencies, TLS keys, fixture accounts, harnesses and logs stay outside Git.
+No live saves, production accounts, external server or running dedicated host touched.
+
+- **45 refinery/oil Python tests pass:** 9 new shared-stock tests, 11 Step 77 and
+  25 oil tests. New cases cover two-process competing and identical withdrawals,
+  changed intent, receipt recovery across generation changes, ownership/private
+  isolation, fractional carry, public deadline idempotence/backward-clock clamp,
+  private paused restart, bounds/refilled capacity/history exhaustion, malformed
+  requests/state, insufficient funds, rollback at each write and lost committed
+  replies. Six owned SQLite subprocess deaths cover before/after submission,
+  completion and withdrawal COMMIT, with exact durable recovery.
+- **Real PostgreSQL/HTTPS shared refinery runner passes**, using two service replicas,
+  two public-server client processes, two approved server identities/accounts and
+  a separate private-host process with actual private output. Both public servers
+  observe the same facility; owned balances remain isolated. Identical concurrent
+  withdrawals produce one debit/collection; distinct quotes/action IDs cannot spend
+  the same stock. A different server cannot bypass the account lease.
+- The real SQL runner forces **six service process deaths** immediately before/after
+  submission, completion and withdrawal COMMIT. Reopen/retry verifies rollback or
+  retained transitions without duplicate output/withdrawal. Stopping all services
+  during processing, initializer replay, PostgreSQL outage/restart, handoff fencing,
+  original receipt recovery, treasury conservation and missing-row no-reseed checks
+  pass. These are real PostgreSQL transactions, not SQL doubles.
+- **Existing real PostgreSQL oil integration runner passes**, including concurrent
+  two-server settlement/replay, four forced write/COMMIT crashes, rebind/handoff,
+  database/service outage/restart, contiguous history, lot costs and conserved money.
+- All **45 existing Python authority tests** pass. Production route benchmark and
+  all three Step 67 progression scenarios pass with replay and reload equivalence.
+- Existing actual Godot/HTTP/private SQLite oil and refinery panels each pass
+  **26 assertions**. Liquid recovery **13**, bulk **15**, gas **15** portable phases
+  pass, including four process kills per family. Bulk capacity **102**, earnings
+  **330**, gas capacity **108** pass. All **28** legacy storage/persistence/migration/
+  durable-recovery phases pass, including **ten** owned-process kills and backup/UI.
+- Voyage suite **101**, round-trip/two reopens and ten ordered crash/recovery phases
+  pass (four intentional process deaths). Sailing-save **330 checkpoints**, slots
+  and unconfigured friends menu pass.
+- Clean editor/import, all **169-script** loading and Main startup pass. Catalog,
+  controls, application flow, starter assets, units, contracts, geography, session,
+  clocks, handling, camera, water/feedback, world size, heavy lifter, fuel, economy,
+  compact snapshots, public physics, repairs, purchase, fleet inspection/switching
+  and resale pass. Diagnostics passes with its deliberate validation message.
+- Local reconnect/actions and normal/impaired replication, cargo-network and
+  connected-world: **16/16 process results pass**.
+  Capacity fixtures at 2/10/25/50/100 clients, dispersed and crowded, pass
+  **30/30 process results** in this run. These local headless fixtures are not a
+  production capacity or authenticated refinery load claim.
+- Python AST parsing (**83 sources**), existing UID byte comparisons, script sidecar
+  presence and whitespace checks pass. No generated evidence, databases, secrets,
+  caches, engine binaries or exports are included in the change.
+
+### Remaining failures and unrun gates
+
+Collision fails lateral contact and composition fails its two side-course contacts.
+Shared gauges/wear hit their 65-second headless rendered-frame wait timeouts; ports
+emits two out-of-tree transform errors despite successful assertions. These reproduce
+previously recorded Linux limitations; they are not clean passes. No physics,
+condition, gauges, networking or scene implementation changed.
+
+- **Windows:** pinned PowerShell/native runners, Debug/Release client/server exports,
+  hosting-bundle execution and Windows clock/restart/save compatibility. No Windows
+  runtime is available here.
+- **PostgreSQL/deployment:** local real SQL contention, crash and restart checks ran.
+  Production upgrade/backup/restore/failover, provider-managed PostgreSQL, WAN TLS,
+  external multi-host networking and production load/long-history throughput remain
+  unrun. Fixture tests do not prove deployed durability or backup consistency.
+- **Keycloak/authenticated game peers:** no configured identity stack/accounts or
+  native login flow here. Real OIDC enrollment/sign-in, public Godot oil/refinery
+  service admission, rendered two-player reconnect/handoff and full-voyage public
+  integration remain unrun. The SQL runner uses operator-created fixture identities
+  and approved-server HTTPS credentials, not Keycloak users.
+- **Visual/Andy playtest:** no rendered/manual acceptance of refinery layout,
+  quantity/fee/retry readability, pacing, sailing/docking, focus/input or ship/HUD
+  behavior. The existing private panel assertions do not establish visual acceptance;
+  Step 78 adds service/storage contracts, not Step 79 loading UI.
+
+Initial attempts corrected: ordinary sandbox Git/import could not use the proxy/
+listen sockets; network-enabled commands succeeded. Python discovery with `-t .`
+cannot discover these namespace-package directories; explicit module runs passed.
+The first SQLite crash test reused its setup action ID; corrected the test identities.
+The expanded second-account SQL fixture initially used the pre-submission revision
+for a foreign-quote check; corrected the fixture revision. Scratch legacy recovery
+and friends-menu invocations used the wrong proof path/flag; corrected runs passed.
+These attempts are not counted as successful checks and required no game changes.
+
+Deliver as a **DRAFT PR against main**, not a push to main. Step 79 remains unstarted;
+no complete Windows/Keycloak/rendered acceptance or live deployment is claimed.
