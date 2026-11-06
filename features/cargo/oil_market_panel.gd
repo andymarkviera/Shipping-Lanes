@@ -117,7 +117,10 @@ func inspect() -> void:
 func show_inventory() -> void:
 	lots.text = "Wallet: %s credits" % money(int(state.get("money", 0)))
 	for lot: Dictionary in state.get("lots", []):
-		lots.text += "\nLot %s · %d/%d barrels remaining\nAcquisition cost %s · sold cost %s · remaining cost %s\nCumulative realized profit %s credits" % [lot.id, lot.remaining_barrels, lot.acquired_barrels, money(int(lot.acquisition_cost_minor)), money(int(lot.sold_cost_minor)), money(int(lot.acquisition_cost_minor) - int(lot.sold_cost_minor)), money(int(lot.proceeds_minor) - int(lot.sold_cost_minor))]
+		lots.text += "\nLot %s · %d/%d barrels remaining\nAcquisition cost %s · sold cost %s · remaining cost %s\nCumulative realized profit %s credits" % [lot.id, lot.remaining_barrels, lot.acquired_barrels, money(int(lot.acquisition_cost_minor)), money(int(lot.sold_cost_minor)), money(int(lot.get("remaining_cost_minor", int(lot.acquisition_cost_minor) - int(lot.sold_cost_minor)))), money(int(lot.proceeds_minor) - int(lot.sold_cost_minor))]
+
+		if lot.has("refined_millibarrels"):
+			lots.text += "\nExact remaining: %d millibarrels · refined cost %s credits" % [int(lot.remaining_millibarrels), money(int(lot.refined_cost_minor))]
 
 func request_quote() -> void:
 	if busy or not pending.is_empty() or state.is_empty() or not send.is_valid(): return
@@ -168,4 +171,4 @@ func show_receipt(result: Dictionary) -> void:
 	var q: Dictionary = result.quote
 	var lot: Dictionary = result.lot
 	var cost: int = int(lot.get("allocated_cost_minor", 0))
-	receipt.text = "LAST TRADE RECEIPT · %s%s\n%s %d barrels · %s credits/barrel · total %s\nAllocated acquisition cost %s · realized profit %s\nDebt repaid %s · wallet change %s\nRemaining %d barrels · remaining cost %s credits" % [result.action_id, " (recovered; no additional payment)" if result.get("duplicate", false) else "", str(q.side).capitalize(), q.barrels, money(int(q.unit_minor)), money(int(q.total_minor)), money(cost), money(int(q.total_minor) - cost if q.side == "sell" else 0), money(int(result.get("recovery_repaid_minor", 0))), money(int(result.amount)), lot.remaining_barrels, money(int(lot.acquisition_cost_minor) - int(lot.sold_cost_minor))]
+	receipt.text = "LAST TRADE RECEIPT · %s%s\n%s %d barrels · %s credits/barrel · total %s\nAllocated acquisition cost %s · realized profit %s\nDebt repaid %s · wallet change %s\nRemaining %d barrels · remaining cost %s credits" % [result.action_id, " (recovered; no additional payment)" if result.get("duplicate", false) else "", str(q.side).capitalize(), q.barrels, money(int(q.unit_minor)), money(int(q.total_minor)), money(cost), money(int(q.total_minor) - cost if q.side == "sell" else 0), money(int(result.get("recovery_repaid_minor", 0))), money(int(result.amount)), lot.remaining_barrels, money(int(lot.get("remaining_cost_minor", int(lot.acquisition_cost_minor) - int(lot.sold_cost_minor))))]

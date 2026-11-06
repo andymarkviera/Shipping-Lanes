@@ -95,14 +95,10 @@ def inventory(profile, wallet, quote, lot_id):
     lot = next((c for c in cargo if c['id'] == lot_id and c.get('definition') == 'cargo_oil' and c.get('ship') == ship['id']), None)
     if lot is None or quote.barrels > lot['remaining_barrels']:
         raise MarketError('CARGO_NOT_OWNED')
-    sold = lot['sold_barrels'] + quote.barrels
-    allocated = lot['acquisition_cost_minor'] * sold // lot['acquired_barrels']
-    cost = allocated - lot['sold_cost_minor']
-    lot.update(sold_barrels=sold, sold_cost_minor=allocated,
-               remaining_barrels=lot['remaining_barrels'] - quote.barrels,
-               proceeds_minor=lot['proceeds_minor'] + quote.total_minor)
+    cost = consume_lot(lot, quote.barrels * 1000, refining=False)
+    lot['proceeds_minor'] += quote.total_minor
     receipt_lot = dict(lot)
-    if not lot['remaining_barrels']:
+    if not remaining_units(lot):
         cargo.remove(lot)
     debt = data.get('recovery_debt_minor', 0)
     repayment = min(debt, max(1, quote.total_minor // 2)) if debt else 0
@@ -111,10 +107,37 @@ def inventory(profile, wallet, quote, lot_id):
     return data, quote.total_minor - repayment, dict(receipt_lot, allocated_cost_minor=cost), repayment
 
 
+def remaining_units(lot):
+    return ((lot['acquired_barrels'] - lot['sold_barrels']) * 1000
+            - lot.get('refined_millibarrels', 0))
+
+
+def consume_lot(lot, units, *, refining):
+    """Allocate cost cumulatively across sales AND refinery consumption.
+
+    Whole barrels remain the market trading unit; residual millibarrels can only
+    be refined. Old lots need no migration and retain their historical fields.
+    """
+    if not integer(units, 1, remaining_units(lot)):
+        raise MarketError('CARGO_NOT_OWNED')
+    refined = lot.get('refined_millibarrels', 0) + (units if refining else 0)
+    sold = lot['sold_barrels'] + (0 if refining else units // 1000)
+    allocated = lot['acquisition_cost_minor'] * (sold * 1000 + refined) // (lot['acquired_barrels'] * 1000)
+    cost = allocated - lot['sold_cost_minor'] - lot.get('refined_cost_minor', 0)
+    if refining:
+        lot['refined_millibarrels'] = refined
+        lot['refined_cost_minor'] = lot.get('refined_cost_minor', 0) + cost
+    else:
+        lot['sold_barrels'] = sold
+        lot['sold_cost_minor'] += cost
+    lot['remaining_barrels'] = remaining_units(lot) // 1000
+    return cost
+
+
 def lot_summary(lot):
     """Derived display fields; original cost/cumulative allocation stay canonical."""
-    return dict(copy.deepcopy(lot),
-                remaining_cost_minor=lot['acquisition_cost_minor'] - lot['sold_cost_minor'],
+    return dict(copy.deepcopy(lot), remaining_millibarrels=remaining_units(lot),
+                remaining_cost_minor=lot['acquisition_cost_minor'] - lot['sold_cost_minor'] - lot.get('refined_cost_minor', 0),
                 realized_profit_minor=lot['proceeds_minor'] - lot['sold_cost_minor'])
 
 

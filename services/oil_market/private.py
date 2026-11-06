@@ -85,7 +85,7 @@ class Transaction:
 
     def latest_receipt(self, account):
         row = self.db.execute("SELECT result FROM receipts WHERE account=? "
-                              "ORDER BY rowid DESC LIMIT 1", (account,)).fetchone()
+                              "AND json_extract(result, '$.code')='OIL_SETTLED' ORDER BY rowid DESC LIMIT 1", (account,)).fetchone()
         return json.loads(row['result']) if row else {}
 
     def settle(self, account, candidate, amount):
