@@ -111,6 +111,13 @@ def inventory(profile, wallet, quote, lot_id):
     return data, quote.total_minor - repayment, dict(receipt_lot, allocated_cost_minor=cost), repayment
 
 
+def lot_summary(lot):
+    """Derived display fields; original cost/cumulative allocation stay canonical."""
+    return dict(copy.deepcopy(lot),
+                remaining_cost_minor=lot['acquisition_cost_minor'] - lot['sold_cost_minor'],
+                realized_profit_minor=lot['proceeds_minor'] - lot['sold_cost_minor'])
+
+
 def execute(tx, realm, profile, request, clock, fault=lambda *_: None):
     """tx locks singleton after the caller locks account; writes commit together.
 
@@ -140,7 +147,11 @@ def execute(tx, realm, profile, request, clock, fault=lambda *_: None):
     before = market._version
     result = None
     if op == 'oil_snapshot':
-        result = dict(ok=True, code='OIL_MARKET', market=market.snapshot(now))
+        result = dict(ok=True, code='OIL_MARKET', market=market.snapshot(now),
+                      revision=profile['revision'], money=profile['money'],
+                      lots=[lot_summary(c) for c in profile['profile']['cargo']
+                            if c.get('definition') == 'cargo_oil'],
+                      last_receipt=tx.latest_receipt(account))
     elif op == 'oil_quote':
         quote = market.quote(request['port_id'], request['side'], request['barrels'], now)
         inventory(profile['profile'], profile['money'], quote, request['lot_id'])
@@ -170,9 +181,13 @@ def execute(tx, realm, profile, request, clock, fault=lambda *_: None):
         fault('after_profile_write', request)
         result = dict(ok=True, code='OIL_SETTLED', action_id=request['action_id'],
                       revision=profile['revision'] + 1, amount=amount, quote=asdict(quote),
-                      lot=lot, recovery_repaid_minor=repayment, market_version=market._version)
+                      lot=lot_summary(lot), recovery_repaid_minor=repayment,
+                      realized_profit_minor=(quote.total_minor - lot['allocated_cost_minor']
+                                             if quote.side == 'sell' else 0),
+                      wallet_minor=profile['money'] + amount, market_version=market._version)
     sequence = state['sequence'] + 1
     result['market_sequence'] = sequence
+    result['server_time'] = now
     tx.save_market(dump(market, bindings, sequence), dict(sequence=sequence, op=op,
                    before_version=before, version=market._version, time=now,
                    account=account, action_id=request.get('action_id'), quote_id=result.get('quote', {}).get('id')))

@@ -30,6 +30,13 @@ class Transaction:
     def receipt(self, account, action):
         return self.db.execute('SELECT * FROM public_authority.receipts WHERE account=%s AND action_id=%s', (account, action)).fetchone()
 
+    def latest_receipt(self, account):
+        row = self.db.execute("SELECT result FROM public_authority.receipts "
+                              "WHERE account=%s AND result->>'code'='OIL_SETTLED' "
+                              "ORDER BY (result->>'revision')::bigint DESC LIMIT 1",
+                              (account,)).fetchone()
+        return row['result'] if row else {}
+
     def settle(self, account, candidate, amount):
         game = self.db.execute('SELECT * FROM public_authority.game WHERE id=1 FOR UPDATE').fetchone()
         if not 0 <= game['money'] - amount <= MAX_MONEY:

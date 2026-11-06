@@ -738,3 +738,26 @@ no public/private quote or account import. Preserve Step 73's historical save co
 The authored oil prototype remains fixture-only; no existing public hull gains
 capacity, no new player UI/RPC or Step 76 work. SHARED_PUBLIC_OIL_MARKET.md records
 migration, transport, trusted-server docking attestation and platform gates.
+
+## D133 — Explicit oil quote review and cumulative lot-cost presentation
+
+Step 76 (`oil-market-interface-and-lot-accounting`) retains D130/D132's one current
+purchased lot and explicit partial-sale selection. Allocate cumulative acquisition
+cost as `floor(original_cost * cumulative_sold / original_barrels)`; each sale
+uses the difference from prior allocation, with remaining cost as the complement.
+Show gross proceeds, allocated cost, realized profit, debt repayment and wallet
+change separately. Final sale retains its receipt after the aboard lot empties.
+Persist through the existing atomic adapters, with no historical save migration.
+
+Reference prices carry per-port authority observation timestamps and are readable
+underway. Executable quotes require separate request/review and explicit acceptance
+of the displayed identity/version/port/revision. Selection changes invalidate;
+refresh never replaces accepted terms. Expiry and stale responses require new
+review. Unknown outcomes retain the same action/quote for retry, never auto-reprice.
+The countdown is advisory monotonic time; authority time decides expiry.
+
+Add a reusable Godot panel and explicitly provisioned private oil sailing fixture
+against Step 75 SQLite. Keep the oil hull fixture-only; no new public Godot RPC,
+public fleet capability, old save conversion, refinery work or deferred features.
+OIL_MARKET_INTERFACE.md defines the lifecycle, bridge trust boundary and remaining
+full-voyage/public/visual gates. Godot 4.7.2 and protocols 17/7 remain unchanged.
