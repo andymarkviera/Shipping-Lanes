@@ -828,3 +828,38 @@ implemented. No transport, sale, propulsion refill, transfer/gift or public play
 oil hull in Step 78. Bounded retained jobs/quotes/withdrawals reject at exhaustion
 without erasing replay history. SHARED_REFINERY_STOCK.md records the API, clock,
 rounding, lifecycle and remaining integration boundaries.
+
+## D136 — Cargo fuel custody and fractional pipeline sales (Step 79)
+
+Consume Step 78 collections atomically into canonical `cargo_fuel` aboard lots.
+The prototype oil hull has 200000 millibarrels of cargo capacity, separate from
+its propulsion tank. One aboard commodity lot, no mixing or active cargo job.
+Partial loading leaves the remainder in refinery custody; loading is free after
+the quoted withdrawal fee. Bind collection loading to its quoted account/ship.
+Slatewater loads; Brindle Quay buys cargo fuel through its fixture pipeline.
+Prototype sale price is 220 minor credits/barrel, frozen in the acquisition record;
+this is tuning for review, not a dynamic oil quote or propulsion refuel price.
+
+Each load records refinery/collection origin, quantity and cumulative allocated
+handling fee. Crude acquisition cost remains in the processing ledger: do not
+mislabel the handling fee as total production cost or claim net production profit.
+Sales allocate handling cost and gross proceeds cumulatively with integer floors;
+partial sales conserve the full-lot proceeds. Existing recovery debt policy applies.
+Transaction receipts, account revision and stock/cargo/wallet commit together.
+Identical retries recover receipts even after berth loss/handoff; changed intent
+conflicts. Close/pause does not sell or cancel. Restart retains collections/lots.
+No refunds, player transfers, automatic consumption as engine fuel or old-save reset.
+Public service uses existing trusted-server docking attestation/fencing. The playable
+interface remains an explicitly provisioned private fixture; public Godot hull,
+full public navigation/handoff and rendering acceptance remain separate gates.
+
+The private Step 79 fixture also checkpoints position/yaw, propulsion quantity and
+condition each active second and before a new refinery operation. Restart restores
+the durable position in neutral, stopped and undocked; re-dock to trade. No offline
+motion. Checkpoints are trusted private-host state, not public client-supplied
+position authority. A failed/corrupt resume fences play rather than respawning a
+loaded voyage at the default port. Economic changes still use the atomic refinery
+transaction; a crash may restore an older navigation checkpoint, never older money.
+Retain at most 10000 cargo-fuel mutations per facility; exhaustion fails closed
+without pruning replay receipts. Snapshot shows the first 32 waiting collections;
+fully loading one exposes the next. No existing file is reset or converted.
