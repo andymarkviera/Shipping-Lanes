@@ -1,7 +1,8 @@
 # Oil market interface and lot accounting — Step 76
 
 Task ID: `oil-market-interface-and-lot-accounting`. Builds on Step 75's durable
-settlement without adding refinery processing or a purchasable oil hull.
+settlement without adding a purchasable oil hull. Step 77 optionally extends
+this private fixture with refinery processing; see REFINERY_PROCESSING.md.
 
 ## Player interface
 
