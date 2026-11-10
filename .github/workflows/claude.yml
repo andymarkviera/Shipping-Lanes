@@ -34,3 +34,5 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Fable while it's included on Pro (through Nov 16, 2026); switch to --model opus after
+          claude_args: "--model fable"
