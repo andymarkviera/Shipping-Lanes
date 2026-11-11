@@ -4884,3 +4884,26 @@ fetch. The audit is a reading of source and records. The movement diagnosis
 (`set_menu_open` called every frame in `oil_port_test.gd` and `bulk_port_test.gd`
 re-arms `wait_for_release`, so held keys never reach the helm) is **not
 reproduced** and must be confirmed in Godot on Windows before it is fixed.
+
+## Rebuild plan approved — November 11, 2026 (docs only)
+
+Andy approved REBUILD_PLAN.md on PR #35 (answers relayed by Hark). D145.
+
+- REBUILD_PLAN.md: recorded Andy's four answers. 1.0 is a polished single-player
+  first draft. Bulk and heavy stay in. Gas, oil, refinery and cargo fuel are
+  "on hold until playtested" with code intact. Added the exact CI job: commands
+  and test paths for Godot 4.7.2 and Python.
+- Movement diagnosis revised. No menu entry is named "fuel test". The "Fuel test
+  tools" buttons exist only in Boat Handling Test and Heavy-Lifter Test, which do
+  not have the per-frame `set_menu_open` bug. New leading guess for Andy's report:
+  "Empty tank (test)" was autosaved in Boat Handling Test and restored empty. The
+  per-frame bug in the oil, bulk and gas scenes still stands as a separate bug.
+  Neither is reproduced.
+- AGENTS.md: agents now follow REBUILD_PLAN.md instead of the numbered roadmap.
+
+No game code, scene, resource, service, save, protocol, export preset or
+`.github/workflows` file changed. `docs/original-references` untouched.
+
+Checks: nothing ran; no Godot or Python on this runner. The CI commands are
+copied from `tools/Godot.ps1` and earlier PROGRESS.md entries and are untested.
+The Godot download URL and the psycopg requirement are unconfirmed.
