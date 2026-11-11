@@ -296,8 +296,10 @@ Until then, a new PR must not add failures to the first run's list.
   Most need launcher arguments, two processes or a `check_*.py` driver. An agent
   runs them in fix-first item 3 and adds each one to Stage 2 once it passes.
 - PostgreSQL, Keycloak and the online stack. Frozen with online.
-- The scripted key-press playthroughs. Added to Stage 2 as each one is written;
-  the first one comes with fix-first item 1.
+- The scripted key-press playthroughs. Added to Stage 2 as each one is written.
+  The first one exists and is waiting for Hark to add it to the workflow:
+  `godot --headless --path . --script res://tools/check_helm_keys.gd`
+  (prints `HELM_KEYS_CHECK_PASS`; about 10–20 s; Windows: `-Mode HelmKeysCheck`).
 - Later (M1): export a Windows zip as a build artifact, so Andy downloads and
   runs it instead of opening the editor. Needs the 4.7.2 export templates.
 
@@ -317,6 +319,13 @@ Nothing new until these are done.
      least say so on screen (see item 4).
    - Add a test that holds the throttle key in each sailing scene and checks the
      ship gains speed.
+
+   **Status (November 11, 2026): code written, not yet run.** `set_menu_open` now
+   ignores an unchanged value. "Empty tank (test)" is no longer saved, and the fuel
+   line says how to recover from EMPTY. The new check is
+   `tools/check_helm_keys.gd`. It has not run anywhere: no Godot on the agent
+   runner. Still open: run it in CI (Hark adds the line below to Stage 2), and the
+   Windows reproduction in Boat Handling Test.
 2. **Get Godot and Python running in CI** (the job above; Hark's workflow edit).
    Until then every fix is another guess.
 3. **Import and parse the whole project, then run everything that has not run

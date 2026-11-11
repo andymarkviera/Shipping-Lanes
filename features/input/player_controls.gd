@@ -82,6 +82,9 @@ func set_ship_context(active: bool) -> void:
 	wait_for_release = true
 
 func set_menu_open(open: bool) -> void:
+	# Scenes call this every frame. Re-arming on an unchanged value would hold
+	# wait_for_release forever while a key is down, and the helm would never see it.
+	if menu_open == open: return
 	menu_open = open
 	wait_for_release = true
 

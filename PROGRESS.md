@@ -4907,3 +4907,33 @@ No game code, scene, resource, service, save, protocol, export preset or
 Checks: nothing ran; no Godot or Python on this runner. The CI commands are
 copied from `tools/Godot.ps1` and earlier PROGRESS.md entries and are untested.
 The Godot download URL and the psycopg requirement are unconfirmed.
+
+## Fix-first 1: the movement bug — November 11, 2026 (written, NOT RUN)
+
+Issue #37. REBUILD_PLAN.md section 4, item 1.
+
+- `features/input/player_controls.gd`: `set_menu_open` returns early when the value
+  is unchanged. Before, the per-frame calls in `bulk_port_test.gd` and
+  `oil_port_test.gd` re-armed `wait_for_release` every frame, so a held key never
+  reached the helm in Bulk Port Test, Gas Port Test and the oil fixture.
+- `features/ships/fuel_test_controls.gd`, `features/handling/handling_test.gd`:
+  "Empty tank (test)" lasts for the visit only. Boat Handling Test saves the fuel
+  level from before the button was clicked. A tank that ran dry by sailing is still
+  saved as empty. The fuel line now reads "EMPTY — stop, then click Refuel (test)".
+  A save that already holds an empty tank is not changed; the new text is the way out.
+- `features/ports/bulk_port_test.gd`: new `voyage_path` export so a test can use an
+  isolated save file. Empty (the default) keeps the normal bulk and gas save paths.
+  No other change to bulk, gas, oil, refinery or cargo-fuel code.
+- New `tools/check_helm_keys.gd`: opens Boat Handling Test, Heavy-Lifter Test, Port
+  Test, Bulk Port Test, Gas Port Test and the oil fixture, holds the bound throttle
+  key through PlayerControls and ShipHelm, and expects over 0.2 m/s. Also checks a
+  test-emptied tank is not restored empty. Saves go to `user://helm_keys_check`.
+  `tools/Godot.ps1` has a new `-Mode HelmKeysCheck`.
+
+Checks: **nothing ran.** This runner has no Godot, and the Godot download and the
+Python commands were refused. No Python file changed. The new check and the edited
+scripts are unparsed and unexecuted, so `tools/check_helm_keys.gd` may itself need
+fixes on its first run. `tools/check_helm_keys.gd.uid` is not committed: Godot must
+generate it. No export preset change (the new file is a test tool, not a runtime
+resource). `.github/workflows` not edited, so CI does not run the new check until
+Hark adds it to Stage 2. Not reproduced or playtested on Windows.
