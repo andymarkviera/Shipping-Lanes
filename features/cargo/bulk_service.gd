@@ -298,12 +298,7 @@ func restore(data: Variant) -> bool:
 	return operations.restore(data.operations)
 
 func transfer_error(job: Dictionary, at_port: String, direction: String) -> String:
+	# Bulk has no terminal interface rule; gas pipeline rules live in GasRules.
 	if family != "gas": return ""
-	if job.is_empty(): return "Unknown gas job."
-	var cargo: CargoDefinition
-	for record: ContentDefinition in PrototypeCatalog.RECORDS:
-		if record.id == job.cargo_id: cargo = record as CargoDefinition
 	var terminal: BerthDefinition = terminals.get(at_port)
-	if cargo == null or terminal == null or terminal.port_id != at_port: return "Missing gas terminal or commodity."
-	var pipeline: String = "pipe_lng" if cargo.gas_pipeline_type == "lng" else "pipe_industrial"
-	return GasRules.transfer_error(ship_definition, cargo, job.get("tank_id", ""), terminal, pipeline, direction)
+	return GasRules.job_transfer_error(ship_definition, PrototypeCatalog.RECORDS, job, terminal, at_port, direction)

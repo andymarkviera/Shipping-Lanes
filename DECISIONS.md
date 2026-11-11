@@ -957,3 +957,23 @@ placeholder presentation. Waypoint ring/pointer, alignment offsets, load readout
 state cues and next-step text are derived from the canonical snapshot and never
 feed evidence or reward. No public heavy support, audio, new art, machinery wear,
 expiry or player transfer. See HEAVY_JOB_PRESENTATION.md.
+
+## D141 — Cargo matrix as tests; family row rules leave shared code (Step 84)
+
+The compatibility matrix is regression coverage, not a new runtime table. Each
+family keeps its own authority and its own definition of a valid hull. Service-side
+families (oil, cargo fuel, heavy) are exercised together in one isolated SQLite
+world through a test-only combined store; no production class combines them.
+GDScript families (containers, bulk, gas, oil lots, heavy slots) are exercised by
+one probe. A wrong hull, another family's unfinished cargo, an over-quantity or a
+repeated action must be refused with no durable change.
+
+`cargo_manifest.gd` keeps shared batch, unit and pooled-capacity rules only. Bulk
+hold rules move to `bulk_rules.gd`; gas tank rules and the gas terminal/pipeline
+check move to `GasRules`. Check order and messages are unchanged.
+
+The remaining gas branches in the shared bulk/gas service, earnings, panel and
+fixture stay: they configure units, stored key names, labels and fixtures for one
+settlement engine. Revisit only with the bulk/gas recovery runners available,
+because those key names are part of saved checkpoints. No protocol, save, price,
+capacity or one-active-job rule changes.
