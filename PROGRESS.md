@@ -4808,3 +4808,63 @@ On branch `claude/issue-29-20261111-1259`; the runner cannot create
    metrics for the harbor ship.
 4. Backlog, not blocking: Windows export, PostgreSQL/Keycloak runners, a measured
    heavy-lifter voyage, the oil/tanker scale decision, and Andy's Step 87 playtest.
+
+## Step 88 — World layout and traversal budget (draft, UNVERIFIED) — November 11, 2026
+
+Task ID `world-layout-and-traversal-budget`. D144. See WORLD_LAYOUT.md. Step 87
+(Andy's playtest/export gate) was skipped on instruction and stays in the backlog.
+
+### Changed
+
+- New `features/world/world_layout.json`: scale, budget model, size classes,
+  seven ports, eight waypoints, two passages and 17 routes. Added to the
+  `include_filter` in `export_presets.cfg`. Nothing loads it yet.
+- New `tools/world_layout/traversal_budget.py` and `test_traversal_budget.py`
+  (standard library only).
+- New WORLD_LAYOUT.md; D144 in DECISIONS.md; a pointer in CONTENT_EXTENSION.md.
+- Cinder Point is placed on the plan at 2.0° S, 2.0° E.
+
+No GDScript, scene, record, service, save, protocol or price change, so no
+`.gd.uid` change. `docs/original-references` and `.github/workflows` untouched.
+
+### Known limitations
+
+- **Every number is hand arithmetic.** Route lengths used flat-chart arithmetic
+  with a cosine correction; the script uses exact great-circle lengths.
+- **Cinder Point is not in the public world or Port Test.** Only its address is
+  decided. The runtime wiring listed in CONTENT_EXTENSION.md is left for Step 89.
+- The budget model is fitted to two measured 3–4 km starter legs and extrapolated
+  to 14 km. Swift, Harbor and lifter planning paces are unmeasured.
+- No coastline: lanes are straight segments that Step 91 scenery must respect.
+- Bulk and gas pay by distance, so the longer routes pay about five times the
+  fixture for about twice the time. Not rebalanced here.
+- The D143 oil and tanker scale decision is still open.
+
+### Checks
+
+Nothing ran. This runner denied `python3` (also `awk`, `bc` and `node` as
+calculators) and has no Godot binary. File edits, read-only shell and git only.
+
+- **Python (not run):** `tools/world_layout` script and tests. A typo in the new
+  script, or a hand length more than 0.5% off, would fail there.
+- **Python (not run, unaffected by this step):** `tools/public_handoff` and
+  `services` tests, still unrun since Step 83.
+- **Godot (not run):** import and export with the new include-filter entry.
+- **Windows / PostgreSQL / Keycloak / visuals / playtest:** not run. No Andy
+  acceptance of the map, targets or names.
+
+### Handoff
+
+On branch `claude/issue-31-20261111-1331`; the runner cannot create
+`feat/step-88-world-layout`. Nothing was pushed to main.
+
+1. Run `python3 tools/world_layout/traversal_budget.py` and
+   `python3 -m unittest discover -s tools/world_layout -p 'test_*.py'`. Expect
+   `WORLD_LAYOUT_PASS routes=17 failures=0`. If a figure differs, trust the
+   script and correct WORLD_LAYOUT.md; if a route misses its tier, move the
+   waypoint rather than the tier.
+2. Andy to review the map, port names, time targets and the two passages.
+3. Step 89 should load this file, then wire Cinder Point into the public world
+   with the protocol and save changes that needs.
+4. Still open from Steps 84–86: their unrun check lists, the economy gate
+   metrics for the harbor ship, and the oil/tanker scale decision.

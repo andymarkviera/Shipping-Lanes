@@ -1016,3 +1016,28 @@ through its developer fixture. Hull prices are set when the hulls go online.
 Existing saves keep frozen quotes and frozen cargo-fuel prices. No protocol, save
 format, condition, expiry, transfer or one-active-job change. Values are
 provisional pending Andy's Step 87 playtest. See CARGO_BALANCE.md.
+
+## D144 — Brindle Reach layout and traversal budget (Step 88)
+
+The launch region is planned as lanes and budgets before scenery, in
+`features/world/world_layout.json`. The 100 km navigation radius, 1 m scene unit
+and 1:1 time scale are kept, so there is no save, protocol or address migration.
+Brindle Quay and Slatewater Works keep their anchors.
+
+Seven ports within about 17.5 × 11.3 km: the two existing ports, Cinder Point at
+2.0° S, 2.0° E, and four planned names (Tallow Reach, Gannet Light, Orrin Deep,
+Farrow Bank). Starter-hull targets, berth to berth at 80% of top speed plus a
+150 s port allowance: starter 8–12, short 12–15, medium 15–24, long 24–36 minutes.
+One-way fuel must stay within 80% of a tank and no leg exceeds 40 minutes; fuel
+range, not time, bounds the region.
+
+Size limits are visible beam limits only: Needle Gut (40 m, class S) and Skerry
+Gate (70 m, classes S and M), each with an open alternative. No depth limits and
+no air-draft limit until Step 94 measures loaded heights.
+
+Cinder Point's address is decided; wiring it into the public world and Port Test
+is deferred to Step 89, because it changes the protocol, save validation and
+service port lists and could not be tested on this runner. The four new ports are
+not catalog records. No offers, rates, hulls or online families are added. The
+D143 oil and tanker scale decision stays open. Names and targets are provisional
+pending Andy's review. See WORLD_LAYOUT.md.
