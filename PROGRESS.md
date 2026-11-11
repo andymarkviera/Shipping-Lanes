@@ -4746,3 +4746,65 @@ Next, in order:
 6. Backlog, not blocking: Windows export/load, PostgreSQL/Keycloak runners, a
    hand-sailed online purchase and voyage with the harbor ship, adding the probe
    to `CheckProject.ps1`, and placing Cinder Point at Step 88.
+
+## Step 86 — Priority cargo balance (draft, UNVERIFIED) — November 11, 2026
+
+Task ID `priority-cargo-balance`. D143. See CARGO_BALANCE.md for the saved table.
+
+### Changed
+
+- `features/cargo/bulk_service.gd`: seeded bulk rates 640/800/960/1200 (limestone,
+  grain, coal, ore) and gas rates 800/1000/1200/1500 (argon, LNG, nitrogen, oxygen).
+- `services/refinery/cargo_fuel.py`: sale price 220 → 320 minor credits per barrel.
+- Pinned expectations updated by hand to match: `tools/bulk_service_probe.gd`,
+  `tools/cargo_fuel_probe.gd`, `tools/check_cargo_fuel.py`,
+  `services/refinery/test_cargo_fuel.py`, `services/test_cargo_matrix.py`.
+- New `tools/public_handoff/cargo_balance.py` and `test_cargo_balance.py`.
+- New CARGO_BALANCE.md; GAS_DELIVERY_PERSISTENCE.md and CARGO_FUEL_TRANSPORT.md
+  examples updated.
+
+No new Godot script or runtime resource, so no `.gd.uid` or export preset change.
+Containers, oil prices, refinery yield/fee, heavy rewards, fuel, repair and
+recovery values are unchanged. No protocol or save version change.
+
+### Known limitations
+
+- **Oil and cargo fuel are still not competitive** (2.10 and 3.50 net credits per
+  minute against 77.70 for a full container load). The 200-barrel tanker is the
+  cause; the scale-up is left for a decision with Andy.
+- **Heavy has no measured voyage**, so it has rewards but no per-minute figure.
+- Travel figures are the Step 67 starter-hull measurements reused for the bulk,
+  gas and oil fixtures. No new voyage was sailed.
+- Bulk and gas rates were raised by a flat factor; they are a first pass.
+- Existing private bulk/gas saves keep their old frozen quotes; only newly seeded
+  fixture worlds get the new rates.
+
+### Checks
+
+Nothing ran. This runner denied every `python3` invocation (unittest and direct
+script) and has no Godot binary. All numbers were worked by hand.
+
+- **Python (not run):** `tools/public_handoff` tests including the new
+  `test_cargo_balance.py`; `services` tests, where `test_cargo_fuel.py` and
+  `test_cargo_matrix.py` now expect 22400 / 29330 / 21400.
+- **Godot (not run):** import, `bulk_service_probe.gd` for bulk and gas (now
+  expects 32073 / 40091 partial and 98625 LNG total), `cargo_fuel_probe.gd`
+  (now expects +672), and the bulk/gas scene and recovery runners.
+- **PostgreSQL (not run):** `tools/check_cargo_fuel.py` (now expects +224).
+- **Windows / Keycloak / visuals / playtest:** not run. No Andy acceptance.
+
+### Handoff
+
+On branch `claude/issue-29-20261111-1259`; the runner cannot create
+`feat/step-86-priority-cargo-balance`. Nothing was pushed to main.
+
+1. Run `python3 -m unittest discover -s tools/public_handoff -p 'test_*.py'` and
+   `python3 -m unittest discover -s services -t . -p 'test_*.py'`. If
+   `test_cargo_balance` disagrees with CARGO_BALANCE.md, trust the script output
+   and correct the document.
+2. With Godot 4.7.2: import, then the bulk and gas service probes and the cargo
+   fuel probe. A hand-computed expectation may be off by a rounding unit.
+3. Still open from Steps 84–85: their unrun check lists and the economy gate
+   metrics for the harbor ship.
+4. Backlog, not blocking: Windows export, PostgreSQL/Keycloak runners, a measured
+   heavy-lifter voyage, the oil/tanker scale decision, and Andy's Step 87 playtest.

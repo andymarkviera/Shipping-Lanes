@@ -6,6 +6,8 @@ var family: String = "bulk"
 var full: int = 123456789
 var part: int = 50000000
 var remainder: int = 73456789
+# Step 86 rates: 50 t of grain at 800, or 50 m3 of LNG at 1000, over 1500 m.
+var partial_minor: int = 32073
 var scene_path: String = "res://features/ports/bulk_port_test.tscn"
 var checks: int = 0
 var failures: int = 0
@@ -26,7 +28,7 @@ func run() -> void:
 		if arg == "--cargo-family=gas":
 			family = "gas"
 			ID = "gas_0_lng_lng"
-			full = 123; part = 50; remainder = 73
+			full = 123; part = 50; remainder = 73; partial_minor = 40091
 			scene_path = "res://features/ports/gas_port_test.tscn"
 	if mode == "suite": await suite()
 	elif mode == "scene": await scene_test()
@@ -46,15 +48,15 @@ func suite() -> void:
 	check(copy.operations.commit(family + "_operation_1").ok and copy.capture() == loaded, "repeated operation completion has no mutation")
 	copy.port = Service.PORTS[1]
 	check(copy.start_discharge(part) and copy.advance(5.0), "partial discharge commits")
-	check(copy.credits == 4009 and copy.manifest.lines()[0].quantity == remainder, "partial wallet and remaining grams reconcile")
+	check(copy.credits == partial_minor and copy.manifest.lines()[0].quantity == remainder, "partial wallet and remaining grams reconcile")
 	var partial: Dictionary = copy.capture()
 	check(s.restore(partial), "partial voyage restores")
 	check(s.offers.view(ID).terms == partial.seeds[ID].terms and s.manifest.lines()[0][s.offers.allocation_key] == ("tank_lng" if family == "gas" else "hold_forward"), "quote and hold survive interruption")
 	var historical: Dictionary = s.offers.discharge(family + "_operation_2", ID, s.owner_id, s.ship_id, Service.PORTS[1], s.manifest, part, true)
-	check(historical.ok and historical.reward_minor == 0 and s.credits == 4009, "receipt retry after reload has zero economic delta")
+	check(historical.ok and historical.reward_minor == 0 and s.credits == partial_minor, "receipt retry after reload has zero economic delta")
 	check(not s.start_discharge(remainder + 1), "over-discharge rejected")
 	check(s.start_discharge(remainder) and s.advance(1), "start remaining discharge")
-	check(s.cancel() and s.manifest.lines()[0].quantity == remainder and s.credits == 4009, "cancel unfinished unload preserves partial voyage")
+	check(s.cancel() and s.manifest.lines()[0].quantity == remainder and s.credits == partial_minor, "cancel unfinished unload preserves partial voyage")
 	check(s.start_discharge(remainder) and s.advance(5), "finish remaining discharge")
 	check(s.credits == s.seeds[ID].reward_minor and s.manifest.lines().is_empty(), "final wallet matches one frozen quote")
 	check(not s.start_discharge(1) and not s.start_loading(ID), "completed job cannot pay or load again")
@@ -139,7 +141,7 @@ func durable(mode: String) -> void:
 			s.advance(3)
 		"verify_unpaid": check(s.credits == 0 and s.manifest.lines()[0].quantity == full, "uncommitted payout and cargo both rolled back")
 		"verify_partial":
-			check(s.credits == 4009 and s.manifest.lines()[0].quantity == remainder and s.active.is_empty(), "partial discharge wallet, hold and remainder recovered")
+			check(s.credits == partial_minor and s.manifest.lines()[0].quantity == remainder and s.active.is_empty(), "partial discharge wallet, hold and remainder recovered")
 			check(s.offers.discharge(family + "_operation_2", ID, s.owner_id, s.ship_id, s.port, s.manifest, part, true).reward_minor == 0, "lost reply replay after process death cannot pay")
 		"finish": check(s.start_discharge(remainder) and s.advance(5), "finish interrupted voyage")
 		"verify_final": check(s.credits == s.seeds[ID].reward_minor and s.manifest.lines().is_empty() and not s.start_discharge(1), "final settlement remains single after reopen")
@@ -186,7 +188,7 @@ func scene_test() -> void:
 	resumed.docking.advance(1.1)
 	resumed.sync_context()
 	resumed.bulk_panel.discharge_requested.emit(part)
-	check(resumed.bulk.advance(5) and resumed.bulk.credits == 4009, "panel partial discharge at destination")
+	check(resumed.bulk.advance(5) and resumed.bulk.credits == partial_minor, "panel partial discharge at destination")
 	resumed.bulk_panel.discharge_requested.emit(10 if family == "gas" else 10000000)
 	check(resumed.bulk.advance(1), "unfinished second discharge")
 	resumed.cargo_scroll.hide()
@@ -194,7 +196,7 @@ func scene_test() -> void:
 	resumed.docking.disconnect_owner(1)
 	resumed.docking.register(1, resumed.ship, resumed.port)
 	resumed.sync_context()
-	check(resumed.bulk.active.is_empty() and resumed.bulk.credits == 4009 and resumed.bulk.manifest.lines()[0].quantity == remainder, "berth loss cancels pending unload only")
+	check(resumed.bulk.active.is_empty() and resumed.bulk.credits == partial_minor and resumed.bulk.manifest.lines()[0].quantity == remainder, "berth loss cancels pending unload only")
 	resumed.ship.global_position = Vector3(4000, 0, -4000)
 	resumed.ship.state.fuel_liters = 321.25
 	resumed.sync_context()
@@ -203,7 +205,7 @@ func scene_test() -> void:
 	var partial = load(scene_path).instantiate()
 	root.add_child(partial)
 	for i: int in 30: await physics_frame
-	check(not partial.bulk.blocked and partial.bulk.credits == 4009 and partial.bulk.manifest.lines()[0].quantity == remainder, "scene restart retains partial wallet and hold")
+	check(not partial.bulk.blocked and partial.bulk.credits == partial_minor and partial.bulk.manifest.lines()[0].quantity == remainder, "scene restart retains partial wallet and hold")
 	check(partial.ship.global_position.distance_to(Vector3(4000, 0, -4000)) < .01 and absf(partial.ship.state.fuel_liters - 321.25) < .01 and partial.ship.commanded_throttle == 0, "partial voyage resumes at saved position and fuel in neutral")
 	partial.free()
 
@@ -253,7 +255,7 @@ func gas_checks() -> void:
 		[345389423, 6241, 767766, 17968, 10858, -1],
 	]:
 		check(s.offers.calculate(v[0], {"direct_distance_m": v[1], "rate_minor_per_cubic_meter_nm": v[2], "origin_modifier_bp": v[3], "destination_modifier_bp": v[4]}) == v[5], "gas rational vector and overflow bound")
-	check(s.seeds[ID].reward_minor == 9862, "123 m3, 1500 m, 100 minor/m3/NM, 11000/9000 bp = 98.62 credits")
+	check(s.seeds[ID].reward_minor == 98625, "123 m3, 1500 m, 1000 minor/m3/NM, 11000/9000 bp = 986.25 credits")
 	check(s.offers.format_quote(s.seeds[ID]).contains("credits/m³/NM"), "quote labels gas units")
 	check(not Service.valid(s.capture()) and not Service.valid(Service.new().capture(), "gas"), "bulk and gas realms cannot cross-load")
 	s.terminals[s.port].gas_pipelines.pipe_lng.can_load = false
@@ -278,10 +280,10 @@ func gas_checks() -> void:
 	check(s.start_discharge(50) and s.advance(5), "compatible partial pays")
 	var receipt: Dictionary = s.presentation().receipt
 	check(receipt.tank_id == "tank_lng" and receipt.acquisition_id == s.manifest.lines()[0].acquisition_id, "receipt keeps acquisition and tank provenance")
-	check(receipt.reward_minor == 4009 and receipt.remaining_cubic_meters == 73 and receipt.origin_port_id == Service.PORTS[0], "gas receipt retains units and origin")
+	check(receipt.reward_minor == 40091 and receipt.remaining_cubic_meters == 73 and receipt.origin_port_id == Service.PORTS[0], "gas receipt retains units and origin")
 	check(not s.offers.discharge(receipt.action_id, ID, s.owner_id, s.ship_id, s.port, s.manifest, 51, true).ok, "conflicting replay rejected")
 	check(not s.offers.discharge("wrong_owner", ID, "other", s.ship_id, s.port, s.manifest, 1, true).ok, "wrong owner rejected")
 	check(not s.offers.discharge("wrong_ship", ID, s.owner_id, "other", s.port, s.manifest, 1, true).ok, "wrong ship rejected")
 	for i: int in 73:
 		check(s.start_discharge(1) and s.advance(5), "one-m3 fragment settles")
-	check(s.credits == 9862 and s.manifest.lines().is_empty(), "fragmented final total exactly matches quote")
+	check(s.credits == 98625 and s.manifest.lines().is_empty(), "fragmented final total exactly matches quote")

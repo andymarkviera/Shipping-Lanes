@@ -50,10 +50,11 @@ intermediate monetary rounding; final fractions of a minor credit are unpaid.
 Detours, elapsed/offline time and later rate settings cannot increase an accepted
 quote. Fuel, repairs and recovery are separate costs, not deductions from the quote.
 
-Fixture quantities are 123 m³. Rates in minor credits/m³/NM: LNG 100, nitrogen 120,
-oxygen 150, argon 80. Brindle's modifier is 11,000 bp; Slatewater's is 9,000 bp.
-Direct separation is 1,500 m. The LNG example pays **98.62 credits** total:
-50 m³ pays **40.09**, then 73 m³ pays **58.53**. Delivering those remaining 73 m³
+Fixture quantities are 123 m³. Rates in minor credits/m³/NM (Step 86, ten
+times the original fixture values): LNG 1000, nitrogen 1200, oxygen 1500, argon 800.
+Brindle's modifier is 11,000 bp; Slatewater's is 9,000 bp.
+Direct separation is 1,500 m. The LNG example pays **986.25 credits** total:
+50 m³ pays **400.91**, then 73 m³ pays **585.34**. Delivering those remaining 73 m³
 one at a time gives exactly the same total. These are fixture rates, not a balance
 claim or a gas resale price.
 
