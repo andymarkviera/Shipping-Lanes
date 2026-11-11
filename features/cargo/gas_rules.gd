@@ -67,6 +67,31 @@ static func transfer_error(ship: ShipDefinition, cargo: CargoDefinition, tank_id
 	if not pipe["can_" + direction]: return "Pipeline does not support requested direction"
 	return ""
 
+## One manifest row (Step 84 split from cargo_manifest.gd; order and messages unchanged).
+## commodities/totals are the caller's per-validation accumulators, keyed by tank ID.
+static func manifest_row_error(ship: ShipDefinition, cargo: CargoDefinition, row: Dictionary, commodities: Dictionary, totals: Dictionary) -> String:
+	if row.has("hold_id"): return "Gas cannot use a bulk hold."
+	if not row.get("tank_id") is String: return "Gas cargo needs a valid tank."
+	var error: String = tank_error(ship, cargo, row.tank_id)
+	if not error.is_empty(): return error
+	if commodities.has(row.tank_id) and commodities[row.tank_id] != row.cargo_id: return "A gas tank cannot mix commodities."
+	commodities[row.tank_id] = row.cargo_id
+	var used_m3: int = totals.get(row.tank_id, 0)
+	if row.quantity > ship.gas_tanks[row.tank_id].capacity_cubic_meters - used_m3: return "Cargo exceeds gas tank capacity."
+	totals[row.tank_id] = used_m3 + row.quantity
+	return ""
+
+## A quoted/accepted gas job at an authority-owned terminal (Step 84 split from
+## bulk_service.gd). The terminal and definitions come from authority, never UI.
+static func job_transfer_error(ship: ShipDefinition, definitions: Array[ContentDefinition], job: Dictionary, terminal: BerthDefinition, at_port: String, direction: String) -> String:
+	if job.is_empty(): return "Unknown gas job."
+	var cargo: CargoDefinition
+	for record: ContentDefinition in definitions:
+		if record.id == job.cargo_id: cargo = record as CargoDefinition
+	if cargo == null or terminal == null or terminal.port_id != at_port: return "Missing gas terminal or commodity."
+	var pipeline: String = "pipe_lng" if cargo.gas_pipeline_type == "lng" else "pipe_industrial"
+	return transfer_error(ship, cargo, job.get("tank_id", ""), terminal, pipeline, direction)
+
 static func validate_references(record: ContentDefinition, definitions: Dictionary, errors: PackedStringArray) -> void:
 	var compartments: Dictionary = {}
 	if record is CargoDefinition:

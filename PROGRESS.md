@@ -4557,3 +4557,113 @@ Next, in order:
    step to its `allowedTools`/workflow.
 
 Step 84 (cargo compatibility matrix) should not start until 1-3 pass.
+
+## Step 84 — Cargo compatibility matrix (draft, UNVERIFIED) — November 11, 2026
+
+Task ID: `cargo-compatibility-matrix`, from GitHub issue #25. Based on main at
+**11ecd77** (Step 83 merge). Read AGENTS.md, CLOUD_HANDOFF.md, latest progress and
+decisions, FEATURE_INVENTORY.md, DEFERRED_PLAYER_REQUESTS.md and original roadmap
+Step 84. Only Step 84 is implemented.
+
+Step 83's handoff said this step should wait for Step 83's checks. Issue #25 asked
+for it anyway, and Step 83's Python and Godot checks are **still unrun**. This step
+builds on unverified Step 83 heavy code.
+
+**No automated or manual check of any kind ran for this step.** See "Checks".
+The "Done when" criterion (each family completes its own voyage without breaking
+another) is written as tests but is **not demonstrated** until they run.
+
+### Changes
+
+- New `services/test_cargo_matrix.py` (3 tests). A test-only `World` class puts
+  the heavy tables beside the oil/refinery tables in one isolated SQLite file, so
+  oil, cargo fuel and heavy lifting share one profile, wallet and revision.
+  - Hull x service matrix: container, bulk, gas, lifter and oil hulls against oil
+    purchase, cargo-fuel loading and heavy claim; each wrong cell must return its
+    own refusal code and leave all eight tables unchanged.
+  - One world, three voyages in sequence (cargo fuel, oil, heavy), then oil again.
+    Covers partial quantities, full oil capacity (200 barrels), over-quantity,
+    faults before/after commit, duplicate actions, rounding (partial cargo-fuel
+    sales total 15400; partial oil cost allocation equals the purchase), another
+    family's unfinished cargo refused as `CARGO_BUSY`, and one wallet seen
+    identically through the oil, refinery and heavy snapshots.
+  - An oil action ID reused by a refinery action is `ID_CONFLICT`.
+- New `tools/cargo_matrix_probe.gd` for the GDScript authorities: every family
+  hull against every family cargo in the manifest; per-family full capacity,
+  one-over, partial remove/refill, repeated batch IDs, bad quantities/units and
+  claiming another family's compartment; a container job voyage (wrong ship,
+  release before loading, duplicate accept/load/delivery, exact-fit capacity);
+  bulk and gas voyages through the shared service (cancelled load, four partial
+  discharges whose payments must equal the frozen quote, duplicate settlement,
+  over-discharge, checkpoints not interchangeable between families); gas terminal
+  and quay service cells; an oil lot voyage with partial sales and replays.
+- Family rules split out of shared code, with check order and messages kept:
+  - new `features/cargo/bulk_rules.gd`: bulk hold row rule, out of `cargo_manifest.gd`;
+  - `GasRules.manifest_row_error`: gas tank row rule, out of `cargo_manifest.gd`;
+  - `GasRules.job_transfer_error`: gas terminal/pipeline choice, out of `bulk_service.gd`.
+- D141 in DECISIONS.md.
+
+Godot stays **4.7.2**; game/ticket protocols, save formats and all stored keys are
+unchanged. `export_presets.cfg` gains `res://features/cargo/bulk_rules.gd`. No
+service or authority behaviour was intentionally changed. No database, credential,
+engine, export or cache is committed. Original references and `.github/workflows`
+untouched. No machinery wear, expiry, hidden shallows, player transfer or second
+active job.
+
+### Known limitations
+
+- **Hand-written `.gd.uid` files.** `features/cargo/bulk_rules.gd.uid` and
+  `tools/cargo_matrix_probe.gd.uid` were typed by hand because no Godot editor was
+  available to generate them. If the editor rejects or regenerates them on first
+  import, commit the editor's version. No existing `.gd.uid` was touched.
+- The remaining `family == "gas"` branches in `bulk_service.gd`, `bulk_earnings.gd`,
+  `bulk_service_panel.gd` and `bulk_port_test.gd` were left in place (D141): they
+  select units, keys, labels and fixtures for one shared engine and decide stored
+  key names, so moving them unverified risked save compatibility.
+- The heavy voyage in the Python test uses host evidence, as the existing heavy
+  tests do; it does not sail a lifter. Containers, bulk and gas have no Python
+  service, so their voyages exist only in the Godot probe.
+- The probe's interruption cases use cancel/release. Undocking mid-operation and
+  process-kill recovery stay with the existing per-family runners.
+- The probe has no Python runner or `.tscn` wrapper and is not in `CheckProject.ps1`.
+
+### Checks
+
+Nothing ran. This GitHub Actions runner again denied every Python invocation
+(`python3 -m unittest ...` in three forms) and has no Godot binary; only file
+edits, read-only shell and git were permitted. Both new test files were checked
+by reading the code they call, which does not count as a pass.
+
+- **Python (not run):** `services.test_cargo_matrix` (3 new tests), plus the 22
+  heavy and 51 oil/refinery/cargo-fuel tests still unrun since Step 83.
+- **Godot (not run):** import, script parse/load, `cargo_matrix_probe.gd`, and the
+  existing bulk/gas capacity, bulk/gas service, liquid inventory, voyage, ports
+  and catalog checks that exercise the three edited scripts. A GDScript parse or
+  typing error in the edited or new files is possible.
+- **Windows:** PowerShell/native checks, exports and exported resource loading
+  (including the new export entry): not run.
+- **PostgreSQL / Keycloak / public peers:** not installed, not run. Public oil and
+  refinery SQL adapters are untouched; no public heavy, bulk or gas support exists.
+- **Visuals / playtest:** not applicable to this step's code; no hand-sailed voyage
+  of any family was made. No Andy acceptance is claimed.
+
+### Handoff
+
+On branch `claude/issue-25-20261111-0058`; the runner cannot create
+`feat/step-84-cargo-compatibility-matrix`. Nothing was pushed to main.
+
+Next, in order:
+
+1. Step 83's list items 1-3 if still open.
+2. `python -m unittest services.test_cargo_matrix -v`, then every `services` test.
+   The expected refusal codes and totals were derived by reading; fix the test if
+   a code differs for a sound reason, fix the service if a table changed.
+3. With pinned Godot 4.7.2: import (watch the two hand-written `.uid` files), the
+   script-load check, then with isolated user-data directories
+   `godot --headless --path . --script tools/cargo_matrix_probe.gd`; expect
+   `CARGO_MATRIX_PASS ... failures=0`.
+4. Re-run bulk/gas capacity and service probes and the liquid inventory, voyage,
+   ports and catalog checks to confirm the rule split changed nothing.
+5. Record real results here and remove "UNVERIFIED" from the heading only then.
+6. Backlog, not blocking: Windows export/load, PostgreSQL/Keycloak runners, a
+   hand-sailed voyage per family, and adding the probe to `CheckProject.ps1`.

@@ -2,6 +2,7 @@ extends RefCounted
 ## Authority-owned per-ship batches. No money, transfer, loading or save side effects.
 signal changed
 
+const BulkRules = preload("res://features/cargo/bulk_rules.gd")
 const LIMIT: int = 1000000000
 const FIELDS: Array[String] = ["batch_id", "cargo_id", "quantity", "unit", "origin_port_id", "destination_port_id", "acquisition_id", "job_id"]
 var _ship: ShipDefinition
@@ -59,28 +60,15 @@ func validate(candidate: Array[Dictionary]) -> String:
 		if row.unit != cargo.quantity_unit: return "Cargo quantity uses the wrong unit."
 		if not _definitions.get(row.origin_port_id) is PortDefinition or not _definitions.get(row.destination_port_id) is PortDefinition: return "Unknown origin or destination."
 		if not GasRules.cargo_error(cargo).is_empty(): return "Invalid gas commodity definition."
+		# Compartment families own their row rules; this file keeps shared pools only.
 		if cargo.capacity_pool == "gas_tanks":
-			if row.has("hold_id"): return "Gas cannot use a bulk hold."
-			if not row.get("tank_id") is String: return "Gas cargo needs a valid tank."
-			var gas_error: String = GasRules.tank_error(_ship, cargo, row.tank_id)
+			var gas_error: String = GasRules.manifest_row_error(_ship, cargo, row, tank_commodities, tank_totals)
 			if not gas_error.is_empty(): return gas_error
-			if tank_commodities.has(row.tank_id) and tank_commodities[row.tank_id] != row.cargo_id: return "A gas tank cannot mix commodities."
-			tank_commodities[row.tank_id] = row.cargo_id
-			var used_m3: int = tank_totals.get(row.tank_id, 0)
-			if row.quantity > _ship.gas_tanks[row.tank_id].capacity_cubic_meters - used_m3: return "Cargo exceeds gas tank capacity."
-			tank_totals[row.tank_id] = used_m3 + row.quantity
 			continue
 		if row.has("tank_id"): return "Only gas cargo can specify a tank."
 		if cargo.capacity_pool == "bulk_holds":
-			if cargo.quantity_unit != "gram": return "Bulk quantities must use grams."
-			if not row.get("hold_id") is String or not _ship.bulk_holds.has(row.hold_id): return "Bulk cargo needs a valid hold."
-			var hold: Dictionary = _ship.bulk_holds[row.hold_id]
-			if not hold.cargo_type_ids.has(row.cargo_id): return "Commodity is incompatible with this hold."
-			if hold_commodities.has(row.hold_id) and hold_commodities[row.hold_id] != row.cargo_id: return "A bulk hold cannot mix commodities."
-			hold_commodities[row.hold_id] = row.cargo_id
-			var used_grams: int = hold_totals.get(row.hold_id, 0)
-			if row.quantity > hold.capacity_grams - used_grams: return "Cargo exceeds bulk hold capacity."
-			hold_totals[row.hold_id] = used_grams + row.quantity
+			var bulk_error: String = BulkRules.manifest_row_error(_ship, cargo, row, hold_commodities, hold_totals)
+			if not bulk_error.is_empty(): return bulk_error
 			continue
 		if row.has("hold_id"): return "Only bulk cargo can specify a hold."
 		var capacity: Variant = _ship.cargo_capacities.get(cargo.capacity_pool)
