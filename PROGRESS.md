@@ -4868,3 +4868,19 @@ On branch `claude/issue-31-20261111-1331`; the runner cannot create
    with the protocol and save changes that needs.
 4. Still open from Steps 84–86: their unrun check lists, the economy gate
    metrics for the harbor ship, and the oil/tanker scale decision.
+
+## Project reset review — November 11, 2026 (planning only)
+
+From GitHub issue #34. Added REBUILD_PLAN.md: an audit of what is playable, the
+likely cause of the no-movement bug, a proposed single-player 1.0 scope, six
+playable milestones, a verification approach and a fix-first list. It is a
+proposal awaiting Andy's approval; no work starts before that.
+
+No game code, scene, resource, service, save, protocol, export preset or
+`.github/workflows` file changed. `docs/original-references` untouched.
+
+Checks: nothing ran. The runner has no Godot and refused Python and a deeper git
+fetch. The audit is a reading of source and records. The movement diagnosis
+(`set_menu_open` called every frame in `oil_port_test.gd` and `bulk_port_test.gd`
+re-arms `wait_for_release`, so held keys never reach the helm) is **not
+reproduced** and must be confirmed in Godot on Windows before it is fixed.
