@@ -4,6 +4,12 @@ extends VBoxContainer
 var ship: HandlingShip
 var controls: PlayerControls
 var status: Label
+## Litres on board before "Empty tank (test)". Negative when the tank is not test-emptied.
+## A test-emptied tank is for this visit only: saves keep the earlier level.
+var fuel_before_test_empty: float = -1.0
+
+func fuel_to_save() -> float:
+	return fuel_before_test_empty if fuel_before_test_empty >= 0 and ship.state.fuel_liters <= 0 else ship.state.fuel_liters
 
 func configure(body: HandlingShip, input: PlayerControls) -> void:
 	ship = body
@@ -17,13 +23,15 @@ func configure(body: HandlingShip, input: PlayerControls) -> void:
 		button.pressed.connect(func():
 			match caption:
 				"Empty tank (test)":
+					if ship.state.fuel_liters > 0: fuel_before_test_empty = ship.state.fuel_liters
 					ship.state.fuel_liters = 0
 					ship.zero_throttle()
 					ship.actual_throttle = 0
 					ship.maneuver(0, 0)
-					status.text = "Tank emptied. Coast to a stop, then use Refuel (test)."
+					status.text = "Tank emptied for this visit only; it is not saved. Coast to a stop, then use Refuel (test)."
 				"Refuel (test)":
 					var added: float = ship.refuel(ship.definition.fuel_capacity_liters)
+					if added > 0: fuel_before_test_empty = -1.0
 					status.text = "Test fuel added: %.1f L" % added if added > 0 else "Refuel needs a stopped boat, neutral controls and tank space."
 				"Pause sim":
 					ship.simulation_paused = not ship.simulation_paused
@@ -45,7 +53,7 @@ func configure(body: HandlingShip, input: PlayerControls) -> void:
 	add_child(status)
 
 static func readout(body: HandlingShip) -> String:
-	var suffix: String = " · EMPTY" if body.state.fuel_liters <= 0 else ""
+	var suffix: String = " · EMPTY — stop, then click Refuel (test)" if body.state.fuel_liters <= 0 else ""
 	if body.simulation_paused: suffix = " · SIM PAUSED"
 	elif body.docked: suffix = " · DOCKED"
 	return "Fuel %.1f / %.0f L%s" % [body.state.fuel_liters, body.definition.fuel_capacity_liters, suffix]

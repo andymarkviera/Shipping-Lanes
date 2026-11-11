@@ -7,6 +7,8 @@ var bulk_panel: VBoxContainer
 var cargo_scroll: ScrollContainer
 var elapsed: float = 0.0
 var booted: bool = false
+## Tests set this to an isolated file. Empty means the normal private voyage save.
+@export var voyage_path: String = ""
 
 func create_ship() -> HandlingShip:
 	var body: HandlingShip = super.create_ship()
@@ -60,7 +62,7 @@ func _ready() -> void:
 	bulk_panel.cancel_requested.connect(func(): bulk.cancel(); publish_state())
 	ship.simulation_paused = true
 	controls.set_menu_open(true)
-	if not bulk.open("user://worlds/private_" + cargo_family + "_voyage/voyage.db"):
+	if not bulk.open(voyage_path if not voyage_path.is_empty() else "user://worlds/private_" + cargo_family + "_voyage/voyage.db"):
 		booted = true
 		return
 	if bulk.store.revision == 1 and bulk.pose == Transform3D.IDENTITY:
