@@ -192,7 +192,7 @@ class CargoMatrixTest(unittest.TestCase):
             wallet = self.money()
             self.assertTrue(self.refinery(sale)['duplicate'])
             self.assertEqual(self.money(), wallet)
-        self.assertEqual(paid, 15400)  # 70 barrels at 220, rounded once over the whole lot
+        self.assertEqual(paid, 22400)  # 70 barrels at 320, rounded once over the whole lot
         self.assertEqual(self.money(), start + paid)
         self.assertEqual(self.profile()['cargo'], [])
         self.assertEqual(self.refinery(self.sale('fuel-again', 'fuel-load', 1))['code'], 'CARGO_NOT_OWNED')

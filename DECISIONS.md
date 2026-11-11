@@ -996,3 +996,23 @@ container unit rule in `record_contract.gd`) are recorded exceptions, not fixed.
 
 The harbor ship is on sale online with placeholder price and handling pending
 Andy's review and an economy gate run. No protocol or save version changes.
+
+## D143 — Priority cargo roles and starter access (Step 86)
+
+Containers stay the starter family: no cargo capital, starter hull, unchanged
+rewards. Bulk is the next step and gas the specialist above it, so their fixture
+rates rise (bulk ×8, gas ×10) to pay more per trip than a full container load on
+the same route. Cargo fuel sells at 320 minor credits per barrel (was 220) so that refining and hauling fuel back beats selling the crude.
+Heavy rewards are unchanged until a lifter voyage is measured.
+
+Oil and cargo fuel remain far below the contract families because the prototype
+tanker carries only 200 barrels. The remedy is a joint capacity/trade-limit/wallet
+scale-up, not a price change; it is deferred to a decision with Andy at Step 88.
+
+Starter access: a new profile plays containers only. Every other family needs its
+dedicated hull, none of which is sold online yet; until then each stays reachable
+through its developer fixture. Hull prices are set when the hulls go online.
+
+Existing saves keep frozen quotes and frozen cargo-fuel prices. No protocol, save
+format, condition, expiry, transfer or one-active-job change. Values are
+provisional pending Andy's Step 87 playtest. See CARGO_BALANCE.md.

@@ -25,7 +25,7 @@ price, withdrawal fee, and sale gross/debt repayment/wallet change.
   Crude production cost remains in the processing ledger, not mislabeled as a
   handling cost or incorrectly displayed as net profit.
 - `refinery_sell` takes only that ship's aboard cargo fuel at Brindle's pipeline.
-  Prototype price is 220 minor credits/barrel. Gross is the difference between
+  Price is 320 minor credits/barrel (Step 86; was 220). Gross is the difference between
   cumulative integer floors before/after the sale; handling cost uses the same
   cumulative allocation. Splitting a lot's sales cannot create rounding profit.
 - Existing recovery debt policy applies to positive proceeds. The receipt separates
@@ -35,8 +35,8 @@ price, withdrawal fee, and sale gross/debt repayment/wallet change.
   while sailing; selling cargo fuel does not act as a refueling service.
 
 Example with a 130-credit/barrel crude quote: 20000 wallet, buy 100 barrels for
-13000, refine 100000 millibarrels to 70000, pay 70 handling, sell for 15400. Final
-wallet is **22330**, a **2330** increase. Actual market quotes can differ; the Godot
+13000, refine 100000 millibarrels to 70000, pay 70 handling, sell for 22400. Final
+wallet is **29330**, a **9330** increase. Actual market quotes can differ; the Godot
 voyage checks its accepted purchase and saved post-fee balance rather than assuming
 a particular current oil price.
 

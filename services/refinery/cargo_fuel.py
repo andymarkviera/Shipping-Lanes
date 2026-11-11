@@ -5,7 +5,7 @@ from services.oil_market.settlement import MAX_MONEY
 
 CAPACITIES = {'ship_oil_prototype_01': 200000}  # millibarrels; fixture hull only
 SALE_PORT = 'port_brindle_quay'
-PRICE = 220  # prototype minor credits per barrel, frozen at acquisition
+PRICE = 320  # Step 86: refining must beat selling the crude; prototype minor credits per barrel, frozen at acquisition
 MUTATIONS = ('refinery_load', 'refinery_sell')
 
 

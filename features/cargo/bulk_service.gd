@@ -66,8 +66,8 @@ func _init(cargo_family: String = "bulk") -> void:
 
 func seed_offers() -> void:
 	var locations: Dictionary = {PORTS[0]: Geo.normalized(0, 0), PORTS[1]: Geo.normalized(0, rad_to_deg(1500.0 / 100000.0))}
-	var rates: Dictionary = {"cargo_bulk_grain": 100, "cargo_bulk_coal": 120, "cargo_bulk_ore": 150, "cargo_bulk_limestone": 80}
-	if family == "gas": rates = {"cargo_gas_lng": 100, "cargo_gas_nitrogen": 120, "cargo_gas_oxygen": 150, "cargo_gas_argon": 80}
+	var rates: Dictionary = {"cargo_bulk_grain": 800, "cargo_bulk_coal": 960, "cargo_bulk_ore": 1200, "cargo_bulk_limestone": 640}
+	if family == "gas": rates = {"cargo_gas_lng": 1000, "cargo_gas_nitrogen": 1200, "cargo_gas_oxygen": 1500, "cargo_gas_argon": 800}
 	var compartments: Dictionary = ship_definition.gas_tanks if family == "gas" else ship_definition.bulk_holds
 	for origin: String in PORTS:
 		for cargo: String in rates:

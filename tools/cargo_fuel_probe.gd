@@ -66,7 +66,7 @@ func run() -> void:
 		refinery_panel.quantity.value = 1099
 		await refinery_panel.execute_selected()
 		check(refinery_panel.state.cargo_fuel.is_empty(), "final sale removes lot")
-		check(int(refinery_panel.state.money) == wallet_before + 462, "wallet adds exact 462 proceeds to saved post-purchase/fee balance")
+		check(int(refinery_panel.state.money) == wallet_before + 672, "wallet adds exact 672 proceeds to saved post-purchase/fee balance")
 		check(is_equal_approx(ship.state.fuel_liters, fuel_before), "partial sales never alter propulsion tank")
 		print("CARGO_FUEL_VOYAGE_SOLD checks=", checks, " failures=", failures)
 	get_tree().quit(0 if failures == 0 else 1)
