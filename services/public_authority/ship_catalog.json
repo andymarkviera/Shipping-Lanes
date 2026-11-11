@@ -19,5 +19,12 @@
     "cost_minor": 120000,
     "fuel_capacity_liters": 1000,
     "description": "Six container slots; 20% stronger forward acceleration with higher fuel use."
+  },
+  {
+    "definition": "ship_harbor_container_01",
+    "name": "Harbor container ship",
+    "cost_minor": 100000,
+    "fuel_capacity_liters": 1000,
+    "description": "Six container slots; 20% quicker turning with 10% gentler forward acceleration."
   }
 ]

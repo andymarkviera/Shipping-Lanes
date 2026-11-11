@@ -14,6 +14,12 @@ static func definition(id: String) -> ShipDefinition:
 		if record.id == id: return record
 	return null
 
+## Online hulls are exactly the rows of the server's ship catalog.
+static func purchasable(id: String) -> bool:
+	for row: Dictionary in purchase_catalog:
+		if row.definition == id: return true
+	return false
+
 static func family_capacity(ship: ShipDefinition, family: String) -> String:
 	if ship == null: return "Unknown definition; capacity unavailable"
 	var pool: String = {"Containers": "container_slots", "Heavy payloads": "heavy_slots"}.get(family, "")
@@ -58,7 +64,7 @@ static func details(entry: Dictionary, family: String, data: Dictionary, availab
 		lines.append("Owned ID: " + str(entry.id))
 		lines.append("Condition: %.2f%% · Propulsion fuel: %.1f L" % [int(entry.get("condition_bp", 10000)) / 100.0, float(entry.get("fuel_liters", 0.0))])
 		if not entry.get("active", false):
-			lines.append("Storage: " + {"port_brindle_quay": "Brindle Quay", "port_slatewater_works": "Slatewater Works"}.get(str(entry.get("storage_port_id", "")), "Unknown port"))
+			lines.append("Storage: " + PrototypeCatalog.display_name(str(entry.get("storage_port_id", "")), "Unknown port"))
 	else:
 		lines.append("Ownership: Catalog design; not an owned instance")
 		lines.append(acquisition(str(entry.definition), data, available))

@@ -2,6 +2,7 @@ extends Node
 ## One account's server-side lease. No database credentials or private-save imports.
 ## The caller owns transport authentication; this adapter is never an RPC endpoint.
 signal fenced
+const Inspection = preload("res://features/catalog/fleet_inspection.gd")
 var endpoint: String
 var server_id: String
 var credential: String
@@ -110,7 +111,7 @@ func valid_grant(value: Dictionary) -> bool:
 	var profile: Dictionary = value.profile
 	if profile.get("version") != 1 or not profile.get("ship") is Dictionary or not profile.get("cargo") is Array or not profile.get("jobs") is Array: return false
 	var ship: Dictionary = profile.ship
-	if ship.get("definition") not in ["ship_starter_container_01", "ship_coastal_container_01", "ship_swift_container_01"] or not ship.get("id") is String or ship.id.is_empty(): return false
+	if not ship.get("definition") is String or not Inspection.purchasable(ship.definition) or not ship.get("id") is String or ship.id.is_empty(): return false
 	if not (ship.get("fuel_liters") is float or ship.get("fuel_liters") is int): return false
 	if not is_finite(ship.fuel_liters) or ship.fuel_liters < 0 or ship.fuel_liters > 1000: return false
 	if not ship.get("position") is Dictionary: return false
