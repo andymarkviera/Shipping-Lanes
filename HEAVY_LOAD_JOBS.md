@@ -110,3 +110,11 @@ already containing heavy navigation requires it on new economic transitions;
 identical retries still recover the original receipt before physical checks.
 The original Step 80 service-only API remains compatible for profiles without
 navigation. Public heavy support and historical Port Test conversion remain absent.
+
+## Step 83 follow-through
+
+HEAVY_JOB_PRESENTATION.md supersedes "one simple block" above for newly created
+worlds: three defined payloads, each with its own zones, lifter load limits and
+import-time rule checks. Intent `payload_id` may be any payload the world offers;
+host evidence must name that job's payload and zone. Worlds created before Step 83
+stay readable and keep offering only the block.

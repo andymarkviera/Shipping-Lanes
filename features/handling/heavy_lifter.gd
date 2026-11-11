@@ -7,6 +7,12 @@ const LOWERED: float = -1.0
 # Centre-over-platform tolerance; heading deliberately remains unrestricted.
 const PICKUP_TOLERANCE: Vector3 = Vector3(9, 2, 24)
 const STOP_YAW_RATE: float = 0.001
+# Load limits: the proven compound payload envelope (width, height, length) and
+# a prototype 200 t mass limit, which caps loaded visual draft at 1.0 m.
+const BASE_PAYLOAD_SIZE: Vector3 = Vector3(14, 8, 32)
+const MAX_PAYLOAD_KG: float = 200000.0
+var payload_size: Vector3 = BASE_PAYLOAD_SIZE
+var payload_collider: CollisionShape3D
 var deck_height: float = RAISED
 var deck_target: float = RAISED
 var deck_visual: Node3D
@@ -62,6 +68,7 @@ func _ready() -> void:
 	collider.shape = payload_shape.shape.duplicate()
 	collider.position.y = 4
 	payload_body.add_child(collider)
+	payload_collider = collider
 	get_parent().add_child.call_deferred(payload_body)
 
 func _exit_tree() -> void:
@@ -104,7 +111,7 @@ func align_test_payload() -> bool:
 		return false
 	var pose: Transform3D = global_transform
 	pose.origin = to_global(Vector3(0, LOWERED, -8))
-	var center: Transform3D = pose.translated_local(Vector3(0, 4, 0))
+	var center: Transform3D = pose.translated_local(Vector3(0, payload_size.y * 0.5, 0))
 	if not space_clear(center, payload_shape.shape):
 		notice = "The loading space is blocked."
 		return false
@@ -120,13 +127,13 @@ func attach_payload() -> bool:
 	if not pickup_position_ready():
 		notice = "Move the platform underneath the centre of the load, then stop and Raise."
 		return false
-	if not space_clear(cargo_mount.global_transform.translated_local(Vector3(0, 4, 0)), payload_shape.shape):
+	if not space_clear(cargo_mount.global_transform.translated_local(Vector3(0, payload_size.y * 0.5, 0)), payload_shape.shape):
 		notice = "Cannot secure cargo inside an obstacle."
 		return false
 	if pickup_commit_guard.is_valid() and not pickup_commit_guard.call(): return false
 	payload_body.collision_layer = 0
 	payload_visual.reparent(cargo_mount, false)
-	payload_visual.transform = Transform3D.IDENTITY
+	payload_visual.transform = payload_pose()
 	payload_shape.disabled = false
 	attached = true
 	apply_payload_effects()
@@ -143,7 +150,7 @@ func detach_payload() -> bool:
 	if release_commit_guard.is_valid() and not release_commit_guard.call(): return false
 	payload_body.global_transform = cargo_mount.global_transform
 	payload_visual.reparent(payload_body, false)
-	payload_visual.transform = Transform3D.IDENTITY
+	payload_visual.transform = payload_pose()
 	payload_shape.disabled = true
 	payload_body.collision_layer = CollisionRules.HULL
 	attached = false
@@ -160,8 +167,8 @@ func advance_deck(delta: float) -> void:
 	var clear: bool = space_clear(deck_pose, swept)
 	if attached:
 		var cargo_swept: BoxShape3D = BoxShape3D.new()
-		cargo_swept.size = Vector3(14, 8 + absf(next - deck_height), 32)
-		clear = clear and space_clear(global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 + 4, -8)), cargo_swept)
+		cargo_swept.size = Vector3(payload_size.x, payload_size.y + absf(next - deck_height), payload_size.z)
+		clear = clear and space_clear(global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 + payload_size.y * 0.5, -8)), cargo_swept)
 	elif deck_target > deck_height and payload_body.collision_layer != 0:
 		# An unsecured floating load must never be raised through.
 		var local_load: Vector3 = to_local(payload_body.global_position)
@@ -175,7 +182,7 @@ func advance_deck(delta: float) -> void:
 	deck_visual.position.y = deck_height - RAISED
 	deck_shape.position.y = deck_height - 0.45
 	cargo_mount.position.y = deck_height
-	payload_shape.position.y = deck_height + 4
+	payload_shape.position.y = deck_height + payload_size.y * 0.5
 	if not operating():
 		notice = "Deck raised — ready to sail." if deck_height == RAISED else "Deck lowered — ready for loading."
 		if deck_height == LOWERED and attached and release_guard.is_valid(): detach_payload()
@@ -199,6 +206,42 @@ func alignment_hint() -> String:
 	if pickup_position_ready(): return "Platform is under the load. Stop in neutral and press Raise."
 	return "Lower the platform and reverse underneath the centre of the load.\nCrooked is fine — no angle matching required."
 
+static func load_within_limits(size: Vector3, mass_kg: float) -> bool:
+	if not size.is_finite() or not is_finite(mass_kg) or mass_kg <= 0 or mass_kg > MAX_PAYLOAD_KG: return false
+	return size.x > 0 and size.y > 0 and size.z > 0 and size.x <= BASE_PAYLOAD_SIZE.x and size.y <= BASE_PAYLOAD_SIZE.y and size.z <= BASE_PAYLOAD_SIZE.z
+
+func payload_pose() -> Transform3D:
+	# The one authored payload model is scaled to the defined envelope (placeholder art).
+	return Transform3D(Basis.from_scale(payload_size / BASE_PAYLOAD_SIZE), Vector3.ZERO)
+
+## Definition-driven payload variant. Refuses anything beyond this lifter's limits;
+## attachment, collision ownership and release logic are unchanged.
+func configure_payload(size: Vector3, mass_kg: float) -> bool:
+	if not load_within_limits(size, mass_kg): return false
+	payload_size = size
+	payload_mass_kg = mass_kg
+	(payload_shape.shape as BoxShape3D).size = size
+	(payload_collider.shape as BoxShape3D).size = size
+	payload_collider.position.y = size.y * 0.5
+	payload_shape.position.y = deck_height + size.y * 0.5
+	payload_visual.transform = payload_pose()
+	return true
+
+## Carrier-frame offset of the floating load from the platform centre, in metres.
+## +X is port and +Z is the bow. Empty when no floating load can be picked up.
+func alignment() -> Dictionary:
+	if attached or not is_instance_valid(payload_body) or not payload_body.is_inside_tree() or payload_body.collision_layer == 0: return {}
+	var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, -8)
+	return {"lateral_m": offset.x, "longitudinal_m": offset.z, "ready": pickup_position_ready()}
+
+func alignment_feedback() -> String:
+	var found: Dictionary = alignment()
+	if found.is_empty(): return ""
+	var lateral: float = found.lateral_m
+	var longitudinal: float = found.longitudinal_m
+	var text: String = "Load centre: %.0f m to %s (limit %.0f), %.0f m %s (limit %.0f)." % [absf(lateral), "port" if lateral > 0 else "starboard", PICKUP_TOLERANCE.x, absf(longitudinal), "ahead" if longitudinal > 0 else "astern", PICKUP_TOLERANCE.z]
+	return text + ("\nIN POSITION — stop in neutral, then Raise." if found.ready else "\nNot yet underneath the load.")
+
 func apply_payload_effects() -> void:
 	# Prototype 1,000 t displacement plus 100 t block; never mutate the catalog.
 	var ratio: float = 1000000.0 / (1000000.0 + (payload_mass_kg if attached else 0.0))
@@ -214,7 +257,7 @@ func restore_heavy_payload(carrying: bool, active: bool, pickup: Vector3) -> voi
 	# Caller has loaded a committed host snapshot; no pickup guard or reward here.
 	attached = carrying
 	payload_visual.reparent(cargo_mount if carrying else payload_body, false)
-	payload_visual.transform = Transform3D.IDENTITY
+	payload_visual.transform = payload_pose()
 	payload_visual.visible = active
 	payload_body.visible = active and not carrying
 	payload_body.global_position = pickup
@@ -223,5 +266,5 @@ func restore_heavy_payload(carrying: bool, active: bool, pickup: Vector3) -> voi
 	deck_visual.position.y = deck_height - RAISED
 	deck_shape.position.y = deck_height - 0.45
 	cargo_mount.position.y = deck_height
-	payload_shape.position.y = deck_height + 4
+	payload_shape.position.y = deck_height + payload_size.y * 0.5
 	apply_payload_effects()
