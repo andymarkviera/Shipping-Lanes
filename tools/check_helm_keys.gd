@@ -19,8 +19,8 @@ func expect(condition: bool, label: String) -> void:
 
 func key(code: int, pressed: bool) -> void:
 	var event: InputEventKey = InputEventKey.new()
-	event.keycode = code
-	event.physical_keycode = code
+	event.keycode = code as Key
+	event.physical_keycode = code as Key
 	event.pressed = pressed
 	Input.parse_input_event(event)
 	Input.flush_buffered_events()
