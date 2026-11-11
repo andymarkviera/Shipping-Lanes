@@ -9,7 +9,7 @@ func _initialize() -> void:
 
 func run() -> void:
 	var rows: Array = []
-	for resource: String in ["starter_ship", "coastal_ship", "swift_ship"]:
+	for resource: String in ["starter_ship", "coastal_ship", "swift_ship", "harbor_ship"]:
 		for leg: int in 2:
 			var ship: HandlingShip = Hull.new()
 			ship.definition = load("res://features/catalog/records/%s.tres" % resource)

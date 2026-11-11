@@ -11,7 +11,8 @@ var allocation_key: String = "hold_id"
 var cumulative_key: String = "discharged_grams"
 var rate_key: String = "rate_minor_per_tonne_nm"
 var unit: String = "gram"
-var commodities: Array[String] = ["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone"]
+# Catalog order; the cargo records decide which commodities each family may quote.
+var commodities: Array[String] = PrototypeCatalog.cargo_ids("bulk_holds")
 
 func _init(cargo_family: String = "bulk") -> void:
 	super()
@@ -21,7 +22,7 @@ func _init(cargo_family: String = "bulk") -> void:
 		cumulative_key = "discharged_cubic_meters"
 		rate_key = "rate_minor_per_cubic_meter_nm"
 		unit = "cubic_meter"
-		commodities = ["cargo_gas_lng", "cargo_gas_nitrogen", "cargo_gas_oxygen", "cargo_gas_argon"]
+		commodities = PrototypeCatalog.cargo_ids("gas_tanks")
 
 func calculate(quantity: int, terms: Dictionary) -> int:
 	var normalized: Dictionary = terms.duplicate()

@@ -237,7 +237,7 @@ func refresh_jobs() -> void:
 	var rows: Array[Dictionary] = heavy_jobs.list_at(port.definition.id) if heavy_mode else offers.list_at(port.definition.id)
 	for row: Dictionary in rows:
 		if row.state != "available": continue
-		var title: String = row.title + " → open ocean" if heavy_mode else "%d container%s → %s" % [row.quantity, "" if row.quantity == 1 else "s", "Slatewater Works" if row.destination_port_id == "port_slatewater_works" else "Brindle Quay"]
+		var title: String = row.title + " → open ocean" if heavy_mode else "%d container%s → %s" % [row.quantity, "" if row.quantity == 1 else "s", PrototypeCatalog.display_name(row.destination_port_id)]
 		jobs_list.add_item("%s · %.2f credits" % [title, row.reward_minor / 100.0])
 		jobs_list.set_item_metadata(jobs_list.item_count - 1, row.id)
 	if jobs_list.item_count > 0:

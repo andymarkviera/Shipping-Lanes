@@ -4667,3 +4667,82 @@ Next, in order:
 5. Record real results here and remove "UNVERIFIED" from the heading only then.
 6. Backlog, not blocking: Windows export/load, PostgreSQL/Keycloak runners, a
    hand-sailed voyage per family, and adding the probe to `CheckProject.ps1`.
+
+## Step 85 — Content extension rehearsal (draft, UNVERIFIED) — November 11, 2026
+
+Roadmap task `content-extension-rehearsal`. See CONTENT_EXTENSION.md and D142.
+
+### Changes
+
+- New records, appended to `PrototypeCatalog.RECORDS` and `export_presets.cfg`:
+  commodity `cargo_bulk_salt`, ship `ship_harbor_container_01`, port
+  `port_cinder_point` with `berth_cinder_point_01` and `cinder_point.tscn`.
+- `bulk_ship.tres` holds accept salt. The ship has rows in `ship_catalog.json`
+  (1000.00 credits), `resale_values.json` and `repair_costs.json`.
+- Hard-coded IDs removed: online hull allow-lists (`public_fleet_service.gd`,
+  `public_authority_client.gd`) follow the ship catalog; bulk/gas commodity lists
+  (`bulk_earnings.gd`) follow cargo records; port names in six scripts use
+  `PrototypeCatalog.display_name` / `short_name`; `test_port.gd` landmark is a
+  scene property set on `brindle_quay.tscn`.
+- Checks that counted three ships now expect four or follow the catalog:
+  `ship_purchase_probe.gd`, `test_ship_purchase.py`, `economy_gate.py`,
+  `economy_gate_probe.gd`.
+- New `tools/content_extension_probe.gd`.
+
+No transaction math, save format, protocol version or ship-controller logic
+changed. No machinery wear, expiry, hidden shallows, player transfer or second
+active job.
+
+### Known limitations
+
+- **Cinder Point is not placed in any world.** It loads, validates, builds its
+  scene and is accepted in save records and bulk quotes, but neither Port Test nor
+  the public world contains it. Placement needs save and protocol changes and is
+  left for the Step 88 world layout decision.
+- **No seeded salt job and no salt entry in the bulk service panel.** Salt works
+  through the bulk authority and manifest only.
+- **The new ship changes online balance.** Price, resale rate, repair cost and
+  handling are placeholder values; the economy gate has no metrics for it yet.
+- **Hand-written `tools/content_extension_probe.gd.uid`.** If the editor
+  regenerates it on first import, commit the editor's version.
+- Remaining ID-bound code is listed in CONTENT_EXTENSION.md.
+
+### Checks
+
+Nothing ran. This runner denied `python3 -m unittest` and has no Godot binary;
+only file edits, read-only shell and git were permitted. All edits were checked
+by reading the code they touch, which does not count as a pass.
+
+- **Python (not run):** `tools/public_handoff` tests (`test_ship_purchase`,
+  `test_fleet`, `test_economy_gate`, `test_resale_accounting`) now see four ships;
+  `services` tests are unaffected by this step but still unrun since Step 83.
+- **Godot (not run):** import, script parse/load, `content_extension_probe.gd`,
+  and the catalog, ports, bulk/gas, ship purchase, fleet inspection, fleet switch,
+  resale and voyage checks that touch the edited scripts. A GDScript parse or
+  typing error in the edited or new files is possible.
+- **Economy gate (not run):** `economy_gate_probe.gd` must be re-run to produce
+  metrics for the fourth ship before `economy_gate.py` can pass.
+- **Windows:** PowerShell/native checks, export and exported resource loading
+  (five new export entries): not run.
+- **PostgreSQL / Keycloak / public peers:** not installed, not run.
+- **Visuals / playtest:** none. No Andy acceptance is claimed.
+
+### Handoff
+
+On branch `claude/issue-27-20261111-1228`; the runner cannot create
+`feat/step-85-content-extension-rehearsal`. Nothing was pushed to main.
+
+Next, in order:
+
+1. Step 84's open list if still pending.
+2. With pinned Godot 4.7.2: import, script-load check, then
+   `godot --headless --path . --script tools/content_extension_probe.gd` with an
+   isolated user-data directory; expect `CONTENT_EXTENSION_PASS ... failures=0`.
+3. Re-run CatalogCheck and the ports, bulk/gas service and earnings, ship purchase,
+   fleet inspection/switch and resale probes.
+4. Python: `tools/public_handoff` unit tests, then regenerate economy metrics and
+   run the economy gate. Review the harbor ship's price and handling if it fails.
+5. Record real results here and remove "UNVERIFIED" from the heading only then.
+6. Backlog, not blocking: Windows export/load, PostgreSQL/Keycloak runners, a
+   hand-sailed online purchase and voyage with the harbor ship, adding the probe
+   to `CheckProject.ps1`, and placing Cinder Point at Step 88.

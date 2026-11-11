@@ -100,7 +100,7 @@ func run() -> void:
 	session.members[2] = {"hull": owner, "voyage_sequence": 0, "voyage_notice": ""}
 	ports.entries[2] = {"owner": owner, "state": "docked", "port_id": "port_brindle_quay"}
 	var rows: Array = service.ship_quotes(2)
-	check(rows.size() == 3, "three progression ships")
+	check(rows.size() == 4, "four progression ships")
 	var quote: Dictionary = rows[1]
 	check(service.ship_quotes(2)[1].id == quote.id, "stable quotes between polls")
 	var registry := DefinitionRegistry.new()

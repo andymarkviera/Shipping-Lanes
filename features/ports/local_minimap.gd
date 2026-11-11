@@ -29,7 +29,7 @@ func _draw() -> void:
 	for port: Node3D in view.world_ports:
 		var point: Vector2 = Navigation.project(port.berth_anchor.global_position, bounds, area)
 		draw_rect(Rect2(point - Vector2(5, 5), Vector2(10, 10)), Color("a0dce9"))
-		var short_name: String = "Brindle" if port.definition.id == "port_brindle_quay" else "Slatewater"
+		var short_name: String = port.definition.display_name.get_slice(" ", 0)
 		draw_string(font, Vector2(clampf(point.x - 26, 12, 232), point.y - 12), short_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	var forward: Vector2 = Navigation.chart_vector(view.ship.global_basis.z).normalized()
 	var side := Vector2(-forward.y, forward.x)

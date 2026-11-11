@@ -25,7 +25,7 @@ func execute(peer: int, ship_id: String) -> Dictionary:
 	if target.is_empty(): return {"ok": false, "code": "SHIP_NOT_STORED"}
 	if target.get("storage_port_id") != port: return {"ok": false, "code": "FLEET_WRONG_PORT"}
 	var definition: ShipDefinition = Inspection.definition(str(target.definition))
-	if definition == null or str(target.definition) not in ["ship_starter_container_01", "ship_coastal_container_01", "ship_swift_container_01"]: return {"ok": false, "code": "UNKNOWN_SHIP"}
+	if definition == null or not Inspection.purchasable(str(target.definition)): return {"ok": false, "code": "UNKNOWN_SHIP"}
 	var slot: int = -1
 	var position_: Dictionary = target.get("position", {}).duplicate(true)
 	if position_.is_empty():
