@@ -8,3 +8,4 @@ definition = ExtResource("2")
 berth = ExtResource("3")
 quay_side = -1
 quay_length_m = 140.0
+landmark = "fuel_store"

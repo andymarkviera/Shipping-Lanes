@@ -6,10 +6,10 @@ id = "ship_bulk_prototype_01"
 display_name = "Two-hold bulk prototype"
 scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
 runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
-cargo_type_ids = Array[String](["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone"])
+cargo_type_ids = Array[String](["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone", "cargo_bulk_salt"])
 dwt_tonnes = 1500
 bulk_mixing_policy = "single_commodity_per_hold"
 bulk_holds = {
-"hold_forward": {"capacity_grams": 400000000, "cargo_type_ids": ["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone"]},
-"hold_aft": {"capacity_grams": 600000000, "cargo_type_ids": ["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone"]}
+"hold_forward": {"capacity_grams": 400000000, "cargo_type_ids": ["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone", "cargo_bulk_salt"]},
+"hold_aft": {"capacity_grams": 600000000, "cargo_type_ids": ["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone", "cargo_bulk_salt"]}
 }

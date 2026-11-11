@@ -39,7 +39,7 @@ func deliver(view: Node3D) -> Dictionary:
 	return {"ok": true, "message": "Delivery complete — paid %.2f credits." % (result.reward_minor / 100.0)}
 
 static func port_name(id: String) -> String:
-	return "Brindle Quay" if id == "port_brindle_quay" else "Slatewater Works"
+	return PrototypeCatalog.display_name(id)
 
 static func receipts(offers: RefCounted, owner: String) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []

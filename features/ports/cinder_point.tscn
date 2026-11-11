@@ -1,0 +1,11 @@
+[gd_scene load_steps=4 format=3]
+[ext_resource type="Script" path="res://features/ports/test_port.gd" id="1"]
+[ext_resource type="Resource" path="res://features/ports/cinder_point.tres" id="2"]
+[ext_resource type="Resource" path="res://features/ports/cinder_point_berth.tres" id="3"]
+[node name="CinderPoint" type="Node3D"]
+script = ExtResource("1")
+definition = ExtResource("2")
+berth = ExtResource("3")
+quay_side = -1
+quay_length_m = 160.0
+landmark = "fuel_store"

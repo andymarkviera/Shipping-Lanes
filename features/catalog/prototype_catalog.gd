@@ -22,4 +22,24 @@ const RECORDS: Array[ContentDefinition] = [
 	preload("res://features/catalog/records/gas_oxygen.tres"),
 	preload("res://features/catalog/records/gas_argon.tres"),
 	preload("res://features/catalog/records/oil.tres"),
+	# Step 85 rehearsal records. Append only: checks address earlier rows by index.
+	preload("res://features/catalog/records/bulk_salt.tres"),
+	preload("res://features/catalog/records/harbor_ship.tres"),
+	preload("res://features/ports/cinder_point.tres"),
+	preload("res://features/ports/cinder_point_berth.tres"),
 ]
+
+## Presentation lookups, so callers never switch on a literal record ID.
+static func display_name(id: String, fallback: String = "") -> String:
+	for record: ContentDefinition in RECORDS:
+		if record.id == id: return record.display_name
+	return id if fallback.is_empty() else fallback
+
+static func short_name(id: String) -> String:
+	return display_name(id).get_slice(" ", 0)
+
+static func cargo_ids(capacity_pool: String) -> Array[String]:
+	var ids: Array[String] = []
+	for record: ContentDefinition in RECORDS:
+		if record is CargoDefinition and record.capacity_pool == capacity_pool: ids.append(record.id)
+	return ids

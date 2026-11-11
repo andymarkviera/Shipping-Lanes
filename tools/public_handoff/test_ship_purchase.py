@@ -145,8 +145,8 @@ class PurchaseTest(unittest.TestCase):
         wear.apply(repaired['ship'], 3600)
         recovery.repay(repaired, 1000)
         self.assertEqual(repaired['stored_ships'], stored)
-    def test_catalog_has_three_positive_integer_prices(self):
-        self.assertEqual(len(ship_purchase.CATALOG), 3)
+    def test_catalog_has_four_positive_integer_prices(self):
+        self.assertEqual(len(ship_purchase.CATALOG), 4)
         for row in ship_purchase.CATALOG.values():
             self.assertIs(type(row['cost_minor']), int)
             self.assertGreater(row['cost_minor'], 20000)

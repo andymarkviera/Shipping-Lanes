@@ -166,7 +166,7 @@ def main():
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     metrics = json.loads(args.metrics.read_text())
-    assert len(metrics) == 6
+    assert len(metrics) == 2 * len(ship_purchase.CATALOG)
     assert {(m['definition'], m['leg']) for m in metrics} == {(key, leg) for key in ship_purchase.CATALOG for leg in range(2)}
     assert all(all(math.isfinite(m[k]) and m[k] > 0 for k in ('seconds', 'operating_seconds', 'fuel_liters', 'distance_m')) for m in metrics)
     results = {}

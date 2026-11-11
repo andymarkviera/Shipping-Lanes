@@ -214,7 +214,7 @@ func cancel_job() -> void:
 		confirm_until = Time.get_ticks_msec() + 5000
 
 static func port_name(id: String) -> String:
-	return "Brindle Quay" if id == "port_brindle_quay" else "Slatewater Works"
+	return PrototypeCatalog.display_name(id)
 
 func refresh_choices(rows: Array) -> void:
 	var next: String = JSON.stringify(rows)
@@ -223,7 +223,7 @@ func refresh_choices(rows: Array) -> void:
 	list.clear()
 	var index: int = 0
 	for row: Dictionary in rows:
-		list.add_item("%d container%s · %s · %.2f cr" % [row.quantity, "" if row.quantity == 1 else "s", "Brindle" if row.destination == "port_brindle_quay" else "Slatewater", row.reward / 100.0])
+		list.add_item("%d container%s · %s · %.2f cr" % [row.quantity, "" if row.quantity == 1 else "s", PrototypeCatalog.short_name(str(row.destination)), row.reward / 100.0])
 		list.set_item_metadata(list.item_count - 1, row.id)
 		if row.id == selected: index = list.item_count - 1
 	selected = ""

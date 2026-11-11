@@ -108,7 +108,7 @@ func inspect() -> void:
 	var lines: PackedStringArray = []
 	for port_id: String in PORT_IDS:
 		var row: Dictionary = result.market.ports[port_id]
-		lines.append("%s: %s credits/barrel · observed %s" % ["Brindle Quay" if port_id == PORT_IDS[0] else "Slatewater Works", money(int(row.reference_minor)), stamp(int(row.observed_at))])
+		lines.append("%s: %s credits/barrel · observed %s" % [PrototypeCatalog.display_name(port_id), money(int(row.reference_minor)), stamp(int(row.observed_at))])
 	prices.text = "REFERENCE PRICES (not executable quotes)\n" + "\n".join(lines)
 	show_inventory()
 	if not result.get("last_receipt", {}).is_empty(): show_receipt(result.last_receipt)

@@ -977,3 +977,22 @@ fixture stay: they configure units, stored key names, labels and fixtures for on
 settlement engine. Revisit only with the bulk/gas recovery runners available,
 because those key names are part of saved checkpoints. No protocol, save, price,
 capacity or one-active-job rule changes.
+
+## D142 — Content is added by record; world placement stays code (Step 85)
+
+A commodity in an existing family, a container ship and a port are added by
+records plus one `PrototypeCatalog.RECORDS` line and export entry; an online ship
+also needs its three service JSON rows. New records are appended, never inserted.
+
+Code must not switch on a literal content ID for names, allow-lists or dressing.
+Online hull eligibility follows `ship_catalog.json`; bulk/gas commodity lists
+follow cargo records; names come from `PrototypeCatalog`.
+
+Which ports exist in a world, their addresses, seeded offers and rates remain
+code, because saves and the protocol validate against them. Cinder Point is
+therefore defined but unplaced until the Step 88 world layout decision. Salt has
+no seeded job. Fixture identities (oil/refinery ports, heavy-lifter mode, the
+container unit rule in `record_contract.gd`) are recorded exceptions, not fixed.
+
+The harbor ship is on sale online with placeholder price and handling pending
+Andy's review and an economy gate run. No protocol or save version changes.

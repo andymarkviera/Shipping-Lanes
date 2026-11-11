@@ -4,6 +4,8 @@ extends Node3D
 @export var berth: BerthDefinition
 @export var quay_side: int = -1
 @export var quay_length_m: float = 140.0
+## Authored per scene so the dressing never depends on a port ID.
+@export_enum("gantry", "fuel_store") var landmark: String = "gantry"
 var spawn_allocator = preload("res://features/ports/spawn_clearance.gd").new()
 var recovery_anchors: Array[Marker3D] = []
 var spawn_anchor: Marker3D
@@ -55,7 +57,7 @@ func _ready() -> void:
 	block("WarehouseRoof", Vector3(quay_side * 72, 26.5, quay_length_m * .7), Vector3(46, 1, 49), Color("c5c0ad"), false)
 	for i: int in 3:
 		block("Container%d" % i, Vector3(quay_side * 46, 7, 24 + i * 16), Vector3(12, 6, 6), Color("b56749") if i % 2 == 0 else Color("799c9c"))
-	if definition.id == "port_brindle_quay":
+	if landmark == "fuel_store":
 		block("FuelStore", Vector3(quay_side * 83, 10, 25), Vector3(20, 12, 20), Color("d2b579"))
 	else:
 		block("GantryLegA", Vector3(quay_side * 34, 19, 35), Vector3(4, 30, 4), Color("ccad6a"))
