@@ -1041,3 +1041,16 @@ service port lists and could not be tested on this runner. The four new ports ar
 not catalog records. No offers, rates, hulls or online families are added. The
 D143 oil and tanker scale decision stays open. Names and targets are provisional
 pending Andy's review. See WORLD_LAYOUT.md.
+
+## D145 — REBUILD_PLAN.md replaces the numbered roadmap (November 11, 2026)
+
+Andy approved REBUILD_PLAN.md on PR #35. Version 1.0 is a polished single-player
+first draft; online comes later as its own project. This overrides the version 1
+online scope in GAME_SPEC.md. Work follows the plan's fix-first list and milestones
+M0–M5, not numbered steps; there is no Step 89.
+
+Bulk and heavy-lifter jobs are in 1.0. Gas, oil trading, refinery and cargo fuel
+are on hold until Andy has playtested them: their code stays intact and is not
+removed. Online code is frozen, not deleted. Godot 4.7.2 and Python checks in
+GitHub Actions are approved; the workflow edit is made by Hark, not by agents.
+AGENTS.md now points every agent at REBUILD_PLAN.md.
