@@ -57,7 +57,8 @@ checks address early rows by index) and in `export_presets.cfg`. After that:
 ## Where new behavior genuinely needs code
 
 - **Placing a port in a world.** Cinder Point is not in Port Test or the public
-  world. Both worlds are two-port by construction: `port_test.gd` positions,
+  world. Step 88 fixed its planned address (2.0° S, 2.0° E; WORLD_LAYOUT.md) but
+  changed none of the code below. Both worlds are two-port by construction: `port_test.gd` positions,
   `voyage_snapshot.gd` / `voyage_lifecycle.gd` save validation by port index,
   `public_port_catalog.gd` addresses and spawn geometry, the two-row dock snapshot
   in `public_peer_session.gd`, `fleet_slots.json`, and the `PORTS` tuples in

@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "layout_id": "region_brindle_reach",
+  "display_name": "Brindle Reach",
+  "status": "planned_lanes_before_scenery",
+  "position_convention": "[latitude_deg, longitude_deg] on the navigation sphere",
+  "scale": {
+    "navigation_radius_m": 100000.0,
+    "navigation_meters_per_world_meter": 1.0,
+    "game_seconds_per_real_second": 1.0
+  },
+  "budget": {
+    "reference_hull": "ship_starter_container_01",
+    "planning_speed_fraction": 0.8,
+    "port_allowance_s": 150.0,
+    "port_allowance_full_output_s": 22.0,
+    "fuel_reserve_fraction": 0.8,
+    "max_leg_minutes": 40.0,
+    "min_shortcut_saving_s": 180.0,
+    "calibration_tolerance": 0.02,
+    "calibration": [
+      {"hull": "ship_starter_container_01", "length_m": 3068.27, "seconds": 530.18, "fuel_liters": 163.58},
+      {"hull": "ship_starter_container_01", "length_m": 4059.16, "seconds": 653.22, "fuel_liters": 214.42},
+      {"hull": "ship_coastal_container_01", "length_m": 3068.27, "seconds": 530.18, "fuel_liters": 131.93},
+      {"hull": "ship_coastal_container_01", "length_m": 4059.16, "seconds": 653.22, "fuel_liters": 172.84}
+    ]
+  },
+  "tiers_minutes": {
+    "starter": [8.0, 12.0],
+    "short": [12.0, 15.0],
+    "medium": [15.0, 24.0],
+    "long": [24.0, 36.0]
+  },
+  "size_classes": {
+    "S": {"max_beam_m": 14.0, "max_length_m": 70.0},
+    "M": {"max_beam_m": 26.0, "max_length_m": 100.0},
+    "L": {"max_beam_m": 40.0, "max_length_m": 170.0}
+  },
+  "clearance": {
+    "passage_width_per_beam": 2.5,
+    "open_lane_min_width_m": 120.0,
+    "berth_margin_m": 1.0,
+    "sea_gate_distance_m": [300.0, 700.0],
+    "sea_gate_bearing_tolerance_deg": 45.0,
+    "min_port_separation_m": 4400.0,
+    "max_region_span_m": 20000.0
+  },
+  "families": {
+    "containers": "container_transfer",
+    "bulk": "bulk_transfer",
+    "gas": "gas_transfer",
+    "oil": "oil_market",
+    "heavy": "heavy_transfer"
+  },
+  "hulls": {
+    "ship_starter_container_01": {"record": "features/catalog/records/starter_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 10.0},
+    "ship_coastal_container_01": {"record": "features/catalog/records/coastal_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 10.0},
+    "ship_swift_container_01": {"record": "features/catalog/records/swift_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 12.0},
+    "ship_harbor_container_01": {"record": "features/catalog/records/harbor_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 9.0},
+    "ship_bulk_prototype_01": {"record": "features/catalog/records/bulk_ship.tres", "family": "bulk", "size_class": "S", "top_speed_mps": 10.0},
+    "ship_gas_prototype_01": {"record": "features/catalog/records/gas_ship.tres", "family": "gas", "size_class": "S", "top_speed_mps": 10.0},
+    "ship_oil_prototype_01": {"record": "features/catalog/records/oil_ship.tres", "family": "oil", "size_class": "S", "top_speed_mps": 10.0},
+    "ship_heavy_lifter_01": {"record": "features/catalog/records/heavy_lifter.tres", "family": "heavy", "size_class": "M", "top_speed_mps": 6.875}
+  },
+  "ports": {
+    "port_brindle_quay": {
+      "display_name": "Brindle Quay",
+      "role": "Starter home, shipyard, grain and LNG consumer, crude buyer",
+      "record": "features/ports/brindle_quay.tres",
+      "berth_record": "features/ports/brindle_quay_berth.tres",
+      "position": [0.0, 0.0],
+      "sea_gate": [-0.3, 0.0],
+      "open_water_bearing_deg": 180.0,
+      "max_class": "L",
+      "services": ["container_transfer", "heavy_transfer", "refuel", "repair", "ship_catalog", "bulk_transfer", "gas_transfer", "oil_market"]
+    },
+    "port_slatewater_works": {
+      "display_name": "Slatewater Works",
+      "role": "Refinery and heavy industry, ore/coal/limestone and industrial gas consumer",
+      "record": "features/ports/slatewater_works.tres",
+      "berth_record": "features/ports/slatewater_works_berth.tres",
+      "position": [0.0, -0.8594366926962348],
+      "sea_gate": [-0.3, -0.8594366926962348],
+      "open_water_bearing_deg": 180.0,
+      "max_class": "L",
+      "services": ["container_transfer", "heavy_transfer", "refuel", "repair", "ship_catalog", "bulk_transfer", "gas_transfer", "oil_market", "refinery"]
+    },
+    "port_cinder_point": {
+      "display_name": "Cinder Point",
+      "role": "First destination beyond the starter pair; island hub at the west mouth of Needle Gut",
+      "record": "features/ports/cinder_point.tres",
+      "berth_record": "features/ports/cinder_point_berth.tres",
+      "position": [-2.0, 2.0],
+      "sea_gate": [-2.2, 1.85],
+      "open_water_bearing_deg": 225.0,
+      "max_class": "L",
+      "services": ["container_transfer", "refuel", "repair"]
+    },
+    "port_tallow_reach": {
+      "display_name": "Tallow Reach",
+      "role": "Farm and quarry town: grain, salt and limestone source, quarry-block heavy lifts",
+      "planned_berth_envelope_m": [34.0, 110.0],
+      "position": [-3.0, -3.5],
+      "sea_gate": [-3.0, -3.25],
+      "open_water_bearing_deg": 90.0,
+      "max_class": "M",
+      "services": ["container_transfer", "bulk_transfer", "heavy_transfer", "refuel", "repair"]
+    },
+    "port_gannet_light": {
+      "display_name": "Gannet Light",
+      "role": "Gas terminal: LNG and industrial cryogenic source",
+      "planned_berth_envelope_m": [64.0, 200.0],
+      "position": [-3.0, 4.6],
+      "sea_gate": [-3.0, 4.35],
+      "open_water_bearing_deg": 270.0,
+      "max_class": "L",
+      "services": ["container_transfer", "gas_transfer", "refuel", "repair"]
+    },
+    "port_orrin_deep": {
+      "display_name": "Orrin Deep",
+      "role": "Mine port: ore and coal source",
+      "planned_berth_envelope_m": [64.0, 230.0],
+      "position": [-1.0, 6.5],
+      "sea_gate": [-1.2, 6.3],
+      "open_water_bearing_deg": 225.0,
+      "max_class": "L",
+      "services": ["container_transfer", "bulk_transfer", "refuel", "repair"]
+    },
+    "port_farrow_bank": {
+      "display_name": "Farrow Bank",
+      "role": "Offshore crude loading terminal",
+      "planned_berth_envelope_m": [64.0, 200.0],
+      "position": [-6.5, 0.5],
+      "sea_gate": [-6.25, 0.5],
+      "open_water_bearing_deg": 0.0,
+      "max_class": "L",
+      "services": ["container_transfer", "oil_market", "refuel", "repair"]
+    }
+  },
+  "co_visible_port_pairs": [
+    {"ports": ["port_brindle_quay", "port_slatewater_works"], "separation_m": 1500.0}
+  ],
+  "waypoints": {
+    "north_cape": [-0.25, 2.5],
+    "cape_west": [-0.5, 2.35],
+    "cape_east": [-0.5, 2.9],
+    "needle_gut_west": [-2.45, 2.3],
+    "needle_gut_east": [-2.6, 3.2],
+    "skerry_gate": [-1.85, -2.4],
+    "skerries_outer_north": [-2.65, -1.7],
+    "skerries_outer_south": [-3.6, -3.2]
+  },
+  "passages": {
+    "needle_gut": {
+      "display_name": "Needle Gut",
+      "waypoints": ["needle_gut_west", "needle_gut_east"],
+      "clear_width_m": 40.0,
+      "max_class": "S",
+      "constraint": "Visible rock walls; straight cut through Emberholm island. No depth limit."
+    },
+    "skerry_gate": {
+      "display_name": "Skerry Gate",
+      "waypoints": ["skerry_gate"],
+      "clear_width_m": 70.0,
+      "max_class": "M",
+      "constraint": "Visible gap between the mainland and the Skerries. No depth limit."
+    }
+  },
+  "routes": [
+    {"id": "brindle_slatewater", "from": "port_brindle_quay", "to": "port_slatewater_works", "via": [], "tier": "starter",
+     "measured": {"outbound_m": 3068.27, "return_m": 4059.16, "outbound_s": 530.18, "return_s": 653.22, "source": "ECONOMY_GATE.md Step 67 fixture corridors"}},
+    {"id": "brindle_cinder", "from": "port_brindle_quay", "to": "port_cinder_point", "via": [], "tier": "short"},
+    {"id": "slatewater_cinder", "from": "port_slatewater_works", "to": "port_cinder_point", "via": [], "tier": "medium"},
+    {"id": "cinder_gannet_gut", "from": "port_cinder_point", "to": "port_gannet_light", "via": ["needle_gut_west", "needle_gut_east"], "tier": "short",
+     "passages": ["needle_gut"], "alternative": "cinder_gannet_cape"},
+    {"id": "cinder_gannet_cape", "from": "port_cinder_point", "to": "port_gannet_light", "via": ["cape_west", "cape_east"], "tier": "medium"},
+    {"id": "gannet_orrin", "from": "port_gannet_light", "to": "port_orrin_deep", "via": [], "tier": "short"},
+    {"id": "brindle_gannet", "from": "port_brindle_quay", "to": "port_gannet_light", "via": ["north_cape"], "tier": "long"},
+    {"id": "slatewater_gannet", "from": "port_slatewater_works", "to": "port_gannet_light", "via": ["north_cape"], "tier": "long"},
+    {"id": "brindle_orrin", "from": "port_brindle_quay", "to": "port_orrin_deep", "via": ["north_cape"], "tier": "long"},
+    {"id": "slatewater_orrin", "from": "port_slatewater_works", "to": "port_orrin_deep", "via": ["north_cape"], "tier": "long"},
+    {"id": "brindle_tallow", "from": "port_brindle_quay", "to": "port_tallow_reach", "via": ["skerry_gate"], "tier": "medium",
+     "passages": ["skerry_gate"]},
+    {"id": "slatewater_tallow_inner", "from": "port_slatewater_works", "to": "port_tallow_reach", "via": ["skerry_gate"], "tier": "medium",
+     "passages": ["skerry_gate"], "alternative": "slatewater_tallow_outer"},
+    {"id": "slatewater_tallow_outer", "from": "port_slatewater_works", "to": "port_tallow_reach", "via": ["skerries_outer_north", "skerries_outer_south"], "tier": "medium"},
+    {"id": "brindle_farrow", "from": "port_brindle_quay", "to": "port_farrow_bank", "via": [], "tier": "long"},
+    {"id": "slatewater_farrow", "from": "port_slatewater_works", "to": "port_farrow_bank", "via": [], "tier": "long"},
+    {"id": "cinder_farrow", "from": "port_cinder_point", "to": "port_farrow_bank", "via": [], "tier": "medium"},
+    {"id": "tallow_farrow", "from": "port_tallow_reach", "to": "port_farrow_bank", "via": [], "tier": "medium"}
+  ]
+}
