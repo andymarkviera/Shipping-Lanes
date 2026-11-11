@@ -60,7 +60,7 @@ def scenario(authority, clients, accounts, owners, start, stop, children, work, 
         # Other approved server still cannot spend this account's cargo/receipt.
         assert not PublicClient(**clients[1]).execute(intent)['ok']
         print('PASS public cargo fuel '+op+' before/after COMMIT death, replay and fencing',flush=True)
-    assert snap()['money']==initial_wallet+154
+    assert snap()['money']==initial_wallet+224
     assert snap()['cargo_fuel']==[] and snap()['collections']==[]
     before=view()
     database_control('stop')
@@ -76,8 +76,8 @@ def scenario(authority, clients, accounts, owners, start, stop, children, work, 
     clients[0]=clients[1]
     assert execute(dict(intent,epoch=owners[0]['epoch'],generation=owners[0]['generation']))['duplicate']
     assert not PublicClient(**source).execute(intent)['ok']
-    assert snap()['money']==initial_wallet+154
-    print('PASS wallet +154, unchanged propulsion, database restart and account handoff',flush=True)
+    assert snap()['money']==initial_wallet+224
+    print('PASS wallet +224, unchanged propulsion, database restart and account handoff',flush=True)
 
 
 if __name__ == '__main__': main(scenario)

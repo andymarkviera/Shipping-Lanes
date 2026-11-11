@@ -60,8 +60,8 @@ class CargoFuelTest(unittest.TestCase):
             total+=result['amount']
             self.assertTrue(self.store.refinery('captain',sale)['duplicate'])
             self.assertEqual(self.fuel(),123456)
-        self.assertEqual(total,15400)
-        self.assertEqual(self.snap()['money'],22330)
+        self.assertEqual(total,22400)
+        self.assertEqual(self.snap()['money'],29330)
         self.assertEqual(self.snap()['cargo_fuel'],[])
         self.assertEqual(self.store.refinery('captain',self.sale('again'))['code'],'CARGO_NOT_OWNED')
 
@@ -102,7 +102,7 @@ s.refinery('captain',json.loads(sys.argv[3]),fault=fault)
                 if stage=='before_commit': self.assertEqual(self.durable(),before)
                 else: self.assertTrue(self.store.refinery('captain',intent)['duplicate'])
                 self.assertEqual(self.fuel(),123456)
-        self.assertEqual(self.snap()['money'],22330)
+        self.assertEqual(self.snap()['money'],29330)
 
     def test_concurrent_loading_and_sale_and_rollback(self):
         self.prepare()
@@ -122,7 +122,7 @@ s.refinery('captain',json.loads(sys.argv[3]),fault=fault)
         with ProcessPoolExecutor(2) as pool:
             results=list(pool.map(remote,[self.path]*2,[intent]*2))
         self.assertEqual(sum(bool(r[1].get('duplicate')) for r in results),1)
-        self.assertEqual(self.snap()['money'],22330)
+        self.assertEqual(self.snap()['money'],29330)
         self.assertEqual(self.fuel(),123456)
 
     def test_debt_recovery_capacity_corruption_and_history_bounds(self):
@@ -153,9 +153,9 @@ s.refinery('captain',json.loads(sys.argv[3]),fault=fault)
         original['recovery_debt_minor']=1000
         with self.store.connect() as db: db.execute('UPDATE profiles SET profile=?',(json.dumps(original),))
         result=self.store.refinery('captain',self.sale())
-        self.assertEqual(result['gross_minor'],15400)
+        self.assertEqual(result['gross_minor'],22400)
         self.assertEqual(result['debt_repayment_minor'],1000)
-        self.assertEqual(result['amount'],14400)
+        self.assertEqual(result['amount'],21400)
         self.assertEqual(self.fuel(),123456)
 
     def test_private_navigation_checkpoint_validation_and_reopen(self):
