@@ -15,6 +15,7 @@ var load_preview_index: int = 0
 var local_save: LocalWorldSave
 var save_notice: Label
 var save_elapsed: float = 0.0
+var fuel_tools: FuelTestControls
 
 func box(parent: Node3D, size: Vector3, at: Vector3, color: Color) -> void:
 	var mesh: MeshInstance3D = MeshInstance3D.new()
@@ -101,7 +102,7 @@ func _ready() -> void:
 	load_preview.text = "Cargo preview: Empty — click to change"
 	load_preview.pressed.connect(cycle_load_preview)
 	hud_stack.add_child(load_preview)
-	var fuel_tools: FuelTestControls = FuelTestControls.new()
+	fuel_tools = FuelTestControls.new()
 	hud_stack.add_child(fuel_tools)
 	fuel_tools.configure(ship, controls)
 	var water_notice: Label = Label.new()
@@ -132,7 +133,11 @@ func save_progress() -> bool:
 	if not local_save.usable:
 		save_notice.text = local_save.message
 		return false
+	# "Empty tank (test)" must not follow the player into the next session.
+	var on_board: float = ship.state.fuel_liters
+	ship.state.fuel_liters = fuel_tools.fuel_to_save()
 	var saved: bool = local_save.save_ship(ship)
+	ship.state.fuel_liters = on_board
 	save_notice.text = local_save.message
 	return saved
 
