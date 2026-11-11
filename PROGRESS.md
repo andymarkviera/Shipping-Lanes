@@ -4937,3 +4937,58 @@ fixes on its first run. `tools/check_helm_keys.gd.uid` is not committed: Godot m
 generate it. No export preset change (the new file is a test tool, not a runtime
 resource). `.github/workflows` not edited, so CI does not run the new check until
 Hark adds it to Stage 2. Not reproduced or playtested on Windows.
+
+## Fix-first 3: import, parse and run everything — November 11, 2026 (PARTIAL, NOT RUN)
+
+Issue #39. REBUILD_PLAN.md section 4, item 3. **This item is not finished.**
+
+**Nothing ran, and the CI log was not read.** This runner refused `godot`,
+`python3 -m unittest`, `python3 -m compileall`, `gh run view`, `gh api`, `curl` and
+web fetch. So run 43078248183 was not seen. The three Stage 4 diagnoses below come
+from reading the source plus the failure wording in earlier entries here
+("lateral-contact assertion", "two side-course contacts", "two out-of-tree
+transform errors"). The Checks run on this PR is their first test.
+
+Stage 4 probes:
+
+- **collision_probe: stale test.** The "lateral collision" fixture coasts sideways
+  at 1 m/s. That is under `neutral_stop_speed_mps` (1.03), so the neutral stopping
+  assist plus lateral drag stop the hull after about 0.83 m (hand arithmetic). The
+  wall is 1.45 m away, so no contact, on any platform. The fixture now holds the
+  thruster toward the wall. No handling code changed.
+- **composition_probe: stale test, same cause.** Both "side" fixtures (starter and
+  heavy) had a 1.15 m gap. They now hold the thruster too.
+- **ports_probe: small real bug, plus a probe fault.** A new heavy lifter adds its
+  floating load with `call_deferred`. A snapshot taken later in the same tick read
+  `payload_body.global_transform` outside the tree: an engine error, twice (capture,
+  then checkpoint), and an identity pose saved for one tick. A player switching to
+  the heavy loader in Port Test can hit it. `voyage_snapshot.gd` now has
+  `floating_pose()`, which works out where the load will appear. Also: without
+  `-- --ports-check` (CI does not pass it) the probe opened the default voyage save
+  `user://worlds/private_port_voyage/voyage.db`. The probe now sets
+  `save_enabled = false`, so it never touches that file.
+
+Other changes:
+
+- Deleted the three hand-written files `features/cargo/bulk_rules.gd.uid`,
+  `tools/cargo_matrix_probe.gd.uid` and `tools/content_extension_probe.gd.uid`.
+  Nothing referenced their IDs. None was replaced: this runner has no Godot, and a
+  uid must not be typed by hand. Godot writes new ones on the next editor import;
+  whoever runs that import on Windows should commit the three files (and
+  `tools/check_helm_keys.gd.uid`).
+- `tools/check_helm_keys.gd`: reviewed by reading against PlayerControls, ShipHelm,
+  the six scenes and both save stores. No logic fault found. One change: the key
+  code is cast `as Key`. Expected run time is 10–20 s plus scene loading, close to
+  the 30 s CI limit.
+
+Not done:
+
+- Steps 83–88 keep "UNVERIFIED". No heading was changed, because I saw no passing
+  result for any of them.
+- The probes under "Not in CI yet" in REBUILD_PLAN.md (bulk, gas, oil, refinery,
+  repairs, purchase, fleet, cargo matrix, content extension and the rest) were not
+  run and not added to Stage 2.
+- Stage 1–3 failures on main, if any, were not seen and not fixed.
+
+No export preset change (no new runtime resource). No gas, oil, refinery or
+cargo-fuel file changed. `.github/workflows` not edited. No Windows run, no playtest.

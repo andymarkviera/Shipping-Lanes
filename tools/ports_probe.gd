@@ -89,6 +89,8 @@ func _ready() -> void:
 		port.queue_free()
 		await get_tree().process_frame
 	var preview: Node3D = Preview.instantiate()
+	# Never open the player's voyage save from a probe, with or without --ports-check.
+	preview.save_enabled = false
 	add_child(preview)
 	verify(preview.port.definition.id == ids[0], "Preview opens first port")
 	preview.ship.command_throttle(1)

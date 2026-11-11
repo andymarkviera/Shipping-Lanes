@@ -37,6 +37,10 @@ func fixture(label: String, speed: Vector3, kind: String, heading: float = 0.0, 
 		wall(origin + Vector3(0, 0, -40 if kind == "reverse" else 40), Vector3(200, 20, 0.1), layer)
 	if kind == "hold": ship.command_throttle(1.0)
 	if kind == "rotation": ship.maneuver(1.0, 0.0)
+	# 1 m/s sideways is under the neutral stopping assist speed, so a coasting hull
+	# stops after about 0.8 m and never reaches the wall 1.45 m away. Hold the
+	# thruster toward the wall (+X) instead.
+	if kind == "side": ship.maneuver(0.0, -1.0)
 	fixtures.append({"label": label, "ship": ship, "origin": origin, "kind": kind, "layer": layer, "valid": true, "max_speed": speed.length(), "contact": false, "last": ship.position})
 
 func _ready() -> void:
