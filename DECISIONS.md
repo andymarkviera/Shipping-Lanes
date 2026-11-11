@@ -935,3 +935,25 @@ releases reservations and pays nothing. Preserve zero-condition hull ownership;
 no implicit repair/replacement or free recovery. A failed tombstone never reoffers
 the block. This resolves payload recovery only; public hull admission/paid recovery
 integration stays outside the private fixture. See HEAVY_TRANSPORT_LIFECYCLE.md.
+
+## D140 — Definition-driven heavy payloads and derived guidance (Step 83)
+
+Add two payload variants (60 t module, 150 t girder) beside the block as authority
+definitions: frozen economic terms plus label/envelope. Claim, evidence, attachment,
+release, destruction and payout take the job's own terms; no per-payload code path.
+Each payload has its own two zones. One active nonexpiring job per account remains.
+
+Lifter load limits: 200000 kg and the 14 x 8 x 32 m envelope already proven for
+deck travel and chart transitions; loaded draft therefore stays within 1.0 m.
+Definitions are verified at import and on claim, and fail closed. New zones must
+fit the measured +/-1000 m local chart. The inherited block drop-off at Z -1800 is
+an explicit recorded exception, kept for saved-world compatibility, not a pass.
+All limits, masses, positions and rewards are prototype tuning pending Andy's review.
+
+New worlds store the full definition set. Step 80-82 single-block worlds stay
+readable and offer only the block; there is no migration. Snapshot fields are
+additive. Variants reuse the existing payload model scaled to the envelope as
+placeholder presentation. Waypoint ring/pointer, alignment offsets, load readout,
+state cues and next-step text are derived from the canonical snapshot and never
+feed evidence or reward. No public heavy support, audio, new art, machinery wear,
+expiry or player transfer. See HEAVY_JOB_PRESENTATION.md.
