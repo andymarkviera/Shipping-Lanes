@@ -11,7 +11,7 @@ import threading
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from services.heavy_load.private import HeavyStore, LIFTER, TERMS, validate_navigation
+from services.heavy_load.private import HeavyStore, LIFTER, PAYLOADS, validate_navigation
 
 REALM = 'private:heavy-transport'
 ACCOUNT = 'heavy-fixture-captain'
@@ -30,10 +30,13 @@ def dispatch(store, payload):
     # This authenticated channel belongs to the spawned host simulation. It is
     # not a client RPC: the Godot guard has already checked space and alignment.
     evidence = None
-    if op in ('pickup', 'deliver', 'destroy'):
+    payload_id = request.get('payload_id')
+    terms = PAYLOADS.get(payload_id) if isinstance(payload_id, str) else None
+    # An unknown payload gets no evidence, so the store gives a definite refusal.
+    if op in ('pickup', 'deliver', 'destroy') and terms is not None:
         evidence = dict(job_id=request['job_id'], ship_id=SHIP,
-                        payload_id=TERMS['payload_id'], validated=True,
-                        zone_id='destroyed' if op == 'destroy' else TERMS['pickup_zone' if op == 'pickup' else 'delivery_zone'])
+                        payload_id=terms['payload_id'], validated=True,
+                        zone_id='destroyed' if op == 'destroy' else terms['pickup_zone' if op == 'pickup' else 'delivery_zone'])
     return store.heavy(ACCOUNT, request, evidence=evidence, navigation=payload['navigation'])
 
 
@@ -42,7 +45,7 @@ def main():
     parser.add_argument('--godot', required=True)
     parser.add_argument('--db', type=Path, required=True)
     parser.add_argument('--create', action='store_true')
-    parser.add_argument('--probe', choices=['carry', 'deliver', 'verify', 'destroy', 'failed'])
+    parser.add_argument('--probe', choices=['carry', 'deliver', 'verify', 'destroy', 'failed', 'variants'])
     args = parser.parse_args()
     store = HeavyStore(args.db, REALM)
     if args.create:

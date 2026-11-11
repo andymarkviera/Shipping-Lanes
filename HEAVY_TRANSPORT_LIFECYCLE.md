@@ -23,8 +23,8 @@ Missing storage, definitions or navigation fences startup without a reset.
 Claim the single nonexpiring block, lower, move the platform under its centre and
 Raise. The fixture starts near the pickup. Sail to the offshore destination at
 (-950, -1800) in the fixture's X/Z meter frame; the cargo anchor must be within
-30 m horizontally. Stop and Lower to deliver. Waypoint guidance, variants and
-presentation polishing remain Step 83. The staging shortcut and free fuel fixture
+30 m horizontally. Stop and Lower to deliver. Step 83 adds waypoint guidance, cues
+and payload variants: see HEAVY_JOB_PRESENTATION.md. The staging shortcut and free fuel fixture
 controls are removed from this durable scene. The original lifter test retains them.
 
 ## Authority and attachment

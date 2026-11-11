@@ -4458,3 +4458,102 @@ runner stops before recovery. Retain both errors; heavy authenticated identity i
 
 Delivery is a feature-branch commit and **draft PR against main**, not a push to
 main or live deployment. Step 83 and the platform/visual acceptance gates remain open.
+
+## Step 83 — Heavy job presentation and variants (draft, UNVERIFIED) — November 11, 2026
+
+Task ID: `heavy-job-presentation-and-variants`, from GitHub issue #23. Based on main
+at **d69a709** (Step 82 merge b9a4f05 plus the Claude action commit). Read AGENTS.md,
+CLOUD_HANDOFF.md, latest progress/decisions, DEFERRED_PLAYER_REQUESTS.md,
+HEAVY_LOAD_JOBS.md, HEAVY_TRANSPORT_LIFECYCLE.md, HEAVY_LIFTER.md and original
+roadmap Step 83. Only Step 83 is implemented.
+
+**No automated or manual check of any kind ran for this step.** See "Checks" below.
+Treat the whole entry as unverified source until the listed commands are run.
+
+### Changes
+
+- `services/heavy_load/private.py`: payload definitions `PAYLOADS` (block, 60 t
+  compact module, 150 t long girder), `ENVELOPES` (label, size) and `LIFTERS` load
+  limits (200000 kg, 14 x 8 x 32 m, 1.0 m draft). `payload_problems` /
+  `definition_problems` check mass, envelope, draft, zone overlap and the
+  +/-1000 m chart budget at import and on claim. Claim/pickup/deliver/destroy use
+  the requested payload's own terms, zones and reward; evidence is bound to that
+  payload. Snapshot adds `payloads` and `lifter`. Step 80 `TERMS` is unchanged.
+- New worlds store the full definition set. Step 80-82 single-block worlds stay
+  readable and offer only the block. No migration; other records fail closed.
+- `features/handling/heavy_lifter.gd`: `configure_payload`, `load_within_limits`,
+  `payload_pose`, `alignment`, `alignment_feedback`. Carrier box, floating collider,
+  swept deck checks and visual scale follow `payload_size`; defaults remain the
+  original block, so existing fixtures and saves are not retuned.
+- `features/handling/heavy_transport_test.gd`: per-payload Claim offers, waypoint
+  ring/marker and screen-edge pointer, distance/turn text, alignment offsets, load
+  limit readout, state-change cues and a next-step line. All derived from the
+  canonical snapshot; guards, commit order and evidence path are unchanged.
+- `tools/heavy_transport_fixture.py` / `tools/heavy_transport_probe.gd`: evidence
+  from the job's payload definition; new `--probe variants` mode.
+- New `services/heavy_load/test_variants.py` (8 tests). New HEAVY_JOB_PRESENTATION.md,
+  D140, and follow-through notes in the two earlier heavy docs.
+
+Godot stays **4.7.2**; game/ticket protocols unchanged. No `.gd.uid` file was added,
+removed or edited: no new script, scene or resource exists, so `export_presets.cfg`
+needed no new entry and was not changed. Variants reuse `industrial_payload.glb`
+scaled to the envelope as placeholder presentation. Original references untouched.
+No database, credential, engine, export or cache is committed. No public heavy
+endpoint, audio, new art, machinery wear, expiry, hidden shallows or player transfer.
+
+### Known limitations by design
+
+- The inherited block drop-off (Z -1800) is outside the +/-1000 m chart budget. It
+  is an explicit exception in `CHART_EXCEPTIONS`, not a pass. New variants are inside.
+- The fixture does no chart rebasing; variant behaviour across a real seam/pole
+  transition is argued from the unchanged single-child/single-box arrangement only.
+- Unclaimed payloads are not shown floating in the world; only the active job's
+  load exists physically, as in Step 82.
+- Limits, masses, zone positions and rewards are prototype tuning awaiting review.
+
+### Checks
+
+Nothing ran. This GitHub Actions runner denied every Python invocation
+(`python -m unittest ...`, `python3 -m unittest ...`, `pytest`) and the download of
+a Godot 4.7.2 Linux binary; only file edits and git were permitted. There is no
+Godot on the runner. The new Python tests and all GDScript were checked by reading
+only, which does not count as a pass. In particular:
+
+- **Python (not run):** the 14 existing heavy tests, the 8 new variant tests and the
+  51 oil/refinery/cargo-fuel tests. The existing heavy tests exercise code this step
+  edited, so regressions there are possible and unmeasured.
+- **Godot (not run):** editor import, script parse/load, the new `variants` probe,
+  the Step 82 `carry`/`deliver`/`verify`/`destroy`/`failed` probes, the 65 lifter
+  assertions and every other suite. `heavy_transport_test.gd` was largely rewritten
+  and `heavy_lifter.gd` edited without a single parse; a GDScript error is possible.
+- **Windows:** PowerShell/native checks, exports, exported resource loading: not run.
+- **PostgreSQL / Keycloak / public peers:** not installed, not run, not applicable
+  to this private fixture; no public heavy support exists.
+- **Visuals / playtest:** ring, marker, pointer, colours, scaled payload model,
+  readout length and the "complete a job without developer instructions" criterion
+  are entirely unseen. No Andy acceptance is claimed.
+
+### Handoff
+
+Done (unverified): definitions, limits, rule checks, variant authority path,
+presentation code, probe mode, tests and docs, on branch
+`claude/issue-23-20261111-0025`. The requested name
+`feat/step-83-heavy-job-presentation` could not be created: the action runner
+denied branch creation. Rename or re-push under that name when opening the PR.
+Nothing was pushed to main.
+
+Next, in order:
+
+1. `python -m unittest services.heavy_load.test_private services.heavy_load.test_transport services.heavy_load.test_variants -v`,
+   then the full `services` test set. Fix anything red before going further.
+2. With pinned Godot 4.7.2: import, script-load check, then
+   `tools/heavy_transport_fixture.py --create --probe variants` on a new file and
+   the five Step 82 probes. Expect to fix GDScript parse or typing errors first.
+3. Run the lifter, voyage, cargo-network and connected-world suites, which share
+   `heavy_lifter.gd`.
+4. Record real results here and remove "UNVERIFIED" from the heading only then.
+5. Manual visual pass of the guidance and a hand-sailed job per payload.
+6. To let the Claude action run checks itself, add Python and a Godot 4.7.2 setup
+   step to its `allowedTools`/workflow.
+
+Step 84 (cargo compatibility matrix) should not start until 1-3 pass.
