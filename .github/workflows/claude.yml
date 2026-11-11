@@ -36,3 +36,5 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Fable while it's included on Pro (through Nov 16, 2026); switch to --model opus after
           claude_args: "--model fable"
+          # Full output in the (private) Actions log so the usage-limit reset time is readable
+          show_full_output: "true"
