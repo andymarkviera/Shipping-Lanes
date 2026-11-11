@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BerthDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/berth_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "berth_cinder_point_01"
+display_name = "Cinder Point Berth 1"
+port_id = "port_cinder_point"
+cargo_type_ids = Array[String](["cargo_test_container"])
+position_m = Vector3(0, 0, 80.0)
+heading_degrees = 0.0
+envelope_m = Vector3(64, 30, 200)
+service_ids = Array[String](["container_transfer", "refuel", "repair"])
