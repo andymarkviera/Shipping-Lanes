@@ -332,6 +332,16 @@ Nothing new until these are done.
    since Step 82.** Fix what is red. Expect trouble in the Step 83–88 files and
    the three hand-written `.gd.uid` files. Remove "UNVERIFIED" from a step only
    when its checks pass.
+
+   **Status (November 11, 2026): partly done, by reading only. Still open.** The
+   agent runner again refused Godot, Python and the CI logs, so nothing was run
+   and run 43078248183 was not read. Done: the three Stage 4 probes were
+   diagnosed from source and fixed (collision and composition were stale tests,
+   ports was a small real bug plus a probe that opened the default save); the
+   three hand-written `.gd.uid` files were deleted so Godot can generate them;
+   `tools/check_helm_keys.gd` was reviewed. Not done: every Step 83–88 heading
+   keeps "UNVERIFIED", the probes listed under "Not in CI yet" were not run, and
+   no generated `.gd.uid` is committed. Details in PROGRESS.md.
 4. **No silent dead ends.** Whenever a scene disables the ship (paused, empty
    tank, failed save, failed resume, panel open, docked), say why on screen and
    how to get out.

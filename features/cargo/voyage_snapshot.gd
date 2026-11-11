@@ -13,12 +13,20 @@ static func capture(view: Node3D) -> Dictionary:
 	for record: Dictionary in operations.records.values(): record.ship_id = view.ship_key()
 	var heavy: Dictionary = {}
 	if view.heavy_mode:
-		heavy = {"active": view.heavy_jobs.active.duplicate(true), "completed": view.heavy_jobs.completed.duplicate(true), "attached": body.attached, "height": body.deck_height, "target": body.deck_target, "payload_pose": body.payload_body.global_transform}
+		heavy = {"active": view.heavy_jobs.active.duplicate(true), "completed": view.heavy_jobs.completed.duplicate(true), "attached": body.attached, "height": body.deck_height, "target": body.deck_target, "payload_pose": floating_pose(body)}
 	return {"version": 2, "realm": "private_port_voyage_v1", "owner": "preview_captain", "heavy_mode": view.heavy_mode,
 		"port": view.world_ports.find(view.port), "pose": body.global_transform, "fuel": body.state.fuel_liters, "condition": body.state.condition,
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
 		"docked": view.docking.state(1) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
+
+static func floating_pose(body: HandlingShip) -> Transform3D:
+	# A new heavy lifter adds its floating load deferred. For the rest of that
+	# tick the load is outside the tree, where global_transform is an engine error.
+	var floating: Node3D = body.payload_body
+	if floating.is_inside_tree(): return floating.global_transform
+	var parent: Node3D = body.get_parent() as Node3D
+	return (parent.global_transform if parent != null else Transform3D.IDENTITY) * floating.transform
 
 static func pose_valid(value: Variant) -> bool:
 	return value is Transform3D and value.is_finite() and value.origin.length() < 100000 and value.basis.is_equal_approx(value.basis.orthonormalized()) and value.basis.y.is_equal_approx(Vector3.UP) and value.basis.determinant() > .99

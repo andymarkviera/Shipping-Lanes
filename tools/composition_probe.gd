@@ -56,6 +56,8 @@ func make_fixture(scene: PackedScene, kind: String) -> void:
 			box.size = Vector3(0.1, 30, 160)
 			wall.position = Vector3(limit, 0, 0)
 			ship.velocity = ship.global_basis.x
+			# The neutral stopping assist halts a 1 m/s coast before the wall; hold the thruster.
+			ship.maneuver(0, -1)
 		collider.shape = box
 		wall.add_child(collider)
 		container.add_child(wall)
