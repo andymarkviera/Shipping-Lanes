@@ -4537,8 +4537,10 @@ only, which does not count as a pass. In particular:
 
 Done (unverified): definitions, limits, rule checks, variant authority path,
 presentation code, probe mode, tests and docs, on branch
-`feat/step-83-heavy-job-presentation` (also pushed as the action's
-`claude/issue-23-20261111-0025`; same commit).
+`claude/issue-23-20261111-0025`. The requested name
+`feat/step-83-heavy-job-presentation` could not be created: the action runner
+denied branch creation. Rename or re-push under that name when opening the PR.
+Nothing was pushed to main.
 
 Next, in order:
 
