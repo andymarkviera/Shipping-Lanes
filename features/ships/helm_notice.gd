@@ -6,7 +6,8 @@ const HOLD_SECONDS: float = 0.4
 var ship: HandlingShip
 var controls: PlayerControls
 ## Scene wording. Text keys: "leave", "docked", "empty", "panel". "rescue": true shows
-## the free test-fuel button in scenes with no other refuel while adrift.
+## the free test-fuel button in scenes with no other refuel while adrift. The game
+## sets "rescue_text" and "rescue_action" to turn that button into its paid tow.
 var hints: Dictionary = {}
 var panel: PanelContainer
 var label: Label
@@ -82,6 +83,10 @@ func reason() -> String:
 
 func add_test_fuel() -> void:
 	if not fuel_empty(): return
+	# The game replaces the free test fuel with its own paid tow.
+	if hints.has("rescue_action"):
+		hints.rescue_action.call()
+		return
 	ship.refuel(ship.definition.fuel_capacity_liters * 0.25)
 	controls.wait_for_release = true
 
@@ -96,7 +101,7 @@ func _process(delta: float) -> void:
 	rescue.visible = bool(hints.get("rescue", false)) and fuel_empty() and ship.helm_available()
 	if rescue.visible:
 		rescue.disabled = ship.velocity.length() > 0.05
-		rescue.text = "Wait for the ship to stop…" if rescue.disabled else "Add free test fuel (quarter tank)"
+		rescue.text = "Wait for the ship to stop…" if rescue.disabled else str(hints.get("rescue_text", "Add free test fuel (quarter tank)"))
 
 func _input(event: InputEvent) -> void:
 	# A focused control swallows the helm keys. Esc hands the keyboard back.

@@ -19,6 +19,8 @@ var recovery_confirmation: ConfirmationDialog
 var play_button: Button
 ## The real game: PLAY for a new game, CONTINUE once a save exists.
 var game_button: Button
+var restart_button: Button
+var restart_confirmation: ConfirmationDialog
 ## Test scenes and test saves. Shown only in developer mode (F3, see DevMode).
 var dev_column: VBoxContainer
 var footer: Label
@@ -64,7 +66,15 @@ func _ready() -> void:
 		# The player menu: PLAY (it reads CONTINUE once a save exists), SETTINGS, QUIT.
 		game_button = button(home, "PLAY", "game")
 		button(home, "SETTINGS", "settings")
+		# Shown only when there is a save to erase (see main.gd refresh_save_status).
+		restart_button = button(home, "RESTART PROGRESS", "restart")
 		button(home, "QUIT", "exit")
+		restart_confirmation = ConfirmationDialog.new()
+		restart_confirmation.title = "Restart progress?"
+		restart_confirmation.dialog_text = "This erases your saved game: money, ship and jobs.\nIt cannot be undone."
+		restart_confirmation.ok_button_text = "Erase and start over"
+		restart_confirmation.confirmed.connect(func() -> void: selected.emit("confirm_restart"))
+		add_child(restart_confirmation)
 		# Everything else is a test fixture: developer mode only.
 		dev_column = VBoxContainer.new()
 		dev_column.position = Vector2(420, 112)
@@ -87,7 +97,7 @@ func _ready() -> void:
 	save_notice.add_theme_font_size_override("font_size", 15)
 	save_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	save_notice.custom_minimum_size.x = 320
-	save_notice.position = Vector2(64, 410)
+	save_notice.position = Vector2(64, 470)
 	save_notice.size = Vector2(320, 180)
 	add_child(save_notice)
 	add_to_group(DevMode.GROUP)

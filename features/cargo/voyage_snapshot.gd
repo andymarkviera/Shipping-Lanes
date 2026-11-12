@@ -14,11 +14,16 @@ static func capture(view: Node3D) -> Dictionary:
 	var heavy: Dictionary = {}
 	if view.heavy_mode:
 		heavy = {"active": view.heavy_jobs.active.duplicate(true), "completed": view.heavy_jobs.completed.duplicate(true), "attached": body.attached, "height": body.deck_height, "target": body.deck_target, "payload_pose": floating_pose(body)}
-	return {"version": 2, "realm": "private_port_voyage_v1", "owner": "preview_captain", "heavy_mode": view.heavy_mode,
+	var data: Dictionary = {"version": 2, "realm": "private_port_voyage_v1", "owner": "preview_captain", "heavy_mode": view.heavy_mode,
 		"port": view.world_ports.find(view.port), "pose": body.global_transform, "fuel": body.state.fuel_liters, "condition": body.state.condition,
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
 		"docked": view.docking.state(1) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
+	# Version 3 (the game, M2): also records money spent on fuel, repairs and recovery.
+	if view.get("game_mode") == true:
+		data.version = 3
+		data.spent = view.spent_minor
+	return data
 
 static func floating_pose(body: HandlingShip) -> Transform3D:
 	# A new heavy lifter adds its floating load deferred. For the rest of that
@@ -35,9 +40,14 @@ static func number(value: Variant, low: float, high: float) -> bool:
 	return (value is float or value is int) and is_finite(value) and value >= low and value <= high
 
 static func valid(value: Variant) -> bool:
-	if not value is Dictionary or value.size() != 19: return false
+	if not value is Dictionary: return false
 	var d: Dictionary = value
-	if d.get("version") not in [1, 2] or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
+	var spent: int = 0
+	if d.get("version") == 3:
+		if d.size() != 20 or not d.get("spent") is int or d.spent < 0: return false
+		spent = d.spent
+	elif d.size() != 19: return false
+	if d.get("version") not in [1, 2, 3] or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
 	for key: String in ["offers", "operations", "heavy", "heavy_completed"]:
 		if not d.get(key) is Dictionary: return false
 	for key: String in ["heavy_mode", "docked"]:
@@ -109,7 +119,7 @@ static func valid(value: Variant) -> bool:
 	for id: Variant in d.heavy_completed:
 		if not heavy_job_valid(d.heavy_completed[id], possible) or d.heavy_completed[id].id != id or d.heavy_completed[id].state != "carrying": return false
 		credits += possible[id].reward_minor
-	if d.credits != credits: return false
+	if d.credits != credits - spent: return false
 	if not d.heavy_mode: return d.heavy.is_empty()
 	var h: Dictionary = d.heavy
 	if h.size() != 6 or not h.get("active") is Dictionary or h.get("completed") != d.heavy_completed or not h.get("attached") is bool: return false
@@ -146,6 +156,7 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 	for row: Dictionary in data.manifest: lines.append(row)
 	if not body.state.manifest.replace(lines).ok: return false
 	view.reward_minor = data.credits
+	view.set("spent_minor", int(data.get("spent", 0)))
 	view.heavy_jobs.completed = data.heavy_completed.duplicate(true)
 	if data.heavy_mode:
 		var h: Dictionary = data.heavy
