@@ -81,10 +81,27 @@ static func describe(view: Node3D) -> Dictionary:
 			result.next = "Sail to the destination, stop alongside the quay, then Dock."
 			if view.docking.state(1) == "docked":
 				result.next = "Open CARGO and select Deliver cargo at this port." if view.port == destination else "Undock and sail to " + destination.definition.display_name + "."
+	if view.get("game_mode") == true: game_hints(view, result)
 	if is_instance_valid(view.persistence) and not view.persistence.ready_to_save:
 		result.stage = "SAVE NEEDS ATTENTION" if view.persistence.blocked else "RESTORING VOYAGE"
 		result.next = view.offer_notice if view.persistence.blocked else "Please wait while your voyage is restored."
 	return result
+
+## M5, the game only: say the next step with no job in hand, and warn early
+## about fuel and hull so a new captain is not surprised by a tow or a sinking.
+static func game_hints(view: Node3D, result: Dictionary) -> void:
+	var docked: bool = view.docking.state(1) == "docked"
+	if result.stage == "NO ACTIVE JOB":
+		result.next = "Open CARGO, pick a job and click Accept selected job." if docked else "Sail up to a quay (see the minimap), stop alongside and click Dock. Jobs are under CARGO."
+		var ships: Dictionary = preload("res://features/game/progression.gd").SHIPS
+		for kind: String in ships:
+			if not view.fleet.has(kind) and view.reward_minor >= int(ships[kind].price_minor):
+				result.next += "\nYou can afford the %s: %s." % [ships[kind].name, "open SHIPS" if docked else "dock and open SHIPS"]
+				break
+	if view.ship.state.fuel_liters < view.ship.definition.fuel_capacity_liters * 0.25:
+		result.next += "\nFuel is low. " + ("Click REFUEL before you leave." if docked else "Dock at the nearest port and click REFUEL.")
+	if view.ship.state.condition < 0.5:
+		result.next += "\nThe hull is badly damaged; at 0% the ship sinks. " + ("Click REPAIR." if docked else "Dock and click REPAIR.")
 
 func refresh(view: Node3D) -> void:
 	var data: Dictionary = describe(view)

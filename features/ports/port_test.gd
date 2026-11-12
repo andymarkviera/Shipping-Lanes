@@ -71,6 +71,19 @@ var ships_panel: VBoxContainer
 var ship_buttons: Dictionary = {}
 var sell_kind: String = ""
 var sell_deadline: int = 0
+## M5, the game only: one-shot sounds by name ("chime" when paid, "thud" on a hit).
+var sfx: Dictionary = {}
+
+func play_sound(kind: String) -> void:
+	if sfx.has(kind): sfx[kind].play()
+
+## M5 first-voyage hint: the helm keys as they are bound in Settings.
+func controls_hint() -> String:
+	var keys: Dictionary = {}
+	for action: String in controls.preferences.bindings: keys[action] = OS.get_keycode_string(controls.preferences.bindings[action])
+	return "%s / %s throttle · %s / %s steer · %s / %s side thrusters\n%s engine to zero · %s horn · Right mouse look · Wheel zoom\nEsc saves and opens the menu. Keys can be changed in Settings." % [
+		keys.ship_throttle_up, keys.ship_throttle_down, keys.ship_steer_left, keys.ship_steer_right,
+		keys.ship_thruster_left, keys.ship_thruster_right, keys.ship_throttle_zero, keys.horn]
 
 func button(parent: Node, title: String, action: Callable) -> Button:
 	var node: Button = Button.new()
@@ -117,6 +130,12 @@ func _ready() -> void:
 		# The game's own container jobs: three per port, replaced as they are delivered.
 		offers._offers.clear()
 		offers.restock()
+		for kind: String in ["chime", "thud"]:
+			var player: AudioStreamPlayer = AudioStreamPlayer.new()
+			player.stream = HandlingFeedback.tone(kind)
+			player.volume_db = -14.0
+			add_child(player)
+			sfx[kind] = player
 	for i: int in scenes.size():
 		var place: Node3D = scenes[i].instantiate()
 		place.position = Progression.WORLD[i].at
@@ -254,6 +273,7 @@ func repair_offered() -> int:
 func take_damage(damage_bp: int) -> void:
 	ship.state.condition = maxf(0.0, ship.state.condition - damage_bp / 10000.0)
 	offer_notice = "Collision! Hull %.0f%%. Dock and click REPAIR." % (ship.state.condition * 100.0)
+	play_sound("thud")
 
 ## Tow back to the current port: out of fuel (tow button) or sunk. The fee is
 ## capped by the wallet, so a broke captain is never stuck.
@@ -553,10 +573,12 @@ func deliver() -> void:
 		bulk_active = ""
 		reward_minor += pay_minor
 		offer_notice = "Delivery complete — paid %.2f credits." % (pay_minor / 100.0)
+		play_sound("chime")
 		refresh_jobs()
 		return
 	var result: Dictionary = delivery.deliver(self)
 	offer_notice = result.message
+	if result.ok: play_sound("chime")
 	refresh_jobs()
 
 func leave() -> void:
@@ -588,6 +610,7 @@ func _physics_process(delta: float) -> void:
 			banked_minor += int(done.reward_minor)
 			offer_notice = "Heavy load delivered — paid %.2f credits." % (done.reward_minor / 100.0)
 		heavy_jobs.completed.clear()
+		play_sound("chime")
 		refresh_jobs()
 	if game_mode and ship.state.condition <= 0.0:
 		# Sunk: hold the ship for a moment under a banner, then recover it.
@@ -665,6 +688,8 @@ func _process(_delta: float) -> void:
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
 		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
+		# The game: the full key list until the first money is earned or spent.
+		if game_mode: navigation.text = controls_hint() if reward_minor == 0 and spent_minor == 0 else "Right mouse look · Wheel zoom · Esc saves and opens the menu"
 	if services.visible: navigation.text += "\n" + (free_note() if game_mode else "Refuel / repair: " + free_note())
 
 func _notification(what: int) -> void:
