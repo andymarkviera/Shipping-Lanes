@@ -214,12 +214,18 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	helm = ShipHelm.new()
 	add_child(helm)
 	helm.configure(ship, controls, ship.assembly.feedback)
+	helm.notice.hints = helm_hints()
 	helm.menu_requested.connect(leave)
 	wake = ship.assembly.create_wake(ocean)
 	camera.distance_order = ship.definition.camera_distance_m
 	camera.set_focus(ship.assembly.focus)
 	controls.wait_for_release = true
 	return true
+
+## Wording for the helm notice: how to get out of each state in this scene.
+func helm_hints() -> Dictionary:
+	return {"leave": "Click \"Main menu\"", "docked": "Wait for docking to finish, then click \"Undock\" to sail.",
+		"empty": "Dock and click REFUEL. Out of reach of a berth? Use the free test fuel below.", "rescue": true}
 
 func bind_port() -> void:
 	offer_notice = ""

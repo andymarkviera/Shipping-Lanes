@@ -4992,3 +4992,47 @@ Not done:
 
 No export preset change (no new runtime resource). No gas, oil, refinery or
 cargo-fuel file changed. `.github/workflows` not edited. No Windows run, no playtest.
+
+## Fix-first 4: no silent dead ends — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #41. REBUILD_PLAN.md section 4, item 4. Last item of M0.
+
+**Nothing ran on the agent runner.** `godot` was refused again. No Python file
+changed, so the Python checks were not run either. The Checks run on the PR is the
+first parse and run of this code.
+
+What changed:
+
+- New `features/ships/helm_notice.gd`: a banner above the throttle indicator. It is
+  owned by `ShipHelm`, so Boat Handling, Heavy-Lifter, Port, Bulk, Gas and the oil
+  fixture all get it. It shows after the helm has been off for 0.4 s and gives the
+  cause, then the way out:
+  - ship switched off (failed resume): leave and reopen;
+  - paused: "Pause sim" clicked, save could not open (Boat Handling), voyage save
+    stopped (Port), cargo save stopped (Bulk, Gas), or a general loading/saving line;
+  - docked: which Undock button to click;
+  - heavy-lifter deck moving or load not raised;
+  - fuel tank empty: where to refuel;
+  - panel open (oil price panel names its close button);
+  - window not active; a control holding the keyboard; keys still held.
+- `HandlingShip.pause_reason`: the scene that pauses the ship sets the wording.
+- Two small behaviour changes, both to give a way out:
+  - Port, Bulk and Gas: an empty tank at sea had no exit, because REFUEL needs a
+    berth. The banner now offers "Add free test fuel (quarter tank)" once the ship
+    has stopped. Test scenes only. M2 replaces it with paid recovery.
+  - Esc releases keyboard focus from a button, list or text box while sailing. A
+    second Esc opens the menu as before.
+- Oil fixture: only a wording function was added (`helm_hints`). No free fuel there.
+- `tools/check_helm_keys.gd` now also checks the banner is silent while the helm
+  works and names a docked and a paused ship. That check is still not in CI.
+- `export_presets.cfg` lists the new script.
+
+Limits:
+
+- Not covered: Local Multiplayer Test and the online client. They are frozen and do
+  not use `ShipHelm`. The home menu's PLAY test page has no ship.
+- Heavy transport fixture gets only the general paused line.
+- Banner position and wording were not seen on screen. It may overlap a HUD panel
+  in a small window.
+- `features/ships/helm_notice.gd.uid` is not committed: Godot must generate it.
+- `.github/workflows` not edited. No Windows run, no playtest.

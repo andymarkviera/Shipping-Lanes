@@ -345,6 +345,15 @@ Nothing new until these are done.
 4. **No silent dead ends.** Whenever a scene disables the ship (paused, empty
    tank, failed save, failed resume, panel open, docked), say why on screen and
    how to get out.
+
+   **Status (November 12, 2026): code written, not run by the agent.** A banner
+   owned by `ShipHelm` (`features/ships/helm_notice.gd`) appears above the
+   throttle whenever the helm is off for more than 0.4 s. It names the cause and
+   the way out, in Boat Handling, Heavy-Lifter, Port, Bulk, Gas and the oil
+   fixture. Godot was refused on the agent runner again, so the Checks run on the
+   PR is the first parse and run. Not covered: Local Multiplayer Test and the
+   online client (frozen; they do not use `ShipHelm`). M0 still needs Andy's
+   Windows playtest. Details in PROGRESS.md.
 5. **Freeze the roadmap.** No Step 89. Park online work. Keep Steps 62–88 code
    but treat it as untrusted until item 3 passes. Gas and oil code stays intact.
 
