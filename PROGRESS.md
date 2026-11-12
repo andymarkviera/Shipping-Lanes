@@ -5318,3 +5318,40 @@ Limits:
   `.gdshader.uid`. No gameplay, physics, save, gas, oil, refinery or cargo-fuel
   file changed. `.github/workflows` not edited. No Windows run, no playtest.
 - Aesthetics items 2 to 5 are not started.
+
+## Aesthetics 2: Toon shader and ink outlines — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #57. REBUILD_PLAN.md section 3, Aesthetics item 2 of 5. Looks only.
+
+**Nothing ran on the agent runner.** Godot is not installed there, so the two
+new shaders and the new script are unparsed and nobody has seen the result. The
+Checks run on the PR is the first parse. Band levels, saturation, ink colour and
+line thickness are guesses until Andy looks at them on Windows.
+
+What changed:
+
+- New `features/toon/toon.gdshader`: three hard light bands (shadow, mid, lit)
+  and a saturation lift. Takes a colour, an optional texture and vertex colours.
+- New `features/toon/toon_outline.gdshader`: ink outline by inverted hull, used
+  as the next pass. Thickness scales with camera distance, capped at 800 m.
+- New `features/toon/toon_look.gd`: `apply(node)` replaces every plain opaque
+  material under a node with the toon material, keeping its colour or texture.
+  Transparent, unshaded and custom shader materials are skipped.
+- `features/ports/port_test.gd`: two calls, one for the ports and land, one for
+  each ship when it spawns (hull and containers). Port Test shares this script,
+  so it gets the look too.
+- `export_presets.cfg`: the three new files added.
+
+Limits:
+
+- No `.gd.uid` or `.gdshader.uid` for the three new files. Godot must write
+  them; open the project once in the editor and commit the files it creates.
+- Only colour, colour texture and vertex colour carry over from the old
+  materials. Normal maps, metal and emission on the ship models are dropped.
+- The outline on the ship models and containers pushes along the normals, so
+  small gaps can show at sharp corners. Box meshes (ports, land) avoid this.
+- The old handling, collision and heavy test scenes and the frozen online scenes
+  are not changed.
+- No gameplay, physics, save, gas, oil, refinery or cargo-fuel file changed.
+  `.github/workflows` not edited. No Windows run, no playtest.
+- Aesthetics items 3 to 5 are not started.
