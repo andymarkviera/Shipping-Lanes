@@ -45,6 +45,15 @@ func sail(label: String, path: String, properties: Dictionary = {}) -> void:
 	var controls: PlayerControls = scene.controls
 	expect(ship.helm_available(), label + ": ship is not paused or docked at start")
 	expect(controls.input_allowed(), label + ": helm accepts input before the key press")
+	# Fix-first item 4: the helm notice is silent while the helm works, and names the cause when it does not.
+	var notice: Node = scene.helm.notice
+	expect(notice.reason() == "", label + ": no helm notice while the helm works (got: %s)" % notice.reason())
+	ship.docked = true
+	expect(notice.reason().begins_with("DOCKED"), label + ": helm notice explains a docked ship")
+	ship.docked = false
+	ship.simulation_paused = true
+	expect(notice.reason().begins_with("PAUSED"), label + ": helm notice explains a paused ship")
+	ship.simulation_paused = false
 	var code: int = controls.preferences.bindings["ship_throttle_up"]
 	key(code, true)
 	var ticks: int = 0

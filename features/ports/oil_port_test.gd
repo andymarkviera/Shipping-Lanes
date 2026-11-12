@@ -158,6 +158,13 @@ func _process(_delta: float) -> void:
 	voyage_hud.hide()
 	heavy_controls.hide()
 
+func helm_hints() -> Dictionary:
+	var hints: Dictionary = super.helm_hints()
+	hints["panel"] = "Click \"Oil prices / close\" to sail."
+	hints["empty"] = "This fixture has no refuel. Click \"Main menu\" to leave."
+	hints["rescue"] = false
+	return hints
+
 func leave() -> void:
 	if is_instance_valid(refinery_panel) and refinery_panel.busy: return
 	if is_instance_valid(oil_panel) and oil_panel.busy: return

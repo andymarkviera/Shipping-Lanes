@@ -125,6 +125,7 @@ func _ready() -> void:
 			camera.set_focus(ship.assembly.focus)
 		else:
 			ship.simulation_paused = true
+			ship.pause_reason = "SAVE COULD NOT OPEN — the boat is held so nothing is overwritten.\n%s\nPress Esc for the main menu, then open LOCAL SAVES." % local_save.message
 			save_notice.text = local_save.message
 		get_tree().auto_accept_quit = false
 

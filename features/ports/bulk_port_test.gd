@@ -136,7 +136,9 @@ func _process(_delta: float) -> void:
 	minimap.queue_redraw()
 	# Editing service controls suppresses helm input; physics/world time keeps running.
 	controls.set_menu_open(services.visible)
-	if bulk.blocked: publish_state()
+	if bulk.blocked:
+		ship.pause_reason = "VOYAGE PAUSED — the cargo save needs attention.\n%s\nClick \"Main menu\" to leave." % bulk.notice
+		publish_state()
 
 func refuel() -> void:
 	if not bulk.active.is_empty() or bulk.blocked: return
