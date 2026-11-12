@@ -81,7 +81,7 @@ func stop_with_error(message: String) -> void:
 	view.details.text = "Voyage paused — save needs attention"
 	view.readiness.text = message
 	for node: Node in view.find_children("*", "Button", true, false):
-		if node.text != "Main menu": node.disabled = true
+		if node.text.to_lower() not in ["main menu", "resume", "quit"]: node.disabled = true
 
 func _exit_tree() -> void:
 	store.close()

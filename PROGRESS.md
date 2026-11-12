@@ -5512,3 +5512,60 @@ Limits:
 - No gameplay, physics, save, settings, gas, oil, refinery or cargo-fuel file
   changed. `.github/workflows` not edited.
 - All five Aesthetics items are written. None is accepted yet.
+
+## Patch 2.0 item 1: Always running + Esc menu — November 12, 2026 (run on Linux, not on Windows)
+
+Issue #66. REBUILD_PLAN.md section 5, item 1 only.
+
+What changed, in the game (`features/game/game.tscn`):
+
+- Esc opens a small menu over the running world: Resume, Settings, Main Menu,
+  Quit. Esc again closes it. Main Menu and Quit save first. New file
+  `features/game/game_menu.gd` (added to `export_presets.cfg`; its `.uid` was
+  written by Godot). Settings is the same panel as on the home menu.
+- The ship no longer stops when the keyboard is away. With the Esc menu open, a
+  panel open, or the window not active, it holds its throttle order and sails
+  on with the rudder centred. Before, `ShipHelm` ordered neutral in all three
+  cases. Fuel burn, jobs, saving and the clock keep going as before.
+- Nothing calls `get_tree().paused`, and nothing lowers the frame rate in the
+  background (the project never turns on Godot's low-processor mode).
+- The home scene (`main.gd`) no longer opens its session menu on focus loss.
+- Hint text now says "Esc opens the menu". The top-left "Main menu" button
+  stays until item 5 (HUD).
+
+Kept as they were, on purpose: test and online scenes still order neutral when
+input is blocked (`ShipHelm.keep_sailing` is set by the game only). The ship
+still stops for real ship states: docked, sunk (4 s recovery), loading the save
+at start, or a save error. The F3 "LOCAL SAVE TEST" clock fixture still stops
+its test clock while its own session menu is open; it is not the game.
+
+Checks run on the agent's Linux runner, Godot 4.7.2 official (checksum matches
+the Checks job), headless:
+
+- Passed: import, `check_scripts` (186), boot, `check_catalog`,
+  `check_controls`, `check_flow` (updated: focus loss no longer pauses),
+  `check_starter`, `check_helm_keys`, `check_m1_voyage`, `units_probe`,
+  `diagnostics_probe`, the twelve Stage 2 probes, `ports_probe`.
+- `check_m1_voyage` now also presses Esc under way and checks: the four buttons,
+  the tree is not paused, the ship moves and the clock ticks for two seconds
+  with the menu open, Settings opens and Esc returns, focus loss leaves the
+  ship sailing, and Main Menu from the Esc menu saves (CONTINUE restores).
+- One screenshot looked at (Mesa llvmpipe under Xvfb, 1280x720): menu centred
+  over the sea, ship at 9.4 kn behind it.
+- Failed: none.
+- Not run: the Python stage (no Python file changed), `collision_probe`,
+  `composition_probe`, anything on Windows, a real minimised or alt-tabbed
+  window (focus loss was sent as a notification), the Quit button's actual
+  exit, any playtest.
+
+Limits:
+
+- A minimised window on Windows is not proven here. Godot keeps stepping
+  physics when minimised by default, but only Andy's playtest can confirm it.
+- The Esc menu buttons are mouse-only (no arrow-key focus), so Esc always
+  reaches the menu.
+- Water quality chosen in the in-game Settings applies as it did before from
+  the home menu; not re-checked here.
+- The import again wrote `.uid` files for older scripts that lack one. They are
+  not in this change.
+- No gas, oil, refinery, cargo-fuel, online service or workflow file changed.
