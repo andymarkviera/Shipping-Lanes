@@ -5036,3 +5036,51 @@ Limits:
   in a small window.
 - `features/ships/helm_notice.gd.uid` is not committed: Godot must generate it.
 - `.github/workflows` not edited. No Windows run, no playtest.
+
+## M1: One real voyage — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #43. REBUILD_PLAN.md section 3, milestone M1. M0 was accepted by Andy.
+
+**Nothing ran on the agent runner.** No Godot is installed; the Godot download,
+Python and files outside the repository were refused. The code below is unparsed
+and unexecuted. The Checks run on the PR is its first parse. The new playthrough
+is not in CI until Hark adds it.
+
+What changed:
+
+- New `features/game/game.tscn`: the one real game scene. It is the Port Test
+  script with the new `game_mode` export on and its own save,
+  `user://worlds/game/voyage.db`. No new gameplay script.
+- `features/ports/port_test.gd`: `game_mode`. In the game the panel says "Wallet",
+  the "Test heavy loader" button is hidden, and free fuel and repair read "no
+  charge yet". Port Test itself is unchanged.
+- Home menu: the first button opens the game. It reads PLAY with no game save and
+  CONTINUE with one. The old PLAY page is now LOCAL SAVE TEST (same action, same
+  behaviour). Buttons are 2 px shorter so 13 fit.
+- Wallet: the credit balance in the game save. Delivery and payment are one
+  SQLite transaction (existing Port Test code). The fixed-price `world.db` test
+  ledger is not used by the game.
+- New `tools/check_m1_voyage.gd`: clicks PLAY, sails Brindle spawn → Brindle berth
+  → Slatewater berth by holding the real throttle, steering and zero-throttle keys
+  through PlayerControls and ShipHelm, takes and delivers a one-container job,
+  checks the wallet (250.00), leaves by "Main menu", clicks CONTINUE and checks the
+  wallet, the docked ship and the helm again. Buttons are clicked only when visible
+  and enabled. Save folder: `user://m1_voyage_check`. `tools/Godot.ps1` has
+  `-Mode M1VoyageCheck`.
+- `tools/slots_probe.gd`: one expected button text updated.
+- `export_presets.cfg` lists `game.tscn`.
+
+Limits:
+
+- The playthrough's route was worked out by hand arithmetic, not by a run. It may
+  need tuning on first run. It fast-forwards by raising physics ticks per second
+  with the step kept at 1/60 s; if the engine refuses, it falls back to real time
+  (about 7 minutes). Run time is unmeasured and may exceed CI's 30-second rule.
+- No Restart Progress and no New Game over an existing save (M2). To start over
+  now, delete `worlds/game` in the Godot user data folder.
+- Six container jobs in total (three each way). They do not come back.
+- Fuel, repair and the rescue fuel are still free (M2).
+- Test fixtures are still on the home menu. No Windows zip artifact.
+- No new `.gd.uid` committed: Godot must generate `tools/check_m1_voyage.gd.uid`.
+- No gas, oil, refinery or cargo-fuel file changed. `.github/workflows` not
+  edited. No Windows run, no playtest.

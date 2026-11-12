@@ -1,7 +1,7 @@
 #requires -Version 7.4
 [CmdletBinding()]
 param(
-    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck','HelmKeysCheck', 'FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck', 'FuelCheck', 'NetworkCheck', 'ReplicationCheck', 'CargoNetworkCheck', 'ConnectedWorldCheck', 'CapacityCheck', 'ActionCheck', 'EconomyCheck', 'RecoveryCheck', 'PersistenceCheck', 'MigrationCheck', 'SlotsCheck')]
+    [ValidateSet('Editor', 'Run', 'Import', 'Check', 'Export', 'RunExport', 'AssetCheck', 'ControlsCheck','HelmKeysCheck', 'M1VoyageCheck','FlowCheck', 'CatalogCheck', 'GeographyCheck', 'ContractsCheck', 'UnitsCheck', 'SessionCheck', 'ClocksCheck', 'DiagnosticsCheck', 'HandlingCheck', 'CameraCheck', 'WaterCheck', 'CollisionCheck', 'FeedbackCheck', 'WorldSizeCheck', 'HeavyLifterCheck', 'CompositionCheck', 'FuelCheck', 'NetworkCheck', 'ReplicationCheck', 'CargoNetworkCheck', 'ConnectedWorldCheck', 'CapacityCheck', 'ActionCheck', 'EconomyCheck', 'RecoveryCheck', 'PersistenceCheck', 'MigrationCheck', 'SlotsCheck')]
     [string]$Mode = 'Editor',
     [switch]$Headless,
     [ValidateRange(0, 1000000)]
@@ -269,6 +269,9 @@ switch ($Mode) {
     }
     'HelmKeysCheck' {
         Invoke-ProjectGodot -LogName 'helm-keys-check.log' -Arguments @('--headless', '--script', 'res://tools/check_helm_keys.gd')
+    }
+    'M1VoyageCheck' {
+        Invoke-ProjectGodot -LogName 'm1-voyage-check.log' -Arguments @('--headless', '--script', 'res://tools/check_m1_voyage.gd')
     }
     'Export' {
         Install-ExportTemplates
