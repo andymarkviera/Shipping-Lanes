@@ -5244,3 +5244,44 @@ Limits:
 - No new script, so no new `.gd.uid`. `progression.gd.uid` is still not
   committed: Godot must generate it. No gas, oil, refinery or cargo-fuel file
   changed. `.github/workflows` not edited. No Windows run, no playtest.
+
+## M5 Finish — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #53. REBUILD_PLAN.md section 3, M5. Trimmed to the minimum on Andy's
+instruction: no new screen, HUD, scene, script or document.
+
+**Nothing ran on the agent runner.** `python3 -m compileall` and the download
+of the pinned Godot 4.7.2 were both refused. The code below is unparsed and
+unexecuted. The Checks run on the PR is its first parse. The PowerShell change
+was not run either (no Windows, no export templates).
+
+What changed (the game only, except the two new tones):
+
+- `features/feedback/handling_feedback.gd`: `tone()` also makes "chime" and
+  "thud", both one-shot. Engine, thruster and horn are unchanged.
+- `features/ports/port_test.gd` in `game_mode`: plays the chime when a
+  container, bulk or heavy delivery is paid and the thud on hull damage. The
+  left panel lists the helm keys (read from Settings) until money is first
+  earned or spent, then one short line.
+- `features/ports/voyage_hud.gd`: with no job the panel says the next step
+  (docked or not) and names a ship the wallet can buy; it adds a line below 25%
+  fuel and below 50% hull. Port Test text is unchanged.
+- `features/main/main.gd`: the home menu notice for a new game says what the
+  game is and that it saves by itself.
+- `tools/Godot.ps1`: `-Mode Export` also zips the exe, pck and DLLs to
+  `exports/ShippingLanes-windows-<configuration>.zip` (ignored by Git).
+- `tools/check_m1_voyage.gd`: two more checks at New Game (hints, sounds).
+
+Limits:
+
+- No art pass: left to the Aesthetics milestone, as the issue asks.
+- The sounds are generated tones. Nobody has heard them; loudness is a guess.
+- Hint wording and the 25% / 50% thresholds are untested with a player.
+- No Settings inside the game: Esc saves and returns to the home menu.
+- The zip is built by hand on Windows, not in CI. No installer, icon or signing.
+- F3 developer mode still works in the packaged build (off at every launch).
+- Open from M4: the heavy lifter cannot dock at Cinder Point; open sea to the
+  south has no edge.
+- No new runtime resource, so `export_presets.cfg` is unchanged and there is no
+  new `.gd.uid`. No gas, oil, refinery or cargo-fuel file changed.
+  `.github/workflows` not edited. No Windows run, no playtest.

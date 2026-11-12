@@ -12,7 +12,8 @@ static func tone(kind: String) -> AudioStreamWAV:
 	var stream: AudioStreamWAV = AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = 22050
-	var duration: float = 1.2 if kind == "horn" else 1.0
+	# "chime" (paid) and "thud" (collision) are the game's two one-shot sounds (M5).
+	var duration: float = float({"horn": 1.2, "chime": 0.6, "thud": 0.4}.get(kind, 1.0))
 	var count: int = int(duration * stream.mix_rate)
 	var samples: PackedByteArray = PackedByteArray()
 	samples.resize(count * 2)
@@ -22,13 +23,19 @@ static func tone(kind: String) -> AudioStreamWAV:
 		if kind == "horn":
 			var envelope: float = minf(1.0, minf(t / 0.08, (duration - t) / 0.2))
 			wave = (sin(TAU * 110 * t) * 0.5 + sin(TAU * 138.6 * t) * 0.3 + sin(TAU * 220 * t) * 0.1) * envelope
+		elif kind == "chime":
+			# Two rising notes, each fading out.
+			var note_time: float = t if t < 0.15 else t - 0.15
+			wave = sin(TAU * (880.0 if t < 0.15 else 1320.0) * t) * 0.5 * minf(1.0, note_time / 0.01) * exp(-5.0 * note_time) * minf(1.0, (duration - t) / 0.05)
+		elif kind == "thud":
+			wave = (sin(TAU * 55 * t) * 0.7 + sin(TAU * 110 * t) * 0.2) * minf(1.0, t / 0.005) * exp(-10.0 * t) * minf(1.0, (duration - t) / 0.05)
 		elif kind == "thruster":
 			wave = (sin(TAU * 90 * t) * 0.4 + sin(TAU * 270 * t) * 0.2) * (0.8 + 0.2 * sin(TAU * 7 * t))
 		else:
 			wave = sin(TAU * 40 * t) * 0.5 + sin(TAU * 80 * t) * 0.25 + sin(TAU * 120 * t) * 0.1
 		samples.encode_s16(index * 2, int(clampf(wave, -1.0, 1.0) * 24000))
 	stream.data = samples
-	if kind != "horn":
+	if kind not in ["horn", "chime", "thud"]:
 		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		stream.loop_begin = 0
 		stream.loop_end = count

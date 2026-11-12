@@ -284,6 +284,30 @@ Left for later, on purpose: land is flat blocks (art pass is M5 and Aesthetics);
 the heavy lifter cannot dock at Cinder Point (its berth has no heavy service);
 the sea has no edge to the south; pay and distances are a first guess.
 
+**M5 status (November 12, 2026): code written, not run by the agent. Waiting for
+the Checks run and Andy's Windows playtest.** Trimmed on Andy's instruction
+(issue #53: simplify, no testing clutter, no extra HUDs). No new screen, panel or
+file. What exists:
+
+- Hints, in the game only, in the two panels already on screen. Until the first
+  money is earned or spent, the left panel lists the helm keys as bound in
+  Settings. With no job, the top-right panel says the next step, and says when
+  a new ship is affordable. It warns below 25% fuel and below 50% hull.
+- The home menu says in two lines what the game is and that it saves by itself.
+- Sound: a chime when a delivery is paid and a thud on a collision, added to the
+  engine, thruster and horn sounds. All follow the Settings volume.
+- Settings: unchanged. Volume, camera, fullscreen, water quality and keys were
+  already on the home menu. In the game, Esc saves and returns there.
+- Packaged build: `tools/Godot.ps1 -Mode Export -Configuration Release` now also
+  writes `exports/ShippingLanes-windows-release.zip` (exe, pck and DLLs only).
+  Unzip anywhere and run `ShippingLanes.exe`.
+- `tools/check_m1_voyage.gd` now also checks the first hints and the two sounds.
+
+Left out, on purpose: the art pass (land stays flat blocks; the look belongs to
+the Aesthetics milestone); no Settings button inside the game; no installer,
+icon or code signing; the zip is not built in CI (needs Hark's workflow edit and
+the 4.7.2 export templates); F3 developer mode is still in the packaged build.
+
 ### How each milestone gets verified
 
 1. **Automatic, every PR.** The CI job below.

@@ -197,6 +197,9 @@ func play() -> void:
 	expect(game.port == brindle and brindle.definition.id == "port_brindle_quay", "New game starts at Brindle Quay")
 	expect(game.reward_minor == 0, "New game starts with an empty wallet")
 	expect(not game.switch_button.visible, "The game does not offer the test heavy loader")
+	# M5: a new captain sees the helm keys and the next step; the two game sounds exist.
+	expect(game.navigation.text.contains("throttle") and game.voyage_hud.instruction.text.contains("click Dock"), "New game shows the helm keys and the first step (%s)" % game.voyage_hud.instruction.text)
+	expect(game.sfx.has("chime") and game.sfx.has("thud"), "The game has its paid and collision sounds")
 	if not expect(game.controls.input_allowed(), "New game: helm accepts input; " + why_stuck(game)): return
 
 	if not await berth_approach(game, brindle, "Brindle Quay berth"): return
