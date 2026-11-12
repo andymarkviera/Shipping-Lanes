@@ -217,6 +217,27 @@ billion testing things and huds everywhere". What exists:
   without them.
 - Test scenes keep their own HUDs. They can only be opened with F3 on.
 
+**M2 status (November 12, 2026): code written, not run by the agent. Waiting for
+the Checks run and Andy's Windows playtest.** In the game only; Port Test is
+still free. What exists:
+
+- Fuel costs 0.50 credits per litre and repairs 5.00 per 1% hull, paid from the
+  wallet at a berth. REFUEL and REPAIR show the price and buy what the wallet can
+  cover.
+- Collisions above 2 m/s now damage the hull (the single condition meter).
+- Out of fuel at sea: the banner offers "Call a tow to port". At 0% hull the ship
+  sinks and is recovered after a few seconds, patched to 50%. Either way the ship
+  goes to the current port's spawn point with at least a quarter tank and keeps
+  its cargo. The fee is 200.00 credits, or the whole wallet if it holds less. The
+  free test fuel is gone from the game.
+- Home menu: RESTART PROGRESS appears when a save exists. It asks first, then
+  erases the game save. PLAY then starts a new game.
+- The save records money spent (snapshot version 3; older game saves still load).
+- `tools/check_m1_voyage.gd` now also covers M2 in the same run.
+
+Left for later, on purpose: no sinking animation; the six container jobs still
+do not come back, so money is finite until M3/M4; prices are a first guess.
+
 ### How each milestone gets verified
 
 1. **Automatic, every PR.** The CI job below.
