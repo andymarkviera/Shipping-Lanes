@@ -6,6 +6,7 @@ const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
+const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
 ## True in features/game/game.tscn: the real game (REBUILD_PLAN.md M1). False: Port Test.
@@ -167,6 +168,11 @@ func _ready() -> void:
 	layer.add_child(voyage_hud)
 	minimap.view = self
 	layer.add_child(minimap)
+	# Aesthetics 5: playful HUD. The game only; test scenes keep the plain panels.
+	if game_mode:
+		PLAYFUL.dress(panel)
+		PLAYFUL.dress(voyage_hud)
+		minimap.playful = true
 	var stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(stack)
 	details = Label.new()
@@ -436,6 +442,12 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	add_child(helm)
 	helm.configure(ship, controls, ship.assembly.feedback)
 	helm.notice.hints = helm_hints()
+	if game_mode:
+		PLAYFUL.dress(helm.throttle_display.panel)
+		# The throttle bar is a pointer, not a fill: neutral must not look half full.
+		helm.throttle_display.slider.add_theme_stylebox_override("grabber_area", StyleBoxEmpty.new())
+		PLAYFUL.dress(helm.notice.panel, true)
+		PLAYFUL.dress(helm.gauge_display.panel)
 	helm.menu_requested.connect(leave)
 	wake = ship.assembly.create_wake(ocean)
 	camera.distance_order = ship.definition.camera_distance_m

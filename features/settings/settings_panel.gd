@@ -15,12 +15,8 @@ var save_button: Button
 var water_quality: OptionButton
 
 func _ready() -> void:
-	var background: StyleBoxFlat = StyleBoxFlat.new()
-	background.bg_color = Color("243642")
-	background.border_color = Color("8299a5")
-	background.set_border_width_all(1)
-	background.set_corner_radius_all(6)
-	add_theme_stylebox_override("panel", background)
+	# Aesthetics 5: the playful look.
+	preload("res://features/ui/playful_theme.gd").dress(self)
 	hide()
 	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	offset_left = -340

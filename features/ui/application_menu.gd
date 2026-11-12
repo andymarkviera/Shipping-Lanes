@@ -2,6 +2,8 @@ class_name ApplicationMenu
 extends Control
 
 signal selected(action: String)
+## Aesthetics 5: the playful look (theme and the drawn backdrop).
+const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 var pages: Dictionary = {}
 var first_buttons: Dictionary = {}
 var timer_details: Label
@@ -33,25 +35,24 @@ static func friends_client() -> bool:
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var background: ColorRect = ColorRect.new()
-	background.color = Color("263b48")
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(background)
+	theme = PLAYFUL.make()
+	add_child(PLAYFUL.Backdrop.new())
 	var title: Label = Label.new()
 	title.text = "CONTAINER SHIP SIM"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	title.offset_top = 42
-	title.add_theme_font_size_override("font_size", 48)
-	title.add_theme_color_override("font_shadow_color", Color("15232e"))
-	title.add_theme_constant_override("shadow_offset_x", 2)
-	title.add_theme_constant_override("shadow_offset_y", 3)
+	title.offset_top = 36
+	title.add_theme_font_size_override("font_size", 60)
+	title.add_theme_color_override("font_color", PLAYFUL.SUN)
+	title.add_theme_constant_override("outline_size", 14)
+	title.add_theme_color_override("font_shadow_color", PLAYFUL.INK)
+	title.add_theme_constant_override("shadow_offset_x", 0)
+	title.add_theme_constant_override("shadow_offset_y", 6)
+	title.add_theme_constant_override("shadow_outline_size", 14)
 	add_child(title)
 	footer = Label.new()
 	footer.text = "FRIENDS PLAYTEST" if friends_client() else "DEVELOPER MODE   /   F3 TO HIDE"
 	footer.add_theme_font_size_override("font_size", 13)
-	footer.modulate = Color("a5b9c2")
 	footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	footer.position = Vector2(64, -40)
 	add_child(footer)
@@ -174,17 +175,8 @@ func label(parent: Control, text: String, size: int) -> void:
 func button(parent: Control, text: String, action: String) -> Button:
 	var item: Button = Button.new()
 	item.text = text
-	item.custom_minimum_size = Vector2(280, 46)
+	item.custom_minimum_size = Vector2(280, 50)
 	item.add_theme_font_size_override("font_size", 21)
-	for state: String in ["normal", "hover", "pressed", "focus", "disabled"]:
-		var style: StyleBoxFlat = StyleBoxFlat.new()
-		style.bg_color = Color("596e7b") if state == "normal" else Color("708895")
-		if state == "disabled":
-			style.bg_color = Color("324854")
-		style.border_color = Color("c3d0d5") if state != "focus" else Color("ffffff")
-		style.set_border_width_all(2 if state == "focus" else 1)
-		style.set_corner_radius_all(3)
-		item.add_theme_stylebox_override(state, style)
 	item.pressed.connect(func() -> void: selected.emit(action))
 	parent.add_child(item)
 	if not first_buttons.has(parent):
