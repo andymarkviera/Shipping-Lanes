@@ -4,6 +4,7 @@ const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.ts
 const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
+const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
 ## True in features/game/game.tscn: the real game (REBUILD_PLAN.md M1). False: Port Test.
@@ -120,6 +121,8 @@ func _ready() -> void:
 	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.environment.ambient_light_color = Color.WHITE
 	environment.environment.ambient_light_energy = .7
+	# Aesthetics 3: cartoon sky, warm sun with shadows, blue ambient light, haze.
+	SKY_LOOK.apply(light, environment.environment)
 	add_child(environment)
 	camera = OrbitCameraRig.new()
 	add_child(camera)

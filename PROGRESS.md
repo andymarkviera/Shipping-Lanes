@@ -5355,3 +5355,48 @@ Limits:
 - No gameplay, physics, save, gas, oil, refinery or cargo-fuel file changed.
   `.github/workflows` not edited. No Windows run, no playtest.
 - Aesthetics items 3 to 5 are not started.
+
+## Aesthetics 3: Sky and lighting — November 12, 2026 (run on Linux, not on Windows)
+
+Issue #59. REBUILD_PLAN.md section 3, Aesthetics item 3 of 5. Looks only.
+
+What changed:
+
+- New `features/sky/toon_sky.gdshader`: sky gradient (deep blue to pale cyan),
+  flat two-tone puffy clouds made from circles, slow drift, flat sun disc.
+- New `features/sky/sky_look.gd`: `apply(sun, environment)` sets the sky, a warm
+  sun with shadows (two splits, 500 m), blue ambient light and depth haze from
+  500 m to 2800 m in the horizon colour.
+- `features/ports/port_test.gd`: one call after the light and environment are
+  made. Port Test shares this script, so it gets the look too.
+- `export_presets.cfg`: the two new files added. Their `.uid` files were written
+  by Godot during the import below, not by hand.
+
+Checks run on the agent's Linux runner with Godot 4.7.2 (official build, same
+checksum as the Checks job):
+
+- Passed: import, `check_scripts` (183 scripts), boot, `units_probe`,
+  `check_catalog`, `diagnostics_probe`, `check_controls`, `check_flow`,
+  `check_starter`, the twelve Stage 2 probes, `ports_probe`, `check_m1_voyage`.
+- The game scene was rendered with GL Compatibility on a software driver
+  (Mesa llvmpipe under Xvfb). The sky shader compiled with no errors and the
+  agent looked at three screenshots: gradient, clouds, haze and shadows show.
+- Failed: none.
+- Not run: the Python stage (no Python file changed), anything on Windows, any
+  real graphics card, any playtest. Frame rate with shadows on is not measured.
+
+Limits:
+
+- Shadows are new in this scene and cost frame time. If Windows runs slower,
+  `shadow_enabled` in `sky_look.gd` is the one line to turn off.
+- The haze tints far water and land through the engine's fog; no ocean file
+  changed. The ocean plane's far edge can show as a thin pale line.
+- Colours, cloud size and cover, haze distance and light levels are first
+  guesses until Andy looks at them on Windows.
+- The old handling, collision and heavy test scenes and the frozen online scenes
+  are not changed.
+- The import also wrote `.uid` files for older scripts that lack one (toon,
+  progression and others). They are not in this change; item 3 only.
+- No gameplay, physics, save, settings, gas, oil, refinery or cargo-fuel file
+  changed. `.github/workflows` not edited.
+- Aesthetics items 4 and 5 are not started.
