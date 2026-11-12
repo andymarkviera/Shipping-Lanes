@@ -574,3 +574,54 @@ One left, and it does not block starting M0:
 - In the scene where the ship would not move, what did the end of the fuel line
   say: **EMPTY**, **SIM PAUSED**, **DOCKED**, or nothing? And was the entry you
   clicked BOAT HANDLING TEST?
+
+## 5. Patch 2.0 (Andy, November 12, 2026)
+
+v1.0 is done and Andy played it on Windows. He loves the look (color, models,
+docks). Patch 2.0 is his playtest feedback. Work the items in this order, one
+PR each. Keep the Wind Waker look, Godot 4.7.2, saves, and the on-hold
+gas/oil/refinery/cargo-fuel code intact. Single-player still; multiplayer is a
+later patch, so build nothing online now, but never design anything that relies
+on pausing the world.
+
+1. **Always running + Esc menu.** The game never pauses: the ship keeps sailing
+   and the world keeps ticking when the window loses focus, is minimized, or
+   when any panel or menu is open (no `get_tree().paused`, no focus-out pause,
+   no frame-rate drop to zero in the background). Esc no longer jumps to the
+   home menu: it toggles a small in-game menu with Resume, Settings, Main Menu
+   and Quit, drawn over a world that keeps running. Main Menu saves first.
+2. **Easy docking.** Drop the berth-angle rule ("Align with the berth
+   direction (within 10 degrees)") and other fussy checks. If the ship is near
+   a berth and slow (generous range, generous speed), Dock works; the game
+   then smoothly slides and turns the ship into the berth by itself. Any
+   message about docking says only what to do ("Slow down to dock").
+3. **Bigger loads.** Jobs are no longer 1, 2 or 3 containers. Offers range from
+   a handful up to the ship's full capacity (raise ship capacities so the
+   starter ship carries a real stack, bigger ships many more), with pay scaled
+   to the load. The containers on deck show the load.
+4. **Sailing feel: waves, rocking and foam.** Reference: Andy's video, The
+   Legend of Zelda: Wind Waker HD "Peaceful Sailing"
+   (https://youtu.be/dERxAAP4Ybo). Replace the placeholder motion and foam:
+   rolling stylized swells, a clearly exaggerated bob, pitch and roll that
+   grow with speed and lean into turns, a white bow spray and hull foam ring,
+   and a long white V wake with swirls that fades behind the ship. Toon style
+   to match the water from Aesthetics 1.
+5. **HUD simplification.** Less on screen:
+   - Throttle: just a slider with R, N and D and a speed readout in knots
+     ("12 kn"), with a small Dock button beside it that is greyed out when no
+     berth is in range and docks when pressed.
+   - Minimap: a small globe (a rotating sphere showing the world, ports and the
+     ship) instead of the flat map.
+   - Job hub: much simpler; be creative (for example one card per offer:
+     from, to, containers, pay, Accept).
+   - Top-left panel (instructions plus the dock and main-menu buttons): remove
+     the clutter. Controls hints appear briefly on the first voyage and then go;
+     the main menu is reached with Esc.
+   - Any other simplification the agent thinks helps, as long as it stays
+     playful and readable.
+   The last item's PR carries a 5-10 line Windows playtest checklist.
+
+**Later patches (do not start):** Patch 3 is a new main menu (Andy's design,
+later). Patch 4 is multiplayer.
+
+**Patch 2.0 status (November 12, 2026):** planned; nothing started.
