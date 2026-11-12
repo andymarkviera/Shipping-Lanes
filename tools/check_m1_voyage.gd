@@ -219,7 +219,9 @@ func play() -> void:
 	if not await click(game, "Deliver cargo at this port"): return
 	expect(game.reward_minor == job.reward_minor and job.reward_minor > 0, "Delivery pays the job into the wallet (wallet %d, job %d)" % [game.reward_minor, job.reward_minor])
 	expect(game.ship.state.manifest.lines().is_empty(), "Delivered containers leave the ship")
-	expect(("Wallet: %.2f credits" % (job.reward_minor / 100.0)) in game.details.text, "The wallet is shown on screen (%s)" % game.details.text.replace("\n", " | "))
+	await settle()
+	expect(game.voyage_hud.is_visible_in_tree() and ("Money %.2f credits" % (job.reward_minor / 100.0)) in game.voyage_hud.instruments.text, "The money is shown on the game HUD (%s)" % game.voyage_hud.instruments.text.replace("\n", " | "))
+	expect(not game.details.visible and not game.helm.gauge_display.visible, "Developer readouts are hidden in the game by default")
 
 	if not await click(game, "Main menu"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the voyage")

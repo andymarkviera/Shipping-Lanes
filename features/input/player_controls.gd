@@ -117,6 +117,13 @@ func _process(_delta: float) -> void:
 			return
 	wait_for_release = false
 
+## F3 is the one developer toggle. Read here because every scene has a PlayerControls.
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and (event.physical_keycode == KEY_F3 or event.keycode == KEY_F3) \
+			and not event.alt_pressed and not event.meta_pressed and not event.shift_pressed and not ApplicationMenu.friends_client():
+		DevMode.toggle(get_tree())
+		get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_allowed():
 		return
