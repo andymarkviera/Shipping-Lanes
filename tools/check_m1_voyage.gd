@@ -174,6 +174,48 @@ func undock(game: Node, label: String) -> bool:
 	await settle()
 	return expect(game.controls.input_allowed(), "%s: helm accepts input after Undock; %s" % [label, why_stuck(game)])
 
+func press_escape() -> void:
+	release_all()
+	await settle()
+	key(KEY_ESCAPE, true)
+	key(KEY_ESCAPE, false)
+	await settle()
+
+## Patch 2.0 item 1: Esc opens a menu over a world that keeps running, and losing
+## the window does not stop the ship either. Called under way, clear of the quay.
+func always_running(game: Node) -> void:
+	var ship: HandlingShip = game.ship
+	var order: float = ship.commanded_throttle
+	expect(order > 0.1 and not game.game_menu.is_open(), "Under way with the menu closed before Esc (order %.2f)" % order)
+	await press_escape()
+	expect(game.game_menu.is_open(), "Esc opens the in-game menu")
+	expect(current_scene == game and not paused, "Esc neither leaves the game nor pauses the tree")
+	var titles: Array = []
+	for node: Node in game.game_menu.panel.find_children("*", "Button", true, false): titles.append(node.text)
+	expect(titles == ["RESUME", "SETTINGS", "MAIN MENU", "QUIT"], "The menu offers Resume, Settings, Main Menu and Quit (%s)" % str(titles))
+	var from: Vector3 = ship.global_position
+	var clock: float = game.offer_time
+	for tick: int in 120: await physics_frame
+	expect(not game.controls.input_allowed() and game.helm.notice.reason() == "", "Menu open: helm keys are released and no warning banner shows (%s)" % game.helm.notice.reason())
+	expect(ship.commanded_throttle == order and flat_distance(ship.global_position, from) > 5.0 and game.offer_time > clock + 1.9,
+		"Menu open: the ship sails on and the world clock ticks (moved %.1f m, order %.2f)" % [flat_distance(ship.global_position, from), ship.commanded_throttle])
+	if not await click(game, "SETTINGS"): return
+	expect(game.game_menu.settings.visible and not game.game_menu.panel.visible, "Settings opens from the menu")
+	await press_escape()
+	expect(not game.game_menu.settings.visible and game.game_menu.panel.visible, "Esc in Settings returns to the menu")
+	await press_escape()
+	expect(not game.game_menu.is_open(), "Esc closes the menu")
+	await until(func() -> bool: return game.controls.input_allowed(), 5, "Helm returns after the menu closes; " + why_stuck(game))
+	# The window loses focus (alt-tab or minimise): no pause, no menu, the ship sails on.
+	from = ship.global_position
+	game.controls.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	game.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	for tick: int in 120: await physics_frame
+	expect(not paused and not game.game_menu.is_open() and not ship.simulation_paused and ship.commanded_throttle == order and flat_distance(ship.global_position, from) > 5.0,
+		"Window not active: the ship sails on (moved %.1f m, order %.2f)" % [flat_distance(ship.global_position, from), ship.commanded_throttle])
+	game.controls.notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	await until(func() -> bool: return game.controls.input_allowed(), 5, "Helm returns when the window is active again; " + why_stuck(game))
+
 func open_game(label: String) -> Node:
 	var game: Node = await open_scene(GAME_SCRIPT, label)
 	if game == null: return null
@@ -215,6 +257,7 @@ func play() -> void:
 	if not await undock(game, "Brindle Quay"): return
 	# Straight ahead until the stern is past the quay, then turn for Slatewater.
 	if not await sail_to(game, brindle.berth_anchor.global_position + Vector3(0, 0, 160), 40.0, 6.0, "Clear of Brindle Quay"): return
+	await always_running(game)
 	if not await sail_to(game, slatewater.berth_anchor.global_position + Vector3(-200, 0, -755), 80.0, 10.0, "Turn-in point south-west of Slatewater"): return
 	if not await berth_approach(game, slatewater, "Slatewater Works berth"): return
 	expect(game.port == slatewater, "The game switched to Slatewater Works on arrival")
@@ -239,7 +282,9 @@ func play() -> void:
 	expect(game.ship.state.fuel_liters > fuel_before and game.spent_minor > 0 and game.reward_minor == job.reward_minor - game.spent_minor, "REFUEL adds fuel and takes money (fuel %.0f -> %.0f L, spent %d, wallet %d)" % [fuel_before, game.ship.state.fuel_liters, game.spent_minor, game.reward_minor])
 	var wallet: int = game.reward_minor
 
-	if not await click(game, "Main menu"): return
+	# Patch 2.0: leave through the Esc menu. Main Menu saves first.
+	await press_escape()
+	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the voyage")
 	if menu == null: return
 	expect(menu.menu.game_button.text == "CONTINUE", "With a save, the button says CONTINUE")

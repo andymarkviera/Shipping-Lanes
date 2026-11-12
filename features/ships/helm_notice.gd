@@ -72,9 +72,11 @@ func reason() -> String:
 	if fuel_empty():
 		return "FUEL TANK EMPTY — engine and thrusters are off.\n" + hint("empty", "Let the boat stop, then click \"Refuel (test)\".")
 	if controls.menu_open:
-		return "HELM OFF — a panel is open.\n" + hint("panel", "Close the panel to sail.")
+		# The game's Esc menu says so itself: an empty "panel" hint keeps the banner away.
+		var close_hint: String = hint("panel", "Close the panel to sail.")
+		return "" if close_hint.is_empty() else "HELM OFF — a panel is open.\n" + close_hint
 	if not controls.window_focused:
-		return "HELM OFF — the game window is not active.\nClick the game window."
+		return hint("unfocused", "HELM OFF — the game window is not active.\nClick the game window.")
 	if get_viewport().gui_get_focus_owner() != null:
 		return "HELM OFF — a button, list or text box has the keyboard.\nPress Esc to give the keyboard back to the helm."
 	if controls.wait_for_release:
@@ -106,6 +108,6 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	# A focused control swallows the helm keys. Esc hands the keyboard back.
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE \
-			and is_instance_valid(controls) and controls.ship_context_active and get_viewport().gui_get_focus_owner() != null:
+			and is_instance_valid(controls) and controls.ship_context_active and not controls.menu_open and get_viewport().gui_get_focus_owner() != null:
 		get_viewport().gui_release_focus()
 		get_viewport().set_input_as_handled()

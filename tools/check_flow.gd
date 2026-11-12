@@ -57,9 +57,10 @@ func run() -> void:
 	app._input(mouse)
 	check(app.orbit_captured, "Fresh orbit press captures")
 	app._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
-	check(app.state == app.State.PAUSED and not app.orbit_captured, "Focus loss pauses local input and releases mouse")
+	check(app.state == app.State.PLAYING and not app.orbit_captured, "Focus loss releases the mouse and pauses nothing")
 	app._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
-	check(app.state == app.State.PAUSED, "Focus return requires explicit resume")
+	check(app.state == app.State.PLAYING, "Focus return keeps playing")
+	app.pause_session()
 	var escape: InputEventKey = InputEventKey.new()
 	escape.physical_keycode = KEY_ESCAPE
 	escape.pressed = true

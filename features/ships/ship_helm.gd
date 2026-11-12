@@ -8,6 +8,10 @@ var notice = preload("res://features/ships/helm_notice.gd").new()
 var ship: HandlingShip
 var controls: PlayerControls
 var feedback: HandlingFeedback
+## Patch 2.0: the game sets this. With no keyboard (window not active, Esc menu or
+## a panel open) the ship holds its throttle order and sails on, rudder centred.
+## Test and online scenes leave it off and still order neutral.
+var keep_sailing: bool = false
 
 func configure(body: HandlingShip, input: PlayerControls, sound: HandlingFeedback) -> void:
 	ship = body
@@ -34,7 +38,7 @@ func _physics_process(delta: float) -> void:
 	if not is_instance_valid(ship) or not is_instance_valid(controls): return
 	var allowed: bool = controls.input_allowed() and ship.helm_available()
 	if not allowed:
-		ship.zero_throttle()
+		if not keep_sailing or not ship.helm_available(): ship.zero_throttle()
 		ship.maneuver(0, 0)
 		return
 	ship.maneuver(controls.steering_axis(), controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"))
@@ -45,7 +49,7 @@ func _physics_process(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	if is_instance_valid(ship) and is_instance_valid(controls):
-		feedback.update(ship, controls.input_allowed() and not ship.simulation_paused, delta)
+		feedback.update(ship, (keep_sailing or controls.input_allowed()) and not ship.simulation_paused, delta)
 
 func _exit_tree() -> void:
 	if is_instance_valid(controls) and controls.command_requested.is_connected(command):

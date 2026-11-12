@@ -310,8 +310,8 @@ func release_capture() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_node_ready():
+		# Patch 2.0: losing focus releases the mouse. It never pauses or opens a menu.
 		release_capture()
-		pause_session()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:

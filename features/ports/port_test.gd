@@ -17,6 +17,8 @@ var port: Node3D
 var ship: HandlingShip
 var controls: PlayerControls
 var helm: ShipHelm
+## Patch 2.0: the game's Esc menu (Resume, Settings, Main Menu, Quit). Null in test scenes.
+var game_menu: CanvasLayer
 var camera: OrbitCameraRig
 var ocean: OceanPresentation
 var wake: ShipWake
@@ -85,7 +87,7 @@ func play_sound(kind: String) -> void:
 func controls_hint() -> String:
 	var keys: Dictionary = {}
 	for action: String in controls.preferences.bindings: keys[action] = OS.get_keycode_string(controls.preferences.bindings[action])
-	return "%s / %s throttle · %s / %s steer · %s / %s side thrusters\n%s engine to zero · %s horn · Right mouse look · Wheel zoom\nEsc saves and opens the menu. Keys can be changed in Settings." % [
+	return "%s / %s throttle · %s / %s steer · %s / %s side thrusters\n%s engine to zero · %s horn · Right mouse look · Wheel zoom\nEsc opens the menu. Keys can be changed there, in Settings." % [
 		keys.ship_throttle_up, keys.ship_throttle_down, keys.ship_steer_left, keys.ship_steer_right,
 		keys.ship_thruster_left, keys.ship_thruster_right, keys.ship_throttle_zero, keys.horn]
 
@@ -191,6 +193,13 @@ func _ready() -> void:
 		heavy_mode = not heavy_mode
 		select_port(world_ports.find(port)))
 	switch_button.visible = not game_mode
+	if game_mode:
+		# Patch 2.0: Esc opens a menu over the running world instead of leaving.
+		game_menu = preload("res://features/game/game_menu.gd").new()
+		game_menu.controls = controls
+		add_child(game_menu)
+		game_menu.main_menu_requested.connect(leave)
+		game_menu.quit_requested.connect(quit_game)
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
@@ -448,7 +457,8 @@ func select_port(index: int, restoring: bool = false) -> bool:
 		helm.throttle_display.slider.add_theme_stylebox_override("grabber_area", StyleBoxEmpty.new())
 		PLAYFUL.dress(helm.notice.panel, true)
 		PLAYFUL.dress(helm.gauge_display.panel)
-	helm.menu_requested.connect(leave)
+	helm.keep_sailing = game_mode
+	helm.menu_requested.connect(game_menu.open if game_mode else leave)
 	wake = ship.assembly.create_wake(ocean)
 	camera.distance_order = ship.definition.camera_distance_m
 	camera.set_focus(ship.assembly.focus)
@@ -463,6 +473,9 @@ func helm_hints() -> Dictionary:
 		hints.empty = "Call a tow back to port. It costs %.2f credits, or what you have if less." % (RECOVERY_FEE_MINOR / 100.0)
 		hints.rescue_text = "Call a tow to port"
 		hints.rescue_action = recover
+		hints.leave = "Press Esc, then Main Menu"
+		hints.panel = ""
+		hints.unfocused = "The ship holds its course. Click the game window to steer."
 	return hints
 
 func bind_port() -> void:
@@ -713,14 +726,17 @@ func _process(_delta: float) -> void:
 	else:
 		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
 		# The game: the full key list until the first money is earned or spent.
-		if game_mode: navigation.text = controls_hint() if reward_minor == 0 and spent_minor == 0 else "Right mouse look · Wheel zoom · Esc saves and opens the menu"
+		if game_mode: navigation.text = controls_hint() if reward_minor == 0 and spent_minor == 0 else "Right mouse look · Wheel zoom · Esc opens the menu"
 	if services.visible: navigation.text += "\n" + (free_note() if game_mode else "Refuel / repair: " + free_note())
 
+## Save, then close the game. The window's close button and the Esc menu's Quit.
+func quit_game() -> void:
+	if is_instance_valid(persistence) and not persistence.blocked:
+		if not persistence.checkpoint(): return
+	get_tree().quit()
+
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		if is_instance_valid(persistence) and not persistence.blocked:
-			if not persistence.checkpoint(): return
-		get_tree().quit()
+	if what == NOTIFICATION_WM_CLOSE_REQUEST: quit_game()
 
 func _exit_tree() -> void:
 	get_tree().auto_accept_quit = true
