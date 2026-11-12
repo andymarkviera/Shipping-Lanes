@@ -238,6 +238,28 @@ still free. What exists:
 Left for later, on purpose: no sinking animation; the six container jobs still
 do not come back, so money is finite until M3/M4; prices are a first guess.
 
+**M3 status (November 12, 2026): code written, not run by the agent. Waiting for
+the Checks run and Andy's Windows playtest.** In the game only. What exists:
+
+- A SHIPS button at a berth, next to CARGO, REFUEL and REPAIR. It lists three
+  ships: Container ship (800.00), Bulk carrier (1,200.00), Heavy lifter (3,000.00).
+  Buy one, switch to one you own, or sell one you are not sailing for half its
+  price (two clicks). Data: `features/game/progression.gd`.
+- Each ship keeps its own fuel and hull. Switching needs no job in hand and puts
+  the new ship just off the quay.
+- Bulk carrier: six bulk jobs, three each way, paying 900 / 1,200 / 1,500
+  (containers pay 250 / 500 / 750). Accept at a berth, deliver at the other port.
+- Heavy lifter: the six heavy jobs Andy played in Port Test, 700 / 850 / 1,000.
+- The save records the ship, the fleet and the bulk jobs (snapshot version 4;
+  older game saves still load).
+- `tools/check_m1_voyage.gd` now also buys, switches, takes a bulk job and sells.
+
+Left for later, on purpose: the bulk carrier uses the container ship's hull and
+handling (no bulk model yet); bulk cargo loads at once and is not shown on deck;
+the game's bulk jobs do not use the hold-by-hold rules of Bulk Port Test; jobs
+still do not come back, so about 15,300 credits can be earned in total (M4);
+prices are a first guess.
+
 ### How each milestone gets verified
 
 1. **Automatic, every PR.** The CI job below.

@@ -5,6 +5,8 @@ static func target(view: Node3D) -> Dictionary:
 		var carrying: bool = view.ship.attached
 		return {"position": view.heavy_jobs.active.drop if carrying else view.ship.payload_body.global_position, "label": "Ocean drop-off" if carrying else "Heavy pickup", "kind": "drop" if carrying else "pickup"}
 	var job: Dictionary = view.offers.active_job("preview_captain")
+	# M3: a bulk job is tracked by the game scene, not by the container offers.
+	if job.is_empty() and view.get("bulk_active") is String and not view.bulk_active.is_empty(): job = {"destination_port_id": view.bulk_destination().definition.id}
 	if not job.is_empty():
 		for port: Node3D in view.world_ports:
 			if port.definition.id == job.destination_port_id:

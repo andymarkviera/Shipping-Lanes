@@ -5,6 +5,7 @@ const Manifest = preload("res://features/cargo/cargo_manifest.gd")
 const Operations = preload("res://features/cargo/cargo_operation.gd")
 const HeavyJobs = preload("res://features/cargo/heavy_ocean_job.gd")
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
+const Progression = preload("res://features/game/progression.gd")
 const PORT_IDS = ["port_brindle_quay", "port_slatewater_works"]
 
 static func capture(view: Node3D) -> Dictionary:
@@ -19,10 +20,14 @@ static func capture(view: Node3D) -> Dictionary:
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
 		"docked": view.docking.state(1) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
-	# Version 3 (the game, M2): also records money spent on fuel, repairs and recovery.
+	# The game writes version 4 (M3): money spent (M2, version 3), the ship being
+	# sailed, the ships owned with their stored fuel and hull, and the bulk jobs.
 	if view.get("game_mode") == true:
-		data.version = 3
+		data.version = 4
 		data.spent = view.spent_minor
+		data.ship = view.ship_kind
+		data.fleet = view.fleet.duplicate(true)
+		data.bulk = {"active": view.bulk_active, "done": view.bulk_done.duplicate()}
 	return data
 
 static func floating_pose(body: HandlingShip) -> Transform3D:
@@ -43,11 +48,14 @@ static func valid(value: Variant) -> bool:
 	if not value is Dictionary: return false
 	var d: Dictionary = value
 	var spent: int = 0
-	if d.get("version") == 3:
+	if d.get("version") == 4:
+		if d.size() != 23 or not Progression.save_valid(d): return false
+		spent = d.spent
+	elif d.get("version") == 3:
 		if d.size() != 20 or not d.get("spent") is int or d.spent < 0: return false
 		spent = d.spent
 	elif d.size() != 19: return false
-	if d.get("version") not in [1, 2, 3] or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
+	if d.get("version") not in [1, 2, 3, 4] or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
 	for key: String in ["offers", "operations", "heavy", "heavy_completed"]:
 		if not d.get(key) is Dictionary: return false
 	for key: String in ["heavy_mode", "docked"]:
@@ -89,6 +97,9 @@ static func valid(value: Variant) -> bool:
 		if row.state == "delivered": credits += row.reward_minor
 		if row.state == "accepted" and (d.loading_offer != id or not d.docked or row.origin_port_id != PORT_IDS[d.port]): return false
 	if active_count > 1 or lines != expected_lines: return false
+	if d.version == 4:
+		if active_count > 0 and not d.bulk.active.is_empty(): return false
+		credits += Progression.bulk_earned(d)
 	if d.operations.get("version") != 1 or not d.operations.get("records") is Dictionary or d.operations.records.size() > 10000: return false
 	var live: int = 0
 	var committed_offers: Array[String] = []
@@ -139,6 +150,12 @@ static func heavy_job_valid(job: Variant, possible: Dictionary) -> bool:
 static func restore(view: Node3D, data: Dictionary) -> bool:
 	if not valid(data): return false
 	view.heavy_mode = data.heavy_mode
+	view.set("ship_kind", "heavy" if data.heavy_mode else "container")
+	if data.version == 4:
+		view.set("ship_kind", data.ship)
+		view.set("fleet", data.fleet.duplicate(true))
+		view.set("bulk_active", data.bulk.active)
+		view.set("bulk_done", data.bulk.done.duplicate())
 	if not view.select_port(data.port, true): return false
 	await view.get_tree().physics_frame # Deferred floating-body creation must finish.
 	if not is_instance_valid(view.ship): return false
