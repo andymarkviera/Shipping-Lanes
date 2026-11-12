@@ -55,6 +55,15 @@ static func describe(view: Node3D) -> Dictionary:
 		result.next = "At the drop-off: stop, then Lower to deliver." if carrying else "Undock, Lower, position the platform under the load, stop, then Raise."
 		if carrying and view.ship.deck_height < 2.6:
 				result.next = "Lowering at the drop-off. Stay stopped until delivery completes." if view.ship.deck_target == -1.0 and view.heavy_jobs.can_release(view.ship) else "Raise the platform fully before sailing."
+	elif view.get("bulk_active") is String and not view.bulk_active.is_empty():
+		var bulk_job: Dictionary = preload("res://features/game/progression.gd").BULK_JOBS[view.bulk_active]
+		var bulk_port: Node3D = view.bulk_destination()
+		result.stage = "DELIVER BULK CARGO"
+		result.cargo = "Cargo aboard: " + bulk_job.title
+		result.route = "%s · %s\nJob payment: %.2f credits" % [bulk_port.definition.display_name, distance_text(view.ship.global_position.distance_to(bulk_port.berth_anchor.global_position)), bulk_job.reward_minor / 100.0]
+		result.next = "Sail to the destination, stop alongside the quay, then Dock."
+		if view.docking.state(1) == "docked":
+			result.next = "Open CARGO and select Deliver cargo at this port." if view.port == bulk_port else "Undock and sail to " + bulk_port.definition.display_name + "."
 	elif not job.is_empty():
 		var destination: Node3D
 		for place: Node3D in view.world_ports:

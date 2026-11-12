@@ -57,6 +57,17 @@ const RECOVERY_FEE_MINOR: int = 20000
 ## Money spent so far. The save checks wallet = earned - spent.
 var spent_minor: int = 0
 var sink_seconds: float = 0.0
+## M3, the game only: the ship being sailed, the ships owned (each with its stored
+## fuel and hull as 0..1) and the bulk jobs. Port Test never changes these.
+const Progression = preload("res://features/game/progression.gd")
+var ship_kind: String = "container"
+var fleet: Dictionary = {"container": {"fuel": 1.0, "condition": 1.0}}
+var bulk_active: String = ""
+var bulk_done: Array = []
+var ships_panel: VBoxContainer
+var ship_buttons: Dictionary = {}
+var sell_kind: String = ""
+var sell_deadline: int = 0
 
 func button(parent: Node, title: String, action: Callable) -> Button:
 	var node: Button = Button.new()
@@ -142,10 +153,12 @@ func _ready() -> void:
 	stack.add_child(services)
 	var tabs: HBoxContainer = HBoxContainer.new()
 	services.add_child(tabs)
-	button(tabs, "CARGO", func(): jobs_panel.visible = not jobs_panel.visible; refresh_jobs())
+	button(tabs, "CARGO", func(): jobs_panel.visible = not jobs_panel.visible; ships_panel.hide(); refresh_jobs())
 	refuel_button = button(tabs, "REFUEL", refuel)
 	repair_button = button(tabs, "REPAIR", repair)
-	button(tabs, "Close services", func(): jobs_panel.hide())
+	if game_mode:
+		button(tabs, "SHIPS", func(): ships_panel.visible = not ships_panel.visible; jobs_panel.hide())
+	button(tabs, "Close services", func(): jobs_panel.hide(); ships_panel.hide())
 	jobs_panel = VBoxContainer.new()
 	services.add_child(jobs_panel)
 	offer_text = Label.new()
@@ -164,6 +177,15 @@ func _ready() -> void:
 	action_reason = Label.new()
 	action_reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	jobs_panel.add_child(action_reason)
+	# M3 shipyard: one row per ship, behind the SHIPS button.
+	ships_panel = VBoxContainer.new()
+	ships_panel.hide()
+	services.add_child(ships_panel)
+	if game_mode:
+		for kind: String in Progression.SHIPS:
+			var row: HBoxContainer = HBoxContainer.new()
+			ships_panel.add_child(row)
+			ship_buttons[kind] = [button(row, "", ship_action.bind(kind)), button(row, "", sell_ship.bind(kind))]
 	loading_text = Label.new()
 	stack.add_child(loading_text)
 	receipt_label = Label.new()
@@ -237,8 +259,79 @@ func cargo_id() -> String:
 func ship_key() -> String:
 	return "preview_heavy" if heavy_mode else "preview_ship"
 
+func bulk_mode() -> bool:
+	return game_mode and ship_kind == "bulk"
+
+func bulk_destination() -> Node3D:
+	return world_ports[1 - int(Progression.BULK_JOBS[bulk_active].origin)]
+
+func deliver_reason() -> String:
+	if not bulk_mode(): return delivery.reason(self)
+	if bulk_active.is_empty(): return "No loaded job to deliver."
+	if docking.state(1) != "docked": return "Dock at the destination first."
+	if port != bulk_destination(): return "This cargo belongs at " + bulk_destination().definition.display_name + "."
+	return ""
+
+## SHIPS panel, first button: buy a ship, or switch to one already owned.
+func ship_action(kind: String) -> void:
+	if kind == ship_kind or docking.state(1) != "docked": return
+	var entry: Dictionary = Progression.SHIPS[kind]
+	if not fleet.has(kind):
+		if reward_minor < entry.price_minor:
+			offer_notice = "Not enough money for the %s." % entry.name
+			return
+		pay(entry.price_minor)
+		fleet[kind] = {"fuel": 1.0, "condition": 1.0}
+		offer_notice = "Bought the %s for %.2f credits. Click Switch to sail it." % [entry.name, entry.price_minor / 100.0]
+		return
+	if not can_switch():
+		offer_notice = "Finish or cancel your current job before changing ships."
+		return
+	# The ship left behind keeps its fuel and damage: switching is not a free refit.
+	var previous: String = ship_kind
+	var stored: Dictionary = {"fuel": clampf(ship.state.fuel_liters / maxf(1.0, ship.definition.fuel_capacity_liters), 0.0, 1.0), "condition": clampf(ship.state.condition, 0.0, 1.0)}
+	ship_kind = kind
+	heavy_mode = kind == "heavy"
+	if not select_port(world_ports.find(port)):
+		ship_kind = previous
+		heavy_mode = previous == "heavy"
+		return
+	fleet[previous] = stored
+	ship.state.fuel_liters = float(fleet[kind].fuel) * ship.definition.fuel_capacity_liters
+	ship.state.condition = float(fleet[kind].condition)
+	offer_notice = "Now sailing the %s. It is waiting off the quay; the %s stays at the yard." % [entry.name, Progression.SHIPS[previous].name]
+
+## SHIPS panel, second button: sell a ship you are not sailing. Two clicks.
+func sell_ship(kind: String) -> void:
+	if kind == ship_kind or not fleet.has(kind) or docking.state(1) != "docked": return
+	if sell_kind != kind or Time.get_ticks_msec() > sell_deadline:
+		sell_kind = kind
+		sell_deadline = Time.get_ticks_msec() + 5000
+		offer_notice = "Sell the %s for %.2f credits? Click Confirm sale within 5 seconds." % [Progression.SHIPS[kind].name, Progression.resale_minor(kind) / 100.0]
+		return
+	sell_kind = ""
+	fleet.erase(kind)
+	pay(-Progression.resale_minor(kind))
+	offer_notice = "Sold the %s for %.2f credits." % [Progression.SHIPS[kind].name, Progression.resale_minor(kind) / 100.0]
+
+func refresh_ships() -> void:
+	for kind: String in ship_buttons:
+		var entry: Dictionary = Progression.SHIPS[kind]
+		var owned: bool = fleet.has(kind)
+		var main: Button = ship_buttons[kind][0]
+		var sell: Button = ship_buttons[kind][1]
+		if kind == ship_kind: main.text = entry.name + " — sailing now"
+		elif owned: main.text = "Switch to " + entry.name
+		else: main.text = "Buy %s · %.2f" % [entry.name, entry.price_minor / 100.0]
+		main.tooltip_text = ""
+		if not owned and reward_minor < entry.price_minor: main.tooltip_text = "Not enough money yet."
+		elif owned and kind != ship_kind and not can_switch(): main.tooltip_text = "Finish or cancel your current job first."
+		main.disabled = kind == ship_kind or not main.tooltip_text.is_empty()
+		sell.visible = owned and kind != ship_kind
+		sell.text = "Confirm sale" if sell_kind == kind and Time.get_ticks_msec() <= sell_deadline else "Sell · +%.2f" % (Progression.resale_minor(kind) / 100.0)
+
 func can_switch() -> bool:
-	return not loading.busy() and offers.active_job("preview_captain").is_empty() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
+	return bulk_active.is_empty() and not loading.busy() and offers.active_job("preview_captain").is_empty() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
 
 func create_ship() -> HandlingShip:
 	return preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate() if heavy_mode else preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
@@ -300,6 +393,7 @@ func bind_port() -> void:
 	docking.register(1, ship, port)
 	loading.bind(ship, port, docking, offers, 1, "preview_captain", ship_key())
 	jobs_panel.hide()
+	ships_panel.hide()
 	refresh_jobs()
 
 func refresh_jobs() -> void:
@@ -307,9 +401,15 @@ func refresh_jobs() -> void:
 	var previous: String = selected_offer
 	jobs_list.clear()
 	selected_offer = ""
+	if bulk_mode():
+		for id: String in Progression.BULK_JOBS:
+			var bulk_job: Dictionary = Progression.BULK_JOBS[id]
+			if world_ports[int(bulk_job.origin)] != port or bulk_done.has(id) or id == bulk_active: continue
+			jobs_list.add_item("%s → %s · %.2f credits" % [bulk_job.title, world_ports[1 - int(bulk_job.origin)].definition.display_name, bulk_job.reward_minor / 100.0])
+			jobs_list.set_item_metadata(jobs_list.item_count - 1, id)
 	var rows: Array[Dictionary] = heavy_jobs.list_at(port.definition.id) if heavy_mode else offers.list_at(port.definition.id)
 	for row: Dictionary in rows:
-		if row.state != "available": continue
+		if row.state != "available" or bulk_mode(): continue
 		var title: String = row.title + " → open ocean" if heavy_mode else "%d container%s → %s" % [row.quantity, "" if row.quantity == 1 else "s", PrototypeCatalog.display_name(row.destination_port_id)]
 		jobs_list.add_item("%s · %.2f credits" % [title, row.reward_minor / 100.0])
 		jobs_list.set_item_metadata(jobs_list.item_count - 1, row.id)
@@ -324,7 +424,7 @@ func accept_reason() -> String:
 	if is_instance_valid(persistence) and not persistence.ready_to_save: return "Please wait for voyage saving/recovery."
 	if docking.state(1) != "docked": return "Dock before accepting a job."
 	if loading.busy(): return "Loading in progress — wait or cancel loading."
-	if not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty(): return "Finish or cancel your current job before accepting another."
+	if not bulk_active.is_empty() or not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty(): return "Finish or cancel your current job before accepting another."
 	if selected_offer.is_empty(): return "No jobs available here for this ship."
 	return ""
 
@@ -336,7 +436,12 @@ func accept_selected() -> void:
 	if not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty():
 		offer_notice = "Finish your current job before accepting another."
 		return
-	if heavy_mode:
+	if bulk_mode():
+		# Bulk loads at once: no crane work to wait for.
+		if Progression.BULK_JOBS.has(selected_offer) and world_ports[int(Progression.BULK_JOBS[selected_offer].origin)] == port and not bulk_done.has(selected_offer):
+			bulk_active = selected_offer
+			offer_notice = "Cargo loaded. Undock and sail to %s." % bulk_destination().definition.display_name
+	elif heavy_mode:
 		offer_notice = "Load ready nearby. Undock and collect it." if heavy_jobs.accept(selected_offer, ship, port, true) else "Cannot accept this job yet."
 	else:
 		var result: Dictionary = offers.accept(selected_offer, "preview_captain", ship_key(), port.definition.id, ship.state.manifest)
@@ -355,6 +460,17 @@ func end_current_job(abandon: bool) -> void:
 	refresh_jobs()
 
 func request_abandon() -> void:
+	if not bulk_active.is_empty():
+		if abandon_job_id == bulk_active and Time.get_ticks_msec() <= abandon_deadline:
+			bulk_active = ""
+			abandon_job_id = ""
+			offer_notice = "Cargo abandoned — no payment. The job is open again at its port."
+			refresh_jobs()
+		else:
+			abandon_job_id = bulk_active
+			abandon_deadline = Time.get_ticks_msec() + 5000
+			offer_notice = "This removes the cargo with no payment. Press Confirm abandon within 5 seconds."
+		return
 	var job: Dictionary = offers.active_job("preview_captain")
 	if job.is_empty() or job.state != "loaded": return
 	if abandon_job_id == job.id and Time.get_ticks_msec() <= abandon_deadline:
@@ -393,6 +509,16 @@ func repair() -> void:
 	ship.state.condition = 1.0
 
 func deliver() -> void:
+	if bulk_mode():
+		if not deliver_reason().is_empty(): return
+		# Pay and job state change together; the autosave writes both on this tick.
+		var pay_minor: int = Progression.BULK_JOBS[bulk_active].reward_minor
+		bulk_done.append(bulk_active)
+		bulk_active = ""
+		reward_minor += pay_minor
+		offer_notice = "Delivery complete — paid %.2f credits." % (pay_minor / 100.0)
+		refresh_jobs()
+		return
 	var result: Dictionary = delivery.deliver(self)
 	offer_notice = result.message
 	refresh_jobs()
@@ -438,7 +564,7 @@ func _physics_process(delta: float) -> void:
 	readiness.text = "Berth: " + (current.capitalize() + ("…" if current != "docked" else "") if current in ["docking", "docked", "undocking"] else status.message)
 	services.visible = current == "docked"
 	if is_instance_valid(helm): helm.throttle_display.visible = not services.visible
-	if not services.visible: jobs_panel.hide()
+	if not services.visible: jobs_panel.hide(); ships_panel.hide()
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
@@ -449,7 +575,8 @@ func _process(_delta: float) -> void:
 	details.text = "%s · %s\n%s: %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", "Wallet" if game_mode else "Voyage wallet", reward_minor / 100.0]
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
-	offer_text.text = "Heavy-loader jobs" if heavy_mode else "Container jobs"
+	offer_text.text = "Heavy-loader jobs" if heavy_mode else ("Bulk jobs" if bulk_mode() else "Container jobs")
+	refresh_ships()
 	accept_button.tooltip_text = accept_reason()
 	accept_button.disabled = not accept_button.tooltip_text.is_empty()
 	refuel_button.text = "REFUEL"
@@ -464,10 +591,10 @@ func _process(_delta: float) -> void:
 	refuel_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Fill to %.0f L capacity; %s." % [ship.definition.fuel_capacity_liters, free_note()]
 	repair_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Restore condition to 100%; " + free_note() + "."
 	action_reason.text = accept_button.tooltip_text
-	if not heavy_mode and offers.active_job("preview_captain").get("state") == "loaded": action_reason.text = delivery.reason(self)
+	if not bulk_active.is_empty() or (not heavy_mode and offers.active_job("preview_captain").get("state") == "loaded"): action_reason.text = deliver_reason()
 	action_reason.visible = not action_reason.text.is_empty()
 	deliver_button.visible = not heavy_mode
-	deliver_button.tooltip_text = delivery.reason(self)
+	deliver_button.tooltip_text = deliver_reason()
 	deliver_button.disabled = not deliver_button.tooltip_text.is_empty()
 	receipt_label.text = delivery.receipt_text(offers)
 	if heavy_mode:
@@ -479,7 +606,7 @@ func _process(_delta: float) -> void:
 	receipt_label.visible = not receipt_label.text.is_empty()
 	cancel_load_button.visible = loading.busy()
 	var active: Dictionary = offers.active_job("preview_captain")
-	abandon_button.visible = not heavy_mode and active.get("state") == "loaded"
+	abandon_button.visible = not bulk_active.is_empty() or (not heavy_mode and active.get("state") == "loaded")
 	abandon_button.text = "Confirm abandon — no payment" if not abandon_job_id.is_empty() and Time.get_ticks_msec() <= abandon_deadline else "Abandon cargo (no payment)"
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
 	if not loading.busy() and offer_notice == "Accepted — loading your cargo.": offer_notice = loading.notice

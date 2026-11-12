@@ -260,6 +260,38 @@ func play() -> void:
 	fee = mini(game.RECOVERY_FEE_MINOR, wallet)
 	expect(not game.ship.simulation_paused and game.reward_minor == wallet - fee, "Recovery returns the ship and charges what the wallet can cover (wallet %d)" % game.reward_minor)
 
+	# M3: buy a second ship, switch, take a bulk job, sell the first ship. The money
+	# comes from one bulk job marked delivered by code: earning it takes two more legs.
+	release_all()
+	await settle()
+	game.bulk_done.append("bulk_0_ore")
+	game.reward_minor += 150000
+	wallet = game.reward_minor
+	if not await berth_approach(game, game.port, "M3 berth, container ship"): return
+	if not await dock(game, "M3, container ship"): return
+	if not await click(game, "SHIPS"): return
+	if not await click(game, game.ship_buttons["bulk"][0].text): return
+	expect(game.fleet.has("bulk") and game.reward_minor == wallet - 120000, "Buying the bulk carrier takes its price (wallet %d)" % game.reward_minor)
+	if not await click(game, "Switch to Bulk carrier"): return
+	expect(game.ship_kind == "bulk" and game.docking.state(1) != "docked", "Switch puts the captain on the bulk carrier, off the quay")
+	if not await berth_approach(game, game.port, "M3 berth, bulk carrier"): return
+	if not await dock(game, "M3, bulk carrier"): return
+	if not await click(game, "CARGO"): return
+	if not await click(game, "Accept selected job"): return
+	expect(game.bulk_active == "bulk_1_grain" and game.voyage_hud.heading.text == "DELIVER BULK CARGO", "A bulk job is accepted and shown on the HUD (%s)" % game.voyage_hud.heading.text)
+	if not await click(game, "SHIPS"): return
+	if not await click(game, game.ship_buttons["container"][1].text): return
+	if not await click(game, "Confirm sale"): return
+	expect(not game.fleet.has("container") and game.reward_minor == wallet - 120000 + 40000, "Selling the container ship pays half its price (wallet %d)" % game.reward_minor)
+	wallet = game.reward_minor
+	if not await click(game, "Main menu"): return
+	menu = await open_scene(MAIN_SCRIPT, "Home menu after the shipyard")
+	if menu == null: return
+	if not await click(menu, "CONTINUE"): return
+	game = await open_game("Continue on the bulk carrier")
+	if game == null: return
+	expect(game.ship_kind == "bulk" and game.bulk_active == "bulk_1_grain" and game.fleet.size() == 1 and game.reward_minor == wallet, "Continue restores the ship, the fleet, the bulk job and the wallet (ship %s, wallet %d)" % [game.ship_kind, game.reward_minor])
+
 	if not await click(game, "Main menu"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu at the end")
 	if menu == null: return

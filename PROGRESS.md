@@ -5160,3 +5160,44 @@ Limits:
 - No new file, so no `.gd.uid` and no `export_presets.cfg` change. No gas, oil,
   refinery or cargo-fuel file changed. `.github/workflows` not edited. No Windows
   run, no playtest.
+
+## M3 Progression — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #49. REBUILD_PLAN.md section 3, M3.
+
+**Nothing ran on the agent runner.** No Godot is installed, and the Godot
+download and Python were both refused. The code below is unparsed and
+unexecuted. The Checks run on the PR is its first parse.
+
+What changed (the game only; Port Test behaves as before):
+
+- New `features/game/progression.gd`: three ships with prices, six bulk jobs, and
+  the checks for the new save fields. Listed in `export_presets.cfg`.
+- `features/ports/port_test.gd` in `game_mode`: a SHIPS button in the berth
+  services opens one row per ship: buy, switch, or sell (half price, two clicks,
+  never the ship being sailed). Each ship keeps its own fuel and hull. Switching
+  needs no job in hand. On the bulk carrier CARGO lists bulk jobs; accept loads
+  at once, "Deliver cargo at this port" pays at the other port, Abandon reopens
+  the job. On the heavy lifter CARGO lists the existing heavy jobs.
+- `features/cargo/voyage_snapshot.gd`: the game writes version 4 with `ship`,
+  `fleet` and `bulk`. The wallet must equal container, heavy and bulk pay minus
+  `spent`. A sale lowers `spent`. Versions 1 to 3 are read as before.
+- `voyage_hud.gd`, `local_navigation.gd`: the job panel and minimap show a bulk job.
+- `tools/check_m1_voyage.gd`: after the M2 part it buys the bulk carrier,
+  switches, docks, accepts a bulk job, sells the container ship and uses
+  Continue. The purchase money is one bulk job marked delivered by code.
+
+Limits:
+
+- The bulk carrier is the container ship's hull and handling under another name.
+  Bulk cargo is not shown on deck and has no loading time.
+- The game's bulk jobs are a simple accept and deliver. They do not use
+  `bulk_service.gd` (holds, tonnes, its own save); Bulk Port Test is unchanged.
+- A bulk delivery is saved by the next autosave tick, not in the same call as
+  container deliveries are.
+- Jobs do not come back: about 15,300 credits in total. Prices are untested.
+- The new check steps dock twice more from the port's spawn point. That path has
+  only been used at Brindle Quay before, and never run here.
+- `features/game/progression.gd.uid` is not committed: Godot must generate it.
+- No gas, oil, refinery or cargo-fuel file changed. `.github/workflows` not
+  edited. No Windows run, no playtest.
