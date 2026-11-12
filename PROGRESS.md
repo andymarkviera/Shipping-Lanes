@@ -5285,3 +5285,36 @@ Limits:
 - No new runtime resource, so `export_presets.cfg` is unchanged and there is no
   new `.gd.uid`. No gas, oil, refinery or cargo-fuel file changed.
   `.github/workflows` not edited. No Windows run, no playtest.
+
+## Aesthetics 1: Water — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #55. REBUILD_PLAN.md section 3, Aesthetics item 1 of 5. Looks only.
+
+**Nothing ran on the agent runner.** Running `godot` was refused again, so the
+two shaders and the wake script are unparsed and nobody has seen the result.
+The Checks run on the PR is the first parse; `tools/water_probe.gd` is in it and
+was not edited. Colours, line density and wake size are guesses until Andy
+looks at them on Windows.
+
+What changed (all in `features/water`, existing files only):
+
+- `stylized_ocean.gdshader`: three soft tone bands between the deep and surface
+  colours; the foam net became separate white swirl strokes that taper off;
+  cells a little larger (32 m, was 26 m). Wave motion and uniforms unchanged.
+- `bright_ocean.tres`, `water_palette.gd`: more saturated blue and teal, pure
+  white foam. `coastal_ocean.tres` is unchanged.
+- `ship_foam.gdshader`: wake is solid white with a short fade at the end.
+- `ship_wake.gd` `draw_foam()`: wider side crests and a white trail behind the
+  stern. `advance()` and the wake samples are unchanged.
+
+Limits:
+
+- The tone bands are a drifting pattern, not real depth. There is no seabed or
+  depth data, and the project uses the GL Compatibility renderer.
+- Shallow-water colour near coasts and shore foam are not done.
+- The old test scenes and the frozen online scenes share the ocean, so they get
+  the new look too. No code of theirs changed.
+- No new runtime resource: `export_presets.cfg` unchanged, no new `.gd.uid` or
+  `.gdshader.uid`. No gameplay, physics, save, gas, oil, refinery or cargo-fuel
+  file changed. `.github/workflows` not edited. No Windows run, no playtest.
+- Aesthetics items 2 to 5 are not started.
