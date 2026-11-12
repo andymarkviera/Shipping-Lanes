@@ -17,6 +17,8 @@ var slot_status: Label
 var slot_result: Label
 var recovery_confirmation: ConfirmationDialog
 var play_button: Button
+## The real game: PLAY for a new game, CONTINUE once a save exists.
+var game_button: Button
 
 static func friends_client() -> bool:
 	return OS.get_cmdline_user_args().has("--friends-client") or FileAccess.file_exists(OS.get_executable_path().get_base_dir().path_join("friends-client.flag"))
@@ -47,7 +49,7 @@ func _ready() -> void:
 	footer.position = Vector2(64, -40)
 	add_child(footer)
 	var home: VBoxContainer = page("title")
-	home.position.y = 130
+	home.position.y = 112
 	home.add_theme_constant_override("separation", 4)
 	if friends_client():
 		home.position.y = 210
@@ -56,7 +58,8 @@ func _ready() -> void:
 		button(home, "SETTINGS", "settings")
 		button(home, "QUIT", "exit")
 	else:
-		play_button = button(home, "PLAY", "play")
+		game_button = button(home, "PLAY", "game")
+		play_button = button(home, "LOCAL SAVE TEST", "play")
 		button(home, "BOAT HANDLING TEST", "handling")
 		button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
 		button(home, "PORT TEST", "ports")
@@ -69,7 +72,7 @@ func _ready() -> void:
 		button(home, "LOCAL SAVES", "saves")
 		button(home, "EXIT", "exit")
 	for child: Node in home.get_children():
-		if child is Button: child.custom_minimum_size.y = 42
+		if child is Button: child.custom_minimum_size.y = 40
 	save_notice = Label.new()
 	save_notice.add_theme_font_size_override("font_size", 15)
 	save_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

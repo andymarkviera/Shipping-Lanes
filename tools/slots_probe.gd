@@ -21,7 +21,7 @@ func _ready() -> void:
 	var preferences_hash: String = FileAccess.get_sha256("user://preferences.json")
 	var app: Node = load("res://features/main/main.tscn").instantiate()
 	add_child(app)
-	expect(app.menu.play_button.text == "CREATE & PLAY", "Empty default explicitly says create")
+	expect(app.menu.play_button.text == "CREATE LOCAL SAVE TEST", "Empty default explicitly says create")
 	app.navigate("saves")
 	expect(app.menu.pages.saves.visible and "New" in app.menu.slot_status.text, "New slot visible")
 	app.navigate("new_slot")

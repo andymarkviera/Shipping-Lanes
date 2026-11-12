@@ -162,6 +162,28 @@ Milestones — each ends with a Windows build and a short checklist for Andy:
 
 Online returns after M5, starting from the frozen Step 57–61 code.
 
+**M0 status: accepted by Andy** (Windows playtest; relayed in issue #43).
+
+**M1 status (November 12, 2026): code written, not run by the agent. Waiting for
+the Checks run and Andy's Windows playtest.** What exists:
+
+- The home menu's first button opens the one real game scene,
+  `features/game/game.tscn`. It says PLAY with no save and CONTINUE once a save
+  exists. The old PLAY page is now LOCAL SAVE TEST.
+- The game scene is the approved Port Test loop (`features/ports/port_test.gd`
+  with `game_mode` on): same handling, docking, loading, delivery and autosave.
+  The test heavy-loader switch is hidden.
+- One save: `user://worlds/game/voyage.db`, separate from every test save.
+- The wallet is the credit balance in that save. A delivery and its payment are
+  written in one transaction. It is not the fixed-price test ledger in `world.db`.
+- Scripted key-press playthrough: `tools/check_m1_voyage.gd` (see "Not in CI yet").
+
+Left for later milestones, on purpose: fuel and repairs are still free and the
+free rescue fuel is still there (M2); no Restart Progress or New Game over an
+existing save (M2); only the six seeded container jobs, three each way, which do
+not come back once delivered (M3/M4); test fixtures are still on the home menu,
+not behind a developer menu; no Windows zip artifact (needs Hark's workflow edit).
+
 ### How each milestone gets verified
 
 1. **Automatic, every PR.** The CI job below.
@@ -300,6 +322,11 @@ Until then, a new PR must not add failures to the first run's list.
   The first one exists and is waiting for Hark to add it to the workflow:
   `godot --headless --path . --script res://tools/check_helm_keys.gd`
   (prints `HELM_KEYS_CHECK_PASS`; about 10–20 s; Windows: `-Mode HelmKeysCheck`).
+  The M1 one is also waiting for Hark:
+  `godot --headless --path . --script res://tools/check_m1_voyage.gd`
+  (prints `M1_VOYAGE_CHECK_PASS`; Windows: `-Mode M1VoyageCheck`). It sails about
+  seven minutes of game time, fast-forwarded. Its real run time is not measured
+  yet and may need more than the 30-second limit.
 - Later (M1): export a Windows zip as a build artifact, so Andy downloads and
   runs it instead of opening the editor. Needs the 4.7.2 export templates.
 
