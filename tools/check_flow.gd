@@ -10,6 +10,8 @@ func _initialize() -> void:
 	run.call_deferred()
 
 func run() -> void:
+	# CONTINUE TEST SESSION is a developer button since the Simplify pass.
+	DevMode.enabled = true
 	var app = load("res://features/main/main.tscn").instantiate()
 	root.add_child(app)
 	await process_frame

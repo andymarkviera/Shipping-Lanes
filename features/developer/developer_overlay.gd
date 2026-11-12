@@ -29,7 +29,12 @@ func _ready() -> void:
 	readout.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	readout.add_theme_font_size_override("font_size",14)
 	panel.add_child(readout)
-	panel.visible = enabled
+	add_to_group(DevMode.GROUP)
+	set_enabled(DevMode.enabled)
+
+## Shown only in developer mode: F3, read by PlayerControls (see DevMode).
+func dev_mode_changed() -> void:
+	set_enabled(DevMode.enabled)
 
 func set_enabled(value: bool) -> void:
 	enabled = value
@@ -37,11 +42,6 @@ func set_enabled(value: bool) -> void:
 
 func set_snapshot(snapshot: Dictionary) -> void:
 	_snapshot = snapshot.duplicate(true)
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed and not event.shift_pressed and (event.physical_keycode == KEY_F3 or event.keycode == KEY_F3):
-		set_enabled(not enabled)
-		get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
 	_seconds += delta
@@ -52,7 +52,7 @@ func _process(delta: float) -> void:
 		_frames = 0
 	if not enabled: return
 	var fuel: Variant = _snapshot.get("fuel_ml")
-	readout.text = "DEVELOPER  |  Ctrl+F3 to hide\nRole: %s\nShip: %s\nSpeed: %s\nThrottle: %s\nPosition: %s\nFuel: %s\nFrame interval: %s\nProcess CPU: %.2f ms" % [
+	readout.text = "DEVELOPER  |  F3 to hide\nRole: %s\nShip: %s\nSpeed: %s\nThrottle: %s\nPosition: %s\nFuel: %s\nFrame interval: %s\nProcess CPU: %.2f ms" % [
 		_snapshot.get("role","No session"), _snapshot.get("ship_id","—"),
 		"Not connected" if _snapshot.get("speed_mps") == null else "%.2f m/s" % _snapshot.speed_mps,
 		"Not connected" if _snapshot.get("throttle") == null else "%.2f" % _snapshot.throttle,

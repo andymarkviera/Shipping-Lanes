@@ -176,6 +176,11 @@ func _ready() -> void:
 func free_note() -> String:
 	return "no charge yet" if game_mode else "free test service"
 
+## Simplify pass: the game has one status HUD (voyage_hud). The older panel line
+## and the gauge panel repeat it, so in the game they need developer mode (F3).
+func extras_visible() -> bool:
+	return not game_mode or DevMode.enabled
+
 func service_id() -> String:
 	return "heavy_transfer" if heavy_mode else "container_transfer"
 
@@ -359,6 +364,8 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
 	voyage_hud.refresh(self)
+	details.visible = extras_visible()
+	if is_instance_valid(helm): helm.gauge_display.visible = extras_visible()
 	minimap.queue_redraw()
 	details.text = "%s · %s\n%s: %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", "Wallet" if game_mode else "Voyage wallet", reward_minor / 100.0]
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
