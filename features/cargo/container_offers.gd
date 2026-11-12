@@ -3,13 +3,53 @@ extends RefCounted
 var _now_ms: int = 0
 var _offers: Dictionary = {}
 
+const Progression = preload("res://features/game/progression.gd")
+
 func _init() -> void:
 	for route: int in 2:
-		var origin: String = "port_brindle_quay" if route == 0 else "port_slatewater_works"
-		var destination: String = "port_slatewater_works" if route == 0 else "port_brindle_quay"
 		for index: int in 3:
 			var id: String = "container_seed_v1_%d_%d" % [route, index]
-			_offers[id] = {"id": id, "cargo_id": "cargo_test_container", "unit": "count", "quantity": index + 1, "origin_port_id": origin, "destination_port_id": destination, "reward_minor": (index + 1) * 25000, "expires_ms": -1, "state": "available", "owner_id": "", "ship_id": "", "accepted_ms": -1}
+			_offers[id] = fresh(id)
+
+static func blank(id: String, quantity: int, origin: String, destination: String, reward_minor: int) -> Dictionary:
+	return {"id": id, "cargo_id": "cargo_test_container", "unit": "count", "quantity": quantity, "origin_port_id": origin, "destination_port_id": destination, "reward_minor": reward_minor, "expires_ms": -1, "state": "available", "owner_id": "", "ship_id": "", "accepted_ms": -1}
+
+## An untouched offer, rebuilt from its ID alone. Empty for an unknown ID.
+## "container_seed_v1_<route>_<index>": the six Port Test jobs.
+## "container_game_<port>_<slot>_<turn>" (the game only): three slots per port.
+## Each turn of a slot goes to the next port along and pays by distance.
+static func fresh(id: String, game: bool = false) -> Dictionary:
+	var parts: PackedStringArray = id.split("_")
+	if parts.size() != 5 or parts[0] != "container": return {}
+	# The numbers must be plain: no sign, no padding. Seeds carry "v1" in place of a port.
+	for part: String in ["0" if parts[1] == "seed" else parts[2], parts[3], parts[4]]:
+		if not part.is_valid_int() or part != str(int(part)) or int(part) < 0 or int(part) > 100000: return {}
+	if parts[1] == "seed" and parts[2] == "v1" and int(parts[3]) < 2 and int(parts[4]) < 3:
+		var route: int = int(parts[3])
+		return blank(id,int(parts[4]) + 1, Progression.WORLD[route].id, Progression.WORLD[1 - route].id, (int(parts[4]) + 1) * 25000)
+	if not game or parts[1] != "game" or int(parts[2]) >= Progression.WORLD.size() or int(parts[3]) > 2: return {}
+	var origin: int = int(parts[2])
+	var destination: int = Progression.others(origin)[(int(parts[3]) + int(parts[4])) % (Progression.WORLD.size() - 1)]
+	# 250.00 credits per container on the 1.5 km hop, more on longer legs.
+	var per_container: int = Progression.leg_units(origin, destination) * 5000 / 3 / 1000 * 1000
+	return blank(id,int(parts[3]) + 1, Progression.WORLD[origin].id, Progression.WORLD[destination].id, (int(parts[3]) + 1) * per_container)
+
+## The game only: keep three open jobs at every port. When a job is delivered or
+## abandoned, the next one for that slot is added. Offers never expire.
+func restock() -> void:
+	var latest: Dictionary = {}
+	for id: String in _offers:
+		var parts: PackedStringArray = id.split("_")
+		if parts[1] != "game": continue
+		var slot: String = parts[2] + "_" + parts[3]
+		latest[slot] = maxi(int(latest.get(slot, -1)), int(parts[4]))
+	for port: int in Progression.WORLD.size():
+		for index: int in 3:
+			var slot: String = "%d_%d" % [port, index]
+			var turn: int = int(latest.get(slot, -1))
+			if turn >= 0 and _offers["container_game_%s_%d" % [slot, turn]].state not in ["delivered", "abandoned"]: continue
+			var id: String = "container_game_%s_%d" % [slot, turn + 1]
+			_offers[id] = fresh(id, true)
 
 func advance_to(world_ms: int) -> bool:
 	if world_ms < _now_ms or world_ms > 9000000000000: return false

@@ -1,5 +1,7 @@
 extends Node3D
 const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.tscn"), preload("res://features/ports/slatewater_works.tscn")]
+## M4, the game only: two more ports. Positions come from Progression.WORLD.
+const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
@@ -63,7 +65,8 @@ const Progression = preload("res://features/game/progression.gd")
 var ship_kind: String = "container"
 var fleet: Dictionary = {"container": {"fuel": 1.0, "condition": 1.0}}
 var bulk_active: String = ""
-var bulk_done: Array = []
+## M4: pay from bulk and heavy jobs. They repeat, so the save keeps the total.
+var banked_minor: int = 0
 var ships_panel: VBoxContainer
 var ship_buttons: Dictionary = {}
 var sell_kind: String = ""
@@ -107,9 +110,16 @@ func _ready() -> void:
 	camera = OrbitCameraRig.new()
 	add_child(camera)
 	camera.bind_controls(controls)
-	for i: int in 2:
-		var place: Node3D = PORTS[i].instantiate()
-		place.position = Vector3(i * 1500, 0, 0)
+	var scenes: Array = PORTS.duplicate()
+	if game_mode:
+		scenes.append_array(GAME_PORTS)
+		for rect: Rect2 in Progression.LAND: add_land(rect)
+		# The game's own container jobs: three per port, replaced as they are delivered.
+		offers._offers.clear()
+		offers.restock()
+	for i: int in scenes.size():
+		var place: Node3D = scenes[i].instantiate()
+		place.position = Progression.WORLD[i].at
 		add_child(place)
 		world_ports.append(place)
 	waypoint = Label3D.new()
@@ -201,6 +211,30 @@ func _ready() -> void:
 		add_child(persistence)
 		get_tree().auto_accept_quit = false
 
+## M4 coastline: a solid sand slab level with the quays, with a green block on top.
+func add_land(rect: Rect2) -> void:
+	var body: StaticBody3D = StaticBody3D.new()
+	body.position = Vector3(rect.get_center().x, -2, rect.get_center().y)
+	body.collision_layer = CollisionRules.SHORE
+	body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+	add_child(body)
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = Vector3(rect.size.x, 12, rect.size.y)
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	collider.shape = shape
+	body.add_child(collider)
+	for level: int in 2:
+		var box: BoxMesh = BoxMesh.new()
+		box.size = shape.size if level == 0 else Vector3(rect.size.x - 120, 14, rect.size.y - 120)
+		var material: StandardMaterial3D = StandardMaterial3D.new()
+		material.albedo_color = Color("d6c692") if level == 0 else Color("7fa368")
+		material.roughness = 0.9
+		var mesh: MeshInstance3D = MeshInstance3D.new()
+		mesh.mesh = box
+		mesh.material_override = material
+		mesh.position.y = level * 13
+		body.add_child(mesh)
+
 ## Port Test services are free. The game charges (M2).
 func free_note() -> String:
 	return "Fuel %.2f credits per litre · Repair %.2f per 1%% hull" % [FUEL_MINOR_PER_LITER / 100.0, REPAIR_MINOR_PER_PERCENT / 100.0] if game_mode else "free test service"
@@ -263,7 +297,7 @@ func bulk_mode() -> bool:
 	return game_mode and ship_kind == "bulk"
 
 func bulk_destination() -> Node3D:
-	return world_ports[1 - int(Progression.BULK_JOBS[bulk_active].origin)]
+	return world_ports[int(Progression.bulk_job(bulk_active).destination)]
 
 func deliver_reason() -> String:
 	if not bulk_mode(): return delivery.reason(self)
@@ -401,11 +435,12 @@ func refresh_jobs() -> void:
 	var previous: String = selected_offer
 	jobs_list.clear()
 	selected_offer = ""
+	if game_mode: offers.restock()
 	if bulk_mode():
-		for id: String in Progression.BULK_JOBS:
-			var bulk_job: Dictionary = Progression.BULK_JOBS[id]
-			if world_ports[int(bulk_job.origin)] != port or bulk_done.has(id) or id == bulk_active: continue
-			jobs_list.add_item("%s → %s · %.2f credits" % [bulk_job.title, world_ports[1 - int(bulk_job.origin)].definition.display_name, bulk_job.reward_minor / 100.0])
+		for id: String in Progression.bulk_ids(world_ports.find(port)):
+			var bulk_job: Dictionary = Progression.bulk_job(id)
+			if id == bulk_active: continue
+			jobs_list.add_item("%s → %s · %.2f credits" % [bulk_job.title, world_ports[int(bulk_job.destination)].definition.display_name, bulk_job.reward_minor / 100.0])
 			jobs_list.set_item_metadata(jobs_list.item_count - 1, id)
 	var rows: Array[Dictionary] = heavy_jobs.list_at(port.definition.id) if heavy_mode else offers.list_at(port.definition.id)
 	for row: Dictionary in rows:
@@ -438,7 +473,7 @@ func accept_selected() -> void:
 		return
 	if bulk_mode():
 		# Bulk loads at once: no crane work to wait for.
-		if Progression.BULK_JOBS.has(selected_offer) and world_ports[int(Progression.BULK_JOBS[selected_offer].origin)] == port and not bulk_done.has(selected_offer):
+		if Progression.bulk_job(selected_offer).get("origin", -1) == world_ports.find(port):
 			bulk_active = selected_offer
 			offer_notice = "Cargo loaded. Undock and sail to %s." % bulk_destination().definition.display_name
 	elif heavy_mode:
@@ -512,8 +547,9 @@ func deliver() -> void:
 	if bulk_mode():
 		if not deliver_reason().is_empty(): return
 		# Pay and job state change together; the autosave writes both on this tick.
-		var pay_minor: int = Progression.BULK_JOBS[bulk_active].reward_minor
-		bulk_done.append(bulk_active)
+		# The job is on offer again at its port: money is never finite.
+		var pay_minor: int = Progression.bulk_job(bulk_active).reward_minor
+		banked_minor += pay_minor
 		bulk_active = ""
 		reward_minor += pay_minor
 		offer_notice = "Delivery complete — paid %.2f credits." % (pay_minor / 100.0)
@@ -546,6 +582,13 @@ func _physics_process(delta: float) -> void:
 		heavy_jobs.update(ship)
 		reward_minor += heavy_jobs.reward_pending
 		heavy_jobs.reward_pending = 0
+	if game_mode and not heavy_jobs.completed.is_empty():
+		# M4: a delivered heavy job is banked and offered again at its port.
+		for done: Dictionary in heavy_jobs.completed.values():
+			banked_minor += int(done.reward_minor)
+			offer_notice = "Heavy load delivered — paid %.2f credits." % (done.reward_minor / 100.0)
+		heavy_jobs.completed.clear()
+		refresh_jobs()
 	if game_mode and ship.state.condition <= 0.0:
 		# Sunk: hold the ship for a moment under a banner, then recover it.
 		if sink_seconds <= 0.0:
@@ -569,6 +612,8 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
 	voyage_hud.refresh(self)
+	# The sea is one 4 km sheet. In the game's larger world it follows the ship.
+	if game_mode: ocean.global_position = Vector3(snappedf(ship.global_position.x, 50), 0, snappedf(ship.global_position.z, 50))
 	details.visible = extras_visible()
 	if is_instance_valid(helm): helm.gauge_display.visible = extras_visible()
 	minimap.queue_redraw()

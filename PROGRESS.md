@@ -5201,3 +5201,46 @@ Limits:
 - `features/game/progression.gd.uid` is not committed: Godot must generate it.
 - No gas, oil, refinery or cargo-fuel file changed. `.github/workflows` not
   edited. No Windows run, no playtest.
+
+## M4 A world worth sailing — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #51. REBUILD_PLAN.md section 3, M4.
+
+**Nothing ran on the agent runner.** The `godot` and `python3` commands were
+both refused again. The code below is unparsed and unexecuted. The Checks run on the
+PR is its first parse.
+
+What changed (the game only; Port Test keeps two ports and its six jobs):
+
+- `features/game/progression.gd`: the world table (four ports with positions),
+  the land rectangles, and bulk jobs built from an ID with pay by distance.
+- New port Gannet Light: `features/ports/gannet_light.tres`,
+  `gannet_light_berth.tres`, `gannet_light.tscn`. Added to the catalog and to
+  `export_presets.cfg`. Cinder Point already existed and is now in the game.
+- `features/ports/port_test.gd` in `game_mode`: four ports, solid land, the sea
+  sheet follows the ship, bulk and heavy pay is banked so those jobs repeat.
+- `features/cargo/container_offers.gd`: game offers named
+  `container_game_<port>_<slot>_<turn>`, three per port. A delivered or
+  abandoned one is followed by the next turn. Nothing expires. The six Port
+  Test offers are unchanged.
+- `features/cargo/voyage_snapshot.gd`, `voyage_lifecycle.gd`: the game writes
+  version 5 (four ports, game offers, `banked`). Versions 1 to 4 read as before;
+  a version 4 save keeps its wallet and gets the new jobs on load.
+- `features/ports/local_minimap.gd`: 200 by 240, land drawn, legend text removed.
+  Port Test, Bulk and the oil fixture share this minimap and get the same look.
+- `tools/check_m1_voyage.gd`: checks four ports and three open jobs at Brindle
+  Quay after a delivery; the M3 purchase money is banked pay.
+
+Limits:
+
+- Land is flat sand and green blocks. Nothing was seen on screen: the look of
+  the coast, the minimap and the camera near land are all unjudged.
+- Delivered container jobs stay in the save as history. The save has a 4 MB
+  limit, reached only after a few thousand deliveries.
+- The heavy lifter cannot dock at Cinder Point: its berth record has no heavy
+  service, and that record was left alone (a content check reads it).
+- A tow still returns the ship to the last port it visited, not the nearest.
+- Open sea to the south has no edge. Pay and distances are untested.
+- No new script, so no new `.gd.uid`. `progression.gd.uid` is still not
+  committed: Godot must generate it. No gas, oil, refinery or cargo-fuel file
+  changed. `.github/workflows` not edited. No Windows run, no playtest.

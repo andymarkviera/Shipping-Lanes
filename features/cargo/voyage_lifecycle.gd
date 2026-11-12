@@ -21,7 +21,7 @@ static func end_job(view: Node3D, abandon_loaded: bool = false) -> Dictionary:
 			data.offers[job.id].state = "abandoned"
 			data.manifest.clear()
 		else:
-			data.offers[job.id] = Offers.new().view(job.id)
+			data.offers[job.id] = Offers.fresh(job.id, data.version == 5)
 			for record: Dictionary in data.operations.records.values():
 				if record.payload.get("offer_id") == job.id and record.state in ["reserved", "running", "ready"]:
 					record.state = "cancelled"
@@ -60,7 +60,8 @@ static func reconcile(value: Variant) -> Dictionary:
 	if not value is Dictionary: return {"ok": false}
 	var d: Dictionary = value.duplicate(true)
 	if not d.get("manifest") is Array or not d.manifest.is_empty() or not d.get("offers") is Dictionary or not d.get("operations") is Dictionary or not d.operations.get("records") is Dictionary: return {"ok": false}
-	var seeded = Offers.new()
+	var game: bool = d.get("version") == 5
+	var ports: Array = Snapshot.port_ids(d)
 	var repaired: bool = false
 	var accepted_count: int = 0
 	for row: Variant in d.offers.values():
@@ -69,10 +70,11 @@ static func reconcile(value: Variant) -> Dictionary:
 	for id: Variant in d.offers:
 		var job: Variant = d.offers[id]
 		if not job is Dictionary or job.get("state") != "accepted": continue
-		if not seeded._offers.has(id) or job.get("owner_id") != "preview_captain" or job.get("ship_id") != "preview_ship" or not job.get("accepted_ms") is int or not d.get("clock") is int or job.accepted_ms < 0 or job.accepted_ms > d.clock: return {"ok": false}
-		if job.size() != seeded._offers[id].size(): return {"ok": false}
-		for key: String in seeded._offers[id]:
-			if key not in ["state", "owner_id", "ship_id", "accepted_ms"] and job.get(key) != seeded._offers[id][key]: return {"ok": false}
+		var untouched: Dictionary = Offers.fresh(id, game) if id is String else {}
+		if untouched.is_empty() or job.get("owner_id") != "preview_captain" or job.get("ship_id") != "preview_ship" or not job.get("accepted_ms") is int or not d.get("clock") is int or job.accepted_ms < 0 or job.accepted_ms > d.clock: return {"ok": false}
+		if job.size() != untouched.size(): return {"ok": false}
+		for key: String in untouched:
+			if key not in ["state", "owner_id", "ship_id", "accepted_ms"] and job.get(key) != untouched[key]: return {"ok": false}
 		var live_ids: Array[String] = []
 		for operation_id: Variant in d.operations.records:
 			var record: Variant = d.operations.records[operation_id]
@@ -80,12 +82,12 @@ static func reconcile(value: Variant) -> Dictionary:
 			if record.payload.get("offer_id") != id: continue
 			if record.get("state") in ["committed", "committing"]: return {"ok": false}
 			if record.get("state") in ["reserved", "running", "ready"]: live_ids.append(operation_id)
-		var intact: bool = live_ids.size() == 1 and d.get("loading") == live_ids[0] and d.get("loading_offer") == id and d.get("docked") == true and d.get("port") is int and d.get("port") in [0, 1] and job.origin_port_id == Snapshot.PORT_IDS[d.port]
+		var intact: bool = live_ids.size() == 1 and d.get("loading") == live_ids[0] and d.get("loading_offer") == id and d.get("docked") == true and d.get("port") is int and d.port >= 0 and d.port < ports.size() and job.origin_port_id == ports[d.port]
 		if intact: continue # Some other inconsistency is not ours to repair.
 		for operation_id: String in live_ids:
 			d.operations.records[operation_id].state = "interrupted"
 			d.operations.records[operation_id].message = "Orphan loading released during recovery; no cargo or payment."
-		d.offers[id] = seeded.view(id)
+		d.offers[id] = untouched
 		# Refuse unrelated/malformed operation pointers instead of erasing them.
 		if d.get("loading_offer") not in ["", id] or not d.get("loading") is String or (not d.loading.is_empty() and not live_ids.has(d.loading)): return {"ok": false}
 		d.loading = ""
