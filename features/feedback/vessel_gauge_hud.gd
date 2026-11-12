@@ -1,6 +1,7 @@
 extends CanvasLayer
 ## Shared, read-only instruments; independent of helm/docking menu visibility.
 var ship: HandlingShip
+var panel: PanelContainer
 var gauges = preload("res://features/feedback/vessel_gauges.gd").new()
 
 func _ready() -> void:
@@ -10,7 +11,7 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
-	var panel := PanelContainer.new()
+	panel = PanelContainer.new()
 	root.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	panel.offset_left = 20
