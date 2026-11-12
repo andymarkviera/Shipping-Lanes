@@ -50,6 +50,13 @@ var jobs_panel: VBoxContainer
 var jobs_list: ItemList
 var heavy_controls: HBoxContainer
 var waypoint: Label3D
+## M2 prices in hundredths of a credit. The game only; Port Test stays free.
+const FUEL_MINOR_PER_LITER: int = 50
+const REPAIR_MINOR_PER_PERCENT: int = 500
+const RECOVERY_FEE_MINOR: int = 20000
+## Money spent so far. The save checks wallet = earned - spent.
+var spent_minor: int = 0
+var sink_seconds: float = 0.0
 
 func button(parent: Node, title: String, action: Callable) -> Button:
 	var node: Button = Button.new()
@@ -172,9 +179,49 @@ func _ready() -> void:
 		add_child(persistence)
 		get_tree().auto_accept_quit = false
 
-## Fuel and repairs cost nothing until M2.
+## Port Test services are free. The game charges (M2).
 func free_note() -> String:
-	return "no charge yet" if game_mode else "free test service"
+	return "Fuel %.2f credits per litre · Repair %.2f per 1%% hull" % [FUEL_MINOR_PER_LITER / 100.0, REPAIR_MINOR_PER_PERCENT / 100.0] if game_mode else "free test service"
+
+func pay(cost_minor: int) -> void:
+	spent_minor += cost_minor
+	reward_minor -= cost_minor
+
+## Litres the tank needs, limited by what the wallet can buy.
+func fuel_offered() -> float:
+	return minf(ship.definition.fuel_capacity_liters - ship.state.fuel_liters, float(reward_minor) / FUEL_MINOR_PER_LITER)
+
+## Hull percent to repair, limited by what the wallet can buy.
+func repair_offered() -> int:
+	return mini(ceili((1.0 - ship.state.condition) * 100.0 - 0.001), floori(float(reward_minor) / REPAIR_MINOR_PER_PERCENT))
+
+func take_damage(damage_bp: int) -> void:
+	ship.state.condition = maxf(0.0, ship.state.condition - damage_bp / 10000.0)
+	offer_notice = "Collision! Hull %.0f%%. Dock and click REPAIR." % (ship.state.condition * 100.0)
+
+## Tow back to the current port: out of fuel (tow button) or sunk. The fee is
+## capped by the wallet, so a broke captain is never stuck.
+func recover() -> void:
+	var sunk: bool = ship.state.condition <= 0.0
+	var fee: int = mini(RECOVERY_FEE_MINOR, reward_minor)
+	docking.cancel(1)
+	port.spawn_allocator.release(spawn_ticket)
+	spawn_ticket = 0
+	var allocation: Dictionary = port.reserve_spawn(ship.definition.hull_size_m)
+	if allocation.ok:
+		spawn_ticket = allocation.ticket
+		ship.global_transform = allocation.transform
+	ship.velocity = Vector3.ZERO
+	ship.yaw_rate = 0
+	ship.zero_throttle()
+	ship.actual_throttle = 0
+	ship.simulation_paused = false
+	sink_seconds = 0
+	if sunk: ship.state.condition = 0.5
+	ship.state.fuel_liters = maxf(ship.state.fuel_liters, ship.definition.fuel_capacity_liters * 0.25)
+	pay(fee)
+	offer_notice = "%s %s. Recovery fee paid: %.2f credits." % ["Ship raised, patched to 50% hull and towed to" if sunk else "Towed to", port.definition.display_name, fee / 100.0]
+	controls.wait_for_release = true
 
 ## Simplify pass: the game has one status HUD (voyage_hud). The older panel line
 ## and the gauge panel repeat it, so in the game they need developer mode (F3).
@@ -221,6 +268,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	spawn_ticket = allocation.ticket
 	ship.transform = allocation.transform
 	add_child(ship)
+	if game_mode: ship.validated_impact.connect(take_damage)
 	if heavy_mode:
 		ship.payload_body.collision_layer = 0
 		ship.payload_body.hide()
@@ -238,8 +286,13 @@ func select_port(index: int, restoring: bool = false) -> bool:
 
 ## Wording for the helm notice: how to get out of each state in this scene.
 func helm_hints() -> Dictionary:
-	return {"leave": "Click \"Main menu\"", "docked": "Wait for docking to finish, then click \"Undock\" to sail.",
+	var hints: Dictionary = {"leave": "Click \"Main menu\"", "docked": "Wait for docking to finish, then click \"Undock\" to sail.",
 		"empty": "Dock and click REFUEL. Out of reach of a berth? Use the free test fuel below.", "rescue": true}
+	if game_mode:
+		hints.empty = "Call a tow back to port. It costs %.2f credits, or what you have if less." % (RECOVERY_FEE_MINOR / 100.0)
+		hints.rescue_text = "Call a tow to port"
+		hints.rescue_action = recover
+	return hints
 
 func bind_port() -> void:
 	offer_notice = ""
@@ -313,11 +366,29 @@ func request_abandon() -> void:
 
 func refuel() -> void:
 	if docking.state(1) != "docked" or loading.busy(): return
+	if game_mode:
+		if ship.definition.fuel_capacity_liters - ship.state.fuel_liters < 1.0: offer_notice = "The tank is full."
+		elif fuel_offered() < 1.0: offer_notice = "Not enough money for fuel. Deliver a job first."
+		else:
+			var bought: float = ship.refuel(fuel_offered())
+			var cost: int = mini(reward_minor, ceili(bought * FUEL_MINOR_PER_LITER))
+			pay(cost)
+			offer_notice = "Refueled %.0f L for %.2f credits." % [bought, cost / 100.0]
+		return
 	var amount: float = ship.refuel(ship.definition.fuel_capacity_liters)
 	offer_notice = "Refueled %.0f L — %s." % [amount, free_note()]
 
 func repair() -> void:
 	if docking.state(1) != "docked" or loading.busy(): return
+	if game_mode:
+		var percent: int = repair_offered()
+		if ship.state.condition >= 0.995: offer_notice = "No repairs needed."
+		elif percent <= 0: offer_notice = "Not enough money for repairs. Deliver a job first."
+		else:
+			pay(percent * REPAIR_MINOR_PER_PERCENT)
+			ship.state.condition = minf(1.0, ship.state.condition + percent / 100.0)
+			offer_notice = "Repaired to %.0f%% hull for %.2f credits." % [ship.state.condition * 100.0, percent * REPAIR_MINOR_PER_PERCENT / 100.0]
+		return
 	offer_notice = "No repairs needed." if ship.state.condition >= 1 else "Repairs complete — %s." % free_note()
 	ship.state.condition = 1.0
 
@@ -349,11 +420,19 @@ func _physics_process(delta: float) -> void:
 		heavy_jobs.update(ship)
 		reward_minor += heavy_jobs.reward_pending
 		heavy_jobs.reward_pending = 0
+	if game_mode and ship.state.condition <= 0.0:
+		# Sunk: hold the ship for a moment under a banner, then recover it.
+		if sink_seconds <= 0.0:
+			sink_seconds = 4.0
+			ship.simulation_paused = true
+			ship.pause_reason = "YOUR SHIP SANK.\nA recovery crew is raising it and towing it to %s. Fee: %.2f credits." % [port.definition.display_name, mini(RECOVERY_FEE_MINOR, reward_minor) / 100.0]
+		sink_seconds -= delta
+		if sink_seconds <= 0.0: recover()
 	var status: Dictionary = port.berth_readiness(ship, service_id(), cargo_id())
 	var current: String = docking.state(1)
 	dock_button.visible = ship.global_position.distance_to(port.berth_anchor.global_position) < 150 or current in ["docking", "docked", "undocking"]
 	dock_button.text = "Undock" if current == "docked" else "Dock"
-	dock_button.disabled = loading.busy() or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
+	dock_button.disabled = loading.busy() or sink_seconds > 0.0 or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
 	cancel_button.visible = current in ["docking", "undocking"]
 	readiness.text = "Berth: " + (current.capitalize() + ("…" if current != "docked" else "") if current in ["docking", "docked", "undocking"] else status.message)
@@ -375,6 +454,10 @@ func _process(_delta: float) -> void:
 	accept_button.disabled = not accept_button.tooltip_text.is_empty()
 	refuel_button.text = "REFUEL"
 	repair_button.text = "REPAIR"
+	if game_mode:
+		# The price of what the button will buy right now.
+		if fuel_offered() >= 1.0: refuel_button.text = "REFUEL %.2f" % (ceili(fuel_offered() * FUEL_MINOR_PER_LITER) / 100.0)
+		if repair_offered() > 0: repair_button.text = "REPAIR %.2f" % (repair_offered() * REPAIR_MINOR_PER_PERCENT / 100.0)
 	# Full/no-damage remains a harmless action with explicit feedback; loading locks services.
 	refuel_button.disabled = loading.busy()
 	repair_button.disabled = loading.busy()
@@ -410,7 +493,7 @@ func _process(_delta: float) -> void:
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
 		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
-	if services.visible: navigation.text += "\nRefuel / repair: " + free_note()
+	if services.visible: navigation.text += "\n" + (free_note() if game_mode else "Refuel / repair: " + free_note())
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

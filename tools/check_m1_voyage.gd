@@ -3,6 +3,8 @@ extends SceneTree
 ## Opens the home menu, clicks PLAY, sails from the Brindle Quay spawn to its berth,
 ## takes a container job, sails to Slatewater Works, delivers, checks the wallet,
 ## leaves through "Main menu", clicks CONTINUE and checks the wallet came back.
+## M2 (same run): pays for fuel, runs dry and calls the tow, sinks and is recovered,
+## then uses Restart Progress.
 ## All sailing is real key presses through PlayerControls and ShipHelm; the ship is
 ## never moved by code. Buttons are clicked only when visible and enabled.
 ## The save goes to an isolated folder, never the player's game save.
@@ -223,6 +225,12 @@ func play() -> void:
 	expect(game.voyage_hud.is_visible_in_tree() and ("Money %.2f credits" % (job.reward_minor / 100.0)) in game.voyage_hud.instruments.text, "The money is shown on the game HUD (%s)" % game.voyage_hud.instruments.text.replace("\n", " | "))
 	expect(not game.details.visible and not game.helm.gauge_display.visible, "Developer readouts are hidden in the game by default")
 
+	# M2: fuel is paid for from the wallet.
+	var fuel_before: float = game.ship.state.fuel_liters
+	if not await click(game, game.refuel_button.text): return
+	expect(game.ship.state.fuel_liters > fuel_before and game.spent_minor > 0 and game.reward_minor == job.reward_minor - game.spent_minor, "REFUEL adds fuel and takes money (fuel %.0f -> %.0f L, spent %d, wallet %d)" % [fuel_before, game.ship.state.fuel_liters, game.spent_minor, game.reward_minor])
+	var wallet: int = game.reward_minor
+
 	if not await click(game, "Main menu"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the voyage")
 	if menu == null: return
@@ -230,7 +238,7 @@ func play() -> void:
 	if not await click(menu, "CONTINUE"): return
 	game = await open_game("Continue")
 	if game == null: return
-	expect(game.reward_minor == job.reward_minor, "Continue restores the wallet (wallet %d)" % game.reward_minor)
+	expect(game.reward_minor == wallet, "Continue restores the wallet after the fuel bill (wallet %d)" % game.reward_minor)
 	expect(game.port == game.world_ports[1] and game.docking.state(1) == "docked", "Continue restores the ship docked at Slatewater Works")
 	expect(game.offers.view(job.id).get("state") == "delivered" and game.offers.active_job(OWNER).is_empty(), "Continue keeps the job delivered, not repeatable")
 	if not await undock(game, "Continue"): return
@@ -238,8 +246,30 @@ func play() -> void:
 	await until(func() -> bool: return game.ship.forward_speed() > 0.2, 15, "Continue: ship gains speed with the throttle key held; " + why_stuck(game))
 	release_all()
 	note("After Continue", game.ship)
+
+	# M2: run dry and call the paid tow. The tank is emptied and the hull is holed by
+	# code: burning a full tank or ramming a quay to zero by key press takes too long.
+	game.ship.state.fuel_liters = 0.0
+	if not await until(func() -> bool: return game.ship.velocity.length() < 0.05, 120, "Out of fuel: the ship drifts to a stop"): return
+	if not await click(game, "Call a tow to port"): return
+	var fee: int = mini(game.RECOVERY_FEE_MINOR, wallet)
+	expect(game.ship.state.fuel_liters > 0.0 and game.reward_minor == wallet - fee, "The tow gives fuel and charges the fee (fuel %.0f L, wallet %d)" % [game.ship.state.fuel_liters, game.reward_minor])
+	wallet -= fee
+	game.ship.state.condition = 0.0
+	if not await until(func() -> bool: return game.ship.state.condition > 0.0, 15, "A sunk ship is recovered; " + why_stuck(game)): return
+	fee = mini(game.RECOVERY_FEE_MINOR, wallet)
+	expect(not game.ship.simulation_paused and game.reward_minor == wallet - fee, "Recovery returns the ship and charges what the wallet can cover (wallet %d)" % game.reward_minor)
+
 	if not await click(game, "Main menu"): return
-	await open_scene(MAIN_SCRIPT, "Home menu at the end")
+	menu = await open_scene(MAIN_SCRIPT, "Home menu at the end")
+	if menu == null: return
+	# M2: Restart Progress erases the save after a confirmation.
+	if not await click(menu, "RESTART PROGRESS"): return
+	expect(menu.menu.restart_confirmation.visible, "Restart Progress asks for confirmation")
+	menu.menu.restart_confirmation.hide()
+	menu.menu.restart_confirmation.confirmed.emit()
+	await settle()
+	expect(menu.menu.game_button.text == "PLAY" and not menu.menu.restart_button.visible, "After Restart Progress the button says PLAY again")
 
 func run() -> void:
 	await process_frame

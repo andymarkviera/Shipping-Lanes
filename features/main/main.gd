@@ -194,6 +194,14 @@ func navigate(action: String) -> void:
 				recovery_source = -1
 				refresh_save_status()
 		"game": get_tree().change_scene_to_file(GAME_SCENE)
+		"restart": menu.restart_confirmation.popup_centered(Vector2i(520, 160))
+		"confirm_restart":
+			# Restart Progress: erase the one game save (and SQLite's side files).
+			var game_save: String = str(get_tree().get_meta("game_save_path", GAME_SAVE))
+			for suffix: String in ["", "-wal", "-shm"]:
+				if FileAccess.file_exists(game_save + suffix): DirAccess.remove_absolute(game_save + suffix)
+			refresh_save_status()
+			menu.save_notice.text = "The save could not be erased. Close other copies of the game and try again." if FileAccess.file_exists(game_save) else "Progress erased. PLAY starts a new game at Brindle Quay."
 		"play":
 			if FileAccess.file_exists("user://public_services.json"): get_tree().change_scene_to_file("res://features/network/public_entry.tscn")
 			else: start_saved_session()
@@ -348,6 +356,7 @@ func refresh_save_status() -> void:
 	menu.slot_status.text = slots.status(menu.slot_picker.selected)
 	var game_saved: bool = FileAccess.file_exists(str(get_tree().get_meta("game_save_path", GAME_SAVE)))
 	menu.game_button.text = "CONTINUE" if game_saved else "PLAY"
+	menu.restart_button.visible = game_saved
 	menu.play_button.text = "LOCAL SAVE TEST" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE LOCAL SAVE TEST"
 	menu.save_notice.text = "CONTINUE resumes your saved voyage." if game_saved else "PLAY starts a new game at Brindle Quay."
 	if DevMode.enabled: menu.save_notice.text += "\n\nTest saves — local slot %d: %s" % [active_slot + 1, slots.status(active_slot)]

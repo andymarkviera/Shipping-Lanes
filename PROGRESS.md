@@ -5121,3 +5121,42 @@ Limits:
 - `features/developer/dev_mode.gd.uid` is not committed: Godot must generate it.
 - No gas, oil, refinery or cargo-fuel file changed. `.github/workflows` not
   edited. No Windows run, no playtest.
+
+## M2 Costs and risk — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #47. REBUILD_PLAN.md section 3, M2.
+
+**Nothing ran on the agent runner.** No Godot is installed and Python was refused
+(no Python file changed). The code below is unparsed and unexecuted. The Checks
+run on the PR is its first parse.
+
+What changed (the game only; Port Test behaves as before):
+
+- `features/ports/port_test.gd` in `game_mode`: REFUEL costs 0.50 credits per
+  litre, REPAIR 5.00 per 1% hull. Each buys what the wallet can cover and shows
+  its price on the button. Collisions reduce hull (`validated_impact` was not
+  connected before). At 0% hull the ship is held for 4 seconds under a banner,
+  then recovered. `recover()` moves the ship to the current port's spawn point,
+  sets hull to 50% if sunk, gives at least a quarter tank and charges 200.00
+  credits or the whole wallet if less. Cargo stays on board.
+- `features/ships/helm_notice.gd`: a scene can replace the free test-fuel button
+  with its own text and action. The game uses it for "Call a tow to port".
+- `features/cargo/voyage_snapshot.gd`: the game writes version 3 with a `spent`
+  total; the wallet must equal delivered pay minus `spent`. Versions 1 and 2
+  (Port Test, older game saves) are read and written as before.
+- Home menu: RESTART PROGRESS, visible only with a save, behind a confirmation.
+  It deletes `voyage.db` and its `-wal` / `-shm` files. The notice text moved down.
+- `tools/check_m1_voyage.gd`: after the delivery it clicks REFUEL and checks the
+  bill; after Continue it calls the tow, sinks, is recovered and uses Restart
+  Progress. The empty tank and the 0% hull are set by code, not by key press.
+
+Limits:
+
+- No sinking animation or sound. Recovery fails over to "ship stays where it is"
+  if every spawn point at the port is blocked; it still charges and refuels.
+- A broke captain is towed free. That is deliberate (no dead end) and exploitable.
+- Six container jobs in total, so money runs out (M3/M4). Prices are untested.
+- No collision by key press in the playthrough. Menu layout was not seen on screen.
+- No new file, so no `.gd.uid` and no `export_presets.cfg` change. No gas, oil,
+  refinery or cargo-fuel file changed. `.github/workflows` not edited. No Windows
+  run, no playtest.
