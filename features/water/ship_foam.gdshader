@@ -1,6 +1,6 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never;
-uniform vec4 foam_color : source_color = vec4(0.83, 0.98, 1.0, 1.0);
+uniform vec4 foam_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float water_time = 0.0;
 uniform int quality = 1;
 void vertex() {
@@ -13,5 +13,6 @@ void vertex() {
 }
 void fragment() {
 	ALBEDO = foam_color.rgb;
-	ALPHA = COLOR.a;
+	// Toon wake: solid white for most of its life, then a short fade.
+	ALPHA = smoothstep(0.04, 0.45, COLOR.a);
 }
