@@ -4,13 +4,14 @@ var slider: HSlider
 var motion: Label
 var order_label: Label
 var ship: HandlingShip
+var panel: PanelContainer
 
 func _ready() -> void:
 	var root: Control = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
-	var panel: PanelContainer = PanelContainer.new()
+	panel = PanelContainer.new()
 	root.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	panel.offset_left = -190

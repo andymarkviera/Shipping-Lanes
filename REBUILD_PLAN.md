@@ -160,7 +160,7 @@ Milestones — each ends with a Windows build and a short checklist for Andy:
 | M3 | **Progression** | Earn enough to buy a second ship, switch, sell, and take bulk and heavy jobs that pay more. |
 | M4 | **A world worth sailing** | Sail between 4–5 ports with coastline, a minimap and sensible trip times. |
 | M5 | **Finish** | Play two hours from a fresh install with no developer help: hints, settings, sound, art pass, packaged build. |
-| — | **Aesthetics** (after M5; items 1 to 4 of 5 written) | See the Wind Waker look described below. |
+| — | **Aesthetics** (after M5; all 5 items written, waiting for Andy's playtest) | See the Wind Waker look described below. |
 
 **Order (Andy, issue #45): M1 done → Simplify → M2 → M3 → M4 → M5 → Aesthetics.**
 
@@ -185,7 +185,10 @@ a time, in this order:
 | 2 | Toon shader and ink outlines | Code written (issue #57), not run or seen by the agent. Waiting for the Checks run and Andy's look on Windows. |
 | 3 | Sky and lighting | Code written (issue #59). Checks and a software-rendered screenshot passed on the agent's Linux runner. Waiting for Andy's look on Windows. |
 | 4 | Ships and ports | Code written (issue #61). Checks and software-rendered screenshots passed on the agent's Linux runner. Waiting for Andy's look on Windows. |
-| 5 | HUD and UI | Not started. |
+| 5 | HUD and UI | Code written (issue #63). Checks and software-rendered screenshots passed on the agent's Linux runner. Waiting for Andy's look on Windows. |
+
+All five items are written. The milestone is not accepted until Andy has played
+it on Windows (checklist in the item 5 pull request).
 
 Item 1, what exists: the same ocean plane and wake nodes, restyled in place
 (`features/water`). The ocean is a saturated blue-to-teal in three soft tone
@@ -222,6 +225,15 @@ red warehouse roof with blue doors, stacked bold containers, a domed fuel tank,
 a crane boom over the berth, bollards, a striped harbour light and red and green
 channel buoys. Every collider, anchor, berth and hull size is unchanged. No
 gameplay, physics, save or settings change.
+
+Item 5, what exists: `features/ui/playful_theme.gd`, one look built in code (no
+image or font file). Navy panels with a thick cream rim and rounded corners,
+chunky yellow buttons with a dark lower lip, bolder text with an ink outline,
+matching sliders, lists, drop-downs and the Restart Progress question. The home
+menu gets a drawn backdrop: sky, sun, drifting puffy clouds, sea and a small red
+ship. Used by the home menu, Settings and the game's HUD (dock panel, job panel,
+throttle bar, warning banner, minimap). The test scenes behind F3 keep their
+plain panels. No text, button, layout rule, gameplay, save or settings change.
 
 **M0 status: accepted by Andy** (Windows playtest; relayed in issue #43).
 

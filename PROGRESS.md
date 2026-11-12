@@ -5455,3 +5455,60 @@ Limits:
 - No gameplay, physics, save, settings, gas, oil, refinery or cargo-fuel file
   changed. `.github/workflows` not edited.
 - Aesthetics item 5 is not started.
+
+## Aesthetics 5: HUD and UI — November 12, 2026 (run on Linux, not on Windows)
+
+Issue #63. REBUILD_PLAN.md section 3, Aesthetics item 5 of 5. Looks only.
+
+What changed:
+
+- New `features/ui/playful_theme.gd`: one Godot theme built in code. Navy panels
+  with a cream rim, chunky yellow buttons, bolder inked text, matching sliders,
+  lists, drop-downs and dialog. It also draws the home menu backdrop (sky, sun,
+  drifting clouds, sea, a small ship). No image, font or paid asset.
+- `features/ui/application_menu.gd`: uses the theme and the backdrop; the old
+  grey button styles and flat background are gone. Same buttons, same actions.
+- `features/settings/settings_panel.gd`: uses the theme.
+- `features/ports/port_test.gd`: when `game_mode` is on, the dock panel, job
+  panel, throttle bar, warning banner (rust red), gauge panel and minimap take
+  the look. The test scenes look as they did.
+- `features/ports/local_minimap.gd`: brighter sea and land, cream rim, outlined
+  port names and ship marker, only when the game asks.
+- `throttle_indicator.gd`, `vessel_gauge_hud.gd`: the panel is now a member so
+  the game can restyle it. No other change.
+- `export_presets.cfg`: the new file added. Its `.uid` was written by Godot
+  during the import below, not by hand.
+
+Checks run on the agent's Linux runner with Godot 4.7.2 (official build, same
+checksum as the Checks job):
+
+- Passed: import, `check_scripts`, boot, `units_probe`, `check_catalog`,
+  `diagnostics_probe`, `check_controls`, `check_flow`, `check_starter`, the
+  twelve Stage 2 probes, `ports_probe`, `check_m1_voyage`.
+- Rendered with GL Compatibility on a software driver (Mesa llvmpipe under Xvfb)
+  at 1280x720. The agent looked at screenshots of the home menu, the Restart
+  Progress question, Settings, the game at sea, at the berth, and docked with
+  the CARGO list and the SHIPS list open.
+- Failed: none.
+- Not run: the Python stage (no Python file changed), `collision_probe` and
+  `composition_probe` (report-only in the Checks job), anything on Windows, any
+  real graphics card, any playtest. Other window sizes and fullscreen were not
+  looked at.
+
+Limits:
+
+- The font is still Godot's built-in one, made bolder. No new typeface.
+- The Dock button is tinted green over the yellow, so it reads olive.
+- With the first-voyage key hints showing and CARGO open, the left panel is
+  tall; it nearly reaches the warning banner at 1280x720. Buttons were made
+  slightly shorter after the last screenshot; that final size was checked by
+  the automatic checks but not looked at.
+- The F3 developer overlay, the test scenes, the frozen online screens and the
+  on-hold gas and oil screens keep their old look. The F3 test buttons on the
+  home menu do take the new button style, because they are on the home menu.
+- Colours and sizes are first guesses until Andy looks on Windows.
+- The import again wrote `.uid` files for older scripts that lack one. They are
+  not in this change.
+- No gameplay, physics, save, settings, gas, oil, refinery or cargo-fuel file
+  changed. `.github/workflows` not edited.
+- All five Aesthetics items are written. None is accepted yet.
