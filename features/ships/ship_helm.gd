@@ -3,6 +3,8 @@ extends Node
 signal menu_requested
 var throttle_display = preload("res://features/feedback/throttle_indicator.gd").new()
 var gauge_display = preload("res://features/feedback/vessel_gauge_hud.gd").new()
+## Says why the helm is off and how to get out. Scenes may set notice.hints.
+var notice = preload("res://features/ships/helm_notice.gd").new()
 var ship: HandlingShip
 var controls: PlayerControls
 var feedback: HandlingFeedback
@@ -14,6 +16,9 @@ func configure(body: HandlingShip, input: PlayerControls, sound: HandlingFeedbac
 	if gauge_display.get_parent() == null: add_child(gauge_display)
 	gauge_display.ship = ship
 	controls = input
+	if notice.get_parent() == null: add_child(notice)
+	notice.ship = ship
+	notice.controls = controls
 	feedback = sound
 	process_physics_priority = -10
 	process_priority = -10

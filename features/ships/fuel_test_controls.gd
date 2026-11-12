@@ -35,6 +35,7 @@ func configure(body: HandlingShip, input: PlayerControls) -> void:
 					status.text = "Test fuel added: %.1f L" % added if added > 0 else "Refuel needs a stopped boat, neutral controls and tank space."
 				"Pause sim":
 					ship.simulation_paused = not ship.simulation_paused
+					ship.pause_reason = "SIM PAUSED — you clicked \"Pause sim\".\nClick \"Resume sim\" to sail."
 					button.text = "Resume sim" if ship.simulation_paused else caption
 				"Dock (test)":
 					if ship.velocity.length() <= 0.05:

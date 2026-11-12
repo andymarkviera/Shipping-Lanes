@@ -72,6 +72,7 @@ func stop_with_error(message: String) -> void:
 	ready_to_save = false
 	view.controls.set_menu_open(true)
 	view.ship.simulation_paused = true
+	view.ship.pause_reason = "VOYAGE PAUSED — the save needs attention.\n%s\nClick \"Main menu\" to leave." % message
 	view.ship.zero_throttle()
 	view.loading.set_physics_process(false)
 	view.docking.set_physics_process(false)

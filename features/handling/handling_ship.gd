@@ -15,6 +15,8 @@ var yaw_rate: float = 0.0
 var state: ShipState
 var fuel: PropulsionFuel
 var simulation_paused: bool = false
+## Shown by the helm notice while paused: why, and how to get out. Cleared on resume.
+var pause_reason: String = ""
 var docked: bool = false
 var condition_affects_propulsion: bool = false
 
