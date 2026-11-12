@@ -2,6 +2,6 @@
 [ext_resource type="Script" path="res://features/water/water_palette.gd" id="1"]
 [resource]
 script = ExtResource("1")
-deep_color = Color(0.0, 0.4196, 0.6902, 1)
-surface_color = Color(0.0, 0.5451, 0.7961, 1)
-foam_color = Color(0.8314, 0.9804, 1.0, 1)
+deep_color = Color(0.0, 0.38, 0.72, 1)
+surface_color = Color(0.04, 0.62, 0.8, 1)
+foam_color = Color(1, 1, 1, 1)

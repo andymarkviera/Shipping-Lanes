@@ -160,21 +160,40 @@ Milestones — each ends with a Windows build and a short checklist for Andy:
 | M3 | **Progression** | Earn enough to buy a second ship, switch, sell, and take bulk and heavy jobs that pay more. |
 | M4 | **A world worth sailing** | Sail between 4–5 ports with coastline, a minimap and sensible trip times. |
 | M5 | **Finish** | Play two hours from a fresh install with no developer help: hints, settings, sound, art pass, packaged build. |
-| — | **Aesthetics** (after M5) | See the Wind Waker look described below. |
+| — | **Aesthetics** (after M5; item 1 of 5 written) | See the Wind Waker look described below. |
 
 **Order (Andy, issue #45): M1 done → Simplify → M2 → M3 → M4 → M5 → Aesthetics.**
 
 Online returns after M5, starting from the frozen Step 57–61 code.
 
-**Aesthetics milestone (after M5, not started).** Target: a Wind Waker look. Toon
-shading with ink outlines, a flat-colour ocean with white swirl foam and wake,
-puffy clouds and sky, chunky ships and ports, a playful HUD and UI. Items:
+**Aesthetics milestone (after M5, item 1 in progress).** Target: a Wind Waker look.
+Toon shading with ink outlines, a flat-colour ocean with white swirl foam and wake,
+puffy clouds and sky, chunky ships and ports, a playful HUD and UI. Items, one at
+a time, in this order:
 
 1. Water: flat-colour ocean, white swirl foam and wake.
 2. Toon shader and ink outlines.
 3. Sky and lighting: puffy clouds.
 4. Ships and ports: chunky models.
 5. HUD and UI: playful style.
+
+**Aesthetics status (November 12, 2026):**
+
+| # | Item | Status |
+| --- | --- | --- |
+| 1 | Water | Code written (issue #55), not run or seen by the agent. Waiting for the Checks run and Andy's look on Windows. |
+| 2 | Toon shader and ink outlines | Not started. |
+| 3 | Sky and lighting | Not started. |
+| 4 | Ships and ports | Not started. |
+| 5 | HUD and UI | Not started. |
+
+Item 1, what exists: the same ocean plane and wake nodes, restyled in place
+(`features/water`). The ocean is a saturated blue-to-teal in three soft tone
+bands, with separate white swirl strokes instead of a full foam net. The wake is
+pure white with a hard toon edge, wider side crests and a new white trail behind
+the stern. The tone bands are a drifting pattern, not real water depth: the game
+has no seabed to measure. No gameplay, physics, save or settings change; the
+three water quality tiers still work the same way.
 
 **M0 status: accepted by Andy** (Windows playtest; relayed in issue #43).
 

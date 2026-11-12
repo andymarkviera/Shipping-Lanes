@@ -59,12 +59,19 @@ func draw_foam() -> void:
 	foam.set_shader_parameter("foam_color", ocean.palette.foam_color)
 	if samples.is_empty() and strength < 0.01: return
 	surface.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-	for sample: Dictionary in samples:
+	var previous_center: Vector3
+	for index: int in range(samples.size()):
+		var sample: Dictionary = samples[index]
 		var age: float = sample.age
 		var opacity: float = pow(1.0 - age / LIFETIME, 2.0) * (0.25 + sample.power * 0.65)
 		var direction: Vector3 = sample.direction
 		var across: Vector3 = Vector3(direction.z, 0, -direction.x)
 		var center: Vector3 = sample.center - direction * age * 0.6
+		# Churned white trail straight behind the stern; it narrows as it ages.
+		var gap: float = center.distance_to(previous_center)
+		if index > 0 and gap > 0.05 and gap < 20.0:
+			ribbon(previous_center, center, half_width * (0.3 + sample.power * 0.7) * (1.0 - age / LIFETIME), opacity)
+		previous_center = center
 		# Short curved crests spread out and remain behind in world space.
 		var radius: float = half_width + age * (1.2 + sample.power)
 		for side: float in [-1.0, 1.0]:
@@ -73,7 +80,7 @@ func draw_foam() -> void:
 				var t1: float = float(part + 1) / 4.0
 				var a: Vector3 = center + across * side * radius * (0.4 + t0 * 0.6) - direction * radius * t0 * t0 * 0.45
 				var b: Vector3 = center + across * side * radius * (0.4 + t1 * 0.6) - direction * radius * t1 * t1 * 0.45
-				ribbon(a, b, 0.3 + sample.power * 1.5, opacity)
+				ribbon(a, b, 0.5 + sample.power * 2.0, opacity)
 	if strength > 0.01:
 		var bow: Vector3 = ship.global_basis.z
 		var across: Vector3 = ship.global_basis.x
