@@ -27,6 +27,9 @@ const RECORDS: Array[ContentDefinition] = [
 	preload("res://features/catalog/records/harbor_ship.tres"),
 	preload("res://features/ports/cinder_point.tres"),
 	preload("res://features/ports/cinder_point_berth.tres"),
+	# M4: the game's fourth port.
+	preload("res://features/ports/gannet_light.tres"),
+	preload("res://features/ports/gannet_light_berth.tres"),
 ]
 
 ## Presentation lookups, so callers never switch on a literal record ID.

@@ -222,6 +222,11 @@ func play() -> void:
 	expect(game.reward_minor == job.reward_minor and job.reward_minor > 0, "Delivery pays the job into the wallet (wallet %d, job %d)" % [game.reward_minor, job.reward_minor])
 	expect(game.ship.state.manifest.lines().is_empty(), "Delivered containers leave the ship")
 	await settle()
+	# M4: four ports, and the delivered job is replaced at Brindle Quay by a new one.
+	var open_jobs: int = 0
+	for row: Dictionary in game.offers.list_at("port_brindle_quay"):
+		if row.state == "available" and row.id != job.id: open_jobs += 1
+	expect(game.world_ports.size() == 4 and open_jobs == 3, "Four ports, and three open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
 	expect(game.voyage_hud.is_visible_in_tree() and ("Money %.2f credits" % (job.reward_minor / 100.0)) in game.voyage_hud.instruments.text, "The money is shown on the game HUD (%s)" % game.voyage_hud.instruments.text.replace("\n", " | "))
 	expect(not game.details.visible and not game.helm.gauge_display.visible, "Developer readouts are hidden in the game by default")
 
@@ -261,10 +266,10 @@ func play() -> void:
 	expect(not game.ship.simulation_paused and game.reward_minor == wallet - fee, "Recovery returns the ship and charges what the wallet can cover (wallet %d)" % game.reward_minor)
 
 	# M3: buy a second ship, switch, take a bulk job, sell the first ship. The money
-	# comes from one bulk job marked delivered by code: earning it takes two more legs.
+	# comes from bulk pay banked by code: earning it takes two more legs.
 	release_all()
 	await settle()
-	game.bulk_done.append("bulk_0_ore")
+	game.banked_minor += 150000
 	game.reward_minor += 150000
 	wallet = game.reward_minor
 	if not await berth_approach(game, game.port, "M3 berth, container ship"): return

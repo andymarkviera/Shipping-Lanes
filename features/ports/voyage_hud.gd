@@ -56,7 +56,7 @@ static func describe(view: Node3D) -> Dictionary:
 		if carrying and view.ship.deck_height < 2.6:
 				result.next = "Lowering at the drop-off. Stay stopped until delivery completes." if view.ship.deck_target == -1.0 and view.heavy_jobs.can_release(view.ship) else "Raise the platform fully before sailing."
 	elif view.get("bulk_active") is String and not view.bulk_active.is_empty():
-		var bulk_job: Dictionary = preload("res://features/game/progression.gd").BULK_JOBS[view.bulk_active]
+		var bulk_job: Dictionary = preload("res://features/game/progression.gd").bulk_job(view.bulk_active)
 		var bulk_port: Node3D = view.bulk_destination()
 		result.stage = "DELIVER BULK CARGO"
 		result.cargo = "Cargo aboard: " + bulk_job.title

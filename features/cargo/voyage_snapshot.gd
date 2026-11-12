@@ -20,15 +20,25 @@ static func capture(view: Node3D) -> Dictionary:
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
 		"docked": view.docking.state(1) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
-	# The game writes version 4 (M3): money spent (M2, version 3), the ship being
-	# sailed, the ships owned with their stored fuel and hull, and the bulk jobs.
+	# The game writes version 5 (M4): money spent (M2, version 3), the ship being
+	# sailed, the ships owned with their stored fuel and hull, the bulk job (M3,
+	# version 4) and the pay banked from bulk and heavy jobs, which repeat.
 	if view.get("game_mode") == true:
-		data.version = 4
+		data.version = 5
 		data.spent = view.spent_minor
 		data.ship = view.ship_kind
 		data.fleet = view.fleet.duplicate(true)
-		data.bulk = {"active": view.bulk_active, "done": view.bulk_done.duplicate()}
+		data.bulk = {"active": view.bulk_active, "done": []}
+		data.banked = view.banked_minor
 	return data
+
+## Port IDs a save may name: all four in a version 5 game save, else the first two.
+static func port_ids(d: Dictionary) -> Array:
+	var ids: Array = PORT_IDS.duplicate()
+	if d.get("version") == 5:
+		ids.clear()
+		for entry: Dictionary in Progression.WORLD: ids.append(entry.id)
+	return ids
 
 static func floating_pose(body: HandlingShip) -> Transform3D:
 	# A new heavy lifter adds its floating load deferred. For the rest of that
@@ -48,14 +58,16 @@ static func valid(value: Variant) -> bool:
 	if not value is Dictionary: return false
 	var d: Dictionary = value
 	var spent: int = 0
-	if d.get("version") == 4:
-		if d.size() != 23 or not Progression.save_valid(d): return false
+	var game: bool = d.get("version") == 5
+	if d.get("version") in [4, 5]:
+		if d.size() != (24 if game else 23) or not Progression.save_valid(d): return false
 		spent = d.spent
 	elif d.get("version") == 3:
 		if d.size() != 20 or not d.get("spent") is int or d.spent < 0: return false
 		spent = d.spent
 	elif d.size() != 19: return false
-	if d.get("version") not in [1, 2, 3, 4] or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
+	var ports: Array = port_ids(d)
+	if d.get("version") not in [1, 2, 3, 4, 5] or d.get("realm") != "private_port_voyage_v1" or d.get("owner") != "preview_captain": return false
 	for key: String in ["offers", "operations", "heavy", "heavy_completed"]:
 		if not d.get(key) is Dictionary: return false
 	for key: String in ["heavy_mode", "docked"]:
@@ -64,7 +76,7 @@ static func valid(value: Variant) -> bool:
 		if not d.get(key) is int or d[key] < 0: return false
 	for key: String in ["loading", "loading_offer"]:
 		if not d.get(key) is String: return false
-	if d.port > 1 or d.clock > 9000000000000 or d.sequence > 1000000000 or not pose_valid(d.get("pose")) or absf(d.pose.origin.y) > .01: return false
+	if d.port >= ports.size() or d.clock > 9000000000000 or d.sequence > 1000000000 or not pose_valid(d.get("pose")) or absf(d.pose.origin.y) > .01: return false
 	var definition: ShipDefinition = Heavy.DEFINITION if d.heavy_mode else preload("res://features/catalog/records/starter_ship.tres")
 	if not number(d.get("fuel"), 0, definition.fuel_capacity_liters) or not number(d.get("condition"), 0, 1) or not d.get("manifest") is Array: return false
 	var manifest = Manifest.new(definition, PrototypeCatalog.RECORDS)
@@ -74,16 +86,20 @@ static func valid(value: Variant) -> bool:
 		lines.append(row)
 	if not manifest.validate(lines).is_empty(): return false
 	var seeded = Offers.new()
-	if d.offers.size() != seeded._offers.size(): return false
+	# Port Test and older saves hold exactly the six seeded offers. The game (version
+	# 5) also holds its own repeating offers, each one rebuilt from its ID to compare.
+	if (not game and d.offers.size() != seeded._offers.size()) or d.offers.size() > 20000: return false
 	var expected_lines: Array[Dictionary] = []
 	var active_count: int = 0
 	var credits: int = 0
 	var ship_key: String = "preview_heavy" if d.heavy_mode else "preview_ship"
-	for id: String in seeded._offers:
-		var row: Variant = d.offers.get(id)
-		if not row is Dictionary or row.size() != seeded._offers[id].size(): return false
-		for key: String in seeded._offers[id]:
-			if key not in ["state", "owner_id", "ship_id", "accepted_ms"] and row.get(key) != seeded._offers[id][key]: return false
+	for id: Variant in d.offers:
+		if not id is String: return false
+		var untouched: Dictionary = Offers.fresh(id, game)
+		var row: Variant = d.offers[id]
+		if untouched.is_empty() or not row is Dictionary or row.size() != untouched.size(): return false
+		for key: String in untouched:
+			if key not in ["state", "owner_id", "ship_id", "accepted_ms"] and row.get(key) != untouched[key]: return false
 		if row.get("state") not in ["available", "accepted", "loaded", "delivered", "abandoned"] or not row.get("accepted_ms") is int: return false
 		if row.state == "abandoned" and d.version < 2: return false
 		if row.state == "available":
@@ -95,11 +111,11 @@ static func valid(value: Variant) -> bool:
 			if d.heavy_mode: return false
 		if row.state == "loaded": expected_lines.append(seeded.batch(row))
 		if row.state == "delivered": credits += row.reward_minor
-		if row.state == "accepted" and (d.loading_offer != id or not d.docked or row.origin_port_id != PORT_IDS[d.port]): return false
+		if row.state == "accepted" and (d.loading_offer != id or not d.docked or row.origin_port_id != ports[d.port]): return false
 	if active_count > 1 or lines != expected_lines: return false
-	if d.version == 4:
+	if d.version >= 4:
 		if active_count > 0 and not d.bulk.active.is_empty(): return false
-		credits += Progression.bulk_earned(d)
+		credits += Progression.earned(d)
 	if d.operations.get("version") != 1 or not d.operations.get("records") is Dictionary or d.operations.records.size() > 10000: return false
 	var live: int = 0
 	var committed_offers: Array[String] = []
@@ -124,11 +140,11 @@ static func valid(value: Variant) -> bool:
 		if row.state == "loaded" and not committed_offers.has(row.id): return false
 	var jobs = HeavyJobs.new()
 	var possible: Dictionary = {}
-	for port: String in PORT_IDS:
+	for port: String in ports:
 		for row: Dictionary in jobs.list_at(port): possible[row.id] = row
-	if d.heavy_completed.size() > 6: return false
+	if d.heavy_completed.size() > possible.size(): return false
 	for id: Variant in d.heavy_completed:
-		if not heavy_job_valid(d.heavy_completed[id], possible) or d.heavy_completed[id].id != id or d.heavy_completed[id].state != "carrying": return false
+		if not heavy_job_valid(d.heavy_completed[id], possible, ports) or d.heavy_completed[id].id != id or d.heavy_completed[id].state != "carrying": return false
 		credits += possible[id].reward_minor
 	if d.credits != credits - spent: return false
 	if not d.heavy_mode: return d.heavy.is_empty()
@@ -136,26 +152,30 @@ static func valid(value: Variant) -> bool:
 	if h.size() != 6 or not h.get("active") is Dictionary or h.get("completed") != d.heavy_completed or not h.get("attached") is bool: return false
 	if not number(h.get("height"), Heavy.LOWERED, Heavy.RAISED) or not number(h.get("target"), Heavy.LOWERED, Heavy.RAISED) or not pose_valid(h.get("payload_pose")): return false
 	if h.active.is_empty(): return not h.attached
-	if active_count > 0 or not heavy_job_valid(h.active, possible) or d.heavy_completed.has(h.active.id): return false
+	if active_count > 0 or not heavy_job_valid(h.active, possible, ports) or d.heavy_completed.has(h.active.id): return false
 	return h.attached == (h.active.state == "carrying")
 
-static func heavy_job_valid(job: Variant, possible: Dictionary) -> bool:
+static func heavy_job_valid(job: Variant, possible: Dictionary, ports: Array = PORT_IDS) -> bool:
 	if not job is Dictionary or job.size() != 5 or not possible.has(job.get("id")): return false
-	if job.get("state") not in ["pickup", "carrying"] or job.get("origin") not in PORT_IDS or job.get("reward_minor") != possible[job.id].reward_minor: return false
+	if job.get("state") not in ["pickup", "carrying"] or job.get("origin") not in ports or job.get("reward_minor") != possible[job.id].reward_minor: return false
 	if not job.id.begins_with(job.origin + "_heavy_") or not job.get("drop") is Vector3 or not job.drop.is_finite(): return false
-	var origin_x: float = 0 if job.origin == PORT_IDS[0] else 1500
-	var side: float = 1 if job.origin == PORT_IDS[0] else -1
-	return absf(job.drop.y) < .01 and job.drop.z >= -1200 and job.drop.z <= -800 and (job.drop.x - origin_x) * side >= 450 and (job.drop.x - origin_x) * side <= 850
+	# The drop lies in open water off the origin port: 450 to 850 m out on its open
+	# side and 800 to 1200 m south. 0.01 m of slack covers rounding far from zero.
+	var place: Dictionary = Progression.WORLD[Progression.port_index(job.origin)]
+	var local: Vector3 = job.drop - place.at
+	var out: float = local.x * float(place.drop_side)
+	return absf(job.drop.y) < .01 and local.z >= -1200.01 and local.z <= -799.99 and out >= 449.99 and out <= 850.01
 
 static func restore(view: Node3D, data: Dictionary) -> bool:
 	if not valid(data): return false
 	view.heavy_mode = data.heavy_mode
 	view.set("ship_kind", "heavy" if data.heavy_mode else "container")
-	if data.version == 4:
+	if data.version >= 4:
 		view.set("ship_kind", data.ship)
 		view.set("fleet", data.fleet.duplicate(true))
 		view.set("bulk_active", data.bulk.active)
-		view.set("bulk_done", data.bulk.done.duplicate())
+		# A version 4 save lists delivered bulk jobs. Their pay moves to the bank.
+		view.set("banked_minor", Progression.earned(data))
 	if not view.select_port(data.port, true): return false
 	await view.get_tree().physics_frame # Deferred floating-body creation must finish.
 	if not is_instance_valid(view.ship): return false

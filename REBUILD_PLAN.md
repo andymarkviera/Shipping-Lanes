@@ -260,6 +260,30 @@ the game's bulk jobs do not use the hold-by-hold rules of Bulk Port Test; jobs
 still do not come back, so about 15,300 credits can be earned in total (M4);
 prices are a first guess.
 
+**M4 status (November 12, 2026): code written, not run by the agent. Waiting for
+the Checks run and Andy's Windows playtest.** In the game only; Port Test keeps
+its two ports. What exists:
+
+- Four ports on the two shores of a strait: Brindle Quay and Slatewater Works
+  where they were, Cinder Point to the north and Gannet Light (new) to the south.
+  Names are from the Brindle Reach layout. Data: `features/game/progression.gd`.
+- Coastline: two shores, the head of the strait and two islands, as solid blocks.
+- Trip times at full speed: about 2.5 minutes (Brindle–Slatewater, 1.5 km),
+  4 to 5 minutes to Cinder Point or Gannet Light (2.2 to 2.8 km), 8 minutes for
+  Cinder Point–Gannet Light (4.8 km). Worked out from 10 m/s, not timed.
+- Minimap: smaller, no text except port names. Land, ports, the ship and a
+  dashed line to the job's destination.
+- Money is no longer finite. Each port always has three container jobs; when one
+  is delivered or abandoned, a new one takes its place, to the next port along.
+  Bulk and heavy jobs can be taken again at once. No offer expires. Pay grows
+  with distance: 250.00 to 800.00 per container, 900.00 to 4,800.00 for bulk.
+- The save is snapshot version 5; older game saves still load.
+- `tools/check_m1_voyage.gd` now also checks four ports and the replaced job.
+
+Left for later, on purpose: land is flat blocks (art pass is M5 and Aesthetics);
+the heavy lifter cannot dock at Cinder Point (its berth has no heavy service);
+the sea has no edge to the south; pay and distances are a first guess.
+
 ### How each milestone gets verified
 
 1. **Automatic, every PR.** The CI job below.
