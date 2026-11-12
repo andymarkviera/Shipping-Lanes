@@ -88,3 +88,10 @@ func refresh(view: Node3D) -> void:
 	progress.value = maxf(0, data.progress)
 	var values: Dictionary = HandlingFeedback.instruments(view.ship)
 	instruments.text = "%.1f kn · %s" % [values.speed_knots, values.direction.capitalize()]
+	if view.get("game_mode") == true: instruments.text = game_line(view, values)
+
+## The game's one status line: speed, fuel, money. Hull shows only when damaged.
+static func game_line(view: Node3D, values: Dictionary) -> String:
+	var text: String = "Speed %.1f kn  ·  Fuel %.0f%%" % [values.speed_knots, 100.0 * values.fuel_liters / maxf(1.0, view.ship.definition.fuel_capacity_liters)]
+	if view.ship.state.condition < 0.995: text += "  ·  Hull %.0f%%" % (view.ship.state.condition * 100.0)
+	return text + "\nMoney %.2f credits" % (view.reward_minor / 100.0)

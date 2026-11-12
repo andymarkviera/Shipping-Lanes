@@ -19,6 +19,11 @@ var recovery_confirmation: ConfirmationDialog
 var play_button: Button
 ## The real game: PLAY for a new game, CONTINUE once a save exists.
 var game_button: Button
+## Test scenes and test saves. Shown only in developer mode (F3, see DevMode).
+var dev_column: VBoxContainer
+var footer: Label
+var current_page: String = ""
+var can_continue_session: bool = false
 
 static func friends_client() -> bool:
 	return OS.get_cmdline_user_args().has("--friends-client") or FileAccess.file_exists(OS.get_executable_path().get_base_dir().path_join("friends-client.flag"))
@@ -41,45 +46,52 @@ func _ready() -> void:
 	title.add_theme_constant_override("shadow_offset_x", 2)
 	title.add_theme_constant_override("shadow_offset_y", 3)
 	add_child(title)
-	var footer: Label = Label.new()
-	footer.text = "FRIENDS PLAYTEST" if friends_client() else "DEVELOPMENT BUILD   /   MENU & SESSION TEST"
+	footer = Label.new()
+	footer.text = "FRIENDS PLAYTEST" if friends_client() else "DEVELOPER MODE   /   F3 TO HIDE"
 	footer.add_theme_font_size_override("font_size", 13)
 	footer.modulate = Color("a5b9c2")
 	footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	footer.position = Vector2(64, -40)
 	add_child(footer)
 	var home: VBoxContainer = page("title")
-	home.position.y = 112
-	home.add_theme_constant_override("separation", 4)
+	home.position.y = 210
+	home.add_theme_constant_override("separation", 14)
 	if friends_client():
-		home.position.y = 210
-		home.add_theme_constant_override("separation", 14)
 		button(home, "SERVERS", "servers")
 		button(home, "SETTINGS", "settings")
 		button(home, "QUIT", "exit")
 	else:
+		# The player menu: PLAY (it reads CONTINUE once a save exists), SETTINGS, QUIT.
 		game_button = button(home, "PLAY", "game")
-		play_button = button(home, "LOCAL SAVE TEST", "play")
-		button(home, "BOAT HANDLING TEST", "handling")
-		button(home, "HEAVY-LIFTER TEST", "heavy_lifter")
-		button(home, "PORT TEST", "ports")
-		button(home, "BULK PORT TEST", "bulk_ports")
-		button(home, "GAS PORT TEST", "gas_ports")
-		button(home, "LOCAL MULTIPLAYER TEST", "local_network")
-		continue_button = button(home, "CONTINUE TEST SESSION", "continue")
-		button(home, "SERVERS", "servers")
 		button(home, "SETTINGS", "settings")
-		button(home, "LOCAL SAVES", "saves")
-		button(home, "EXIT", "exit")
-	for child: Node in home.get_children():
-		if child is Button: child.custom_minimum_size.y = 40
+		button(home, "QUIT", "exit")
+		# Everything else is a test fixture: developer mode only.
+		dev_column = VBoxContainer.new()
+		dev_column.position = Vector2(420, 112)
+		dev_column.add_theme_constant_override("separation", 4)
+		add_child(dev_column)
+		label(dev_column, "DEVELOPER TESTS", 16)
+		play_button = button(dev_column, "LOCAL SAVE TEST", "play")
+		button(dev_column, "BOAT HANDLING TEST", "handling")
+		button(dev_column, "HEAVY-LIFTER TEST", "heavy_lifter")
+		button(dev_column, "PORT TEST", "ports")
+		button(dev_column, "BULK PORT TEST", "bulk_ports")
+		button(dev_column, "GAS PORT TEST", "gas_ports")
+		button(dev_column, "LOCAL MULTIPLAYER TEST", "local_network")
+		continue_button = button(dev_column, "CONTINUE TEST SESSION", "continue")
+		button(dev_column, "SERVERS", "servers")
+		button(dev_column, "LOCAL SAVES", "saves")
+		for child: Node in dev_column.get_children():
+			if child is Button: child.custom_minimum_size.y = 40
 	save_notice = Label.new()
 	save_notice.add_theme_font_size_override("font_size", 15)
 	save_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	save_notice.custom_minimum_size.x = 440
-	save_notice.position = Vector2(420, 160)
-	save_notice.size = Vector2(440, 180)
+	save_notice.custom_minimum_size.x = 320
+	save_notice.position = Vector2(64, 410)
+	save_notice.size = Vector2(320, 180)
 	add_child(save_notice)
+	add_to_group(DevMode.GROUP)
+	dev_mode_changed()
 	if friends_client(): return
 	var saves: VBoxContainer = page("saves")
 	saves.position.y = 135
@@ -170,12 +182,21 @@ func button(parent: Control, text: String, action: String) -> Button:
 	return item
 
 func show_page(id: String, can_continue: bool) -> void:
-	save_notice.visible = id == "title" and not friends_client()
-	if continue_button != null: continue_button.visible = can_continue
+	current_page = id
+	can_continue_session = can_continue
+	dev_mode_changed()
 	for key: String in pages:
 		pages[key].visible = key == id
 	if pages.has(id) and id != "playing":
 		first_buttons[pages[id]].grab_focus()
+
+## Called by DevMode when F3 is pressed, and whenever the page changes.
+func dev_mode_changed() -> void:
+	var dev: bool = DevMode.enabled and not friends_client()
+	footer.visible = dev or friends_client()
+	save_notice.visible = current_page == "title" and not friends_client()
+	if dev_column != null: dev_column.visible = dev and current_page == "title"
+	if continue_button != null: continue_button.visible = can_continue_session
 
 func show_session_state(snapshot: Dictionary, message: String) -> void:
 	session_revision = snapshot.revision

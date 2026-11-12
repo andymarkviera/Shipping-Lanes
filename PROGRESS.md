@@ -5084,3 +5084,40 @@ Limits:
 - No new `.gd.uid` committed: Godot must generate `tools/check_m1_voyage.gd.uid`.
 - No gas, oil, refinery or cargo-fuel file changed. `.github/workflows` not
   edited. No Windows run, no playtest.
+
+## Simplify pass — November 12, 2026 (NOT RUN BY THE AGENT)
+
+Issue #45. REBUILD_PLAN.md section 3, "Simplify pass". No new features.
+
+**Nothing ran on the agent runner.** No Godot is installed and Python was refused
+(no Python file changed). The code below is unparsed and unexecuted. The Checks
+run on the PR is its first parse.
+
+What changed:
+
+- New `features/developer/dev_mode.gd` (`DevMode`): one switch, off by default,
+  not saved. `PlayerControls` toggles it on F3. Not available in the friends client.
+- Home menu (`application_menu.gd`): PLAY / CONTINUE (one button, as in M1),
+  SETTINGS, QUIT. EXIT is now QUIT. The ten test buttons moved to a "DEVELOPER
+  TESTS" column that shows only with F3 on. The footer and the test-save notice
+  line also need F3.
+- `developer_overlay.gd`: follows `DevMode`. Its own Ctrl+F3 handler is gone.
+- Game HUD (`voyage_hud.gd`, `port_test.gd` in `game_mode` only): the top-right
+  panel's last lines are now "Speed · Fuel" (plus Hull when damaged) and "Money".
+  The gauge panel and the port/wallet line are hidden in the game unless F3 is on.
+  Port Test and every other test scene look as before.
+- Checks updated: `diagnostics_probe.gd` presses plain F3 and checks the test
+  buttons start hidden; `check_flow.gd` turns developer mode on (it checks the
+  Continue Test Session button); `check_m1_voyage.gd` reads the money from the HUD.
+- `export_presets.cfg` lists `dev_mode.gd`. REBUILD_PLAN.md: Simplify status,
+  Aesthetics milestone, new order.
+
+Limits:
+
+- Layout was not seen on screen. The menu notice moved under the buttons.
+- The game still shows four panels: actions (Dock, Main menu, services), job HUD,
+  throttle bar, minimap. Merging them further would change approved play controls.
+- Test scenes keep their own HUDs and test tools; only the way in is hidden.
+- `features/developer/dev_mode.gd.uid` is not committed: Godot must generate it.
+- No gas, oil, refinery or cargo-fuel file changed. `.github/workflows` not
+  edited. No Windows run, no playtest.

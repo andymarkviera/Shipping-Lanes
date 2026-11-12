@@ -160,6 +160,7 @@ func _ready() -> void:
 	if not ApplicationMenu.friends_client():
 		developer_overlay = DeveloperOverlay.new()
 		add_child(developer_overlay)
+		add_to_group(DevMode.GROUP)
 	menu.selected.connect(navigate)
 	$UI/Settings.closed.connect(func() -> void: transition(settings_return))
 	controls.command_requested.connect(func(action: StringName) -> void:
@@ -348,7 +349,12 @@ func refresh_save_status() -> void:
 	var game_saved: bool = FileAccess.file_exists(str(get_tree().get_meta("game_save_path", GAME_SAVE)))
 	menu.game_button.text = "CONTINUE" if game_saved else "PLAY"
 	menu.play_button.text = "LOCAL SAVE TEST" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE LOCAL SAVE TEST"
-	menu.save_notice.text = "%s\n\nTest saves — local slot %d: %s" % ["CONTINUE resumes your saved voyage." if game_saved else "PLAY starts a new game at Brindle Quay.", active_slot + 1, slots.status(active_slot)]
+	menu.save_notice.text = "CONTINUE resumes your saved voyage." if game_saved else "PLAY starts a new game at Brindle Quay."
+	if DevMode.enabled: menu.save_notice.text += "\n\nTest saves — local slot %d: %s" % [active_slot + 1, slots.status(active_slot)]
+
+## F3 pressed: the menu notice gains or loses its test-save line.
+func dev_mode_changed() -> void:
+	refresh_save_status()
 
 func select_save_slot(index: int) -> void:
 	# A slot switch ends the old local authority; continuation cannot cross slots.

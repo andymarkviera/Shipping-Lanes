@@ -155,12 +155,26 @@ Milestones — each ends with a Windows build and a short checklist for Andy:
 | --- | --- | --- |
 | M0 | **Stabilise** (the fix-first list below) | Open every menu entry and sail in it. |
 | M1 | **One real voyage** | Press PLAY, take a container job at Brindle Quay, sail, deliver at Slatewater, get paid into a real wallet, quit, Continue. |
+| — | **Simplify pass** (issue #45; no new features) | See a four-button menu and one small HUD. No test buttons or debug readouts unless F3 is pressed. |
 | M2 | **Costs and risk** | Pay for fuel and repairs, run dry, crash, sink and pay recovery, Restart Progress. |
 | M3 | **Progression** | Earn enough to buy a second ship, switch, sell, and take bulk and heavy jobs that pay more. |
 | M4 | **A world worth sailing** | Sail between 4–5 ports with coastline, a minimap and sensible trip times. |
 | M5 | **Finish** | Play two hours from a fresh install with no developer help: hints, settings, sound, art pass, packaged build. |
+| — | **Aesthetics** (after M5) | See the Wind Waker look described below. |
+
+**Order (Andy, issue #45): M1 done → Simplify → M2 → M3 → M4 → M5 → Aesthetics.**
 
 Online returns after M5, starting from the frozen Step 57–61 code.
+
+**Aesthetics milestone (after M5, not started).** Target: a Wind Waker look. Toon
+shading with ink outlines, a flat-colour ocean with white swirl foam and wake,
+puffy clouds and sky, chunky ships and ports, a playful HUD and UI. Items:
+
+1. Water: flat-colour ocean, white swirl foam and wake.
+2. Toon shader and ink outlines.
+3. Sky and lighting: puffy clouds.
+4. Ships and ports: chunky models.
+5. HUD and UI: playful style.
 
 **M0 status: accepted by Andy** (Windows playtest; relayed in issue #43).
 
@@ -181,8 +195,27 @@ the Checks run and Andy's Windows playtest.** What exists:
 Left for later milestones, on purpose: fuel and repairs are still free and the
 free rescue fuel is still there (M2); no Restart Progress or New Game over an
 existing save (M2); only the six seeded container jobs, three each way, which do
-not come back once delivered (M3/M4); test fixtures are still on the home menu,
-not behind a developer menu; no Windows zip artifact (needs Hark's workflow edit).
+not come back once delivered (M3/M4); no Windows zip artifact (needs Hark's
+workflow edit). Test fixtures moved behind F3 in the Simplify pass below.
+
+**Simplify pass status (November 12, 2026): code written, not run by the agent.
+Waiting for the Checks run and Andy's Windows playtest.** Andy's direction:
+"heavily simplify it and make it so it's actually playable and not filled with a
+billion testing things and huds everywhere". What exists:
+
+- Home menu: PLAY (it reads CONTINUE once a save exists), SETTINGS, QUIT. Nothing
+  else. One button, not two, because New Game over a save is M2.
+- One developer toggle: **F3**, off by default, off again at every launch
+  (`features/developer/dev_mode.gd`). It shows the test-scene buttons (Local Save
+  Test, Boat Handling, Heavy-Lifter, Port, Bulk, Gas, Local Multiplayer, Continue
+  Test Session, Servers, Local Saves), the developer overlay (was Ctrl+F3), the
+  test-save notice and the game's extra readouts. No test code was removed.
+- In-game HUD: the top-right panel shows the current job, speed, fuel and money
+  (hull too, only when damaged). The gauge panel and the old port/wallet line are
+  developer-only in the game. Still on screen: the Dock / Main menu / services
+  panel, the throttle bar and the minimap, because the game cannot be played
+  without them.
+- Test scenes keep their own HUDs. They can only be opened with F3 on.
 
 ### How each milestone gets verified
 

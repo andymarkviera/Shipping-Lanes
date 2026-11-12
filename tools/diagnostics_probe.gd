@@ -23,14 +23,14 @@ func run() -> void:
 	app.start_session()
 	var overlay: DeveloperOverlay = app.developer_overlay
 	check(not overlay.enabled and not overlay.panel.visible,"Overlay starts off")
+	check(not app.menu.dev_column.visible and not app.menu.footer.visible,"Test-scene buttons start hidden")
 	var key: InputEventKey = InputEventKey.new()
 	key.physical_keycode = KEY_F3
-	key.ctrl_pressed = true
 	key.pressed = true
 	Input.parse_input_event(key.duplicate())
 	Input.flush_buffered_events()
 	await get_tree().process_frame
-	check(overlay.enabled,"Shortcut enables overlay")
+	check(overlay.enabled and DevMode.enabled,"F3 enables developer mode and the overlay")
 	await get_tree().process_frame
 	check(overlay.readout.text.contains("ship_test") and overlay.readout.text.contains("40.00 L") and overlay.readout.text.contains("Not connected"),"Readout distinguishes fixture state from absent movement")
 	check(overlay.panel.mouse_filter == Control.MOUSE_FILTER_IGNORE and overlay.readout.mouse_filter == Control.MOUSE_FILTER_IGNORE,"Overlay cannot block pointer")
