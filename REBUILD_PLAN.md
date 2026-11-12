@@ -624,4 +624,6 @@ on pausing the world.
 **Later patches (do not start):** Patch 3 is a new main menu (Andy's design,
 later). Patch 4 is multiplayer.
 
-**Patch 2.0 status (November 12, 2026):** planned; nothing started.
+**Patch 2.0 status (November 12, 2026):** item 1 (Always running + Esc menu) is
+written and passes the automatic checks on Linux; it waits for Andy's Windows
+playtest. Items 2 to 5 not started. Details in PROGRESS.md.
