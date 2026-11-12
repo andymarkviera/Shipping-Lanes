@@ -285,6 +285,11 @@ switch ($Mode) {
             }
         }
         Write-Host "Export ready: $exportPath (keep the entire export folder together, including the SQLite DLL)"
+        # M5 packaged build: one zip with only the game files (exe, pck, DLLs).
+        $zipPath = Join-Path $projectRoot ('exports/ShippingLanes-windows-' + $Configuration.ToLowerInvariant() + '.zip')
+        $zipFiles = @(Get-ChildItem -LiteralPath $exportRoot -File | Where-Object { $_.Extension -in '.exe', '.pck', '.dll' } | ForEach-Object { $_.FullName })
+        Compress-Archive -LiteralPath $zipFiles -DestinationPath $zipPath -Force
+        Write-Host "Packaged build: $zipPath (unzip anywhere and run ShippingLanes.exe)"
     }
     'RunExport' {
         $dllName = 'libgdsqlite.windows.template_' + $Configuration.ToLowerInvariant() + '.x86_64.dll'
