@@ -3,6 +3,8 @@ const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.ts
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
+## True in features/game/game.tscn: the real game (REBUILD_PLAN.md M1). False: Port Test.
+@export var game_mode: bool = false
 var persistence: Node
 var world_ports: Array[Node3D] = []
 var port: Node3D
@@ -63,6 +65,8 @@ func button(parent: Node, title: String, action: Callable) -> Button:
 	return node
 
 func _ready() -> void:
+	# A check may point the game at an isolated save. Players never set this.
+	if game_mode: save_path = str(get_tree().get_meta("game_save_path", save_path))
 	add_child(docking)
 	add_child(loading)
 	controls = PlayerControls.new()
@@ -124,6 +128,7 @@ func _ready() -> void:
 		if not can_switch(): return
 		heavy_mode = not heavy_mode
 		select_port(world_ports.find(port)))
+	switch_button.visible = not game_mode
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
@@ -166,6 +171,10 @@ func _ready() -> void:
 		persistence = preload("res://features/cargo/voyage_persistence.gd").new()
 		add_child(persistence)
 		get_tree().auto_accept_quit = false
+
+## Fuel and repairs cost nothing until M2.
+func free_note() -> String:
+	return "no charge yet" if game_mode else "free test service"
 
 func service_id() -> String:
 	return "heavy_transfer" if heavy_mode else "container_transfer"
@@ -300,11 +309,11 @@ func request_abandon() -> void:
 func refuel() -> void:
 	if docking.state(1) != "docked" or loading.busy(): return
 	var amount: float = ship.refuel(ship.definition.fuel_capacity_liters)
-	offer_notice = "Refueled %.0f L — free test service." % amount
+	offer_notice = "Refueled %.0f L — %s." % [amount, free_note()]
 
 func repair() -> void:
 	if docking.state(1) != "docked" or loading.busy(): return
-	offer_notice = "No repairs needed." if ship.state.condition >= 1 else "Repairs complete — free test service."
+	offer_notice = "No repairs needed." if ship.state.condition >= 1 else "Repairs complete — %s." % free_note()
 	ship.state.condition = 1.0
 
 func deliver() -> void:
@@ -351,7 +360,7 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
 	voyage_hud.refresh(self)
 	minimap.queue_redraw()
-	details.text = "%s · %s\nVoyage wallet: %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", reward_minor / 100.0]
+	details.text = "%s · %s\n%s: %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", "Wallet" if game_mode else "Voyage wallet", reward_minor / 100.0]
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else "Container jobs"
@@ -362,8 +371,8 @@ func _process(_delta: float) -> void:
 	# Full/no-damage remains a harmless action with explicit feedback; loading locks services.
 	refuel_button.disabled = loading.busy()
 	repair_button.disabled = loading.busy()
-	refuel_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Fill to %.0f L capacity; free test service." % ship.definition.fuel_capacity_liters
-	repair_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Restore condition to 100%; free test service."
+	refuel_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Fill to %.0f L capacity; %s." % [ship.definition.fuel_capacity_liters, free_note()]
+	repair_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Restore condition to 100%; " + free_note() + "."
 	action_reason.text = accept_button.tooltip_text
 	if not heavy_mode and offers.active_job("preview_captain").get("state") == "loaded": action_reason.text = delivery.reason(self)
 	action_reason.visible = not action_reason.text.is_empty()
@@ -394,7 +403,7 @@ func _process(_delta: float) -> void:
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
 		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
-	if services.visible: navigation.text += "\nRefuel / repair: free test services"
+	if services.visible: navigation.text += "\nRefuel / repair: " + free_note()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

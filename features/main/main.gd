@@ -2,6 +2,9 @@ extends Node
 ## Application owns local navigation; it never pauses the shared SceneTree.
 enum State { BOOT, TITLE, SERVERS, PLAYING, PAUSED, SETTINGS, SAVES }
 const Session = preload("res://features/main/test_session.gd")
+## The one real game scene (REBUILD_PLAN.md M1) and its single save.
+const GAME_SCENE: String = "res://features/game/game.tscn"
+const GAME_SAVE: String = "user://worlds/game/voyage.db"
 var developer_overlay: DeveloperOverlay
 var state: State = State.BOOT
 var settings_return: State = State.TITLE
@@ -189,6 +192,7 @@ func navigate(action: String) -> void:
 				recovery_target = -1
 				recovery_source = -1
 				refresh_save_status()
+		"game": get_tree().change_scene_to_file(GAME_SCENE)
 		"play":
 			if FileAccess.file_exists("user://public_services.json"): get_tree().change_scene_to_file("res://features/network/public_entry.tscn")
 			else: start_saved_session()
@@ -341,8 +345,10 @@ func _exit_tree() -> void:
 func refresh_save_status() -> void:
 	if ApplicationMenu.friends_client(): return
 	menu.slot_status.text = slots.status(menu.slot_picker.selected)
-	menu.play_button.text = "PLAY" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE & PLAY"
-	menu.save_notice.text = "Local slot %d: %s" % [active_slot + 1, slots.status(active_slot)]
+	var game_saved: bool = FileAccess.file_exists(str(get_tree().get_meta("game_save_path", GAME_SAVE)))
+	menu.game_button.text = "CONTINUE" if game_saved else "PLAY"
+	menu.play_button.text = "LOCAL SAVE TEST" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE LOCAL SAVE TEST"
+	menu.save_notice.text = "%s\n\nTest saves — local slot %d: %s" % ["CONTINUE resumes your saved voyage." if game_saved else "PLAY starts a new game at Brindle Quay.", active_slot + 1, slots.status(active_slot)]
 
 func select_save_slot(index: int) -> void:
 	# A slot switch ends the old local authority; continuation cannot cross slots.
