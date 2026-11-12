@@ -5400,3 +5400,58 @@ Limits:
 - No gameplay, physics, save, settings, gas, oil, refinery or cargo-fuel file
   changed. `.github/workflows` not edited.
 - Aesthetics items 4 and 5 are not started.
+
+## Aesthetics 4: Ships and ports — November 12, 2026 (run on Linux, not on Windows)
+
+Issue #61. REBUILD_PLAN.md section 3, Aesthetics item 4 of 5. Looks only.
+
+What changed:
+
+- New `features/toon/chunky_look.gd`: builds chunky ship and port shapes in code
+  with plain coloured materials. The existing toon shader and ink outline are
+  applied to them by `toon_look.gd` as before. No model file or paid asset.
+- Ships: rounded hull, white rail, rust-red bottom, big wheelhouse, banded
+  funnel, mast, hatch covers. Container ship red, bulk carrier blue, heavy lifter
+  yellow. The imported ship model is hidden, not deleted. The heavy lifter's
+  lifting deck and load keep their own models.
+- Ports: pitched warehouse roof and doors, stacked containers, domed fuel tank,
+  crane boom and cab, bollards, striped harbour light, red and green buoys.
+- `features/ports/port_test.gd`: two calls, both only when `game_mode` is on. The
+  test scenes (Port Test, bulk, oil, gas) look as they did.
+- `export_presets.cfg`: the new file added. Its `.uid` was written by Godot
+  during the import below, not by hand.
+
+Checks run on the agent's Linux runner with Godot 4.7.2 (official build, same
+checksum as the Checks job):
+
+- Passed: import, `check_scripts`, boot, `units_probe`, `check_catalog`,
+  `diagnostics_probe`, `check_controls`, `check_flow`, `check_starter`, the
+  twelve Stage 2 probes, `ports_probe`, `check_m1_voyage`.
+- The game scene was rendered with GL Compatibility on a software driver (Mesa
+  llvmpipe under Xvfb) with no script or shader errors. The agent looked at
+  screenshots of all three ships and of the fuel-store and crane ports.
+- Failed: none.
+- Not run: the Python stage (no Python file changed), `collision_probe` and
+  `composition_probe` (report-only in the Checks job), anything on Windows, any
+  real graphics card, any playtest. Frame rate is not measured.
+
+Limits:
+
+- Every collider is unchanged, so the solid shapes are still boxes. The round
+  bow, the buoys and the tank are drawn slightly inside or outside their boxes;
+  a ship can touch a corner that is not drawn. The upper containers, crane boom
+  and harbour light are not solid (they sit on the solid quay or high above it).
+- The hull keeps its real size (13 m by 64 m; 24 m by 90 m for the heavy
+  lifter), so the ships are chunky in shape and colour, not shorter or wider.
+- Faces turned away from the sun fall in the toon mid band, so white walls read
+  as pale blue-grey. The heavy lifter's sunk float shows a small dark outline
+  tip at the stern.
+- The container, bulk and heavy ships are the game's three kinds. The frozen
+  online scenes, the old test scenes and the on-hold gas and oil scenes still
+  use the imported model.
+- Colours and proportions are first guesses until Andy looks on Windows.
+- The import again wrote `.uid` files for older scripts that lack one. They are
+  not in this change.
+- No gameplay, physics, save, settings, gas, oil, refinery or cargo-fuel file
+  changed. `.github/workflows` not edited.
+- Aesthetics item 5 is not started.

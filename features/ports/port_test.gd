@@ -5,6 +5,7 @@ const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_poi
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
+const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
 ## True in features/game/game.tscn: the real game (REBUILD_PLAN.md M1). False: Port Test.
@@ -145,6 +146,8 @@ func _ready() -> void:
 		place.position = Progression.WORLD[i].at
 		add_child(place)
 		world_ports.append(place)
+		# Aesthetics 4: chunky port dressing. The game only; test scenes keep the blocks.
+		if game_mode: CHUNKY_LOOK.dress_port(place)
 	# Aesthetics 2: toon shading and ink outlines on the ports and land.
 	TOON_LOOK.apply(self)
 	waypoint = Label3D.new()
@@ -421,6 +424,8 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	spawn_ticket = allocation.ticket
 	ship.transform = allocation.transform
 	add_child(ship)
+	# Aesthetics 4: chunky ship in place of the imported model. The game only.
+	if game_mode: CHUNKY_LOOK.dress_ship(ship, ship_kind)
 	TOON_LOOK.apply(ship)
 	if game_mode: ship.validated_impact.connect(take_damage)
 	if heavy_mode:
