@@ -79,7 +79,7 @@ func _ready() -> void:
 		if not docking.request_dock(1, service_id(), cargo_id()).ok:
 			bulk.stop("Saved berth is unavailable. Save preserved; reopen when clear.")
 		else:
-			docking.advance(1.1)
+			docking.advance(docking.MAX_SLIDE_SECONDS + .1)
 			if docking.state(1) != "docked": bulk.stop("Could not restore bulk docking. Save preserved.")
 	booted = true
 	ship.simulation_paused = bulk.blocked

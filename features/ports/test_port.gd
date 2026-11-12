@@ -87,3 +87,12 @@ func reserve_spawn(size: Vector3, cargo: Array[AABB] = []) -> Dictionary:
 func berth_readiness(body: HandlingShip, service: String, cargo_id: String) -> Dictionary:
 	var excluded: Array[RID] = [body.get_rid()]
 	return preload("res://features/ports/berth_eligibility.gd").evaluate(berth, berth_anchor.global_transform, body.definition, body.global_transform, body.velocity, service, cargo_id, get_world_3d().direct_space_state, excluded)
+
+## Patch 2.0 easy docking (single-player): near + slow. berth_readiness above is
+## the older strict rule, still used by the frozen online code.
+func dock_readiness(body: HandlingShip, service: String, cargo_id: String) -> Dictionary:
+	var excluded: Array[RID] = [body.get_rid()]
+	return preload("res://features/ports/berth_eligibility.gd").evaluate_easy(berth, berth_anchor.global_transform, body.definition, body.global_transform, body.velocity, service, cargo_id, get_world_3d().direct_space_state, excluded)
+
+func dock_pose(body: HandlingShip) -> Transform3D:
+	return preload("res://features/ports/berth_eligibility.gd").berth_pose(berth_anchor.global_transform, body.global_transform)

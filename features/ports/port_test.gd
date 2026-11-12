@@ -657,7 +657,7 @@ func _physics_process(delta: float) -> void:
 			ship.pause_reason = "YOUR SHIP SANK.\nA recovery crew is raising it and towing it to %s. Fee: %.2f credits." % [port.definition.display_name, mini(RECOVERY_FEE_MINOR, reward_minor) / 100.0]
 		sink_seconds -= delta
 		if sink_seconds <= 0.0: recover()
-	var status: Dictionary = port.berth_readiness(ship, service_id(), cargo_id())
+	var status: Dictionary = port.dock_readiness(ship, service_id(), cargo_id())
 	var current: String = docking.state(1)
 	dock_button.visible = ship.global_position.distance_to(port.berth_anchor.global_position) < 150 or current in ["docking", "docked", "undocking"]
 	dock_button.text = "Undock" if current == "docked" else "Dock"
