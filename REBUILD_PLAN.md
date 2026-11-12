@@ -160,7 +160,7 @@ Milestones — each ends with a Windows build and a short checklist for Andy:
 | M3 | **Progression** | Earn enough to buy a second ship, switch, sell, and take bulk and heavy jobs that pay more. |
 | M4 | **A world worth sailing** | Sail between 4–5 ports with coastline, a minimap and sensible trip times. |
 | M5 | **Finish** | Play two hours from a fresh install with no developer help: hints, settings, sound, art pass, packaged build. |
-| — | **Aesthetics** (after M5; items 1 and 2 of 5 written) | See the Wind Waker look described below. |
+| — | **Aesthetics** (after M5; items 1 to 3 of 5 written) | See the Wind Waker look described below. |
 
 **Order (Andy, issue #45): M1 done → Simplify → M2 → M3 → M4 → M5 → Aesthetics.**
 
@@ -183,7 +183,7 @@ a time, in this order:
 | --- | --- | --- |
 | 1 | Water | Code written (issue #55), not run or seen by the agent. Waiting for the Checks run and Andy's look on Windows. |
 | 2 | Toon shader and ink outlines | Code written (issue #57), not run or seen by the agent. Waiting for the Checks run and Andy's look on Windows. |
-| 3 | Sky and lighting | Not started. |
+| 3 | Sky and lighting | Code written (issue #59). Checks and a software-rendered screenshot passed on the agent's Linux runner. Waiting for Andy's look on Windows. |
 | 4 | Ships and ports | Not started. |
 | 5 | HUD and UI | Not started. |
 
@@ -202,6 +202,14 @@ thickness on screen. `toon_look.gd` swaps the plain materials for these, keeping
 each mesh's own colour or texture. The game applies it to the ports, the land,
 the ship and its containers. The ocean, wake and labels are not touched. No
 gameplay, physics, save or settings change.
+
+Item 3, what exists: `features/sky`. `toon_sky.gdshader` draws the sky: deep blue
+overhead fading to pale cyan at the horizon, flat white puffy clouds with a pale
+blue underside (a big bank on the horizon, smaller ones higher up, drifting very
+slowly) and a flat sun disc. `sky_look.gd` sets it up with a warm sun that casts
+shadows, soft blue ambient light and a light haze that fades far land and water
+into the horizon colour. The game scene calls it once. No ocean, ship or HUD
+file changed. No gameplay, physics, save or settings change.
 
 **M0 status: accepted by Andy** (Windows playtest; relayed in issue #43).
 
