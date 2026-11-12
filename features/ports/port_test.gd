@@ -3,6 +3,7 @@ const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.ts
 ## M4, the game only: two more ports. Positions come from Progression.WORLD.
 const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
+const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
 ## True in features/game/game.tscn: the real game (REBUILD_PLAN.md M1). False: Port Test.
@@ -141,6 +142,8 @@ func _ready() -> void:
 		place.position = Progression.WORLD[i].at
 		add_child(place)
 		world_ports.append(place)
+	# Aesthetics 2: toon shading and ink outlines on the ports and land.
+	TOON_LOOK.apply(self)
 	waypoint = Label3D.new()
 	waypoint.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	waypoint.font_size = 48
@@ -415,6 +418,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	spawn_ticket = allocation.ticket
 	ship.transform = allocation.transform
 	add_child(ship)
+	TOON_LOOK.apply(ship)
 	if game_mode: ship.validated_impact.connect(take_damage)
 	if heavy_mode:
 		ship.payload_body.collision_layer = 0

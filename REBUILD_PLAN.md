@@ -160,7 +160,7 @@ Milestones — each ends with a Windows build and a short checklist for Andy:
 | M3 | **Progression** | Earn enough to buy a second ship, switch, sell, and take bulk and heavy jobs that pay more. |
 | M4 | **A world worth sailing** | Sail between 4–5 ports with coastline, a minimap and sensible trip times. |
 | M5 | **Finish** | Play two hours from a fresh install with no developer help: hints, settings, sound, art pass, packaged build. |
-| — | **Aesthetics** (after M5; item 1 of 5 written) | See the Wind Waker look described below. |
+| — | **Aesthetics** (after M5; items 1 and 2 of 5 written) | See the Wind Waker look described below. |
 
 **Order (Andy, issue #45): M1 done → Simplify → M2 → M3 → M4 → M5 → Aesthetics.**
 
@@ -182,7 +182,7 @@ a time, in this order:
 | # | Item | Status |
 | --- | --- | --- |
 | 1 | Water | Code written (issue #55), not run or seen by the agent. Waiting for the Checks run and Andy's look on Windows. |
-| 2 | Toon shader and ink outlines | Not started. |
+| 2 | Toon shader and ink outlines | Code written (issue #57), not run or seen by the agent. Waiting for the Checks run and Andy's look on Windows. |
 | 3 | Sky and lighting | Not started. |
 | 4 | Ships and ports | Not started. |
 | 5 | HUD and UI | Not started. |
@@ -194,6 +194,14 @@ pure white with a hard toon edge, wider side crests and a new white trail behind
 the stern. The tone bands are a drifting pattern, not real water depth: the game
 has no seabed to measure. No gameplay, physics, save or settings change; the
 three water quality tiers still work the same way.
+
+Item 2, what exists: `features/toon`. `toon.gdshader` lights a surface in three
+hard bands (shadow, mid, lit) and lifts colour saturation. `toon_outline.gdshader`
+draws a dark ink line around each mesh (inverted hull) that keeps a steady
+thickness on screen. `toon_look.gd` swaps the plain materials for these, keeping
+each mesh's own colour or texture. The game applies it to the ports, the land,
+the ship and its containers. The ocean, wake and labels are not touched. No
+gameplay, physics, save or settings change.
 
 **M0 status: accepted by Andy** (Windows playtest; relayed in issue #43).
 
