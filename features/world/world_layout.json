@@ -16,20 +16,16 @@
     "port_allowance_full_output_s": 22.0,
     "fuel_reserve_fraction": 0.8,
     "max_leg_minutes": 40.0,
-    "min_shortcut_saving_s": 180.0,
+    "min_shortcut_saving_s": 120.0,
     "calibration_tolerance": 0.02,
-    "calibration": [
-      {"hull": "ship_starter_container_01", "length_m": 3068.27, "seconds": 530.18, "fuel_liters": 163.58},
-      {"hull": "ship_starter_container_01", "length_m": 4059.16, "seconds": 653.22, "fuel_liters": 214.42},
-      {"hull": "ship_coastal_container_01", "length_m": 3068.27, "seconds": 530.18, "fuel_liters": 131.93},
-      {"hull": "ship_coastal_container_01", "length_m": 4059.16, "seconds": 653.22, "fuel_liters": 172.84}
-    ]
+    "calibration_note": "The Step 67 legs were measured at the old 10 m/s starter top speed and were removed with Patch 2.1 item 2 (30 kn). Measure new legs before trusting the time and fuel model to 2%.",
+    "calibration": []
   },
   "tiers_minutes": {
-    "starter": [8.0, 12.0],
-    "short": [12.0, 15.0],
-    "medium": [15.0, 24.0],
-    "long": [24.0, 36.0]
+    "starter": [6.0, 9.0],
+    "short": [9.0, 11.0],
+    "medium": [11.0, 16.5],
+    "long": [16.5, 24.0]
   },
   "size_classes": {
     "S": {"max_beam_m": 14.0, "max_length_m": 70.0},
@@ -53,14 +49,14 @@
     "heavy": "heavy_transfer"
   },
   "hulls": {
-    "ship_starter_container_01": {"record": "features/catalog/records/starter_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 10.0},
-    "ship_coastal_container_01": {"record": "features/catalog/records/coastal_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 10.0},
-    "ship_swift_container_01": {"record": "features/catalog/records/swift_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 12.0},
-    "ship_harbor_container_01": {"record": "features/catalog/records/harbor_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 9.0},
+    "ship_starter_container_01": {"record": "features/catalog/records/starter_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 15.435},
+    "ship_coastal_container_01": {"record": "features/catalog/records/coastal_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 15.435},
+    "ship_swift_container_01": {"record": "features/catalog/records/swift_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 18.52},
+    "ship_harbor_container_01": {"record": "features/catalog/records/harbor_ship.tres", "family": "containers", "size_class": "S", "top_speed_mps": 13.89},
     "ship_bulk_prototype_01": {"record": "features/catalog/records/bulk_ship.tres", "family": "bulk", "size_class": "S", "top_speed_mps": 10.0},
     "ship_gas_prototype_01": {"record": "features/catalog/records/gas_ship.tres", "family": "gas", "size_class": "S", "top_speed_mps": 10.0},
     "ship_oil_prototype_01": {"record": "features/catalog/records/oil_ship.tres", "family": "oil", "size_class": "S", "top_speed_mps": 10.0},
-    "ship_heavy_lifter_01": {"record": "features/catalog/records/heavy_lifter.tres", "family": "heavy", "size_class": "M", "top_speed_mps": 6.875}
+    "ship_heavy_lifter_01": {"record": "features/catalog/records/heavy_lifter.tres", "family": "heavy", "size_class": "M", "top_speed_mps": 10.61}
   },
   "ports": {
     "port_brindle_quay": {

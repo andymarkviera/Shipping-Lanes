@@ -51,7 +51,7 @@ func check_checkpoints() -> void:
 	var invalid: Dictionary = checkpoints.accelerate.duplicate(true)
 	invalid.speed_mps = NAN
 	check(not Checkpoint.deviations("accelerate", invalid).is_empty(), "Nonfinite telemetry fails comparison")
-	check(is_equal_approx((load("res://features/catalog/records/starter_ship.tres") as ShipDefinition).forward_acceleration_mps2, 0.8), "Regression fixture leaves shipped tuning unchanged")
+	check(is_equal_approx((load("res://features/catalog/records/starter_ship.tres") as ShipDefinition).forward_acceleration_mps2, 3.087), "Regression fixture leaves shipped tuning unchanged")
 
 func start_run() -> void:
 	Engine.max_fps = CAPS[run_index]
@@ -74,7 +74,7 @@ func _physics_process(_delta: float) -> void:
 	# Parent runs before child: sample the previous completed physics tick.
 	if tick == 60:
 		accelerated = ship.velocity.z
-		check(accelerated > 0.1 and accelerated < 0.4, "Forward acceleration")
+		check(accelerated > 0.3 and accelerated < 1.5, "Forward acceleration")
 		ship.zero_throttle()
 	if tick == 90:
 		neutral_speed = ship.velocity.z
