@@ -5,6 +5,9 @@ const SHORE: int = 1 << 1
 const TRIGGER: int = 1 << 2
 const CARGO_VISUAL: int = 1 << 3
 const CHARACTER: int = 1 << 4
+## Patch 2.1 item 4: a ship sliding into, sitting at or just leaving a berth.
+## Other ships pass through it; it still meets the shore.
+const DOCKED_HULL: int = 1 << 5
 const SOLID_WATERCRAFT: int = HULL | SHORE
 const SUPPORTED_SPEED_MPS: float = 20.0
 

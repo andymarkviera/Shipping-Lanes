@@ -675,4 +675,7 @@ written: 3A (the world wraps in every direction and the globe minimap shows
 it) and 3B (North Pole and South Pole ports with jobs, and solid toon icebergs
 in the polar seas) both pass the automatic checks on Linux; 3B was seen only
 as software-rendered screenshots by the agent. All wait for Andy's Windows
-playtest. Item 4 is not started. Details in PROGRESS.md.
+playtest. Item 4 (multiplayer-safe docking: two berths per port, one ship
+each, "port full" when both are taken, ship collision off at a berth) is
+written and passes the automatic checks on Linux; not seen on a screen. All
+of Patch 2.1 now waits for Andy's Windows playtest. Details in PROGRESS.md.

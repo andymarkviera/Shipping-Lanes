@@ -19,7 +19,7 @@ func reserve(space: PhysicsDirectSpaceState3D, candidates: Array[Transform3D], s
 		var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
 		query.shape = shape
 		query.transform = pose.translated_local(center)
-		query.collision_mask = CollisionRules.HULL | CollisionRules.SHORE | CollisionRules.CARGO_VISUAL
+		query.collision_mask = CollisionRules.HULL | CollisionRules.DOCKED_HULL | CollisionRules.SHORE | CollisionRules.CARGO_VISUAL
 		query.collide_with_areas = true
 		var bounds: AABB = query.transform * AABB(-shape.size / 2, shape.size)
 		var blocked: bool = not space.intersect_shape(query, 1).is_empty()
