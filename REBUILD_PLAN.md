@@ -766,6 +766,6 @@ ain't jank").** Every item must hold all of these:
 - Performance: big models stay low-poly, run smoothly on Andy's Windows PC
   and the export includes every new asset.
 
-**Patch 2.2 status (November 13, 2026):** items 1 (container ships 2-5) and 2
-(bulk ships 1-5) built and checked on Linux headless; not playtested on
-Windows. Items 3-4 not started.
+**Patch 2.2 status (November 13, 2026):** items 1 (container ships 2-5), 2
+(bulk ships 1-5) and 3 (heavy-lift ships 2-5) built and checked on Linux
+headless; not playtested on Windows. Item 4 not started.

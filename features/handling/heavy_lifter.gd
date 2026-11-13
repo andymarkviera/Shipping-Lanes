@@ -11,6 +11,11 @@ const STOP_YAW_RATE: float = 0.001
 # a prototype 200 t mass limit, which caps loaded visual draft at 1.0 m.
 const BASE_PAYLOAD_SIZE: Vector3 = Vector3(14, 8, 32)
 const MAX_PAYLOAD_KG: float = 200000.0
+## Patch 2.2 item 3: ship 1's hull. Bigger heavy-lift ships scale the deck,
+## colliders, pickup reach and load limits by beam (x) and length (z); deck
+## heights stay the same.
+const BASE_HULL: Vector3 = Vector3(24, 7.5, 90)
+var k: Vector3 = Vector3.ONE
 var payload_size: Vector3 = BASE_PAYLOAD_SIZE
 var payload_collider: CollisionShape3D
 var deck_height: float = RAISED
@@ -43,22 +48,24 @@ func helm_available() -> bool:
 
 func _ready() -> void:
 	super._ready()
+	k = Vector3(definition.hull_size_m.x / BASE_HULL.x, 1.0, definition.hull_size_m.z / BASE_HULL.z)
 	empty_accelerations = [definition.forward_acceleration_mps2, definition.reverse_acceleration_mps2, definition.thruster_acceleration_mps2, definition.turn_acceleration_degrees]
 	assembly = ShipAssembly.new()
 	add_child(assembly)
 	assembly.configure(self)
 	deck_visual = DECK.instantiate()
+	deck_visual.scale = k
 	add_child(deck_visual)
-	shape(Vector3(24, 2.5, 90), Vector3(0, -3.25, 0))
-	for side: float in [-1, 1]: shape(Vector3(3, 5, 74), Vector3(side * 10.5, 0.5, -5))
-	shape(Vector3(20, 13, 17), Vector3(0, 4.5, 32))
-	deck_shape = shape(Vector3(18, 0.6, 48), Vector3(0, 2.15, -8))
-	payload_shape = shape(Vector3(14, 8, 32), Vector3(0, RAISED + 4, -8))
+	shape(Vector3(24, 2.5, 90) * k, Vector3(0, -3.25, 0))
+	for side: float in [-1, 1]: shape(Vector3(3, 5, 74) * k, Vector3(side * 10.5, 0.5, -5) * k)
+	shape(Vector3(20, 13, 17) * k, Vector3(0, 4.5, 32) * k)
+	deck_shape = shape(Vector3(18, 0.6, 48) * k, Vector3(0, 2.15, deck_z()))
+	payload_shape = shape(Vector3(14, 8, 32), Vector3(0, RAISED + 4, deck_z()))
 	payload_shape.disabled = true
 	cargo_mount = assembly.cargo_anchor
 	payload_body = StaticBody3D.new()
 	# Position in the same parent frame, even inside a translated/rotated scene.
-	payload_body.transform = transform * Transform3D(Basis.IDENTITY, Vector3(35, LOWERED, -8))
+	payload_body.transform = transform * Transform3D(Basis.IDENTITY, Vector3(35 * k.x, LOWERED, deck_z()))
 	payload_body.collision_layer = CollisionRules.HULL
 	payload_body.collision_mask = 0
 	assembly.focus.associated_bodies.append(payload_body)
@@ -70,6 +77,21 @@ func _ready() -> void:
 	payload_body.add_child(collider)
 	payload_collider = collider
 	get_parent().add_child.call_deferred(payload_body)
+
+## Fore-and-aft centre of the lifting deck: -8 m on ship 1.
+func deck_z() -> float:
+	return -8.0 * k.z
+
+## The biggest load this hull lifts: ship 1's envelope widened and lengthened
+## with the deck, a little taller, and its mass limit by deck area.
+func payload_limit() -> Vector3:
+	return BASE_PAYLOAD_SIZE * Vector3(k.x, sqrt(k.x), k.z)
+
+func mass_limit() -> float:
+	return MAX_PAYLOAD_KG * k.x * k.z
+
+func pickup_tolerance() -> Vector3:
+	return PICKUP_TOLERANCE * k
 
 func _exit_tree() -> void:
 	if is_instance_valid(payload_body): payload_body.queue_free()
@@ -110,7 +132,7 @@ func align_test_payload() -> bool:
 		notice = "Lower the empty deck while stopped before staging the test load."
 		return false
 	var pose: Transform3D = global_transform
-	pose.origin = to_global(Vector3(0, LOWERED, -8))
+	pose.origin = to_global(Vector3(0, LOWERED, deck_z()))
 	var center: Transform3D = pose.translated_local(Vector3(0, payload_size.y * 0.5, 0))
 	if not space_clear(center, payload_shape.shape):
 		notice = "The loading space is blocked."
@@ -161,18 +183,18 @@ func detach_payload() -> bool:
 func advance_deck(delta: float) -> void:
 	if simulation_paused or not is_finite(delta) or delta <= 0 or not operating(): return
 	var next: float = move_toward(deck_height, deck_target, delta * 1.2)
-	var deck_pose: Transform3D = global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 - 0.3, -8))
+	var deck_pose: Transform3D = global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 - 0.3, deck_z()))
 	var swept: BoxShape3D = BoxShape3D.new()
-	swept.size = Vector3(18, 0.6 + absf(next - deck_height), 48)
+	swept.size = Vector3(18 * k.x, 0.6 + absf(next - deck_height), 48 * k.z)
 	var clear: bool = space_clear(deck_pose, swept)
 	if attached:
 		var cargo_swept: BoxShape3D = BoxShape3D.new()
 		cargo_swept.size = Vector3(payload_size.x, payload_size.y + absf(next - deck_height), payload_size.z)
-		clear = clear and space_clear(global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 + payload_size.y * 0.5, -8)), cargo_swept)
+		clear = clear and space_clear(global_transform.translated_local(Vector3(0, (next + deck_height) * 0.5 + payload_size.y * 0.5, deck_z())), cargo_swept)
 	elif deck_target > deck_height and payload_body.collision_layer != 0:
 		# An unsecured floating load must never be raised through.
 		var local_load: Vector3 = to_local(payload_body.global_position)
-		if absf(local_load.x) < 16 and absf(local_load.z + 8) < 40:
+		if absf(local_load.x) < 16 * k.x and absf(local_load.z - deck_z()) < 40 * k.z:
 			clear = false
 	if not clear:
 		deck_target = deck_height
@@ -197,9 +219,10 @@ func _physics_process(delta: float) -> void:
 
 func pickup_position_ready() -> bool:
 	if not is_instance_valid(payload_body) or not payload_body.is_inside_tree() or payload_body.collision_layer == 0: return false
-	var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, -8)
+	var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, deck_z())
+	var reach: Vector3 = pickup_tolerance()
 	# The load centre must be over the platform. Heading is deliberately unrestricted.
-	return offset.is_finite() and absf(offset.x) <= PICKUP_TOLERANCE.x and absf(offset.z) <= PICKUP_TOLERANCE.z and absf(offset.y) <= PICKUP_TOLERANCE.y
+	return offset.is_finite() and absf(offset.x) <= reach.x and absf(offset.z) <= reach.z and absf(offset.y) <= reach.y
 
 func alignment_hint() -> String:
 	if attached: return "Load aboard. Raise to sail; Lower at the ocean drop-off to deliver."
@@ -217,7 +240,23 @@ func payload_pose() -> Transform3D:
 ## Definition-driven payload variant. Refuses anything beyond this lifter's limits;
 ## attachment, collision ownership and release logic are unchanged.
 func configure_payload(size: Vector3, mass_kg: float) -> bool:
-	if not load_within_limits(size, mass_kg): return false
+	if k == Vector3.ONE:
+		if not load_within_limits(size, mass_kg): return false
+	else:
+		var top: Vector3 = payload_limit()
+		if not size.is_finite() or not is_finite(mass_kg) or mass_kg <= 0 or mass_kg > mass_limit() or minf(size.x, minf(size.y, size.z)) <= 0 or size.x > top.x or size.y > top.y or size.z > top.z: return false
+	set_payload(size, mass_kg)
+	return true
+
+## Patch 2.2 item 3: a heavy job's load, from heavy_ocean_job.gd load_of. Ship
+## 1's prototype load (no mass) is always allowed; anything else must fit.
+func use_job_load(piece: Dictionary) -> bool:
+	if piece.size == BASE_PAYLOAD_SIZE and float(piece.mass_kg) == 0.0:
+		set_payload(BASE_PAYLOAD_SIZE, 0.0)
+		return true
+	return configure_payload(piece.size, piece.mass_kg)
+
+func set_payload(size: Vector3, mass_kg: float) -> void:
 	payload_size = size
 	payload_mass_kg = mass_kg
 	(payload_shape.shape as BoxShape3D).size = size
@@ -225,13 +264,12 @@ func configure_payload(size: Vector3, mass_kg: float) -> bool:
 	payload_collider.position.y = size.y * 0.5
 	payload_shape.position.y = deck_height + size.y * 0.5
 	payload_visual.transform = payload_pose()
-	return true
 
 ## Carrier-frame offset of the floating load from the platform centre, in metres.
 ## +X is port and +Z is the bow. Empty when no floating load can be picked up.
 func alignment() -> Dictionary:
 	if attached or not is_instance_valid(payload_body) or not payload_body.is_inside_tree() or payload_body.collision_layer == 0: return {}
-	var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, -8)
+	var offset: Vector3 = to_local(payload_body.global_position) - Vector3(0, LOWERED, deck_z())
 	return {"lateral_m": offset.x, "longitudinal_m": offset.z, "ready": pickup_position_ready()}
 
 func alignment_feedback() -> String:
@@ -239,17 +277,19 @@ func alignment_feedback() -> String:
 	if found.is_empty(): return ""
 	var lateral: float = found.lateral_m
 	var longitudinal: float = found.longitudinal_m
-	var text: String = "Load centre: %.0f m to %s (limit %.0f), %.0f m %s (limit %.0f)." % [absf(lateral), "port" if lateral > 0 else "starboard", PICKUP_TOLERANCE.x, absf(longitudinal), "ahead" if longitudinal > 0 else "astern", PICKUP_TOLERANCE.z]
+	var text: String = "Load centre: %.0f m to %s (limit %.0f), %.0f m %s (limit %.0f)." % [absf(lateral), "port" if lateral > 0 else "starboard", pickup_tolerance().x, absf(longitudinal), "ahead" if longitudinal > 0 else "astern", pickup_tolerance().z]
 	return text + ("\nIN POSITION — stop in neutral, then Raise." if found.ready else "\nNot yet underneath the load.")
 
 func apply_payload_effects() -> void:
 	# Prototype 1,000 t displacement plus 100 t block; never mutate the catalog.
-	var ratio: float = 1000000.0 / (1000000.0 + (payload_mass_kg if attached else 0.0))
+	# Bigger hulls displace more in step with their deck area.
+	var displacement: float = 1000000.0 * k.x * k.z
+	var ratio: float = displacement / (displacement + (payload_mass_kg if attached else 0.0))
 	definition.forward_acceleration_mps2 = empty_accelerations[0] * ratio
 	definition.reverse_acceleration_mps2 = empty_accelerations[1] * ratio
 	definition.thruster_acceleration_mps2 = empty_accelerations[2] * ratio
 	definition.turn_acceleration_degrees = empty_accelerations[3] * ratio
-	loaded_draft_m = 0.5 * payload_mass_kg / 100000.0 if attached else 0.0
+	loaded_draft_m = 0.5 * payload_mass_kg / (100000.0 * k.x * k.z) if attached else 0.0
 	# Visible hull draft only: fixed cargo anchor/collision remain in the planar frame.
 	assembly.visual.position.y = -loaded_draft_m
 

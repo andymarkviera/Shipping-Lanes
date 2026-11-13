@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ship_heavy_twin_crane_03"
+display_name = "Twin-crane heavy lifter"
+scene_path = "res://features/ships/heavy_lifter_01/heavy_lifter_01.glb"
+runtime_scene_path = "res://features/ships/heavy_lifter_01/heavy_runtime.tscn"
+cargo_type_ids = Array[String](["cargo_test_industrial"])
+hull_size_m = Vector3(30, 7.5, 175)
+camera_radius_m = 85.0
+camera_distance_m = 255.0
+wake_half_length_m = 80.0
+wake_half_width_m = 15.0
+cargo_anchor_m = Vector3(0, 2.6, -15.56)
+visual_bobbing = false
+neutral_stop_deceleration_mps2 = 0.24
+forward_acceleration_mps2 = 2.387
+reverse_acceleration_mps2 = 0.72
+linear_drag_per_second = 0.145
+max_turn_rate_degrees = 1.6
+turn_acceleration_degrees = 1.15
+thruster_acceleration_mps2 = 0.24
+fuel_capacity_liters = 3800.0
+fuel_full_output_lps = 1.6
+fuel_idle_lps = 0.03
+fuel_thruster_lps = 0.1
+cargo_capacities = {"heavy_slots": 1}

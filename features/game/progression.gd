@@ -62,6 +62,10 @@ const SHIPS = {
 	"bulk_4": {"name": "Capesize bulker", "price_minor": 18000000, "record": "res://features/catalog/records/bulk_04_ship.tres"},
 	"bulk_5": {"name": "Valemax ore carrier", "price_minor": 45000000, "record": "res://features/catalog/records/bulk_05_ship.tres"},
 	"heavy": {"name": "Heavy lifter", "price_minor": 300000},
+	"heavy_2": {"name": "Twin-crane project ship", "price_minor": 4500000, "record": "res://features/catalog/records/heavy_02_ship.tres"},
+	"heavy_3": {"name": "Twin-crane heavy lifter", "price_minor": 15000000, "record": "res://features/catalog/records/heavy_03_ship.tres"},
+	"heavy_4": {"name": "Semi-submersible heavy ship", "price_minor": 40000000, "record": "res://features/catalog/records/heavy_04_ship.tres"},
+	"heavy_5": {"name": "Giant semi-submersible", "price_minor": 90000000, "record": "res://features/catalog/records/heavy_05_ship.tres"},
 }
 ## The container ladder, smallest first. Tier 1 is "container".
 const CONTAINER_KINDS: Array[String] = ["container", "container_2", "container_3", "container_4", "container_5"]
@@ -72,6 +76,10 @@ const CONTAINER_PAY_PERCENT: Array[int] = [100, 110, 120, 130, 140]
 ## "bulk" (the old prototype). Tonnage comes from each record's dwt_tonnes.
 const BULK_KINDS: Array[String] = ["bulk", "bulk_2", "bulk_3", "bulk_4", "bulk_5"]
 const BULK_PAY_PERCENT: Array[int] = [100, 110, 120, 130, 140]
+## Patch 2.2 item 3: the heavy-lift ladder, smallest first. Tier 1 keeps the
+## save ID "heavy" and the current heavy lifter's record. Every heavy kind sails
+## in heavy mode (lifting deck, one ocean load at a time).
+const HEAVY_KINDS: Array[String] = ["heavy", "heavy_2", "heavy_3", "heavy_4", "heavy_5"]
 ## Ship record IDs and the ladder kind each one is saved as. The old container
 ## variants all had the starter's 24-slot hull: the starter and the slower
 ## harbor ship are ship 1; the coastal and the faster swift ship are ship 2,
@@ -81,7 +89,8 @@ const LADDER_IDS = {
 	"ship_coastal_container_01": "container_2", "ship_swift_container_01": "container_2",
 	"ship_container_feeder_02": "container_2", "ship_container_panamax_03": "container_3",
 	"ship_container_neopanamax_04": "container_4", "ship_container_ultra_05": "container_5",
-	"ship_heavy_lifter_01": "heavy",
+	"ship_heavy_lifter_01": "heavy", "ship_heavy_project_02": "heavy_2", "ship_heavy_twin_crane_03": "heavy_3",
+	"ship_heavy_semisub_04": "heavy_4", "ship_heavy_semisub_05": "heavy_5",
 	"ship_bulk_prototype_01": "bulk", "ship_bulk_handysize_01": "bulk",
 	"ship_bulk_supramax_02": "bulk_2", "ship_bulk_panamax_03": "bulk_3",
 	"ship_bulk_capesize_04": "bulk_4", "ship_bulk_valemax_05": "bulk_5",
@@ -131,6 +140,10 @@ static func leg_units(a: int, b: int) -> int:
 ## 1 to 5 for a bulk ship, 0 for any other kind.
 static func bulk_tier(kind: String) -> int:
 	return BULK_KINDS.find(kind) + 1
+
+## 1 to 5 for a heavy-lift ship, 0 for any other kind.
+static func heavy_tier(kind: String) -> int:
+	return HEAVY_KINDS.find(kind) + 1
 
 ## Deadweight tonnes a bulk tier carries, from its record.
 static func bulk_capacity(tier: int) -> int:
@@ -208,7 +221,7 @@ static func save_valid(d: Dictionary) -> bool:
 	var current: bool = d.get("version") == 5
 	if not d.get("spent") is int or d.spent < 0: return false
 	if current and (not d.get("banked") is int or d.banked < 0): return false
-	if not d.get("ship") is String or not SHIPS.has(d.ship) or d.get("heavy_mode") != (d.ship == "heavy"): return false
+	if not d.get("ship") is String or not SHIPS.has(d.ship) or d.get("heavy_mode") != (heavy_tier(d.ship) > 0): return false
 	if not d.get("fleet") is Dictionary or not d.fleet.has(d.ship): return false
 	for kind: Variant in d.fleet:
 		if not kind is String or not SHIPS.has(kind): return false

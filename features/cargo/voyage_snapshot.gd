@@ -79,7 +79,8 @@ static func valid(value: Variant) -> bool:
 		if not d.get(key) is String: return false
 	if d.port >= ports.size() or d.clock > 9000000000000 or d.sequence > 1000000000 or not pose_valid(d.get("pose")) or absf(d.pose.origin.y) > .01: return false
 	# Patch 2.2: a container ship 2-5 checks its cargo and fuel against its own record.
-	var definition: ShipDefinition = Heavy.DEFINITION if d.heavy_mode else (Progression.definition(d.ship) if d.version >= 4 else preload("res://features/catalog/records/starter_ship.tres"))
+	# Patch 2.2 item 3: so does a heavy-lift ship 2-5.
+	var definition: ShipDefinition = Progression.definition(d.ship) if d.version >= 4 else (Heavy.DEFINITION if d.heavy_mode else preload("res://features/catalog/records/starter_ship.tres"))
 	if not number(d.get("fuel"), 0, definition.fuel_capacity_liters) or not number(d.get("condition"), 0, 1) or not d.get("manifest") is Array: return false
 	var manifest = Manifest.new(definition, PrototypeCatalog.RECORDS)
 	var lines: Array[Dictionary] = []
@@ -143,7 +144,8 @@ static func valid(value: Variant) -> bool:
 	var jobs = HeavyJobs.new()
 	var possible: Dictionary = {}
 	for port: String in ports:
-		for row: Dictionary in jobs.list_at(port): possible[row.id] = row
+		# Patch 2.2 item 3: the game also offers heavy jobs for ships 2-5.
+		for row: Dictionary in (jobs.list_all(port) if game else jobs.list_at(port)): possible[row.id] = row
 	if d.heavy_completed.size() > possible.size(): return false
 	for id: Variant in d.heavy_completed:
 		if not heavy_job_valid(d.heavy_completed[id], possible, ports) or d.heavy_completed[id].id != id or d.heavy_completed[id].state != "carrying": return false
@@ -155,6 +157,8 @@ static func valid(value: Variant) -> bool:
 	if not number(h.get("height"), Heavy.LOWERED, Heavy.RAISED) or not number(h.get("target"), Heavy.LOWERED, Heavy.RAISED) or not pose_valid(h.get("payload_pose")): return false
 	if h.active.is_empty(): return not h.attached
 	if active_count > 0 or not heavy_job_valid(h.active, possible, ports) or d.heavy_completed.has(h.active.id): return false
+	# A ship cannot hold a heavy job sized for a bigger ship.
+	if HeavyJobs.tier_of(h.active.id) > (Progression.heavy_tier(d.ship) if game else 1): return false
 	return h.attached == (h.active.state == "carrying")
 
 static func heavy_job_valid(job: Variant, possible: Dictionary, ports: Array = PORT_IDS) -> bool:
@@ -208,9 +212,12 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 		body.payload_body.global_transform = h.payload_pose
 		body.attached = h.attached
 		view.heavy_jobs.active = h.active.duplicate(true)
+		# Patch 2.2 item 3: the job's own load size; ship 1's is unchanged.
+		if not h.active.is_empty() and not body.use_job_load(HeavyJobs.load_for(h.active.id)): return false
+		body.payload_shape.position.y = h.height + body.payload_size.y * 0.5
 		if h.attached:
 			body.payload_visual.reparent(body.cargo_mount, false)
-			body.payload_visual.transform = Transform3D.IDENTITY
+			body.payload_visual.transform = body.payload_pose()
 			body.payload_shape.disabled = false
 		body.payload_body.collision_layer = CollisionRules.HULL if not h.attached and not h.active.is_empty() else 0
 		body.payload_body.visible = not h.active.is_empty()

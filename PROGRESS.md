@@ -6195,3 +6195,52 @@ Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
 
 Limits: Bulk Port Test (the on-hold service prototype) still uses
 `bulk_ship.tres`. Upkeep and repair prices do not scale by tier.
+
+## Patch 2.2 item 3 — Heavy-lift family ships 2-5 (November 13, 2026)
+
+REBUILD_PLAN.md section 7, item 3. Not playtested; Andy has not played it.
+
+- Ladder (`progression.gd` `SHIPS`, `HEAVY_KINDS`; records `heavy_0{2..5}_ship.tres`).
+  Speed, length × beam, price: 1 Heavy lifter (unchanged) 90×24 m, 3,000 ·
+  2 Twin-crane project ship 29 kn, 130×26 m, 45,000 · 3 Twin-crane heavy lifter
+  32 kn, 175×30 m, 150,000 · 4 Semi-submersible 35 kn, 220×36 m, 400,000 ·
+  5 Giant semi-submersible 38 kn, 270×38 m, 900,000 credits. Drag falls
+  0.2 → 0.1 (about 20 s → 40 s to full speed); reverse, turn, thrusters, fuel,
+  camera and wake scale with the hull. All sail heavy mode on the same runtime.
+- Lifter (`heavy_lifter.gd`): deck, colliders, deck model, pickup reach and load
+  limits scale by beam and length from ship 1 (`k`); deck heights unchanged.
+  Ship 1 is unchanged (k = 1).
+- Models (`chunky_look.gd` `_dress_heavy`): ship 1's look, stretched to match the
+  colliders. Ships 2-3 have two deck cranes on the port wall, ships 4-5 stern
+  buoyancy towers and a funnel on the bridge, ship 5 a helideck.
+- Jobs (`heavy_ocean_job.gd`): ship 1 jobs, IDs and pay are unchanged. Ships 2-5
+  get three jobs per port (`<port>_heavy_t<tier>_<i>`) with bigger, heavier
+  pieces (70/85/95% of the ship's biggest load) and 6×/18×/42×/90× ship 1 pay
+  (ship 5's best job pays 90,000 credits, about 10 trips to buy it). Own tier first,
+  then smaller, never bigger, at most 6. Heavier loads sit the hull lower.
+- Saves: "heavy" is still ship 1 and `ship_heavy_lifter_01` maps onto it; the new
+  record IDs map to their kinds. heavy_mode follows any heavy kind. A save cannot
+  hold a heavy job bigger than its ship; a restored load keeps its tier's size.
+  `world_layout.json` lists the new hulls.
+
+Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
+
+- New `tools/heavy_ladder_check.gd` passed 603 checks: ladder data, tier jobs,
+  old IDs; in the game scene every ship spawns, wears its model, docks clear of
+  the quay at the five heavy ports, sees a board it can carry, gets its biggest
+  load staged at each port, lifts it, saves, delivers it at sea and is paid;
+  a ship 5 carrying save restores in a fresh scene with its load aboard.
+- Passed: import, `check_scripts` (193), boot, stage 2 smoke set, stage 4
+  (`collision_probe`, `composition_probe`, `ports_probe` 320), `check_m1_voyage`,
+  `check_helm_keys`, `voyage_probe`, `sailing_save_probe`, `cargo_matrix_probe`,
+  `container_ladder_check`, `bulk_ladder_check`; stage 3 Python (compileall,
+  service tests, world_layout, traversal_budget, public_handoff with psycopg in
+  a temp venv).
+- Failed on main too (not in CI, unchanged): `fleet_inspection_probe` (3) and
+  `heavy_transport_probe` (needs the real HTTP heavy service).
+- Not run: Windows, a playtest or screenshots.
+
+Limits: heavy ship 1 still tops out at about 20.6 kn, not the plan table's
+26 kn (item 3 keeps the current heavy lifter; Andy to decide). Cinder Point has
+no heavy berth (as before), so no heavy ship docks there. A big lifter's piece is staged at
+the same spot off each quay as ship 1's.
