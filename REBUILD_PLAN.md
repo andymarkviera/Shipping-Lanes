@@ -675,3 +675,5 @@ done: 3A (the world wraps in every direction and the globe minimap shows it)
 is written and passes the automatic checks on Linux; 3B (polar ports and
 icebergs) is not started. All wait for Andy's Windows playtest. Item 4 is not
 started. Details in PROGRESS.md.
+
+In progress: item 3B polar ports and icebergs (Codex, Nov 13).
