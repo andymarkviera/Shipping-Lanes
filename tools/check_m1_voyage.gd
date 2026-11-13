@@ -401,7 +401,7 @@ func play() -> void:
 	if not await click(game, "SHIPS"): return
 	if not await click(game, game.ship_buttons["bulk"][0].text): return
 	expect(game.fleet.has("bulk") and game.reward_minor == wallet - 120000, "Buying the bulk carrier takes its price (wallet %d)" % game.reward_minor)
-	if not await click(game, "Switch to Bulk carrier"): return
+	if not await click(game, "Switch to " + game.Progression.SHIPS.bulk.name): return
 	expect(game.ship_kind == "bulk" and game.docking.state(1) != "docked", "Switch puts the captain on the bulk carrier, off the quay")
 	if not await berth_approach(game, game.port, "M3 berth, bulk carrier"): return
 	if not await dock(game, "M3, bulk carrier"): return

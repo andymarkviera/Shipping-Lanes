@@ -6149,3 +6149,49 @@ Limits: ships 2-5 sail the starter's runtime scene with their own record. The
 imported starter GLB is hidden under the toon model, as before, and Port Test
 (F3) still has only the starter. Upkeep and repair prices do not scale by
 tier. The hangar is item 4.
+
+## Patch 2.2 item 2 — Bulk family ships 1-5 (November 13, 2026)
+
+REBUILD_PLAN.md section 7, item 2. Not playtested; Andy has not played it.
+
+- Ladder (`progression.gd` `SHIPS`, `BULK_KINDS`; records `bulk_0{1..5}_ship.tres`).
+  Speed, length × beam, deadweight, price: 1 Handysize 28 kn, 60×13 m, 6,000 t,
+  1,200 (old bulk price) · 2 Supramax 31 kn, 92×18 m, 15,000 t, 18,000 ·
+  3 Panamax 34 kn, 136×24 m, 28,000 t, 67,500 · 4 Capesize 37 kn, 204×32 m,
+  45,000 t, 180,000 · 5 Valemax 40 kn, 276×38 m, 72,000 t, 450,000 credits.
+  Drag, turning, reverse, thrusters, fuel, camera and wake follow the container
+  tiers. Ship 1 now has its own record (it used to sail the starter's).
+- Models (`chunky_look.gd` `_dress_bulker`): blue and orange toon hulls sized
+  from each record. Hatch rows grow from 4 to 11 covers and the stern house gets
+  taller with each tier. Ships 1-2 have deck cranes, ships 3-5 a raised
+  forecastle, and ship 5 twin funnels.
+- Jobs: the ship 1 job IDs, titles and pay are unchanged (`bulk_<port>_<cargo>`).
+  Ships 2-5 get `bulk_t<tier>_<port>_<cargo>`, three per port per tier. Their
+  tonnage is in step with deadweight (ore is a full load) and they pay 10-40%
+  more per tonne. The board lists the ship's own tier first, then smaller
+  loads, never anything bigger, and at most 6 cards. A bulk ship docks
+  without the container cargo check. Bulk still loads at once, so there is no
+  crane time to scale.
+- Saves: the kind "bulk" is still ship 1, and the old prototype record ID maps
+  onto it. A save cannot hold a job bigger than its ship.
+  `world_layout.json` lists the five hulls. The check_m1_voyage button label
+  now reads the ship name ("Handysize bulker").
+
+Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
+
+- Passed: import, `check_scripts` (192), boot, the whole stage 2 smoke set,
+  stage 4 (`collision_probe`, `composition_probe`, `ports_probe`),
+  `check_m1_voyage` (the bulk buy, switch, dock and continue still work),
+  `voyage_probe`, `sailing_save_probe`, `check_helm_keys`, and
+  `container_ladder_check`.
+- New `tools/bulk_ladder_check.gd` passed 503 checks. It covers the ladder
+  data, tier jobs and refused IDs. In the game scene, each ship spawns, wears
+  its model, docks at all six ports clear of the quay, sees a board it can
+  carry, takes and saves its own job, and an old prototype save loads.
+- Passed: stage 3 (compileall, service unit tests, `tools/world_layout`,
+  `traversal_budget.py`, `tools/public_handoff` with psycopg in a temp venv).
+- Not run: anything on Windows, a playtest or screenshots (headless cannot
+  render).
+
+Limits: Bulk Port Test (the on-hold service prototype) still uses
+`bulk_ship.tres`. Upkeep and repair prices do not scale by tier.

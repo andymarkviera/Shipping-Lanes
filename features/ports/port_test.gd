@@ -410,13 +410,15 @@ func service_id() -> String:
 	return "heavy_transfer" if heavy_mode else "container_transfer"
 
 func cargo_id() -> String:
+	# Patch 2.2 item 2: a bulk ship docks for its abstract bulk jobs; no container check.
+	if bulk_mode(): return ""
 	return "cargo_test_industrial" if heavy_mode else "cargo_test_container"
 
 func ship_key() -> String:
 	return "preview_heavy" if heavy_mode else "preview_ship"
 
 func bulk_mode() -> bool:
-	return game_mode and ship_kind == "bulk"
+	return game_mode and Progression.bulk_tier(ship_kind) > 0
 
 func bulk_destination() -> Node3D:
 	return world_ports[int(Progression.bulk_job(bulk_active).destination)]
@@ -577,7 +579,11 @@ func refresh_jobs() -> void:
 	selected_offer = ""
 	if game_mode: offers.restock()
 	if bulk_mode():
-		for id: String in Progression.bulk_ids(world_ports.find(port)):
+		# Patch 2.2 item 2: this ship's own tier first, then smaller loads, never
+		# more than it carries, at most JOB_BOARD_SIZE cards.
+		var bulk_rows: Array[String] = []
+		for tier: int in range(Progression.bulk_tier(ship_kind), 0, -1): bulk_rows.append_array(Progression.bulk_ids(world_ports.find(port), tier))
+		for id: String in bulk_rows.slice(0, JOB_BOARD_SIZE):
 			var bulk_job: Dictionary = Progression.bulk_job(id)
 			if id == bulk_active: continue
 			jobs_list.add_item("%s → %s · %.2f credits" % [bulk_job.title, world_ports[int(bulk_job.destination)].definition.display_name, bulk_job.reward_minor / 100.0])
@@ -630,7 +636,8 @@ func accept_selected() -> void:
 		return
 	if bulk_mode():
 		# Bulk loads at once: no crane work to wait for.
-		if Progression.bulk_job(selected_offer).get("origin", -1) == world_ports.find(port):
+		var picked: Dictionary = Progression.bulk_job(selected_offer)
+		if picked.get("origin", -1) == world_ports.find(port) and int(picked.get("tier", 9)) <= Progression.bulk_tier(ship_kind):
 			bulk_active = selected_offer
 			offer_notice = "Cargo loaded. Undock and sail to %s." % bulk_destination().definition.display_name
 	elif heavy_mode:

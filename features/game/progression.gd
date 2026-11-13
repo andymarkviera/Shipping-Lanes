@@ -56,7 +56,11 @@ const SHIPS = {
 	"container_3": {"name": "Panamax box ship", "price_minor": 4500000, "record": "res://features/catalog/records/container_03_ship.tres"},
 	"container_4": {"name": "Neo-Panamax box ship", "price_minor": 12000000, "record": "res://features/catalog/records/container_04_ship.tres"},
 	"container_5": {"name": "Ultra-large box ship", "price_minor": 30000000, "record": "res://features/catalog/records/container_05_ship.tres"},
-	"bulk": {"name": "Bulk carrier", "price_minor": 120000},
+	"bulk": {"name": "Handysize bulker", "price_minor": 120000, "record": "res://features/catalog/records/bulk_01_ship.tres"},
+	"bulk_2": {"name": "Supramax bulker", "price_minor": 1800000, "record": "res://features/catalog/records/bulk_02_ship.tres"},
+	"bulk_3": {"name": "Panamax bulker", "price_minor": 6750000, "record": "res://features/catalog/records/bulk_03_ship.tres"},
+	"bulk_4": {"name": "Capesize bulker", "price_minor": 18000000, "record": "res://features/catalog/records/bulk_04_ship.tres"},
+	"bulk_5": {"name": "Valemax ore carrier", "price_minor": 45000000, "record": "res://features/catalog/records/bulk_05_ship.tres"},
 	"heavy": {"name": "Heavy lifter", "price_minor": 300000},
 }
 ## The container ladder, smallest first. Tier 1 is "container".
@@ -64,6 +68,10 @@ const CONTAINER_KINDS: Array[String] = ["container", "container_2", "container_3
 ## Pay per container grows a little with the tier (percent), so each step up
 ## earns more per trip than the containers alone.
 const CONTAINER_PAY_PERCENT: Array[int] = [100, 110, 120, 130, 140]
+## Patch 2.2 item 2: the bulk ladder, smallest first. Tier 1 keeps the save ID
+## "bulk" (the old prototype). Tonnage comes from each record's dwt_tonnes.
+const BULK_KINDS: Array[String] = ["bulk", "bulk_2", "bulk_3", "bulk_4", "bulk_5"]
+const BULK_PAY_PERCENT: Array[int] = [100, 110, 120, 130, 140]
 ## Ship record IDs and the ladder kind each one is saved as. The old container
 ## variants all had the starter's 24-slot hull: the starter and the slower
 ## harbor ship are ship 1; the coastal and the faster swift ship are ship 2,
@@ -74,12 +82,17 @@ const LADDER_IDS = {
 	"ship_container_feeder_02": "container_2", "ship_container_panamax_03": "container_3",
 	"ship_container_neopanamax_04": "container_4", "ship_container_ultra_05": "container_5",
 	"ship_heavy_lifter_01": "heavy",
+	"ship_bulk_prototype_01": "bulk", "ship_bulk_handysize_01": "bulk",
+	"ship_bulk_supramax_02": "bulk_2", "ship_bulk_panamax_03": "bulk_3",
+	"ship_bulk_capesize_04": "bulk_4", "ship_bulk_valemax_05": "bulk_5",
 }
 ## A sold ship pays back half its price.
 const RESALE_PERCENT: int = 50
-## Bulk cargo: name, title, pay per 100 m sailed. Every port always has one job of
-## each cargo, one for each other port. A delivered job is on offer again at once.
-const BULK_CARGO = [["grain", "Grain, 4,000 t", 6000], ["coal", "Coal, 5,000 t", 8000], ["ore", "Iron ore, 6,000 t", 10000]]
+## Bulk cargo: name, label, pay per 100 m sailed and tonnes for ship 1. Every
+## port always has one job of each cargo per bulk tier, one for each other port.
+## A delivered job is on offer again at once. Bigger tiers carry tonnage in
+## step with their deadweight and earn a little more per tonne.
+const BULK_CARGO = [["grain", "Grain", 6000, 4000], ["coal", "Coal", 8000, 5000], ["ore", "Iron ore", 10000, 6000]]
 ## Pay of the six M3 bulk jobs, to read a version 4 save that lists delivered ones.
 const BULK_V4 = {"bulk_0_grain": 90000, "bulk_0_coal": 120000, "bulk_0_ore": 150000, "bulk_1_grain": 90000, "bulk_1_coal": 120000, "bulk_1_ore": 150000}
 
@@ -115,24 +128,46 @@ static func leg_units(a: int, b: int) -> int:
 	var to: Vector3 = WORLD[b].at
 	return roundi(short_way(to - from).length() / 100.0)
 
-## A bulk job from its ID, "bulk_<origin port>_<cargo>". Empty if there is none.
+## 1 to 5 for a bulk ship, 0 for any other kind.
+static func bulk_tier(kind: String) -> int:
+	return BULK_KINDS.find(kind) + 1
+
+## Deadweight tonnes a bulk tier carries, from its record.
+static func bulk_capacity(tier: int) -> int:
+	return definition(BULK_KINDS[tier - 1]).dwt_tonnes
+
+## "12,500" for 12500.
+static func thousands(value: int) -> String:
+	var text: String = str(value)
+	for at: int in range(text.length() - 3, 0, -3): text = text.insert(at, ",")
+	return text
+
+## A bulk job from its ID: "bulk_<origin port>_<cargo>" for ship 1 (the M3 IDs)
+## or "bulk_t<tier>_<origin port>_<cargo>" for ships 2-5. Empty if there is none.
 static func bulk_job(id: String) -> Dictionary:
 	var parts: PackedStringArray = id.split("_")
+	var tier: int = 1
+	if parts.size() == 4 and parts[0] == "bulk" and parts[1].length() == 2 and parts[1][0] == "t" and parts[1][1] in "2345":
+		tier = int(parts[1][1])
+		parts.remove_at(1)
 	if parts.size() != 3 or parts[0] != "bulk" or not parts[1].is_valid_int(): return {}
 	var origin: int = int(parts[1])
 	if origin < 0 or origin >= WORLD.size() or parts[1] != str(origin): return {}
 	for index: int in BULK_CARGO.size():
 		if BULK_CARGO[index][0] != parts[2]: continue
 		var destination: int = others(origin)[index]
-		return {"title": BULK_CARGO[index][1], "origin": origin, "destination": destination, "reward_minor": int(BULK_CARGO[index][2]) * leg_units(origin, destination)}
+		var base: int = int(BULK_CARGO[index][3])
+		var tonnes: int = base if tier == 1 else roundi(float(base) * bulk_capacity(tier) / bulk_capacity(1) / 100.0) * 100
+		var pay: int = int(BULK_CARGO[index][2]) * leg_units(origin, destination) * tonnes / base * BULK_PAY_PERCENT[tier - 1] / 100
+		return {"title": "%s, %s t" % [BULK_CARGO[index][1], thousands(tonnes)], "origin": origin, "destination": destination, "reward_minor": pay, "tier": tier, "tonnes": tonnes}
 	return {}
 
-static func bulk_ids(origin: int) -> Array[String]:
+static func bulk_ids(origin: int, tier: int = 1) -> Array[String]:
 	var result: Array[String] = []
-	for cargo: Array in BULK_CARGO: result.append("bulk_%d_%s" % [origin, cargo[0]])
+	for cargo: Array in BULK_CARGO: result.append(("bulk_%d_%s" % [origin, cargo[0]]) if tier == 1 else ("bulk_t%d_%d_%s" % [tier, origin, cargo[0]]))
 	return result
 
-## The ship record a kind sails with. Bulk sails the starter hull for now.
+## The ship record a kind sails with.
 static func definition(kind: String) -> ShipDefinition:
 	if kind == "heavy": return load("res://features/catalog/records/heavy_lifter.tres") as ShipDefinition
 	return load(str(SHIPS.get(kind, {}).get("record", "res://features/catalog/records/starter_ship.tres"))) as ShipDefinition
@@ -186,7 +221,7 @@ static func save_valid(d: Dictionary) -> bool:
 	for id: Variant in bulk.done:
 		if not id is String or not BULK_V4.has(id) or seen.has(id): return false
 		seen[id] = true
-	if not bulk.active.is_empty() and (d.ship != "bulk" or bulk_job(bulk.active).is_empty() or seen.has(bulk.active)): return false
+	if not bulk.active.is_empty() and (bulk_tier(d.ship) < int(bulk_job(bulk.active).get("tier", 9)) or seen.has(bulk.active)): return false
 	return true
 
 ## Pay from bulk and heavy jobs that are not listed one by one in the save.

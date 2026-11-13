@@ -121,7 +121,7 @@ static func dress_ship(ship: Node3D, kind: String) -> void:
 	var assembly: ShipAssembly = ship.get("assembly") as ShipAssembly
 	if assembly == null or assembly.visual == null or assembly.visual.get_child_count() == 0: return
 	(assembly.visual.get_child(0) as Node3D).hide()
-	var colours: Array = SHIP_COLOURS.get(kind, SHIP_COLOURS["container"])
+	var colours: Array = SHIP_COLOURS.get(kind.get_slice("_", 0), SHIP_COLOURS["container"])
 	var main: Color = colours[0]
 	var trim: Color = colours[1]
 	var cache: Dictionary = {}
@@ -134,6 +134,9 @@ static func dress_ship(ship: Node3D, kind: String) -> void:
 	root.add_child(hull)
 	if kind.begins_with("container_"):
 		_dress_box_ship(root, hull, ship.definition, int(kind.trim_prefix("container_")), main, trim, cache)
+		return
+	if kind == "bulk" or kind.begins_with("bulk_"):
+		_dress_bulker(root, hull, ship.definition, 1 if kind == "bulk" else int(kind.trim_prefix("bulk_")), main, trim, cache)
 		return
 	if kind == "heavy":
 		# Low float, two side walls, an open stern and a tower at the bow. The
@@ -350,3 +353,42 @@ static func _dress_box_ship(root: Node3D, hull: MeshInstance3D, definition: Ship
 			_box(root, Vector3(1.6, 1.6, 2.0), Vector3(x, deck + 9.4, z), WHITE, cache)
 			var jib: MeshInstance3D = _box(root, Vector3(0.6, 0.6, 12.0), Vector3(x + 0.8, deck + 11.0, z + 5.0), trim, cache)
 			jib.rotation.x = -0.35
+
+## Patch 2.2 item 2: bulk ships 1-5, sized from the record. A row of hatch
+## covers that grows with the tier and a stern house that rises with it. Ships
+## 1-2 (Handysize, Supramax) carry deck cranes between the hatches; ships 3-5
+## are gearless with a raised forecastle; ship 5 (Valemax) has twin funnels.
+static func _dress_bulker(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition, tier: int, main: Color, trim: Color, cache: Dictionary) -> void:
+	var size: Vector3 = definition.hull_size_m
+	var s: float = size.y / 4.0
+	var deck: float = 2.6 * s
+	hull.mesh = hull_mesh(size.z, size.x, -3.2 * s, deck, 3.5 * s, 1.6 * s, main, Color("b9a47a"))
+	var aft: float = -size.z / 2.0
+	var bow: float = size.z / 2.0
+	_house(root, Vector3(0, deck, aft + 10.5 * s), Vector3(size.x - 2.6 * s, (5.0 + tier * 1.5) * s, 11 * s), main, cache)
+	var top: float = deck + (5.7 + tier * 1.5) * s
+	_house(root, Vector3(0, top, aft + 12 * s), Vector3(size.x - 0.6, 3.4 * s, 6.5 * s), main, cache)
+	for x: float in ([-size.x * 0.15, size.x * 0.15] if tier == 5 else [0.0]):
+		_funnel(root, Vector3(x, top, aft + 6 * s), 1.9 * s, 6.0 * s, trim, cache)
+	_drum(root, 0.25 * s, 0.25 * s, 4.0 * s, Vector3(0, top + 6.1 * s, aft + 12 * s), WHITE, cache)
+	_ball(root, 0.7 * s, 1.4 * s, Vector3(0, top + 8.4 * s, aft + 12 * s), trim, cache)
+	if tier >= 3:
+		_box(root, Vector3(size.x * 0.45, 2.2 * s, 8 * s), Vector3(0, deck + 1.1 * s, bow - 10 * s), WHITE, cache)
+	_box(root, Vector3(4 * s, 1.4 * s, 3 * s), Vector3(0, deck + 0.7 * s, bow - 8 * s), INK, cache)
+	_drum(root, 0.45 * s, 0.45 * s, 4.5 * s, Vector3(0, deck + 2.25 * s, bow - 5 * s), WHITE, cache)
+	_ball(root, 0.8 * s, 1.6 * s, Vector3(0, deck + 4.9 * s, bow - 5 * s), trim, cache)
+	# Hatch covers, evenly spaced between the house and the bow.
+	var count: int = [4, 5, 7, 9, 11][tier - 1]
+	var start: float = aft + 20.0 * s
+	var pitch: float = (bow - 15.0 * s - start) / count
+	for index: int in count:
+		var z: float = start + pitch * (index + 0.5)
+		_box(root, Vector3(size.x * 0.66, 0.9 * s, pitch * 0.74), Vector3(0, deck + 0.45 * s, z), trim, cache)
+		_box(root, Vector3(size.x * 0.6, 0.4 * s, pitch * 0.64), Vector3(0, deck + 1.0 * s, z), WHITE.lerp(trim, 0.35), cache)
+		if tier > 2 or index == 0: continue
+		# A deck crane in the gap aft of this hatch, its jib resting over it.
+		var gap: float = z - pitch * 0.5
+		_drum(root, 0.9 * s, 0.9 * s, 3.5 * s, Vector3(0, deck + 1.75 * s, gap), trim, cache)
+		_box(root, Vector3(2.4 * s, 2.0 * s, 2.4 * s), Vector3(0, deck + 4.5 * s, gap), WHITE, cache)
+		var jib: MeshInstance3D = _box(root, Vector3(0.6 * s, 0.6 * s, pitch * 0.9), Vector3(0, deck + 5.0 * s + pitch * 0.12, gap + pitch * 0.43), trim, cache)
+		jib.rotation.x = -0.28

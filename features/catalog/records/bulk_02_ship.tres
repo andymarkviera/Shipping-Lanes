@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ship_bulk_supramax_02"
+display_name = "Supramax bulker"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
+cargo_type_ids = Array[String](["cargo_bulk_grain", "cargo_bulk_coal", "cargo_bulk_ore", "cargo_bulk_limestone", "cargo_bulk_salt"])
+dwt_tonnes = 15000
+hull_size_m = Vector3(18, 5, 92)
+camera_radius_m = 46
+camera_distance_m = 138
+wake_half_length_m = 43.2
+wake_half_width_m = 9.0
+cargo_anchor_m = Vector3(0, 3.3, 24.8)
+neutral_stop_deceleration_mps2 = 0.3
+forward_acceleration_mps2 = 2.711
+reverse_acceleration_mps2 = 1.1
+linear_drag_per_second = 0.17
+forward_throttle_limit = 1.0
+reverse_throttle_limit = 0.6
+command_rate_per_second = 0.5
+engine_ramp_up_per_second = 0.5
+engine_ramp_down_per_second = 1.0
+max_turn_rate_degrees = 2.7
+turn_acceleration_degrees = 1.7
+rudder_full_effect_speed_mps = 4.0
+thruster_acceleration_mps2 = 0.35
+lateral_drag_per_second = 0.4
+thruster_cutoff_speed_mps = 4.0
+fuel_capacity_liters = 1800.0
+fuel_full_output_lps = 0.8
+fuel_idle_lps = 0.015
