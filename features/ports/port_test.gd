@@ -449,10 +449,10 @@ func ship_action(kind: String) -> void:
 	var previous: String = ship_kind
 	var stored: Dictionary = {"fuel": clampf(ship.state.fuel_liters / maxf(1.0, ship.definition.fuel_capacity_liters), 0.0, 1.0), "condition": clampf(ship.state.condition, 0.0, 1.0)}
 	ship_kind = kind
-	heavy_mode = kind == "heavy"
+	heavy_mode = Progression.heavy_tier(kind) > 0
 	if not select_port(world_ports.find(port)):
 		ship_kind = previous
-		heavy_mode = previous == "heavy"
+		heavy_mode = Progression.heavy_tier(previous) > 0
 		return
 	fleet[previous] = stored
 	ship.state.fuel_liters = float(fleet[kind].fuel) * ship.definition.fuel_capacity_liters
@@ -492,7 +492,11 @@ func can_switch() -> bool:
 	return bulk_active.is_empty() and not loading.busy() and offers.active_job("preview_captain").is_empty() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
 
 func create_ship() -> HandlingShip:
-	if heavy_mode: return preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate()
+	if heavy_mode:
+		var lifter: HandlingShip = preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate()
+		# Patch 2.2 item 3: heavy-lift ships 2-5 sail the same runtime with their own record.
+		if game_mode and Progression.heavy_tier(ship_kind) > 0: lifter.definition = Progression.definition(ship_kind)
+		return lifter
 	var body: HandlingShip = preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
 	# Patch 2.2 item 1: container ships 2-5 sail the same runtime with their own record.
 	if game_mode: body.definition = Progression.definition(ship_kind)
@@ -501,7 +505,7 @@ func create_ship() -> HandlingShip:
 func select_port(index: int, restoring: bool = false) -> bool:
 	if index < 0 or index >= world_ports.size(): return false
 	if is_instance_valid(ship) and not restoring and not can_switch():
-		heavy_mode = ship.definition.id == "ship_heavy_lifter_01"
+		heavy_mode = ship.has_method("attach_payload")
 		offer_notice = "Finish or cancel your current job before changing ships."
 		return false
 	var next_port: Node3D = world_ports[index]
@@ -509,7 +513,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	var allocation: Dictionary = next_port.reserve_spawn(next_ship.definition.hull_size_m)
 	if not allocation.ok:
 		next_ship.free()
-		if is_instance_valid(ship): heavy_mode = ship.definition.id == "ship_heavy_lifter_01"
+		if is_instance_valid(ship): heavy_mode = ship.has_method("attach_payload")
 		offer_notice = "Spawn occupied. Current ship and job preserved."
 		return false
 	loading.disconnect_ship()
@@ -589,7 +593,14 @@ func refresh_jobs() -> void:
 			jobs_list.add_item("%s → %s · %.2f credits" % [bulk_job.title, world_ports[int(bulk_job.destination)].definition.display_name, bulk_job.reward_minor / 100.0])
 			jobs_list.set_item_metadata(jobs_list.item_count - 1, id)
 			job_cards.append({"id": id, "kind": "bulk", "count": 1, "what": bulk_job.title, "to": world_ports[int(bulk_job.destination)].definition.display_name, "pay": bulk_job.reward_minor})
-	var rows: Array[Dictionary] = heavy_jobs.list_at(port.definition.id) if heavy_mode else offers.list_at(port.definition.id)
+	var rows: Array[Dictionary] = offers.list_at(port.definition.id)
+	if heavy_mode:
+		# Patch 2.2 item 3: this ship's own tier first, then smaller loads, never a
+		# bigger one, at most JOB_BOARD_SIZE cards.
+		rows = []
+		for tier: int in range(maxi(1, Progression.heavy_tier(ship_kind) if game_mode else 1), 0, -1): rows.append_array(heavy_jobs.list_at(port.definition.id, tier))
+		rows.assign(rows.filter(func(row: Dictionary) -> bool: return row.state == "available"))
+		rows.resize(mini(rows.size(), JOB_BOARD_SIZE))
 	# Patch 2.2 item 1: never list a container job bigger than this ship. Jobs
 	# sized for the biggest tier that fits come first, so a big ship sees its
 	# own jobs on top; within a tier the order is as before. The board keeps to

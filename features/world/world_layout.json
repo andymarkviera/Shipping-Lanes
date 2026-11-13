@@ -66,7 +66,11 @@
     "ship_bulk_supramax_02": {"record": "features/catalog/records/bulk_02_ship.tres", "family": "bulk", "size_class": "M", "top_speed_mps": 15.94705882352941},
     "ship_bulk_panamax_03": {"record": "features/catalog/records/bulk_03_ship.tres", "family": "bulk", "size_class": "L", "top_speed_mps": 17.489655172413794},
     "ship_bulk_capesize_04": {"record": "features/catalog/records/bulk_04_ship.tres", "family": "bulk", "size_class": "XL", "top_speed_mps": 19.03333333333333},
-    "ship_bulk_valemax_05": {"record": "features/catalog/records/bulk_05_ship.tres", "family": "bulk", "size_class": "XL", "top_speed_mps": 20.58}
+    "ship_bulk_valemax_05": {"record": "features/catalog/records/bulk_05_ship.tres", "family": "bulk", "size_class": "XL", "top_speed_mps": 20.58},
+    "ship_heavy_project_02": {"record": "features/catalog/records/heavy_02_ship.tres", "family": "heavy", "size_class": "L", "top_speed_mps": 14.918823529411764},
+    "ship_heavy_twin_crane_03": {"record": "features/catalog/records/heavy_03_ship.tres", "family": "heavy", "size_class": "XL", "top_speed_mps": 16.462068965517243},
+    "ship_heavy_semisub_04": {"record": "features/catalog/records/heavy_04_ship.tres", "family": "heavy", "size_class": "XL", "top_speed_mps": 18.00583333333333},
+    "ship_heavy_semisub_05": {"record": "features/catalog/records/heavy_05_ship.tres", "family": "heavy", "size_class": "XL", "top_speed_mps": 19.549}
   },
   "ports": {
     "port_brindle_quay": {

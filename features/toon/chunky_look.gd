@@ -138,18 +138,8 @@ static func dress_ship(ship: Node3D, kind: String) -> void:
 	if kind == "bulk" or kind.begins_with("bulk_"):
 		_dress_bulker(root, hull, ship.definition, 1 if kind == "bulk" else int(kind.trim_prefix("bulk_")), main, trim, cache)
 		return
-	if kind == "heavy":
-		# Low float, two side walls, an open stern and a tower at the bow. The
-		# lifting deck and the load keep their own models.
-		hull.mesh = hull_mesh(size.z, size.x, -4.5, -2.0, -1.6, 0.0, main, Color("8f9aa3"))
-		for side: float in [-1.0, 1.0]:
-			_box(root, Vector3(3, 5, 74), Vector3(side * 10.5, 0.5, -5), main, cache)
-			_box(root, Vector3(3.3, 0.6, 74.3), Vector3(side * 10.5, 3.2, -5), WHITE, cache)
-			_funnel(root, Vector3(side * 6.5, 15.2, 37), 1.7, 6.0, trim, cache)
-		_house(root, Vector3(0, -2, 32), Vector3(20, 13, 17), trim, cache)
-		_house(root, Vector3(0, 11.7, 30), Vector3(14, 3.5, 9), trim, cache)
-		_drum(root, 0.3, 0.3, 5.0, Vector3(0, 18.4, 30), WHITE, cache)
-		_ball(root, 0.8, 1.6, Vector3(0, 21.2, 30), RUST, cache)
+	if kind == "heavy" or kind.begins_with("heavy_"):
+		_dress_heavy(root, hull, ship.definition, 1 if kind == "heavy" else int(kind.trim_prefix("heavy_")), main, trim, cache)
 		return
 	var deck: float = 2.6
 	hull.mesh = hull_mesh(size.z, size.x, -3.2, deck, 3.5, 1.6, main, Color("c9b48a"))
@@ -392,3 +382,41 @@ static func _dress_bulker(root: Node3D, hull: MeshInstance3D, definition: ShipDe
 		_box(root, Vector3(2.4 * s, 2.0 * s, 2.4 * s), Vector3(0, deck + 4.5 * s, gap), WHITE, cache)
 		var jib: MeshInstance3D = _box(root, Vector3(0.6 * s, 0.6 * s, pitch * 0.9), Vector3(0, deck + 5.0 * s + pitch * 0.12, gap + pitch * 0.43), trim, cache)
 		jib.rotation.x = -0.28
+
+## Patch 2.2 item 3: heavy-lift ships 1-5. Ship 1 is the current heavy lifter:
+## a low float, two side walls, an open stern and a tower at the bow. Bigger
+## ships stretch it by beam and length like their colliders (heavy_lifter.gd).
+## Ships 2-3 add two deck cranes on the port wall (project cargo ships);
+## ships 4-5 are semi-submersibles with buoyancy towers at the stern, and
+## ship 5 a helideck on its bridge. The lifting deck and the load keep their
+## own models.
+static func _dress_heavy(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition, tier: int, main: Color, trim: Color, cache: Dictionary) -> void:
+	var size: Vector3 = definition.hull_size_m
+	var k: Vector3 = Vector3(size.x / 24.0, 1.0, size.z / 90.0)
+	hull.mesh = hull_mesh(size.z, size.x, -4.5, -2.0, -1.6, 0.0, main, Color("8f9aa3"))
+	for side: float in [-1.0, 1.0]:
+		_box(root, Vector3(3, 5, 74) * k, Vector3(side * 10.5, 0.5, -5) * k, main, cache)
+		_box(root, Vector3(3.3 * k.x, 0.6, 74.3 * k.z), Vector3(side * 10.5 * k.x, 3.2, -5 * k.z), WHITE, cache)
+		if tier <= 3: _funnel(root, Vector3(side * 6.5 * k.x, 15.2, 37 * k.z), 1.7 * k.x, 6.0, trim, cache)
+		if tier >= 4:
+			# Buoyancy towers on the stern ends of the walls.
+			var stern: float = -42.0 * k.z + 7.0 * k.z
+			_box(root, Vector3(3 * k.x, 9.0 + tier, 10 * k.z), Vector3(side * 10.5 * k.x, 3.0 + (9.0 + tier) / 2.0, stern), trim, cache)
+			_box(root, Vector3(3.4 * k.x, 0.8, 10.4 * k.z), Vector3(side * 10.5 * k.x, 3.4 + 9.0 + tier, stern), WHITE, cache)
+	_house(root, Vector3(0, -2, 32 * k.z), Vector3(20 * k.x, 13, 17 * k.z), trim, cache)
+	var bridge: float = 11.7 + (tier - 1) * 1.2
+	if tier > 1: _house(root, Vector3(0, 11.0, 30 * k.z), Vector3(16 * k.x, bridge - 11.0, 11 * k.z), trim, cache)
+	_house(root, Vector3(0, bridge, 30 * k.z), Vector3(14 * k.x, 3.5, 9 * k.z), trim, cache)
+	_drum(root, 0.3, 0.3, 5.0, Vector3(0, bridge + 6.7, 30 * k.z), WHITE, cache)
+	_ball(root, 0.8, 1.6, Vector3(0, bridge + 9.5, 30 * k.z), RUST, cache)
+	if tier >= 4: _funnel(root, Vector3(0, bridge + 3.5, 26 * k.z), 1.8 * k.x, 5.0, main, cache)
+	if tier == 5: _drum(root, 9.0, 9.0, 0.6, Vector3(0, bridge + 3.8, 36 * k.z), WHITE.lerp(Color("4caf50"), 0.5), cache)
+	if tier in [2, 3]:
+		# Twin heavy cranes on the port wall, jibs resting astern over the deck.
+		var reach: float = (18.0 + tier * 2.0) * k.z
+		for z: float in [-20.0 * k.z, 4.0 * k.z]:
+			var base: Vector3 = Vector3(10.5 * k.x, 3.0, z)
+			_drum(root, 2.0 * k.x, 2.3 * k.x, 8.0, base + Vector3(0, 4.0, 0), trim, cache)
+			_box(root, Vector3(5.0, 4.0, 5.0), base + Vector3(-0.5, 10.0, 0), WHITE, cache)
+			var jib: MeshInstance3D = _box(root, Vector3(1.6, 1.6, reach), base + Vector3(-3.0, 12.0 + reach * 0.5 * sin(0.18), -reach * 0.5 * cos(0.18)), trim, cache)
+			jib.rotation.x = 0.18
