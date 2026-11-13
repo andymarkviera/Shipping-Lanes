@@ -26,7 +26,7 @@ func start(id: String) -> bool:
 	sequence += 1
 	var next: String = "load_%s_%d" % [id, sequence]
 	var service: RefCounted = rule.body.state.operations
-	var result: Dictionary = service.reserve(next, rule.body.state.instance_id, "port_loading", {"offer_id": id}, offer.quantity * 5.0)
+	var result: Dictionary = service.reserve(next, rule.body.state.instance_id, "port_loading", {"offer_id": id}, rule.offers.loading_seconds(int(offer.quantity)))
 	notice = result.message
 	if not result.ok: return false
 	operation = next

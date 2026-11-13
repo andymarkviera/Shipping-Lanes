@@ -123,7 +123,7 @@ static func valid(value: Variant) -> bool:
 		var e: Variant = d.operations.records[id]
 		if not id is String or not e is Dictionary or e.size() != 8 or e.get("id") != id or e.get("ship_id") != ship_key or e.get("rule_id") != "port_loading" or not e.get("payload") is Dictionary or not e.get("message") is String: return false
 		var offer: Variant = d.offers.get(e.payload.get("offer_id"))
-		if not offer is Dictionary or not number(e.get("duration"), .001, 86400) or e.duration != offer.quantity * 5.0 or not number(e.get("elapsed"), 0, e.duration): return false
+		if not offer is Dictionary or not number(e.get("duration"), .001, 86400) or not offer.get("quantity") is int or e.duration != Offers.loading_seconds(offer.quantity) or not number(e.get("elapsed"), 0, e.duration): return false
 		if e.get("state") not in ["reserved", "running", "ready", "committed", "cancelled", "interrupted", "failed"]: return false
 		if e.state == "reserved" and e.elapsed != 0: return false
 		if e.state in ["ready", "committed"] and e.elapsed != e.duration: return false

@@ -5636,3 +5636,62 @@ Limits:
   not in this change.
 - No online service, export preset or workflow file changed. No new runtime
   resource was added.
+
+## November 13, 2026 — Patch 2.0 item 3: Bigger loads (issue #70)
+
+Written and checked on Linux. Not playtested. Nobody has looked at the stack on
+screen yet.
+
+What changed:
+
+- The container ship carries 24 containers, up from 6: four bays, three across,
+  two tiers. These are the 24 deck positions already authored for the hull
+  (`asset_manifest.json`). The lower tier fills first, bow to stern, then the
+  upper tier. The containers on deck are still drawn from the manifest.
+- Game jobs (`container_offers.gd`): each port still has three open jobs. One is
+  a handful (4, 6 or 8 containers), one a part load (10 to 16), one a full ship
+  (24). The sizes change as jobs are delivered.
+- Pay is per container and per distance: 3.00 credits per container per 100 m.
+  That is 45.00 a container on the 1.5 km hop, so 180.00 for 4 and 1,080.00 for
+  a full ship there (the old best job on that hop paid 750.00).
+- Loading: 5 s a container for the first three (as before), then 0.5 s each. A
+  full ship loads in 25.5 s instead of 2 minutes. The ship can cancel as before;
+  nothing pauses.
+- Older saves: the old 1, 2 and 3 container game jobs still read. A job in
+  progress or already paid stays as it was; untaken old jobs are replaced by
+  the new ones. Port Test and the frozen online service keep their six seeded
+  1 to 3 container jobs and pay.
+- The three other container ship records (coastal, harbor, swift) share the
+  same hull and deck, so they are 24 as well. They are not sold in the game.
+
+Checks run on the agent's Linux runner, Godot 4.7.2 official, headless:
+
+- Passed: import, `check_scripts` (186 scripts), boot, `check_catalog`,
+  `check_controls`, `check_flow`, `check_starter`, `check_helm_keys`,
+  `check_m1_voyage` (it now takes a 4 container job for 180.00 credits), the
+  Stage 2 probes, `collision_probe`, `composition_probe`, `ports_probe` (305
+  checks), `voyage_probe`, `sailing_save_probe`, `public_physics_probe`,
+  `cargo_matrix_probe`.
+- `ports_probe` now also checks: 24 fit and 25 do not; the deck layout is two
+  tiers, lower first; game jobs run from 4 to 24 and pay the same per container
+  on the same leg; old small game jobs still read; restock withdraws untaken
+  old jobs and keeps finished ones; loading times.
+- Failed, the same on unchanged main: `fleet_inspection_probe` (3 checks),
+  `ship_purchase_probe` (1 check). Both are online-panel probes outside the
+  Checks job. `voyage_probe` passes on clean user data and fails if run a second
+  time on the same user data ("Store opens"); main does the same.
+- Not run: the Python unittest stage (no Python file changed; `compileall`
+  passed), anything on Windows, any screenshot, any playtest.
+
+Limits:
+
+- The game sells one container ship, so "bigger ships carry many more" has no
+  ship to apply to yet. Bulk and heavy jobs are unchanged.
+- The pay rate and job sizes are first guesses for Andy to judge in play.
+- Headless Godot does not keep MultiMesh transforms, so the stack positions are
+  checked from the layout file, not from the drawn instances.
+- A third tier would fit the count limit but would stand in front of the bridge
+  windows, so the stack stops at two tiers.
+- The import again wrote `.uid` files for older scripts that lack one. They are
+  not in this change. No export preset or workflow file changed; no new runtime
+  resource was added.
