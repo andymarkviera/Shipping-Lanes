@@ -91,6 +91,12 @@ func _draw() -> void:
 	# Toon shading: a soft shadow on the lower right, a shine on the upper left.
 	draw_arc(middle, radius - 5, deg_to_rad(-10), deg_to_rad(100), 24, Color(PLAYFUL.INK, 0.16), 10, true)
 	draw_arc(middle, radius - 9, deg_to_rad(200), deg_to_rad(250), 12, Color(1, 1, 1, 0.45), 4, true)
+	# Patch 2.1 item 3: icebergs as small white dots.
+	for berg: Vector3 in Progression.ICEBERGS:
+		var spot: Vector2 = sphere_point(Vector3(berg.x, 0, berg.z), ship)
+		if not visible_on(spot): continue
+		draw_circle(on_disc(spot, radius), 3.0, Color("8fc3d6"))
+		draw_circle(on_disc(spot, radius), 2.0, Color.WHITE)
 	var destination: Dictionary = Navigation.target(view)
 	var goal_at: Vector2 = sphere_point(destination.position, ship) if not destination.is_empty() else Vector2.ZERO
 	if not destination.is_empty():

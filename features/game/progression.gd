@@ -29,6 +29,17 @@ const LAND = [
 ]
 ## Patch 2.1 item 3: snowy ice shelves beside the two polar quays, solid like land.
 const ICE_SHELVES = [Rect2(3050, 3700, 450, 460), Rect2(-2100, -4360, 450, 500)]
+## Patch 2.1 item 3: icebergs in the polar seas, solid like land. Vector3(x,
+## radius, z) in metres. They keep clear of the polar quays, their approaches
+## and their heavy-load drop areas.
+const ICEBERGS = [
+	Vector3(3000, 45, 4750), Vector3(4300, 60, 4800), Vector3(5200, 50, 4300), Vector3(2200, 70, 5000),
+	Vector3(3500, 55, 5400), Vector3(5000, 65, 5600), Vector3(1200, 50, 5500), Vector3(2700, 40, 5900),
+	Vector3(-300, 60, 5200), Vector3(6200, 45, 5000),
+	Vector3(-1500, 55, -4750), Vector3(-3800, 60, -4400), Vector3(-2000, 50, -6000), Vector3(-700, 70, -5100),
+	Vector3(-4400, 45, -5600), Vector3(200, 50, -4600), Vector3(-3300, 60, -6100), Vector3(1400, 55, -5600),
+	Vector3(-5200, 50, -4700), Vector3(2600, 45, -5000),
+]
 ## Patch 2.1 item 3: the world repeats every WRAP_M metres east-west and
 ## north-south, so a ship that sails off one edge carries on from the opposite
 ## one. 4000 pi metres is a whole number of every swell and tone wave in the

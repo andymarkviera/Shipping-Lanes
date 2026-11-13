@@ -277,6 +277,33 @@ func play() -> void:
 		kept = kept and offers_script.fresh(check_id[0], true).get("destination_port_id") == check_id[1]
 	expect(kept, "Saved strait jobs keep the destinations they had before the polar ports")
 	expect(offers_script.fresh("container_load_1_3_0", true).destination_port_id == "port_north_pole" and offers_script.fresh("container_load_1_3_1", true).destination_port_id == "port_south_pole" and offers_script.fresh("container_load_4_3_0", true).is_empty(), "Each strait port has a job to each pole in turn; the poles have three slots")
+	# Patch 2.1 item 3: solid toon icebergs in the polar seas, clear of every
+	# quay, approach and heavy-load drop area, and never torn by the world's edge.
+	var bergs: Array = game.Progression.ICEBERGS
+	var bergs_clear: bool = game.icebergs.size() == bergs.size() and bergs.size() >= 16
+	for index: int in bergs.size():
+		var berg: Vector3 = Vector3(bergs[index].x, 0, bergs[index].z)
+		var body: StaticBody3D = game.icebergs[index]
+		bergs_clear = bergs_clear and body.collision_layer == CollisionRules.SHORE and body.get_child(0) is CollisionShape3D
+		for place: Node3D in game.world_ports:
+			var drop_side: float = game.Progression.WORLD[game.world_ports.find(place)].drop_side
+			var local: Vector3 = game.Progression.short_way(berg - place.position)
+			var near_quay: bool = Vector2(local.x, local.z).length() < 700 + bergs[index].y
+			var in_drops: bool = local.x * drop_side > 300 - bergs[index].y and local.x * drop_side < 1000 + bergs[index].y and local.z > -1350 - bergs[index].y and local.z < -650 + bergs[index].y
+			if near_quay or in_drops:
+				bergs_clear = false
+				print("M1_VOYAGE iceberg %d too close to %s" % [index, place.definition.id])
+		for rect: Rect2 in game.Progression.LAND + game.Progression.ICE_SHELVES:
+			if rect.grow(bergs[index].y + 150).has_point(Vector2(berg.x, berg.z)): bergs_clear = false
+	expect(bergs_clear, "%d solid icebergs, clear of the ports, the heavy drop areas and the land" % bergs.size())
+	var copies: StaticBody3D = game.icebergs[0]
+	var first: Vector3 = Vector3(bergs[0].x, 0, bergs[0].z)
+	game.ship.global_position = first + Vector3(0, 0, -game.Progression.WRAP_M + 900)
+	game.place_icebergs()
+	var moved: bool = copies.position.distance_to(first - Vector3(0, 0, game.Progression.WRAP_M)) < 1.0
+	game.ship.global_position = home
+	game.place_icebergs()
+	expect(moved and copies.position.distance_to(first) < 1.0, "An iceberg near the edge is there on both sides of it")
 	var straight: float = north.position.distance_to(south.position)
 	expect(game.Progression.leg_units(4, 5) * 100 < straight - 2000, "The leg between the poles goes the short way, over the edge (%d00 m, %.0f m straight)" % [game.Progression.leg_units(4, 5), straight])
 	if not expect(game.controls.input_allowed(), "New game: helm accepts input; " + why_stuck(game)): return
