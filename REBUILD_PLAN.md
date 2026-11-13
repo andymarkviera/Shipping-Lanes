@@ -621,7 +621,7 @@ on pausing the world.
      playful and readable.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
-**Later patches:** Patch 2.1 is next (section 6). Patch 3 is a new main menu
+**Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is next. Patch 3 is a new main menu
 (Andy's design, later; do not start). Patch 4 is multiplayer (do not start).
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
@@ -679,3 +679,57 @@ playtest. Item 4 (multiplayer-safe docking: two berths per port, one ship
 each, "port full" when both are taken, ship collision off at a berth) is
 written and passes the automatic checks on Linux; not seen on a screen. All
 of Patch 2.1 now waits for Andy's Windows playtest. Details in PROGRESS.md.
+
+## 7. Patch 2.2 (Andy, November 13, 2026)
+
+Andy's next round: a real fleet ladder and a boat hangar. Same rules as
+sections 5 and 6: one PR each, in this order, Wind Waker look, Godot 4.7.2,
+saves and on-hold gas/oil/refinery/cargo-fuel code intact (gas and oil ships
+stay out of the ladder and the hangar for now), nothing that relies on
+pausing, single-player for now, Patch 2.0/2.1 wake, waves, rocking and bow
+splash keep working and scale with each hull. Hark chose the designs (Andy:
+"decided by you or the AI, find different real-life ships and get inspired").
+
+**Fleet ladder.** Three families of five ships each. Ship 1 is the smallest,
+ship 5 is huge. Bigger is faster (Andy's call), but bigger also takes longer
+to speed up, stop and turn, so a big ship feels heavy. Prices climb steeply so
+ship 5 is a long-term goal. Saves keep working: existing starter, coastal,
+harbor, swift container ships, the bulk prototype and the heavy lifter map
+onto the new ladder by ID (no save loses a ship or credits).
+
+| Family | 1 | 2 | 3 | 4 | 5 (huge) |
+| --- | --- | --- | --- | --- | --- |
+| Container (inspired by) | Starter feeder (current) | Coastal feeder, ~1,000 TEU | Panamax, ~4,500 TEU | Neo-Panamax, ~14,000 TEU | Ultra-large box ship like MSC Irina, ~24,000 TEU |
+| Container top speed | 30 kn | 33 kn | 36 kn | 39 kn | 42 kn |
+| Bulk (inspired by) | Handysize with deck cranes | Supramax | Panamax bulker | Capesize | Valemax ore carrier |
+| Bulk top speed | 28 kn | 31 kn | 34 kn | 37 kn | 40 kn |
+| Heavy lift (inspired by) | Current heavy lifter | Twin-crane project cargo ship (Jumbo J-class style) | Big twin-crane heavy lifter | Semi-submersible (BigLift Happy-Star style) | Giant semi-submersible like BOKA Vanguard |
+| Heavy lift top speed | 26 kn | 29 kn | 32 kn | 35 kn | 38 kn |
+
+Sizes roughly double in length every one to two steps (ship 5 is several times
+the starter; on screen it should feel enormous next to ship 1). Time to full
+speed grows from about 21 s (ship 1) to about 40 s (ship 5); stopping grows
+similarly; turning gets wider. Capacity, price and fuel use scale with size.
+Each ship gets its own low-poly toon model in the Wind Waker look with a
+distinct silhouette and color scheme per family; berths and the auto-slide
+docking must fit every size (big ships use bigger berths or a longer slide;
+no clipping into the quay).
+
+1. **Container family:** container ships 2-5 (models, definitions, cargo
+   capacity, prices, speeds), save mapping for the old container variants.
+2. **Bulk family:** bulk ships 1-5, replacing the bulk prototype by mapping.
+3. **Heavy-lift family:** heavy-lift ships 2-5 (ship 1 is the current heavy
+   lifter).
+4. **Boat hangar.** The ship purchase list becomes a full screen: a toon boat
+   hangar (shed doors open to the water, warm lights) with one ship shown at a
+   time, slowly turning. Left/right arrows (on screen and keys) cycle every
+   ship in the ladder; a family filter (All, Container, Bulk, Heavy lift)
+   at the top. Each ship shows name, family, size, top speed, capacity and
+   price. Not owned: Buy (if affordable, else shows how much more is needed).
+   Owned: Select, which makes it your active ship (the same switching rules
+   the fleet already uses: switch while docked at a port). The current ship is
+   marked Active. Back returns to the game. Opened from the existing buy/fleet
+   button at ports. The last item's PR carries a 5-10 line Windows playtest
+   checklist for all of Patch 2.2.
+
+**Patch 2.2 status (November 13, 2026):** planned; not started.
