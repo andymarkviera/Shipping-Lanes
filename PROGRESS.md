@@ -5748,3 +5748,74 @@ Limits:
 - A moored ship rocks on the swell like any other.
 - The import again wrote `.uid` files for older scripts that lack one. They are
   not in this change. No export preset or workflow file changed.
+
+## Patch 2.0 item 5: HUD simplification — November 13, 2026 (run on Linux, not on Windows)
+
+Issue #74. REBUILD_PLAN.md section 5, item 5. The game only; test scenes keep
+their HUDs. No save, cargo, money or docking rule changed.
+
+What changed:
+
+- New `features/game/game_hud.gd`: the game's HUD layout.
+  - Helm bar, bottom centre: a slider marked R, N and D, the speed ("12 kn")
+    and the Dock button. Dock is always there and greyed out with no berth in
+    range; it reads Undock when docked. "Slow down to dock." shows under the
+    slider when that is the only thing missing. The slider follows the
+    throttle keys and can also be dragged or clicked to set the engine order.
+  - Controls hint, top left: a new game only (no money earned or spent), for
+    the first 45 seconds under way, then it fades and does not come back.
+  - Notices (paid, refueled, collision and so on) show under the job card for
+    6 seconds and fade. Loading progress stays up while loading.
+  - Port card, top left, only while docked: port name, REFUEL, REPAIR, SHIPS
+    and one card per job (a small picture of the load, what, from → to, pay,
+    Accept). The cards are there as soon as the ship docks. CARGO, "Close
+    services", the job list and "Accept selected job" are gone. Deliver shows
+    only at the right port. SHIPS reads JOBS while the ship list is open.
+- New `features/game/globe_minimap.gd`: a small globe, bottom right. The world
+  is wrapped on a sphere that turns as the ship sails. Land, ports, the ship
+  arrow and a dotted course to the destination, which is named and ringed.
+- `features/ports/port_test.gd` (in `game_mode`): the top-left panel is gone at
+  sea. No key list, "Berth:" line, Main menu button (Esc has it), receipt text
+  or prices line. Uses the two new files. Job cards are listed on docking.
+- `features/ports/voyage_hud.gd` (game only): money in large type at the top;
+  no "NO ACTIVE JOB" heading, no cargo count, no speed (it is on the helm bar).
+  Hint wording follows the new buttons.
+- `features/ships/helm_notice.gd`: a scene may switch off the "DOCKED" banner.
+  The game does; the Undock button is right there.
+- `export_presets.cfg`: the two new files added. Their `.uid` files were
+  written by Godot during the import, not by hand.
+- `tools/check_m1_voyage.gd` follows the new HUD: Accept on a job card,
+  Deliver, Esc then MAIN MENU where it clicked the removed Main menu button.
+  New checks: the globe is the minimap, nothing top left at sea, Dock greyed
+  out away from a berth, knots readout, slider orders ahead and neutral, the
+  hint is gone after the first delivery, one card per offer.
+
+Checks run on the agent's Linux runner, Godot 4.7.2 official, headless:
+
+- Passed: import, `check_scripts` (188 scripts), boot, `units_probe`,
+  `check_catalog`, `diagnostics_probe`, `check_controls`, `check_flow`,
+  `check_starter`, `check_helm_keys`, `check_m1_voyage`, all twelve Stage 2
+  probes, `collision_probe`, `composition_probe`, `ports_probe`,
+  `voyage_probe`, `sailing_save_probe`, `public_physics_probe`.
+- Rendered with GL Compatibility on a software driver (Mesa llvmpipe under
+  Xvfb) at 1280x720. The agent looked at screenshots at sea, under way with a
+  job, docked with the job cards, docked with a job aboard, and the SHIPS list.
+- Failed once and fixed: `check_m1_voyage` reported a resource still in use at
+  exit (the flat minimap the globe replaces was not freed).
+- `voyage_probe` fails when run a second time on the same data folder (its own
+  leftover test files); it does the same without this change. It passes on a
+  clean folder, which is how the Checks job runs.
+- `shared_gauges_probe` (not in the Checks job) passes its checks but does not
+  exit; it does the same without this change.
+- Not run: the Python stage (no Python file changed), `cargo_matrix_probe`,
+  the online-panel probes, anything on Windows, any real graphics card, any
+  playtest. Other window sizes and fullscreen were not looked at.
+
+Limits:
+
+- The slider was driven by code in the check, not by a real mouse drag.
+- A heavy job still shows its Lower, Raise and Cancel pickup buttons and
+  guidance text top left while it is active. Not seen on screen.
+- The globe names only the destination port; other ports are dots.
+- The import again wrote `.uid` files for older scripts that lack one. They
+  are not in this change. No workflow file changed.

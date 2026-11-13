@@ -624,8 +624,10 @@ on pausing the world.
 **Later patches (do not start):** Patch 3 is a new main menu (Andy's design,
 later). Patch 4 is multiplayer.
 
-**Patch 2.0 status (November 13, 2026):** items 1 (Always running + Esc menu),
-2 (Easy docking), 3 (Bigger loads) and 4 (Sailing feel) are written and pass
-the automatic checks on Linux; all four wait for Andy's Windows playtest. Item
-4 has not been seen on a screen by anyone yet. Item 5 not started. Details in
-PROGRESS.md.
+**Patch 2.0 status (November 13, 2026):** all five items are written and pass
+the automatic checks on Linux: 1 (Always running + Esc menu), 2 (Easy docking),
+3 (Bigger loads), 4 (Sailing feel) and 5 (HUD simplification). All five wait
+for Andy's Windows playtest; the checklist is in the item 5 pull request.
+Item 4 has not been judged on a screen by anyone yet; item 5 was seen only as
+software-rendered screenshots by the agent.
+Details in PROGRESS.md.

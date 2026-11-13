@@ -6,6 +6,8 @@ var route: Label
 var instruction: Label
 var instruments: Label
 var progress: ProgressBar
+## Patch 2.0 item 5, the game only: the wallet, large, at the top of the card.
+var money: Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
@@ -21,6 +23,10 @@ func _ready() -> void:
 	stack.add_theme_constant_override("separation", 8)
 	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stack)
+	money = label(stack)
+	money.add_theme_font_size_override("font_size", 24)
+	money.add_theme_color_override("font_color", Color("ffc940"))
+	money.hide()
 	heading = label(stack)
 	heading.add_theme_color_override("font_color", Color("9ee3b1"))
 	cargo = label(stack)
@@ -92,12 +98,13 @@ static func describe(view: Node3D) -> Dictionary:
 static func game_hints(view: Node3D, result: Dictionary) -> void:
 	var docked: bool = view.docking.state(1) == "docked"
 	if result.stage == "NO ACTIVE JOB":
-		result.next = "Open CARGO, pick a job and click Accept selected job." if docked else "Sail up to a quay (see the minimap), slow down and click Dock. Jobs are under CARGO."
+		result.next = "Pick a job card and click Accept." if docked else "Sail up to a quay (see the globe), slow down and click Dock."
 		var ships: Dictionary = preload("res://features/game/progression.gd").SHIPS
 		for kind: String in ships:
 			if not view.fleet.has(kind) and view.reward_minor >= int(ships[kind].price_minor):
 				result.next += "\nYou can afford the %s: %s." % [ships[kind].name, "open SHIPS" if docked else "dock and open SHIPS"]
 				break
+	result.next = result.next.replace("Open CARGO and select Deliver cargo at this port.", "Click Deliver.")
 	if view.ship.state.fuel_liters < view.ship.definition.fuel_capacity_liters * 0.25:
 		result.next += "\nFuel is low. " + ("Click REFUEL before you leave." if docked else "Dock at the nearest port and click REFUEL.")
 	if view.ship.state.condition < 0.5:
@@ -114,10 +121,17 @@ func refresh(view: Node3D) -> void:
 	progress.value = maxf(0, data.progress)
 	var values: Dictionary = HandlingFeedback.instruments(view.ship)
 	instruments.text = "%.1f kn · %s" % [values.speed_knots, values.direction.capitalize()]
-	if view.get("game_mode") == true: instruments.text = game_line(view, values)
+	if view.get("game_mode") == true:
+		# Patch 2.0 item 5: less on the card. The speed is on the helm bar, the
+		# containers are on deck, and "no job" needs no heading.
+		instruments.text = game_line(view, values)
+		money.text = "%.2f credits" % (view.reward_minor / 100.0)
+		money.show()
+		heading.visible = data.stage != "NO ACTIVE JOB"
+		cargo.hide()
 
-## The game's one status line: speed, fuel, money. Hull shows only when damaged.
+## The game's one status line: fuel, and hull only when damaged.
 static func game_line(view: Node3D, values: Dictionary) -> String:
-	var text: String = "Speed %.1f kn  ·  Fuel %.0f%%" % [values.speed_knots, 100.0 * values.fuel_liters / maxf(1.0, view.ship.definition.fuel_capacity_liters)]
+	var text: String = "Fuel %.0f%%" % (100.0 * values.fuel_liters / maxf(1.0, view.ship.definition.fuel_capacity_liters))
 	if view.ship.state.condition < 0.995: text += "  ·  Hull %.0f%%" % (view.ship.state.condition * 100.0)
-	return text + "\nMoney %.2f credits" % (view.reward_minor / 100.0)
+	return text
