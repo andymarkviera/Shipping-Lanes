@@ -670,8 +670,9 @@ nothing that relies on pausing, single-player for now.
 and passes the automatic checks on Linux; seen only as software-rendered
 screenshots by the agent. Item 2 (faster ships: starter 30 kn, about 21 s to
 full speed, about 16 s to stop) is written; its Godot checks have not run yet
-(only the Python checks ran) and wait for the Checks workflow. Item 3 is half
-done: 3A (the world wraps in every direction and the globe minimap shows it)
-is written and passes the automatic checks on Linux; 3B (polar ports and
-icebergs) is not started. All wait for Andy's Windows playtest. Item 4 is not
-started. Details in PROGRESS.md.
+(only the Python checks ran) and wait for the Checks workflow. Item 3 is
+written: 3A (the world wraps in every direction and the globe minimap shows
+it) and 3B (North Pole and South Pole ports with jobs, and solid toon icebergs
+in the polar seas) both pass the automatic checks on Linux; 3B was seen only
+as software-rendered screenshots by the agent. All wait for Andy's Windows
+playtest. Item 4 is not started. Details in PROGRESS.md.
