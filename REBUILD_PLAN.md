@@ -670,3 +670,5 @@ nothing that relies on pausing, single-player for now.
 and passes the automatic checks on Linux; seen only as software-rendered
 screenshots by the agent. It waits for Andy's Windows playtest. Items 2 to 4
 are not started. Details in PROGRESS.md.
+
+In progress: item 2 Faster ships (Codex, Nov 13, 2026)
