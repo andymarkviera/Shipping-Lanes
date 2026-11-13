@@ -5,6 +5,8 @@ const OCEAN_SHADER: Shader = preload("res://features/water/stylized_ocean.gdshad
 var quality: int = 1
 var elapsed: float = 0.0
 var ocean_material: ShaderMaterial
+## Total distance the world has been wrapped (see shift).
+var swirl_origin: Vector2 = Vector2.ZERO
 
 ## Rolling swell height in metres above the still water. The ocean and foam
 ## shaders repeat these numbers, so a hull that reads this rides the drawn water.
@@ -41,6 +43,12 @@ func set_quality(value: int) -> void:
 	surface.subdivide_depth = divisions
 	mesh = surface
 	ocean_material.set_shader_parameter("quality", quality)
+
+## The swirl lines do not repeat, so when the world wraps round they are slid
+## by the same step and the sea around the ship looks exactly as it did.
+func shift(by: Vector3) -> void:
+	swirl_origin += Vector2(by.x, by.z)
+	ocean_material.set_shader_parameter("swirl_origin", swirl_origin)
 
 func _process(delta: float) -> void:
 	elapsed += delta

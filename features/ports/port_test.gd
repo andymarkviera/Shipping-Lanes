@@ -646,8 +646,21 @@ func leave() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().change_scene_to_file("res://features/main/main.tscn")
 
+## Patch 2.1 item 3: a ship past an edge of the world carries on from the
+## opposite edge. The camera, the wake and the sea pattern move with it, so
+## nothing on screen jumps.
+func wrap_world() -> void:
+	var shift: Vector3 = Progression.wrapped(ship.global_position) - ship.global_position
+	if shift.length() < 1.0: return
+	ship.global_position += shift
+	if ship.get("attached") == true: ship.payload_body.global_position += shift
+	camera.shift(shift)
+	wake.shift(shift)
+	ocean.shift(shift)
+
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(ship): return
+	if game_mode: wrap_world()
 	offer_time += delta
 	offers.advance_to(int(offer_time * 1000))
 	if docking.state(1) in ["underway", "approaching"] and not loading.busy():
@@ -743,6 +756,7 @@ func _process(_delta: float) -> void:
 	waypoint.visible = false
 	if heavy_mode and not heavy_jobs.active.is_empty():
 		var target: Vector3 = ship.payload_body.global_position if heavy_jobs.active.state == "pickup" else heavy_jobs.active.drop
+		if game_mode: target = Progression.nearest(target, ship.global_position)
 		waypoint.position = target + Vector3(0, 12, 0)
 		waypoint.text = "PICKUP" if heavy_jobs.active.state == "pickup" else "OCEAN DROP-OFF"
 		waypoint.visible = true

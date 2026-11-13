@@ -5935,3 +5935,61 @@ Limits:
   are unchanged; the game does not sail them with their own handling.
 - WORLD_LAYOUT.md still shows the old trip-time tables. No workflow file
   changed. No new runtime resource, so `export_presets.cfg` is unchanged.
+
+## Patch 2.1 item 3A: map wrapping and minimap — November 13, 2026 (run on Linux, not on Windows)
+
+Issue #85. First half of item 3 only: the world wraps, and the globe minimap
+shows it. No polar ports and no icebergs yet (3B).
+
+What changed:
+
+- The game world now repeats every 4000 pi metres (about 12.57 km) east-west
+  and north-south, centred on the strait. A ship that sails off any edge,
+  top and bottom included, carries on from the opposite edge
+  (`Progression.WRAP_M`, `wrapped`, `nearest`; `wrap_world` in `port_test.gd`,
+  game only). Sailing once round takes about 13.5 minutes at 30 kn. The land
+  has at least 2.7 km of open sea to every edge.
+- This is a flat wrap (top joins bottom), as the issue asks, not a true globe
+  where crossing a pole brings you back on the far side of the same pole.
+- Nothing jumps on screen at the edge: the camera, the wake trail and the bow
+  splash chunks are moved with the ship. The size was picked so every swell
+  and tone wave in the ocean shader fits a whole number of times, so the
+  swell, rocking and colour bands match across the edge with no change to
+  them. The white swirl lines do not repeat, so the ocean shader has one new
+  uniform (`swirl_origin`, zero until the first wrap) that slides them by the
+  same step. The wake, waves and rocking code is otherwise unchanged.
+- Globe minimap: the ship now stays in the middle and the world rolls under
+  it; once round the world is one full turn of the globe, either way. Land,
+  ports and the dotted course are drawn the short way round, across an edge
+  when that is closer. A destination over the horizon sits on the rim in the
+  direction to sail. One globe radian is now 2,000 m (was 3,200 m), so the
+  globe shows about 3.1 km around the ship.
+- The heavy-job waypoint and its distance use the nearest copy of the target.
+- `tools/check_m1_voyage.gd` also checks the wrap in each direction, the open
+  sea round the land and the globe scale.
+
+Checks (agent's Linux runner, Godot 4.7.2 stable, headless):
+
+- Passed: import, `check_scripts`, boot, the whole stage 2 smoke set of the
+  Checks workflow (18 runs), `check_m1_voyage` (M1_VOYAGE_CHECK_PASS),
+  `python3 -m compileall services tools`, the `tools/world_layout` tests and
+  `traversal_budget.py`.
+- Software-rendered screenshots (xvfb): the globe at the start, south of the
+  strait, at the east edge and at a corner. Frames 1 m before and 1 m after
+  the east edge and the bottom edge differ no more than two ordinary frames
+  1 m apart.
+- Not run: the other Python suites (no file they cover changed), anything on
+  Windows, any playtest.
+
+Limits:
+
+- Nobody has sailed across an edge on a real screen yet.
+- Far out at sea the globe shows only water and grid lines until land comes
+  over the horizon.
+- The job panel's distance to a port is still the straight-line distance, not
+  the way round. The ports are all nearer the straight way, so it reads the
+  same today.
+- After many trips round the world in the same direction in one sitting
+  (dozens), the swirl lines may get slightly coarser; a reload resets it.
+- The older test scenes (F3) do not wrap. Saves are unchanged. No workflow
+  file changed. No new runtime resource, so `export_presets.cfg` is unchanged.

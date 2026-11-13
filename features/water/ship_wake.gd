@@ -42,6 +42,13 @@ func _process(delta: float) -> void:
 	draw_foam()
 	splash.update(delta)
 
+## Carries the trail along when the ship is moved to the far edge of a wrapped
+## world, so the wake stays behind the ship instead of being cut.
+func shift(by: Vector3) -> void:
+	for sample: Dictionary in samples: sample.center += by
+	if has_position: last_position += by
+	for chunk: Dictionary in splash.chunks: chunk.position += by
+
 func travel_sign() -> float:
 	return 1.0 if ship.velocity.dot(ship.global_basis.z) >= 0.0 else -1.0
 

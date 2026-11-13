@@ -48,6 +48,11 @@ func set_focus(target: CameraFocus) -> void:
 		arm_length = distance_order
 		initialized = true
 
+## Moves the view by a fixed step with no smoothing (the world wrapped round).
+func shift(by: Vector3) -> void:
+	pivot += by
+	camera.global_position += by
+
 func minimum_distance() -> float:
 	return maxf(8.0, focus.hull_radius * 1.3)
 
