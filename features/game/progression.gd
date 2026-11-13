@@ -47,10 +47,33 @@ const ICEBERGS = [
 ## land sits in the middle with at least 2.5 km of open sea to every edge.
 const WRAP_M: float = 4000.0 * PI
 const WRAP_CENTRE: Vector3 = Vector3(750, 0, -100)
+## Patch 2.2 item 1: container ships 1-5 (REBUILD_PLAN.md section 7). Ship 1
+## keeps the save ID "container"; ships 2-5 name their own records. Bigger is
+## faster but heavier: slower to speed up, stop and turn.
 const SHIPS = {
 	"container": {"name": "Container ship", "price_minor": 80000},
+	"container_2": {"name": "Coastal feeder", "price_minor": 1200000, "record": "res://features/catalog/records/container_02_ship.tres"},
+	"container_3": {"name": "Panamax box ship", "price_minor": 4500000, "record": "res://features/catalog/records/container_03_ship.tres"},
+	"container_4": {"name": "Neo-Panamax box ship", "price_minor": 12000000, "record": "res://features/catalog/records/container_04_ship.tres"},
+	"container_5": {"name": "Ultra-large box ship", "price_minor": 30000000, "record": "res://features/catalog/records/container_05_ship.tres"},
 	"bulk": {"name": "Bulk carrier", "price_minor": 120000},
 	"heavy": {"name": "Heavy lifter", "price_minor": 300000},
+}
+## The container ladder, smallest first. Tier 1 is "container".
+const CONTAINER_KINDS: Array[String] = ["container", "container_2", "container_3", "container_4", "container_5"]
+## Pay per container grows a little with the tier (percent), so each step up
+## earns more per trip than the containers alone.
+const CONTAINER_PAY_PERCENT: Array[int] = [100, 110, 120, 130, 140]
+## Ship record IDs and the ladder kind each one is saved as. The old container
+## variants all had the starter's 24-slot hull: the starter and the slower
+## harbor ship are ship 1; the coastal and the faster swift ship are ship 2,
+## the coastal feeder. A save naming one of them keeps the ship.
+const LADDER_IDS = {
+	"ship_starter_container_01": "container", "ship_harbor_container_01": "container",
+	"ship_coastal_container_01": "container_2", "ship_swift_container_01": "container_2",
+	"ship_container_feeder_02": "container_2", "ship_container_panamax_03": "container_3",
+	"ship_container_neopanamax_04": "container_4", "ship_container_ultra_05": "container_5",
+	"ship_heavy_lifter_01": "heavy",
 }
 ## A sold ship pays back half its price.
 const RESALE_PERCENT: int = 50
@@ -108,6 +131,35 @@ static func bulk_ids(origin: int) -> Array[String]:
 	var result: Array[String] = []
 	for cargo: Array in BULK_CARGO: result.append("bulk_%d_%s" % [origin, cargo[0]])
 	return result
+
+## The ship record a kind sails with. Bulk sails the starter hull for now.
+static func definition(kind: String) -> ShipDefinition:
+	if kind == "heavy": return load("res://features/catalog/records/heavy_lifter.tres") as ShipDefinition
+	return load(str(SHIPS.get(kind, {}).get("record", "res://features/catalog/records/starter_ship.tres"))) as ShipDefinition
+
+## 1 to 5 for a container ship, 0 for any other kind.
+static func container_tier(kind: String) -> int:
+	return CONTAINER_KINDS.find(kind) + 1
+
+## Containers a tier carries, from its record.
+static func container_capacity(tier: int) -> int:
+	return int(definition(CONTAINER_KINDS[tier - 1]).cargo_capacities.get("container_slots", 0))
+
+## A saved ship ID as a ladder kind. Kinds pass through; unknown IDs too, so
+## save_valid still rejects them.
+static func ladder_kind(id: String) -> String:
+	return id if SHIPS.has(id) else str(LADDER_IDS.get(id, id))
+
+## Patch 2.2: a version 4/5 save that names ships by record ID reads them as
+## ladder kinds. Two IDs on one kind keep the first. Call before save_valid.
+static func migrate(d: Dictionary) -> void:
+	if d.get("ship") is String: d.ship = ladder_kind(d.ship)
+	if not d.get("fleet") is Dictionary: return
+	var fleet: Dictionary = {}
+	for kind: Variant in d.fleet:
+		var mapped: Variant = ladder_kind(kind) if kind is String else kind
+		if not fleet.has(mapped): fleet[mapped] = d.fleet[kind]
+	d.fleet = fleet
 
 static func resale_minor(kind: String) -> int:
 	return int(SHIPS[kind].price_minor) * RESALE_PERCENT / 100

@@ -22,8 +22,28 @@ const PAY_PER_CONTAINER_100M: int = 300
 
 ## Seconds at the berth to load a job: 5 s a container for the first three (as
 ## before), then half a second each, so a full deck takes about 25 s.
+## Patch 2.2 item 1: past a full starter deck the bigger ships' cranes work
+## faster, 0.15 s a container, so 288 containers load in about a minute.
 static func loading_seconds(quantity: int) -> float:
-	return quantity * 5.0 if quantity <= 3 else 15.0 + (quantity - 3) * 0.5
+	if quantity <= 3: return quantity * 5.0
+	return 15.0 + (quantity - 3) * 0.5 if quantity <= GAME_CAPACITY else 25.5 + (quantity - GAME_CAPACITY) * 0.15
+
+## Patch 2.2 item 1: every port also offers jobs sized for container ships 2-5,
+## TIER_SLOTS per tier: slot 0 a part load (55, 65 or 75% of that ship), slot 1
+## a full ship. IDs "container_t<tier>_<port>_<slot>_<turn>".
+const TIER_PREFIXES: Array[String] = ["t2", "t3", "t4", "t5"]
+const TIER_SLOTS: int = 2
+
+static func tier_quantity(tier: int, port: int, slot: int, turn: int) -> int:
+	var capacity: int = Progression.container_capacity(tier)
+	return capacity if slot == 1 else capacity * (55 + 10 * ((port + turn) % 3)) / 100
+
+## The ladder tier a job was sized for: 1 for the starter's jobs, 2-5 for the
+## bigger ships', 0 for an ID that is neither.
+static func job_tier(id: String) -> int:
+	var prefix: String = id.get_slice("_", 1)
+	if prefix in ["load", "game", "seed"]: return 1
+	return TIER_PREFIXES.find(prefix) + 2 if TIER_PREFIXES.has(prefix) else 0
 
 ## Containers in a game job. Slot 0 is a handful (4, 6 or 8), slot 1 a part
 ## load (10 to 16), slot 2 a full ship. The size changes each turn of a slot.
@@ -60,8 +80,14 @@ static func fresh(id: String, game: bool = false) -> Dictionary:
 	if parts[1] == "seed" and parts[2] == "v1" and int(parts[3]) < 2 and int(parts[4]) < 3:
 		var route: int = int(parts[3])
 		return blank(id,int(parts[4]) + 1, Progression.WORLD[route].id, Progression.WORLD[1 - route].id, (int(parts[4]) + 1) * 25000)
-	if not game or parts[1] not in ["game", "load"] or int(parts[2]) >= Progression.WORLD.size(): return {}
+	if not game or (parts[1] not in ["game", "load"] and not TIER_PREFIXES.has(parts[1])) or int(parts[2]) >= Progression.WORLD.size(): return {}
 	var origin: int = int(parts[2])
+	if TIER_PREFIXES.has(parts[1]):
+		if int(parts[3]) >= TIER_SLOTS: return {}
+		var tier: int = job_tier(id)
+		var to: int = game_destination(origin, int(parts[3]), int(parts[4]))
+		var amount: int = tier_quantity(tier, origin, int(parts[3]), int(parts[4]))
+		return blank(id, amount, Progression.WORLD[origin].id, Progression.WORLD[to].id, amount * Progression.leg_units(origin, to) * PAY_PER_CONTAINER_100M * Progression.CONTAINER_PAY_PERCENT[tier - 1] / 100)
 	if int(parts[3]) >= (game_slots(origin) if parts[1] == "load" else 3) or (parts[1] == "game" and origin >= Progression.STRAIT_PORTS): return {}
 	var destination: int = game_destination(origin, int(parts[3]), int(parts[4]))
 	if parts[1] == "load":
@@ -79,16 +105,17 @@ func restock() -> void:
 	for id: String in _offers.keys():
 		var parts: PackedStringArray = id.split("_")
 		if parts[1] == "game" and _offers[id].state == "available": _offers.erase(id)
-		if parts[1] != "load": continue
-		var slot: String = parts[2] + "_" + parts[3]
+		if parts[1] != "load" and not TIER_PREFIXES.has(parts[1]): continue
+		var slot: String = "%s_%s_%s" % [parts[1], parts[2], parts[3]]
 		latest[slot] = maxi(int(latest.get(slot, -1)), int(parts[4]))
 	for port: int in Progression.WORLD.size():
-		for index: int in game_slots(port):
-			var slot: String = "%d_%d" % [port, index]
-			var turn: int = int(latest.get(slot, -1))
-			if turn >= 0 and _offers["container_load_%s_%d" % [slot, turn]].state not in ["delivered", "abandoned"]: continue
-			var id: String = "container_load_%s_%d" % [slot, turn + 1]
-			_offers[id] = fresh(id, true)
+		for prefix: String in ["load"] + TIER_PREFIXES:
+			for index: int in (game_slots(port) if prefix == "load" else TIER_SLOTS):
+				var slot: String = "%s_%d_%d" % [prefix, port, index]
+				var turn: int = int(latest.get(slot, -1))
+				if turn >= 0 and _offers["container_%s_%d" % [slot, turn]].state not in ["delivered", "abandoned"]: continue
+				var id: String = "container_%s_%d" % [slot, turn + 1]
+				_offers[id] = fresh(id, true)
 
 func advance_to(world_ms: int) -> bool:
 	if world_ms < _now_ms or world_ms > 9000000000000: return false

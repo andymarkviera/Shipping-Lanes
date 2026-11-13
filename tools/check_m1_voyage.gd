@@ -267,7 +267,8 @@ func play() -> void:
 	expect(north.definition.id == "port_north_pole" and south.definition.id == "port_south_pole" and north.icy and south.icy and north.has_node("ChunkyPort"), "The North Pole and South Pole ports are there, dressed in ice")
 	expect(north.position.z > 3400 + 500 and south.position.z < -3600 - 400, "The polar ports lie north and south of all the strait land")
 	for polar: Node3D in [north, south]:
-		var polar_jobs: Array[Dictionary] = game.offers.list_at(polar.definition.id)
+		# Patch 2.2 item 1: the starter's three, beside the bigger ships' jobs.
+		var polar_jobs: Array = game.offers.list_at(polar.definition.id).filter(func(row: Dictionary) -> bool: return game.offers.job_tier(row.id) == 1)
 		var bulk_ok: bool = true
 		for bulk_id: String in game.Progression.bulk_ids(game.world_ports.find(polar)): bulk_ok = bulk_ok and game.Progression.bulk_job(bulk_id).get("reward_minor", 0) > 0
 		expect(polar_jobs.size() == 3 and bulk_ok, "%s has three container jobs and three bulk jobs" % polar.definition.display_name)
@@ -337,7 +338,7 @@ func play() -> void:
 	# Brindle Quay by a new one: three strait jobs and one to a pole.
 	var open_jobs: int = 0
 	for row: Dictionary in game.offers.list_at("port_brindle_quay"):
-		if row.state == "available" and row.id != job.id: open_jobs += 1
+		if row.state == "available" and row.id != job.id and game.offers.job_tier(row.id) == 1: open_jobs += 1
 	expect(game.world_ports.size() == 6 and open_jobs == 4, "Six ports, and four open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
 	expect(game.voyage_hud.money.is_visible_in_tree() and game.voyage_hud.money.text == "%.2f credits" % (job.reward_minor / 100.0), "The money is shown on the game HUD (%s)" % game.voyage_hud.money.text)
 	expect(not game.game_hud.hint.visible, "The controls hint is gone after the first delivery")

@@ -132,6 +132,9 @@ static func dress_ship(ship: Node3D, kind: String) -> void:
 	var hull: MeshInstance3D = MeshInstance3D.new()
 	hull.name = "Hull"
 	root.add_child(hull)
+	if kind.begins_with("container_"):
+		_dress_box_ship(root, hull, ship.definition, int(kind.trim_prefix("container_")), main, trim, cache)
+		return
 	if kind == "heavy":
 		# Low float, two side walls, an open stern and a tower at the bow. The
 		# lifting deck and the load keep their own models.
@@ -290,3 +293,60 @@ static func _dress_icy(port: Node3D, root: Node3D, side: float, length: float, c
 		icicle.radial_segments = 6
 		icicle.rings = 1
 		_part(root, icicle, Vector3(side * 19.0, 2.0, z + 6.0), ICE, cache)
+
+## Patch 2.2 item 1: container ships 2-5. The starter's shapes grown with the
+## record's hull (s scales heights), each with its own silhouette: the coastal
+## feeder carries two deck cranes, the Panamax a tall stern house, the
+## Neo-Panamax twin funnels, and the ultra-large ship its bridge well forward
+## with the funnel aft. Hatch covers sit under each row of the container layout
+## (tools/build_container_ladder.py keeps the rows clear of the houses).
+static func _dress_box_ship(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition, tier: int, main: Color, trim: Color, cache: Dictionary) -> void:
+	var size: Vector3 = definition.hull_size_m
+	var s: float = size.y / 4.0
+	var deck: float = 2.6 * s
+	hull.mesh = hull_mesh(size.z, size.x, -3.2 * s, deck, 3.5 * s, 1.6 * s, main, Color("c9b48a"))
+	var aft: float = -size.z / 2.0
+	if tier < 5:
+		_house(root, Vector3(0, deck, aft + 10.5 * s), Vector3(size.x - 2.6 * s, (5.5 + tier) * s, 11 * s), main, cache)
+		var top: float = deck + (6.2 + tier) * s
+		_house(root, Vector3(0, top, aft + 12 * s), Vector3(size.x - 0.6, 3.6 * s, 6.5 * s), main, cache)
+		for x: float in ([-size.x * 0.16, size.x * 0.16] if tier == 4 else [0.0]):
+			_funnel(root, Vector3(x, top, aft + 6 * s), 2.0 * s, 6.5 * s, main, cache)
+		_drum(root, 0.25 * s, 0.25 * s, 4.0 * s, Vector3(0, top + 6.3 * s, aft + 12 * s), WHITE, cache)
+		_ball(root, 0.7 * s, 1.4 * s, Vector3(0, top + 8.6 * s, aft + 12 * s), trim, cache)
+	else:
+		# Engine house and funnel aft, a slim accommodation tower forward.
+		_house(root, Vector3(0, deck, aft + 10.5 * s), Vector3(size.x * 0.55, 4.0 * s, 11 * s), main, cache)
+		_funnel(root, Vector3(0, deck + 4.7 * s, aft + 9 * s), 2.4 * s, 7.0 * s, main, cache)
+		var bridge: float = size.z * 0.2
+		_house(root, Vector3(0, deck, bridge), Vector3(size.x * 0.4, 7.0 * s, 9 * s), main, cache)
+		_house(root, Vector3(0, deck + 7.7 * s, bridge), Vector3(size.x - 0.6, 3.2 * s, 6 * s), main, cache)
+		_drum(root, 0.25 * s, 0.25 * s, 4.0 * s, Vector3(0, deck + 13.5 * s, bridge), WHITE, cache)
+		_ball(root, 0.7 * s, 1.4 * s, Vector3(0, deck + 15.8 * s, bridge), trim, cache)
+	_box(root, Vector3(4 * s, 1.4 * s, 3 * s), Vector3(0, deck + 0.7 * s, size.z / 2.0 - 8 * s), INK, cache)
+	_drum(root, 0.45 * s, 0.45 * s, 4.5 * s, Vector3(0, deck + 2.25 * s, size.z / 2.0 - 5 * s), WHITE, cache)
+	_ball(root, 0.8 * s, 1.6 * s, Vector3(0, deck + 4.9 * s, size.z / 2.0 - 5 * s), trim, cache)
+	var layout: ContainerLayout = definition.container_layout
+	if layout == null or layout.centres.is_empty(): return
+	var low: float = layout.centres[0].y
+	var rows: Dictionary = {}
+	var reach: float = 0.0
+	for centre: Vector3 in layout.centres:
+		low = minf(low, centre.y)
+		reach = maxf(reach, absf(centre.x))
+	for centre: Vector3 in layout.centres:
+		if is_equal_approx(centre.y, low): rows[centre.z] = true
+	var width: float = reach * 2.0 + layout.container_size_m.x + 0.6
+	for z: float in rows:
+		_box(root, Vector3(width, 0.5, layout.container_size_m.z + 0.4), Vector3(0, deck + 0.25, z), trim, cache)
+	if tier == 2:
+		# Two deck cranes on the port rail, between the rows.
+		var keys: Array = rows.keys()
+		keys.sort()
+		for index: int in [1, keys.size() - 2]:
+			var z: float = (float(keys[index]) + float(keys[index + 1 if index + 1 < keys.size() else index - 1])) / 2.0
+			var x: float = -(size.x / 2.0 - 1.2)
+			_drum(root, 0.7, 0.6, 9.0, Vector3(x, deck + 4.5, z), trim, cache)
+			_box(root, Vector3(1.6, 1.6, 2.0), Vector3(x, deck + 9.4, z), WHITE, cache)
+			var jib: MeshInstance3D = _box(root, Vector3(0.6, 0.6, 12.0), Vector3(x + 0.8, deck + 11.0, z + 5.0), trim, cache)
+			jib.rotation.x = -0.35
