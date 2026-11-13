@@ -23,4 +23,4 @@ rudder_full_effect_speed_mps = 4.0
 thruster_acceleration_mps2 = 0.4
 lateral_drag_per_second = 0.4
 thruster_cutoff_speed_mps = 4.0
-cargo_capacities = {"container_slots": 6}
+cargo_capacities = {"container_slots": 24}

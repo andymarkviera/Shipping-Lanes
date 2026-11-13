@@ -15,7 +15,7 @@ const DESTINATION: String = "port_slatewater_works"
 # One representative hull and cargo per manifest family. full = whole capacity of
 # the named pool/compartment; part = a partial quantity removed and put back.
 var families: Array[Dictionary] = [
-	{"name": "containers", "ship": "res://features/catalog/records/starter_ship.tres", "cargo": "cargo_test_container", "allocation": "", "full": 6, "part": 2},
+	{"name": "containers", "ship": "res://features/catalog/records/starter_ship.tres", "cargo": "cargo_test_container", "allocation": "", "full": 24, "part": 2},
 	{"name": "heavy", "ship": "res://features/catalog/records/heavy_lifter.tres", "cargo": "cargo_test_industrial", "allocation": "", "full": 1, "part": 1},
 	{"name": "bulk", "ship": "res://features/catalog/records/bulk_ship.tres", "cargo": "cargo_bulk_grain", "allocation": "hold_forward", "full": 400000000, "part": 123456789},
 	{"name": "gas", "ship": "res://features/catalog/records/gas_ship.tres", "cargo": "cargo_gas_lng", "allocation": "tank_lng", "full": 400, "part": 123},
@@ -130,13 +130,13 @@ func containers() -> void:
 	var again: Dictionary = offers.deliver_at("captain", "ship", DESTINATION, m, true)
 	check(not again.ok and again.reward_minor == 0, "containers: duplicate delivery pays nothing")
 	check(offers.view(id).state == "delivered" and not offers.accept(id, "captain", "ship", ORIGIN, m).ok, "containers: delivered job cannot be taken again")
-	# Four of six slots used: a three-box job is refused, a two-box job fills the ship exactly.
+	# 22 of 24 slots used: a three-box job is refused, a two-box job fills the ship exactly.
 	var tight = Offers.new()
 	var packed = Manifest.new(ship, records)
-	check(packed.add(batch("held", "cargo_test_container", 4)).ok, "containers: prefill four slots")
+	check(packed.add(batch("held", "cargo_test_container", 22)).ok, "containers: prefill 22 slots")
 	check(not tight.accept(id, "captain", "ship", ORIGIN, packed).ok and tight.view(id).state == "available", "containers: over-capacity job refused and left available")
 	check(tight.accept("container_seed_v1_0_1", "captain", "ship", ORIGIN, packed).ok and tight.complete_loading("container_seed_v1_0_1", "captain", "ship", ORIGIN, packed).ok, "containers: exact-fit job accepted and loaded")
-	check(packed.usage() == {"container_slots": 6}, "containers: ship is exactly full")
+	check(packed.usage() == {"container_slots": 24}, "containers: ship is exactly full")
 
 ## One bulk or gas voyage through the shared service: interrupted load, partial
 ## discharges that sum to the frozen quote, duplicate settlement and over-discharge.
