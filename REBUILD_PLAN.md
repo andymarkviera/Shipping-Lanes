@@ -621,8 +621,8 @@ on pausing the world.
      playful and readable.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
-**Later patches (do not start):** Patch 3 is a new main menu (Andy's design,
-later). Patch 4 is multiplayer.
+**Later patches:** Patch 2.1 is next (section 6). Patch 3 is a new main menu
+(Andy's design, later; do not start). Patch 4 is multiplayer (do not start).
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
 the automatic checks on Linux: 1 (Always running + Esc menu), 2 (Easy docking),
@@ -631,3 +631,39 @@ for Andy's Windows playtest; the checklist is in the item 5 pull request.
 Item 4 has not been judged on a screen by anyone yet; item 5 was seen only as
 software-rendered screenshots by the agent.
 Details in PROGRESS.md.
+
+## 6. Patch 2.1 (Andy, November 12, 2026)
+
+Andy played Patch 2.0 and loves it: the long wake trail, the waves and the
+boat motion are "perfect". Keep all of that exactly as it is. Patch 2.1 is his
+next round. Same rules as section 5: one PR each, in this order, Wind Waker
+look, Godot 4.7.2, saves and on-hold gas/oil/refinery/cargo-fuel code intact,
+nothing that relies on pausing, single-player for now.
+
+1. **3D bow splash.** Replace the flat bow foam with a real 3D splashing effect
+   at the bow: white toon spray chunks/particles that kick up and fall back,
+   bigger with speed, gone when stopped. Do not change the wake trail, waves or
+   rocking from Patch 2.0.
+2. **Faster ships.** The starter ship tops out at about 30 knots; bigger ships
+   scale sensibly from that. Acceleration and deceleration must feel
+   reasonable, not crazy slow: the starter ship reaches full ahead in roughly
+   15-25 seconds and stops from full speed in a similar time (tune by feel and
+   note the numbers in PROGRESS.md). Reverse stays slower. Rocking, wake and
+   splash keep scaling correctly at the new speeds.
+3. **Polar ports and a loopable globe.** The world wraps like a globe: sailing
+   off any edge (east/west and over the poles) continues around the world, and
+   the globe minimap shows it. Add a North Pole port and a South Pole port,
+   ice themed (snowy docks, ice-white palette), with icebergs around the polar
+   seas (solid obstacles, toon style). Both ports get jobs like any other port.
+4. **Multiplayer-safe docking.** Docking keeps the automatic slide into the
+   berth. Prepare it for multiplayer later: each berth holds one ship at a time
+   (a taken berth is skipped and the next free berth at that port is used; if
+   none is free, Dock says the port is full); ships never overlap at a port;
+   and while a ship is sliding into or sitting at a berth its collision with
+   other ships is off, coming back on only once it has left the berth and is
+   clear of other ships. Keep it single-player now, but write berth claiming so
+   a future server can own it (simulate a second, AI-held berth in a test).
+   The last item's PR carries a 5-10 line Windows playtest checklist for all of
+   Patch 2.1.
+
+**Patch 2.1 status:** planned; nothing started.
