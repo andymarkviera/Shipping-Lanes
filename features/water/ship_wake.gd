@@ -1,12 +1,11 @@
 class_name ShipWake
 extends MeshInstance3D
 ## World-space presentation; never writes to the navigation body.
-## Draws the hull foam ring, the bow wave and spray, and a long V wake with
-## swirls that stays behind in the water and fades (Patch 2.0 sailing feel).
+## Draws the hull foam ring and a long V wake with swirls that stays behind in
+## the water and fades (Patch 2.0 sailing feel). The 3D bow splash is BowSplash.
 const FOAM_SHADER = preload("res://features/water/ship_foam.gdshader")
 const LIFETIME: float = 14.0
 const MAX_SAMPLES: int = 40
-const SPRAY_SPEED_FRACTION: float = 0.3
 var ship: CharacterBody3D
 var ocean: OceanPresentation
 var half_length: float = 30.0
@@ -19,8 +18,7 @@ var has_position: bool = false
 var strength: float = 0.0
 var surface: ImmediateMesh = ImmediateMesh.new()
 var foam: ShaderMaterial
-var spray: CPUParticles3D
-var spray_material: StandardMaterial3D
+var splash: BowSplash
 var drawing: bool = false
 
 func _ready() -> void:
@@ -30,44 +28,16 @@ func _ready() -> void:
 	material_override = foam
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	extra_cull_margin = 1.0
-	build_spray()
-
-## Chunky white blobs thrown up at the bow; flat colour to match the toon foam.
-func build_spray() -> void:
-	spray_material = StandardMaterial3D.new()
-	spray_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	var blob: SphereMesh = SphereMesh.new()
-	blob.radius = 0.5
-	blob.height = 1.0
-	blob.radial_segments = 6
-	blob.rings = 3
-	blob.material = spray_material
-	var shrink: Curve = Curve.new()
-	shrink.add_point(Vector2(0.0, 0.6))
-	shrink.add_point(Vector2(0.25, 1.0))
-	shrink.add_point(Vector2(1.0, 0.0))
-	spray = CPUParticles3D.new()
-	spray.name = "BowSpray"
-	spray.mesh = blob
-	spray.amount = 28
-	spray.lifetime = 1.2
-	spray.local_coords = false
-	spray.emitting = false
-	spray.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	spray.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	spray.direction = Vector3.UP
-	spray.spread = 50.0
-	spray.gravity = Vector3(0, -11, 0)
-	spray.scale_amount_min = 0.6
-	spray.scale_amount_max = 1.4
-	spray.scale_amount_curve = shrink
-	add_child(spray)
+	splash = BowSplash.new()
+	splash.name = "BowSplash"
+	splash.wake = self
+	add_child(splash)
 
 func _process(delta: float) -> void:
 	if not is_instance_valid(ship) or not is_instance_valid(ocean): return
 	advance(delta)
 	draw_foam()
-	update_spray()
+	splash.update(delta)
 
 func travel_sign() -> float:
 	return 1.0 if ship.velocity.dot(ship.global_basis.z) >= 0.0 else -1.0
@@ -141,7 +111,6 @@ func draw_foam() -> void:
 			var direction: Vector3 = ship.velocity.normalized()
 			join(previous, section({"center": trailing_point(direction), "direction": direction, "age": 0.0, "power": strength, "serial": serial + 1}))
 		hull_ring()
-		bow_wave()
 	if drawing: surface.surface_end()
 
 func join(a: Dictionary, b: Dictionary) -> void:
@@ -196,34 +165,6 @@ func hull_ring() -> void:
 		if part > 0: strip(last, point, last_width, width, 0.3 + strength * 0.65, 0.3 + strength * 0.65)
 		last = point
 		last_width = width
-
-## Two white curls peeling off the bow and sweeping back along the hull.
-func bow_wave() -> void:
-	if strength < 0.12: return
-	var bow: Vector3 = ship.global_basis.z * travel_sign()
-	var across: Vector3 = ship.global_basis.x
-	var tip: Vector3 = ship.global_position + bow * (half_length + 1.5 + strength * 2.0)
-	var pulse: float = 0.85 + 0.15 * sin(ocean.elapsed * 5.0)
-	for side: float in [-1.0, 1.0]:
-		var last: Vector3 = tip
-		for part: int in range(1, 8):
-			var t: float = float(part) / 7.0
-			var point: Vector3 = tip + across * side * t * (half_width * 1.5 + strength * 5.0) - bow * t * t * half_length * (0.45 + strength * 0.35)
-			var t0: float = float(part - 1) / 7.0
-			strip(last, point, (0.4 + (1.0 - t0) * strength * 3.2) * pulse, (0.4 + (1.0 - t) * strength * 3.2) * pulse, 0.9 * strength * (1.0 - t0 * 0.7), 0.9 * strength * (1.0 - t * 0.7))
-			last = point
-
-func update_spray() -> void:
-	var bow: Vector3 = ship.global_basis.z * travel_sign()
-	var tip: Vector3 = ship.global_position + bow * (half_length - 1.0)
-	tip.y = ocean.global_position.y + OceanPresentation.swell_height(tip.x, tip.z, ocean.elapsed, ocean.quality) + 0.4
-	spray.global_position = tip
-	spray.global_basis = Basis.looking_at(-bow, Vector3.UP)
-	spray.emission_box_extents = Vector3(half_width * 0.7, 0.2, 2.0)
-	spray.initial_velocity_min = 2.0 + strength * 3.0
-	spray.initial_velocity_max = 4.0 + strength * 6.0
-	spray_material.albedo_color = ocean.palette.foam_color
-	spray.emitting = strength >= SPRAY_SPEED_FRACTION
 
 ## A flat ribbon from a to b whose width and opacity can differ at each end.
 func strip(a: Vector3, b: Vector3, width_a: float, width_b: float, opacity_a: float, opacity_b: float) -> void:

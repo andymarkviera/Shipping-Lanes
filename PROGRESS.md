@@ -5819,3 +5819,50 @@ Limits:
 - The globe names only the destination port; other ports are dots.
 - The import again wrote `.uid` files for older scripts that lack one. They
   are not in this change. No workflow file changed.
+
+## Patch 2.1 item 1: 3D bow splash — November 13, 2026 (run on Linux, not on Windows)
+
+Issue #77. Only this item; the wake trail, swells and rocking code is untouched.
+
+- New `features/water/bow_splash.gd` and `bow_splash.gdshader`. White chunks
+  are thrown up and out from both sides of the bow, arc under gravity and are
+  gone when they sink back under the drawn swell. Two raised crests stand up
+  off the stem and sweep back. A two-tone shader (white tops, pale blue
+  undersides) makes them read as solid toon lumps.
+- Bigger with speed: more chunks, larger chunks, thrown higher, taller crests.
+  Nothing below about 10% of full foam strength, so nothing when stopped.
+  At most 96 chunks; half the rate on low water quality. Reversing splashes at
+  the stern. It does not use pausing and never writes to the ship.
+- `features/water/ship_wake.gd`: the flat bow curls and the old small particle
+  spray are removed and replaced by the splash. The V wake, swirls and hull
+  foam ring are the same code as before.
+- `export_presets.cfg`: the two new files added. Their `.uid` files were
+  written by Godot during the import, not by hand.
+- `tools/water_probe.gd`: the two old spray checks are replaced by seven for
+  the splash (chunks at speed, height, at the bow, drawn, smaller when slow,
+  stern when reversing, none when stopped).
+
+Checks run on the agent's Linux runner, Godot 4.7.2 official, headless:
+
+- Passed: import, `check_scripts` (189 scripts), boot, `check_catalog`,
+  `check_controls`, `check_flow`, `check_starter`, `check_helm_keys`,
+  `check_m1_voyage`, all twelve Stage 2 probes including `water_probe`
+  (75 checks), `units_probe`, `diagnostics_probe`, `collision_probe`,
+  `composition_probe`, `ports_probe`. Nothing failed.
+- Rendered with GL Compatibility on a software driver (Mesa llvmpipe under
+  Xvfb) at 1280x720 in the Boat Handling scene. The agent looked at three
+  screenshots from the front quarter: full speed (chunks all round the bow),
+  slow (a few small lumps), stopped (none).
+- Not run: the Python stage (no Python file changed), the online probes,
+  anything on Windows, any real graphics card, any playtest.
+
+Limits:
+
+- Seen only as still screenshots, not in motion, and not in the game scene
+  (it uses the same `ShipWake`). In the stills the chunks read clearly; the
+  raised crests are low and read mostly as white from above. Size, height and
+  amount are first guesses for Andy to judge.
+- The splash is full size at 8 m/s, like the wake. Item 2 (faster ships) has
+  to rescale both.
+- The import again wrote `.uid` files for older scripts that lack one. They
+  are not in this change. No workflow file changed.

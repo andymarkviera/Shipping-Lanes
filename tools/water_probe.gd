@@ -87,8 +87,34 @@ func run() -> void:
 	var oldest: Dictionary = scene.wake.section(scene.wake.samples[0])
 	check(oldest.left.distance_to(oldest.right) > newest.left.distance_to(newest.right), "Wake arms open into a V behind the ship")
 	check(oldest.fade < newest.fade, "Wake fades with age")
-	scene.wake.update_spray()
-	check(scene.wake.spray.emitting and scene.wake.spray.global_position.z > scene.ship.position.z, "Bow spray flies at the bow at speed")
+	# Patch 2.1: the 3D bow splash. Chunks kick up at the bow and fall back.
+	var splash: BowSplash = scene.wake.splash
+	var highest: float = 0.0
+	var thrown: int = 0
+	for tick: int in range(120):
+		splash.update(1.0 / 60.0)
+		thrown = maxi(thrown, splash.chunks.size())
+		for chunk: Dictionary in splash.chunks: highest = maxf(highest, chunk.position.y - splash.water_height(chunk.position.x, chunk.position.z))
+	check(splash.power == 1.0 and thrown > 20 and thrown <= BowSplash.MAX_CHUNKS, "Bow splash throws a bounded crowd of chunks at speed")
+	check(highest > 2.5 and highest < 9.0, "Chunks kick well clear of the water")
+	check(splash.chunks.all(func(chunk: Dictionary) -> bool: return chunk.position.z > scene.ship.position.z), "Splash is at the bow")
+	check(splash.cloud.visible_instance_count == splash.chunks.size() and splash.crest.get_surface_count() == 1 and splash.crest_peak_m > 2.0, "Chunks and raised bow crest are drawn")
+	var full_peak: float = splash.crest_peak_m
+	var full_size: float = 0.0
+	for chunk: Dictionary in splash.chunks: full_size = maxf(full_size, chunk.size)
+	scene.ship.velocity = Vector3(0, 0, 3)
+	scene.wake.advance(0.01)
+	for tick: int in range(240): splash.update(1.0 / 60.0)
+	var slow_size: float = 0.0
+	for chunk: Dictionary in splash.chunks: slow_size = maxf(slow_size, chunk.size)
+	check(not splash.chunks.is_empty() and slow_size < full_size * 0.6 and splash.crest_peak_m < full_peak * 0.5, "Splash is smaller at low speed")
+	scene.ship.velocity = Vector3(0, 0, -8)
+	scene.wake.advance(0.01)
+	for tick: int in range(240): splash.update(1.0 / 60.0)
+	check(splash.chunks.all(func(chunk: Dictionary) -> bool: return chunk.position.z < scene.ship.position.z), "Reversing splashes at the stern")
+	check(scene.ship.transform == wake_body and scene.ship.velocity == Vector3(0, 0, -8), "Splash cannot change navigation")
+	scene.ship.velocity = Vector3(0, 0, 8)
+	scene.wake.advance(0.01)
 	# Sailing feel: the hull rocks harder at speed and leans into a turn.
 	var motion: ShipVisualMotion = scene.visual_root
 	motion.set_process(false)
@@ -140,8 +166,8 @@ func run() -> void:
 	for tick: int in range(150): scene.wake.advance(0.1)
 	scene.wake.draw_foam()
 	check(scene.wake.samples.is_empty() and scene.wake.surface.get_surface_count() == 0, "Stopped boat leaves no permanent trail")
-	scene.wake.update_spray()
-	check(not scene.wake.spray.emitting, "Stopped boat throws no spray")
+	for tick: int in range(240): splash.update(1.0 / 60.0)
+	check(splash.power == 0.0 and splash.chunks.is_empty() and splash.cloud.visible_instance_count == 0 and splash.crest.get_surface_count() == 0, "Stopped boat has no bow splash")
 	scene.ship.transform = body_transform
 	var service: PlayerControls = scene.controls
 	var original_path: String = service.preferences_path

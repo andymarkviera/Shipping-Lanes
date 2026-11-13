@@ -666,4 +666,7 @@ nothing that relies on pausing, single-player for now.
    The last item's PR carries a 5-10 line Windows playtest checklist for all of
    Patch 2.1.
 
-**Patch 2.1 status:** planned; nothing started.
+**Patch 2.1 status (November 13, 2026):** item 1 (3D bow splash) is written
+and passes the automatic checks on Linux; seen only as software-rendered
+screenshots by the agent. It waits for Andy's Windows playtest. Items 2 to 4
+are not started. Details in PROGRESS.md.
