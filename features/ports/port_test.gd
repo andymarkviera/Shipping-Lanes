@@ -29,6 +29,13 @@ var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
 var voyage_hud = preload("res://features/ports/voyage_hud.gd").new()
 var minimap = preload("res://features/ports/local_minimap.gd").new()
+## Patch 2.0 item 5, the game only: the simplified HUD (helm bar, hint, notice,
+## job cards). The old top-left panel is kept as the port card it arranges.
+var game_hud: Control
+var port_panel: PanelContainer
+var dock_status: Dictionary = {}
+## What refresh_jobs last listed, one entry per offer, for the game's job cards.
+var job_cards: Array[Dictionary] = []
 var action_reason: Label
 var refuel_button: Button
 var repair_button: Button
@@ -167,14 +174,18 @@ func _ready() -> void:
 	for edge: String in ["left", "right", "top", "bottom"]: style.set("content_margin_" + edge, 12)
 	panel.add_theme_stylebox_override("panel", style)
 	layer.add_child(panel)
+	port_panel = panel
 	layer.add_child(voyage_hud)
+	# Patch 2.0 item 5: the game's minimap is a globe. Test scenes keep the chart.
+	if game_mode:
+		minimap.free()
+		minimap = preload("res://features/game/globe_minimap.gd").new()
 	minimap.view = self
 	layer.add_child(minimap)
 	# Aesthetics 5: playful HUD. The game only; test scenes keep the plain panels.
 	if game_mode:
 		PLAYFUL.dress(panel)
 		PLAYFUL.dress(voyage_hud)
-		minimap.playful = true
 	var stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(stack)
 	details = Label.new()
@@ -203,6 +214,7 @@ func _ready() -> void:
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
+	services.visible = not game_mode
 	stack.add_child(services)
 	var tabs: HBoxContainer = HBoxContainer.new()
 	services.add_child(tabs)
@@ -248,6 +260,10 @@ func _ready() -> void:
 	button(heavy_controls, "Lower", func(): ship.request_height(Heavy.LOWERED))
 	button(heavy_controls, "Raise", func(): ship.request_height(Heavy.RAISED))
 	button(heavy_controls, "Cancel pickup", func(): end_current_job(false))
+	if game_mode:
+		game_hud = preload("res://features/game/game_hud.gd").new()
+		layer.add_child(game_hud)
+		game_hud.setup(self)
 	select_port(0)
 	if save_enabled and not OS.get_cmdline_user_args().has("--ports-check") and not OS.get_cmdline_user_args().has("--voyage-check"):
 		persistence = preload("res://features/cargo/voyage_persistence.gd").new()
@@ -452,9 +468,8 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	helm.configure(ship, controls, ship.assembly.feedback)
 	helm.notice.hints = helm_hints()
 	if game_mode:
-		PLAYFUL.dress(helm.throttle_display.panel)
-		# The throttle bar is a pointer, not a fill: neutral must not look half full.
-		helm.throttle_display.slider.add_theme_stylebox_override("grabber_area", StyleBoxEmpty.new())
+		# Patch 2.0 item 5: the game's helm bar (game_hud) replaces the throttle panel.
+		helm.throttle_display.hide()
 		PLAYFUL.dress(helm.notice.panel, true)
 		PLAYFUL.dress(helm.gauge_display.panel)
 	helm.keep_sailing = game_mode
@@ -475,6 +490,7 @@ func helm_hints() -> Dictionary:
 		hints.rescue_action = recover
 		hints.leave = "Press Esc, then Main Menu"
 		hints.panel = ""
+		hints.docked = ""
 		hints.unfocused = "The ship holds its course. Click the game window to steer."
 	return hints
 
@@ -491,6 +507,7 @@ func refresh_jobs() -> void:
 	if jobs_list == null or not is_instance_valid(port): return
 	var previous: String = selected_offer
 	jobs_list.clear()
+	job_cards.clear()
 	selected_offer = ""
 	if game_mode: offers.restock()
 	if bulk_mode():
@@ -499,18 +516,21 @@ func refresh_jobs() -> void:
 			if id == bulk_active: continue
 			jobs_list.add_item("%s → %s · %.2f credits" % [bulk_job.title, world_ports[int(bulk_job.destination)].definition.display_name, bulk_job.reward_minor / 100.0])
 			jobs_list.set_item_metadata(jobs_list.item_count - 1, id)
+			job_cards.append({"id": id, "kind": "bulk", "count": 1, "what": bulk_job.title, "to": world_ports[int(bulk_job.destination)].definition.display_name, "pay": bulk_job.reward_minor})
 	var rows: Array[Dictionary] = heavy_jobs.list_at(port.definition.id) if heavy_mode else offers.list_at(port.definition.id)
 	for row: Dictionary in rows:
 		if row.state != "available" or bulk_mode(): continue
 		var title: String = row.title + " → open ocean" if heavy_mode else "%d container%s → %s" % [row.quantity, "" if row.quantity == 1 else "s", PrototypeCatalog.display_name(row.destination_port_id)]
 		jobs_list.add_item("%s · %.2f credits" % [title, row.reward_minor / 100.0])
 		jobs_list.set_item_metadata(jobs_list.item_count - 1, row.id)
+		job_cards.append({"id": row.id, "kind": "heavy" if heavy_mode else "container", "count": 1 if heavy_mode else int(row.quantity), "what": title.get_slice(" → ", 0), "to": "Open ocean" if heavy_mode else PrototypeCatalog.display_name(row.destination_port_id), "pay": row.reward_minor})
 	if jobs_list.item_count > 0:
 		var selected: int = 0
 		for index: int in jobs_list.item_count:
 			if jobs_list.get_item_metadata(index) == previous: selected = index
 		jobs_list.select(selected)
 		selected_offer = jobs_list.get_item_metadata(selected)
+	if is_instance_valid(game_hud): game_hud.rebuild_cards()
 
 func accept_reason() -> String:
 	if is_instance_valid(persistence) and not persistence.ready_to_save: return "Please wait for voyage saving/recovery."
@@ -659,14 +679,18 @@ func _physics_process(delta: float) -> void:
 		if sink_seconds <= 0.0: recover()
 	var status: Dictionary = port.dock_readiness(ship, service_id(), cargo_id())
 	var current: String = docking.state(1)
-	dock_button.visible = ship.global_position.distance_to(port.berth_anchor.global_position) < 150 or current in ["docking", "docked", "undocking"]
+	dock_status = status
+	# The game always shows Dock beside the throttle, greyed out with no berth in range.
+	dock_button.visible = game_mode or ship.global_position.distance_to(port.berth_anchor.global_position) < 150 or current in ["docking", "docked", "undocking"]
 	dock_button.text = "Undock" if current == "docked" else "Dock"
 	dock_button.disabled = loading.busy() or sink_seconds > 0.0 or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
 	cancel_button.visible = current in ["docking", "undocking"]
 	readiness.text = "Berth: " + (current.capitalize() + ("…" if current != "docked" else "") if current in ["docking", "docked", "undocking"] else status.message)
+	# The game shows the job cards as soon as the ship is docked, so list them then.
+	if game_mode and current == "docked" and not services.visible: refresh_jobs()
 	services.visible = current == "docked"
-	if is_instance_valid(helm): helm.throttle_display.visible = not services.visible
+	if is_instance_valid(helm): helm.throttle_display.visible = not services.visible and not game_mode
 	if not services.visible: jobs_panel.hide(); ships_panel.hide()
 
 func _process(_delta: float) -> void:
@@ -725,9 +749,10 @@ func _process(_delta: float) -> void:
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
 		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
-		# The game: the full key list until the first money is earned or spent.
-		if game_mode: navigation.text = controls_hint() if reward_minor == 0 and spent_minor == 0 else "Right mouse look · Wheel zoom · Esc opens the menu"
-	if services.visible: navigation.text += "\n" + (free_note() if game_mode else "Refuel / repair: " + free_note())
+		# The game: nothing here. The keys show briefly on the first voyage (game_hud).
+		if game_mode: navigation.text = ""
+	if services.visible and not game_mode: navigation.text += "\nRefuel / repair: " + free_note()
+	if is_instance_valid(game_hud): game_hud.refresh(_delta)
 
 ## Save, then close the game. The window's close button and the Esc menu's Quit.
 func quit_game() -> void:

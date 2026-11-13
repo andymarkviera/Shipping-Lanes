@@ -66,7 +66,9 @@ func reason() -> String:
 		if not ship.pause_reason.is_empty(): return ship.pause_reason
 		return "PAUSED — the voyage is loading, saving or stopped by an error (see the panel text).\nStill paused after a few seconds? %s, then open this scene again." % leave
 	if ship.docked:
-		return "DOCKED — the helm is locked at the berth.\n" + hint("docked", "Click \"Undock (test)\" to sail.")
+		# The game's helm bar shows Undock itself: an empty "docked" hint keeps the banner away.
+		var undock_hint: String = hint("docked", "Click \"Undock (test)\" to sail.")
+		return "" if undock_hint.is_empty() else "DOCKED — the helm is locked at the berth.\n" + undock_hint
 	if not ship.helm_available():
 		return "HELM LOCKED — the deck is moving, or the load is not fully raised.\nWait for the deck. With a load on board, click Raise before sailing."
 	if fuel_empty():

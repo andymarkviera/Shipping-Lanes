@@ -240,14 +240,17 @@ func play() -> void:
 	expect(game.reward_minor == 0, "New game starts with an empty wallet")
 	expect(not game.switch_button.visible, "The game does not offer the test heavy loader")
 	# M5: a new captain sees the helm keys and the next step; the two game sounds exist.
-	expect(game.navigation.text.contains("throttle") and game.voyage_hud.instruction.text.contains("click Dock"), "New game shows the helm keys and the first step (%s)" % game.voyage_hud.instruction.text)
+	expect(game.game_hud.hint.is_visible_in_tree() and game.game_hud.hint_label.text.contains("throttle") and game.voyage_hud.instruction.text.contains("click Dock"), "New game shows the helm keys and the first step (%s)" % game.voyage_hud.instruction.text)
+	# Patch 2.0 item 5: the simplified HUD.
+	expect(game.minimap.get_script().resource_path.ends_with("globe_minimap.gd") and game.minimap.is_visible_in_tree(), "The minimap is the globe")
+	expect(not game.port_panel.visible and not game.helm.throttle_display.visible and not game.readiness.is_visible_in_tree(), "At sea the top-left panel and the old throttle panel are gone")
+	expect(game.game_hud.bar.is_visible_in_tree() and game.game_hud.knots.text == "0 kn" and game.dock_button.get_parent().get_parent().get_parent() == game.game_hud.bar, "The helm bar shows the speed in knots with Dock beside the slider (%s)" % game.game_hud.knots.text)
 	expect(game.sfx.has("chime") and game.sfx.has("thud"), "The game has its paid and collision sounds")
 	if not expect(game.controls.input_allowed(), "New game: helm accepts input; " + why_stuck(game)): return
 
 	if not await berth_approach(game, brindle, "Brindle Quay berth"): return
 	if not await dock(game, "Brindle Quay"): return
-	if not await click(game, "CARGO"): return
-	if not await click(game, "Accept selected job"): return
+	if not await click(game, "Accept"): return
 	if not await until(func() -> bool: return game.offers.active_job(OWNER).get("state") == "loaded", 60, "Container job loads"): return
 	var job: Dictionary = game.offers.active_job(OWNER)
 	expect(job.destination_port_id == "port_slatewater_works", "The job is for Slatewater Works")
@@ -259,12 +262,14 @@ func play() -> void:
 	if not await sail_to(game, brindle.berth_anchor.global_position + Vector3(0, 0, 160), 40.0, 6.0, "Clear of Brindle Quay"): return
 	await always_running(game)
 	if not await sail_to(game, slatewater.berth_anchor.global_position + Vector3(-200, 0, -755), 80.0, 10.0, "Turn-in point south-west of Slatewater"): return
+	await settle()
+	expect(game.dock_button.is_visible_in_tree() and game.dock_button.disabled and game.dock_button.text == "Dock", "No berth in range: Dock is on screen and greyed out")
+	expect(game.game_hud.knots.text.ends_with(" kn") and int(game.game_hud.knots.text) >= 10 and game.game_hud.slider.value > 0.1, "Under way the bar shows the speed and the throttle order (%s, slider %.2f)" % [game.game_hud.knots.text, game.game_hud.slider.value])
 	if not await berth_approach(game, slatewater, "Slatewater Works berth"): return
 	expect(game.port == slatewater, "The game switched to Slatewater Works on arrival")
 	expect(game.ship.state.condition >= 1.0, "No collision damage on the way (condition %.2f)" % game.ship.state.condition)
 	if not await dock(game, "Slatewater Works"): return
-	if not await click(game, "CARGO"): return
-	if not await click(game, "Deliver cargo at this port"): return
+	if not await click(game, "Deliver"): return
 	expect(game.reward_minor == job.reward_minor and job.reward_minor > 0, "Delivery pays the job into the wallet (wallet %d, job %d)" % [game.reward_minor, job.reward_minor])
 	expect(game.ship.state.manifest.lines().is_empty(), "Delivered containers leave the ship")
 	await settle()
@@ -273,7 +278,9 @@ func play() -> void:
 	for row: Dictionary in game.offers.list_at("port_brindle_quay"):
 		if row.state == "available" and row.id != job.id: open_jobs += 1
 	expect(game.world_ports.size() == 4 and open_jobs == 3, "Four ports, and three open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
-	expect(game.voyage_hud.is_visible_in_tree() and ("Money %.2f credits" % (job.reward_minor / 100.0)) in game.voyage_hud.instruments.text, "The money is shown on the game HUD (%s)" % game.voyage_hud.instruments.text.replace("\n", " | "))
+	expect(game.voyage_hud.money.is_visible_in_tree() and game.voyage_hud.money.text == "%.2f credits" % (job.reward_minor / 100.0), "The money is shown on the game HUD (%s)" % game.voyage_hud.money.text)
+	expect(not game.game_hud.hint.visible, "The controls hint is gone after the first delivery")
+	expect(game.game_hud.cards.is_visible_in_tree() and game.game_hud.cards.get_child_count() == game.jobs_list.item_count and game.jobs_list.item_count > 0 and not game.jobs_list.visible, "Docked with no job: one card per offer (%d cards)" % game.game_hud.cards.get_child_count())
 	expect(not game.details.visible and not game.helm.gauge_display.visible, "Developer readouts are hidden in the game by default")
 
 	# M2: fuel is paid for from the wallet.
@@ -295,6 +302,13 @@ func play() -> void:
 	expect(game.port == game.world_ports[1] and game.docking.state(1) == "docked", "Continue restores the ship docked at Slatewater Works")
 	expect(game.offers.view(job.id).get("state") == "delivered" and game.offers.active_job(OWNER).is_empty(), "Continue keeps the job delivered, not repeatable")
 	if not await undock(game, "Continue"): return
+	# Patch 2.0 item 5: the slider is a control too. D end, then back to N.
+	game.game_hud.slider.value = 1.0
+	await settle()
+	expect(is_equal_approx(game.ship.commanded_throttle, game.ship.definition.forward_throttle_limit), "Slider at D orders full ahead (order %.2f)" % game.ship.commanded_throttle)
+	game.game_hud.slider.value = 0.0
+	await settle()
+	expect(game.ship.commanded_throttle == 0.0, "Slider at N orders neutral (order %.2f)" % game.ship.commanded_throttle)
 	hold("ship_throttle_up", true)
 	await until(func() -> bool: return game.ship.forward_speed() > 0.2, 15, "Continue: ship gains speed with the throttle key held; " + why_stuck(game))
 	release_all()
@@ -329,15 +343,15 @@ func play() -> void:
 	expect(game.ship_kind == "bulk" and game.docking.state(1) != "docked", "Switch puts the captain on the bulk carrier, off the quay")
 	if not await berth_approach(game, game.port, "M3 berth, bulk carrier"): return
 	if not await dock(game, "M3, bulk carrier"): return
-	if not await click(game, "CARGO"): return
-	if not await click(game, "Accept selected job"): return
+	if not await click(game, "Accept"): return
 	expect(game.bulk_active == "bulk_1_grain" and game.voyage_hud.heading.text == "DELIVER BULK CARGO", "A bulk job is accepted and shown on the HUD (%s)" % game.voyage_hud.heading.text)
 	if not await click(game, "SHIPS"): return
 	if not await click(game, game.ship_buttons["container"][1].text): return
 	if not await click(game, "Confirm sale"): return
 	expect(not game.fleet.has("container") and game.reward_minor == wallet - 120000 + 40000, "Selling the container ship pays half its price (wallet %d)" % game.reward_minor)
 	wallet = game.reward_minor
-	if not await click(game, "Main menu"): return
+	await press_escape()
+	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the shipyard")
 	if menu == null: return
 	if not await click(menu, "CONTINUE"): return
@@ -345,7 +359,8 @@ func play() -> void:
 	if game == null: return
 	expect(game.ship_kind == "bulk" and game.bulk_active == "bulk_1_grain" and game.fleet.size() == 1 and game.reward_minor == wallet, "Continue restores the ship, the fleet, the bulk job and the wallet (ship %s, wallet %d)" % [game.ship_kind, game.reward_minor])
 
-	if not await click(game, "Main menu"): return
+	await press_escape()
+	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu at the end")
 	if menu == null: return
 	# M2: Restart Progress erases the save after a confirmation.
