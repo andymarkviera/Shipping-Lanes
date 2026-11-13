@@ -13,6 +13,12 @@ var recovery_anchors: Array[Marker3D] = []
 var spawn_anchor: Marker3D
 var approach_anchor: Marker3D
 var berth_anchor: Marker3D
+## Patch 2.1 item 4: each port has BERTH_COUNT berths in a row along its quay,
+## BERTH_SPACING_M apart. Berth 1 is the authored one (berth_anchor); the
+## others share its rules. Each berth holds one ship at a time.
+const BERTH_COUNT: int = 2
+const BERTH_SPACING_M: float = 150.0
+var berth_anchors: Array[Marker3D] = []
 
 func marker(label: String, at: Vector3, heading: float) -> Marker3D:
 	var node: Marker3D = Marker3D.new()
@@ -52,9 +58,17 @@ func _ready() -> void:
 		recovery_anchors.append(marker("Recovery%d" % i, definition.recovery_positions_m[i], definition.spawn_heading_degrees))
 	approach_anchor = marker("Approach", definition.approach_position_m, definition.spawn_heading_degrees)
 	berth_anchor = marker("Berth", berth.position_m, berth.heading_degrees)
+	berth_anchors = [berth_anchor]
+	for i: int in range(1, BERTH_COUNT):
+		berth_anchors.append(marker("Berth%d" % (i + 1), berth.position_m + Basis(Vector3.UP, -deg_to_rad(berth.heading_degrees)) * Vector3(0, 0, BERTH_SPACING_M * i), berth.heading_degrees))
 	# The inner quay face is x=+/-20. The approach and berth centerline are x=0.
 	block("Quay", Vector3(quay_side * 60, 1, quay_length_m / 2), Vector3(80, 6, quay_length_m), Color("76695b"))
 	block("QuayEdge", Vector3(quay_side * 20.5, 4.1, quay_length_m / 2), Vector3(1, .2, quay_length_m - 4), Color("e2d6ad"), false)
+	# The quay runs on past the last berth.
+	var quay_end: float = berth_anchors[-1].position.z + 75.0
+	if quay_end > quay_length_m:
+		block("QuayExtension", Vector3(quay_side * 60, 1, (quay_length_m + quay_end) / 2), Vector3(80, 6, quay_end - quay_length_m), Color("76695b"))
+		block("QuayExtensionEdge", Vector3(quay_side * 20.5, 4.1, (quay_length_m + quay_end) / 2), Vector3(1, .2, quay_end - quay_length_m - 2), Color("e2d6ad"), false)
 	block("Warehouse", Vector3(quay_side * 72, 15, quay_length_m * .7), Vector3(42, 22, 45), Color("566b70"))
 	block("WarehouseRoof", Vector3(quay_side * 72, 26.5, quay_length_m * .7), Vector3(46, 1, 49), Color("c5c0ad"), false)
 	for i: int in 3:
@@ -92,9 +106,17 @@ func berth_readiness(body: HandlingShip, service: String, cargo_id: String) -> D
 
 ## Patch 2.0 easy docking (single-player): near + slow. berth_readiness above is
 ## the older strict rule, still used by the frozen online code.
-func dock_readiness(body: HandlingShip, service: String, cargo_id: String) -> Dictionary:
+## index picks the berth (0 is berth 1); claims are the docking authority's job.
+func dock_readiness(body: HandlingShip, service: String, cargo_id: String, index: int = 0) -> Dictionary:
 	var excluded: Array[RID] = [body.get_rid()]
-	return preload("res://features/ports/berth_eligibility.gd").evaluate_easy(berth, berth_anchor.global_transform, body.definition, body.global_transform, body.velocity, service, cargo_id, get_world_3d().direct_space_state, excluded)
+	return preload("res://features/ports/berth_eligibility.gd").evaluate_easy(berth, berth_anchors[index].global_transform, body.definition, body.global_transform, body.velocity, service, cargo_id, get_world_3d().direct_space_state, excluded)
 
-func dock_pose(body: HandlingShip) -> Transform3D:
-	return preload("res://features/ports/berth_eligibility.gd").berth_pose(berth_anchor.global_transform, body.global_transform)
+func dock_pose(body: HandlingShip, index: int = 0) -> Transform3D:
+	return preload("res://features/ports/berth_eligibility.gd").berth_pose(berth_anchors[index].global_transform, body.global_transform)
+
+func berth_id(index: int) -> String:
+	return berth.id if index == 0 else "%s_%02d" % [berth.id.trim_suffix("_01"), index + 1]
+
+## The berth box in world space, as held clear of spawns while it is in use.
+func berth_bounds(index: int) -> AABB:
+	return berth_anchors[index].global_transform * AABB(-berth.envelope_m / 2, berth.envelope_m)

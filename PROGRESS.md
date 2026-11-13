@@ -6048,3 +6048,45 @@ Limits:
 - `voyage_probe` fails if run twice in the same user data folder (old saves
   left behind); it passes on a fresh folder, as in CI.
 - The older test scenes (F3) have no polar ports or icebergs.
+
+## Patch 2.1 item 4: multiplayer-safe docking — November 13, 2026 (run on Linux, not on Windows)
+
+REBUILD_PLAN.md section 6, item 4. Not playtested; Andy has not played it.
+
+- Every port now has two berths in a row along its quay, 150 m apart
+  (`test_port.gd` `BERTH_COUNT`, `berth_anchors`, `berth_id`). Berth 1 is the
+  authored one and keeps its ID; berth 2 is `..._02` and shares its rules. The
+  quay runs on past berth 2 (`QuayExtension`). Land, ice shelves and icebergs
+  stay clear of it.
+- Berth claims (`berth_claims.gd`): one ship per berth, one berth per ship. The
+  docking authority only asks it (`holder`, `claim`, `release`,
+  `release_owner`), so a future server can own the table. The authority also
+  gives up the slide if the claim is taken away mid-slide.
+- Dock (`docking_authority.gd` `pick_berth`) keeps the auto-slide and takes the
+  nearest free berth; a berth held by another ship or filled by one is
+  skipped. With none free, Dock is greyed out and says "Port full — every
+  berth is taken." A save docked at berth 2 should load back there (nearest berth; not tested).
+- Ship collision: from Dock until the ship has left the berth box and is clear
+  of every other ship, it sits on a new `CollisionRules.DOCKED_HULL` layer and
+  meets only the shore, so ships pass through each other there. The berth
+  check and spawn clearance still see these hulls, so ships never overlap.
+- `ports_probe` has a new set: an AI ship holds berth 1, the captain is sent to
+  berth 2, a third ship gets "port full", collision is off while sliding and
+  docked, stays off while still in the berth or touching a ship, and comes back
+  once clear. Still single-player. Wake, waves, rocking and splash unchanged.
+
+Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
+
+- Passed: import, `check_scripts`, boot, the whole stage 2 smoke set, stage 4
+  (`collision_probe`, `composition_probe`, `ports_probe` 320 checks),
+  `voyage_probe`, `sailing_save_probe`, `bulk_service_probe`, `check_m1_voyage`,
+  `check_helm_keys`, `python3 -m compileall services tools`, the
+  `tools/world_layout` tests and `traversal_budget.py`.
+- Failed, same on unchanged main: `public_physics_probe` (frozen online code,
+  not in CI; "head-on hulls never pass through one another").
+- Passed: the stage 3 service unit tests. Not run: `tools/public_handoff`
+  (needs `psycopg`, not on this runner; no file it covers changed). Nothing on Windows, no playtest, no screenshots.
+
+Limits: two berths per port is a first draft. The older test scenes (F3) get
+the second berth too. Undock still hands the helm back in place; the captain
+sails out of the berth.

@@ -752,7 +752,8 @@ func _physics_process(delta: float) -> void:
 			ship.pause_reason = "YOUR SHIP SANK.\nA recovery crew is raising it and towing it to %s. Fee: %.2f credits." % [port.definition.display_name, mini(RECOVERY_FEE_MINOR, reward_minor) / 100.0]
 		sink_seconds -= delta
 		if sink_seconds <= 0.0: recover()
-	var status: Dictionary = port.dock_readiness(ship, service_id(), cargo_id())
+	# Patch 2.1 item 4: the nearest free berth, or "port full".
+	var status: Dictionary = docking.readiness(1, service_id(), cargo_id())
 	var current: String = docking.state(1)
 	dock_status = status
 	# The game always shows Dock beside the throttle, greyed out with no berth in range.
