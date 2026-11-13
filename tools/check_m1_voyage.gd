@@ -246,6 +246,21 @@ func play() -> void:
 	expect(not game.port_panel.visible and not game.helm.throttle_display.visible and not game.readiness.is_visible_in_tree(), "At sea the top-left panel and the old throttle panel are gone")
 	expect(game.game_hud.bar.is_visible_in_tree() and game.game_hud.knots.text == "0 kn" and game.dock_button.get_parent().get_parent().get_parent() == game.game_hud.bar, "The helm bar shows the speed in knots with Dock beside the slider (%s)" % game.game_hud.knots.text)
 	expect(game.sfx.has("chime") and game.sfx.has("thud"), "The game has its paid and collision sounds")
+	# Patch 2.1 item 3: past any edge of the world the ship comes back on the opposite side.
+	var wrap_m: float = game.Progression.WRAP_M
+	var home: Vector3 = game.ship.global_position
+	for step: Vector3 in [Vector3(wrap_m, 0, 0), Vector3(-wrap_m, 0, 0), Vector3(0, 0, wrap_m), Vector3(0, 0, -wrap_m), Vector3(-wrap_m, 0, wrap_m)]:
+		game.ship.global_position = home + step
+		for tick: int in 3: await physics_frame
+		expect(flat_distance(game.ship.global_position, home) < 1.0, "World wraps: a ship %s past the edge is back on the other side" % step)
+	var edge: Vector3 = game.Progression.WRAP_CENTRE + Vector3(wrap_m / 2 - 5, 0, 0)
+	expect(game.Progression.wrapped(edge + Vector3(10, 0, 0)).distance_to(edge - Vector3(wrap_m - 10, 0, 0)) < 0.01, "World wraps: 5 m past the east edge is 5 m inside the west edge")
+	expect(game.Progression.nearest(edge - Vector3(wrap_m - 10, 0, 0), edge).distance_to(edge + Vector3(10, 0, 0)) < 0.01, "World wraps: the nearest copy of a point is across the edge")
+	for rect: Rect2 in game.Progression.LAND:
+		var middle: Vector3 = Vector3(rect.get_center().x, 0, rect.get_center().y) - game.Progression.WRAP_CENTRE
+		expect(absf(middle.x) + rect.size.x / 2 < wrap_m / 2 - 2000 and absf(middle.z) + rect.size.y / 2 < wrap_m / 2 - 2000, "World wraps: open sea between land %s and every edge" % rect)
+	var minimap_script: Script = game.minimap.get_script()
+	expect(minimap_script.sphere_point(home + Vector3(wrap_m, 0, 0), home).length() < 0.001 and absf(minimap_script.sphere_point(home + Vector3(0, 0, wrap_m / 4), home).y - PI / 2) < 0.001, "The globe turns once for one trip round the world")
 	if not expect(game.controls.input_allowed(), "New game: helm accepts input; " + why_stuck(game)): return
 
 	if not await berth_approach(game, brindle, "Brindle Quay berth"): return

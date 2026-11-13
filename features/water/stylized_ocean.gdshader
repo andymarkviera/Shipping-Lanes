@@ -6,6 +6,8 @@ uniform vec4 surface_color : source_color = vec4(0.04, 0.62, 0.80, 1.0);
 uniform vec4 foam_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float water_time = 0.0;
 uniform int quality = 1;
+// Slides the swirl lines only. Zero unless the world has wrapped round.
+uniform vec2 swirl_origin = vec2(0.0);
 varying vec3 world_position;
 
 vec2 cell_point(vec2 cell) {
@@ -45,7 +47,7 @@ void fragment() {
 
 	// Swirl lines: cell borders, drawn only where a drifting mask allows, so they
 	// read as separate curved strokes that taper to a point.
-	vec2 uv = p / 32.0 + vec2(water_time * 0.016, water_time * 0.010);
+	vec2 uv = (p - swirl_origin) / 32.0 + vec2(water_time * 0.016, water_time * 0.010);
 	float warp_time = quality > 0 ? water_time * 0.18 : 0.0;
 	uv += 0.42 * vec2(sin(uv.y * 2.7 + warp_time), cos(uv.x * 2.2 - warp_time));
 	vec2 base = floor(uv);
