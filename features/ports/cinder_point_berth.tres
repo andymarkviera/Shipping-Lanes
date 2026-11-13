@@ -8,5 +8,5 @@ port_id = "port_cinder_point"
 cargo_type_ids = Array[String](["cargo_test_container"])
 position_m = Vector3(0, 0, 80.0)
 heading_degrees = 0.0
-envelope_m = Vector3(64, 30, 200)
+envelope_m = Vector3(64, 30, 290)
 service_ids = Array[String](["container_transfer", "refuel", "repair"])

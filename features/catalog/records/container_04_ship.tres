@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=3 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[ext_resource type="Resource" path="res://features/ships/container_ladder/container_04_layout.tres" id="2_layout"]
+[resource]
+script = ExtResource("1")
+container_layout = ExtResource("2_layout")
+id = "ship_container_neopanamax_04"
+display_name = "Neo-Panamax box ship"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
+cargo_type_ids = Array[String](["cargo_test_container"])
+cargo_capacities = {"container_slots": 180}
+hull_size_m = Vector3(32, 7, 200)
+camera_radius_m = 100
+camera_distance_m = 300
+wake_half_length_m = 94.0
+wake_half_width_m = 16.0
+cargo_anchor_m = Vector3(0, 4.6, 54.0)
+neutral_stop_deceleration_mps2 = 0.22
+forward_acceleration_mps2 = 2.408
+reverse_acceleration_mps2 = 0.8
+linear_drag_per_second = 0.12
+forward_throttle_limit = 1.0
+reverse_throttle_limit = 0.6
+command_rate_per_second = 0.5
+engine_ramp_up_per_second = 0.5
+engine_ramp_down_per_second = 1.0
+max_turn_rate_degrees = 2.0
+turn_acceleration_degrees = 1.1
+rudder_full_effect_speed_mps = 4.0
+thruster_acceleration_mps2 = 0.25
+lateral_drag_per_second = 0.4
+thruster_cutoff_speed_mps = 4.0
+fuel_capacity_liters = 4500.0
+fuel_full_output_lps = 1.7
+fuel_idle_lps = 0.03
