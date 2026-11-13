@@ -398,19 +398,26 @@ func play() -> void:
 	wallet = game.reward_minor
 	if not await berth_approach(game, game.port, "M3 berth, container ship"): return
 	if not await dock(game, "M3, container ship"): return
+	# Patch 2.2 item 4: SHIPS opens the boat hangar.
 	if not await click(game, "SHIPS"): return
-	if not await click(game, game.ship_buttons["bulk"][0].text): return
+	if not await click(game, "Bulk"): return
+	if not await click(game, "Buy · 1,200.00"): return
 	expect(game.fleet.has("bulk") and game.reward_minor == wallet - 120000, "Buying the bulk carrier takes its price (wallet %d)" % game.reward_minor)
-	if not await click(game, "Switch to " + game.Progression.SHIPS.bulk.name): return
+	# Headless clicks land milliseconds apart; a player's are past the double-press guard.
+	game.hangar.last_action_ms = -100000
+	if not await click(game, "Select"): return
 	expect(game.ship_kind == "bulk" and game.docking.state(1) != "docked", "Switch puts the captain on the bulk carrier, off the quay")
 	if not await berth_approach(game, game.port, "M3 berth, bulk carrier"): return
 	if not await dock(game, "M3, bulk carrier"): return
 	if not await click(game, "Accept"): return
 	expect(game.bulk_active == "bulk_1_grain" and game.voyage_hud.heading.text == "DELIVER BULK CARGO", "A bulk job is accepted and shown on the HUD (%s)" % game.voyage_hud.heading.text)
 	if not await click(game, "SHIPS"): return
-	if not await click(game, game.ship_buttons["container"][1].text): return
+	if not await click(game, "Container"): return
+	if not await click(game, "Sell · +400.00"): return
+	game.hangar.last_action_ms = -100000
 	if not await click(game, "Confirm sale"): return
 	expect(not game.fleet.has("container") and game.reward_minor == wallet - 120000 + 40000, "Selling the container ship pays half its price (wallet %d)" % game.reward_minor)
+	if not await click(game, "< Back"): return
 	wallet = game.reward_minor
 	await press_escape()
 	if not await click(game, "MAIN MENU"): return
