@@ -621,7 +621,7 @@ on pausing the world.
      playful and readable.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
-**Later patches:** Patch 2.1 is next (section 6). Patch 3 is a new main menu
+**Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is next. Patch 3 is a new main menu
 (Andy's design, later; do not start). Patch 4 is multiplayer (do not start).
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
@@ -679,3 +679,91 @@ playtest. Item 4 (multiplayer-safe docking: two berths per port, one ship
 each, "port full" when both are taken, ship collision off at a berth) is
 written and passes the automatic checks on Linux; not seen on a screen. All
 of Patch 2.1 now waits for Andy's Windows playtest. Details in PROGRESS.md.
+
+## 7. Patch 2.2 (Andy, November 13, 2026)
+
+Andy's next round: a real fleet ladder and a boat hangar. Same rules as
+sections 5 and 6: one PR each, in this order, Wind Waker look, Godot 4.7.2,
+saves and on-hold gas/oil/refinery/cargo-fuel code intact (gas and oil ships
+stay out of the ladder and the hangar for now), nothing that relies on
+pausing, single-player for now, Patch 2.0/2.1 wake, waves, rocking and bow
+splash keep working and scale with each hull. Hark chose the designs (Andy:
+"decided by you or the AI, find different real-life ships and get inspired").
+
+**Fleet ladder.** Three families of five ships each. Ship 1 is the smallest,
+ship 5 is huge. Bigger is faster (Andy's call), but bigger also takes longer
+to speed up, stop and turn, so a big ship feels heavy. Prices climb steeply so
+ship 5 is a long-term goal. Saves keep working: existing starter, coastal,
+harbor, swift container ships, the bulk prototype and the heavy lifter map
+onto the new ladder by ID (no save loses a ship or credits).
+
+| Family | 1 | 2 | 3 | 4 | 5 (huge) |
+| --- | --- | --- | --- | --- | --- |
+| Container (inspired by) | Starter feeder (current) | Coastal feeder, ~1,000 TEU | Panamax, ~4,500 TEU | Neo-Panamax, ~14,000 TEU | Ultra-large box ship like MSC Irina, ~24,000 TEU |
+| Container top speed | 30 kn | 33 kn | 36 kn | 39 kn | 42 kn |
+| Bulk (inspired by) | Handysize with deck cranes | Supramax | Panamax bulker | Capesize | Valemax ore carrier |
+| Bulk top speed | 28 kn | 31 kn | 34 kn | 37 kn | 40 kn |
+| Heavy lift (inspired by) | Current heavy lifter | Twin-crane project cargo ship (Jumbo J-class style) | Big twin-crane heavy lifter | Semi-submersible (BigLift Happy-Star style) | Giant semi-submersible like BOKA Vanguard |
+| Heavy lift top speed | 26 kn | 29 kn | 32 kn | 35 kn | 38 kn |
+
+Sizes roughly double in length every one to two steps (ship 5 is several times
+the starter; on screen it should feel enormous next to ship 1). Time to full
+speed grows from about 21 s (ship 1) to about 40 s (ship 5); stopping grows
+similarly; turning gets wider. Capacity, price and fuel use scale with size.
+Each ship gets its own low-poly toon model in the Wind Waker look with a
+distinct silhouette and color scheme per family; berths and the auto-slide
+docking must fit every size (big ships use bigger berths or a longer slide;
+no clipping into the quay).
+
+1. **Container family:** container ships 2-5 (models, definitions, cargo
+   capacity, prices, speeds), save mapping for the old container variants.
+2. **Bulk family:** bulk ships 1-5, replacing the bulk prototype by mapping.
+3. **Heavy-lift family:** heavy-lift ships 2-5 (ship 1 is the current heavy
+   lifter).
+4. **Boat hangar.** The ship purchase list becomes a full screen: a toon boat
+   hangar (shed doors open to the water, warm lights) with one ship shown at a
+   time, slowly turning. Left/right arrows (on screen and keys) cycle every
+   ship in the ladder; a family filter (All, Container, Bulk, Heavy lift)
+   at the top. Each ship shows name, family, size, top speed, capacity and
+   price. Not owned: Buy (if affordable, else shows how much more is needed).
+   Owned: Select, which makes it your active ship (the same switching rules
+   the fleet already uses: switch while docked at a port). The current ship is
+   marked Active. Back returns to the game. Opened from the existing buy/fleet
+   button at ports. The last item's PR carries a 5-10 line Windows playtest
+   checklist for all of Patch 2.2.
+
+**Bigger ships, bigger jobs (Andy, Nov 13).** Jobs scale with the ship: ports
+offer jobs sized to each ship tier, so a bigger ship gets jobs with far more
+containers (or tonnage for bulk, or bigger/heavier pieces for heavy lift) and
+pays far more per trip. The job board shows jobs that fit your active ship
+first, never offers a job your ship cannot carry, and every family's ship 5
+gets jobs worth its price. Loading and unloading time scales sensibly (big
+ships take longer but not painfully: use a faster crane rate per tier).
+Each item's PR wires its new ships into these jobs; item 4 checks the board
+for every tier.
+
+**No-jank checklist (Andy: "consider everything that's needed so the game
+ain't jank").** Every item must hold all of these:
+- Camera: chase distance, height and zoom limits scale with hull size, so a
+  huge ship fills the view without clipping into it or losing the horizon.
+- Physics: no jitter, sinking, tipping or bouncing on any hull; rocking,
+  wake, bow splash and buoyancy scale with size; collision shapes match each
+  model; ships cannot clip through quays, icebergs or each other.
+- Docking: every port (polar ports included) has berths each tier fits; a
+  ship too big for every berth at a port gets a clear "too big for this port"
+  message instead of a broken slide; ship 5 can dock at the major ports.
+- Map and world wrap: big ships wrap around the globe edges cleanly with no
+  pop or snap, and minimap icons scale with size.
+- Economy: prices, pay, fuel use and upkeep (if any) are balanced so each
+  step up is worth it and no tier is useless; starting a new game is still
+  the starter ship and fair.
+- Saves: old saves load with every ship and credits kept; buying and
+  switching ships saves correctly; the active ship survives a reload.
+- Hangar: arrow cycling never desyncs from the stats shown; Buy cannot be
+  double-pressed into two charges; Select only works when allowed and says
+  why when not; controller/keyboard and mouse both work; no frame drops when
+  swapping models (load or cache them).
+- Performance: big models stay low-poly, run smoothly on Andy's Windows PC
+  and the export includes every new asset.
+
+**Patch 2.2 status (November 13, 2026):** planned; not started.
