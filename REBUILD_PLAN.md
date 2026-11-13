@@ -732,4 +732,38 @@ no clipping into the quay).
    button at ports. The last item's PR carries a 5-10 line Windows playtest
    checklist for all of Patch 2.2.
 
+**Bigger ships, bigger jobs (Andy, Nov 13).** Jobs scale with the ship: ports
+offer jobs sized to each ship tier, so a bigger ship gets jobs with far more
+containers (or tonnage for bulk, or bigger/heavier pieces for heavy lift) and
+pays far more per trip. The job board shows jobs that fit your active ship
+first, never offers a job your ship cannot carry, and every family's ship 5
+gets jobs worth its price. Loading and unloading time scales sensibly (big
+ships take longer but not painfully: use a faster crane rate per tier).
+Each item's PR wires its new ships into these jobs; item 4 checks the board
+for every tier.
+
+**No-jank checklist (Andy: "consider everything that's needed so the game
+ain't jank").** Every item must hold all of these:
+- Camera: chase distance, height and zoom limits scale with hull size, so a
+  huge ship fills the view without clipping into it or losing the horizon.
+- Physics: no jitter, sinking, tipping or bouncing on any hull; rocking,
+  wake, bow splash and buoyancy scale with size; collision shapes match each
+  model; ships cannot clip through quays, icebergs or each other.
+- Docking: every port (polar ports included) has berths each tier fits; a
+  ship too big for every berth at a port gets a clear "too big for this port"
+  message instead of a broken slide; ship 5 can dock at the major ports.
+- Map and world wrap: big ships wrap around the globe edges cleanly with no
+  pop or snap, and minimap icons scale with size.
+- Economy: prices, pay, fuel use and upkeep (if any) are balanced so each
+  step up is worth it and no tier is useless; starting a new game is still
+  the starter ship and fair.
+- Saves: old saves load with every ship and credits kept; buying and
+  switching ships saves correctly; the active ship survives a reload.
+- Hangar: arrow cycling never desyncs from the stats shown; Buy cannot be
+  double-pressed into two charges; Select only works when allowed and says
+  why when not; controller/keyboard and mouse both work; no frame drops when
+  swapping models (load or cache them).
+- Performance: big models stay low-poly, run smoothly on Andy's Windows PC
+  and the export includes every new asset.
+
 **Patch 2.2 status (November 13, 2026):** planned; not started.
