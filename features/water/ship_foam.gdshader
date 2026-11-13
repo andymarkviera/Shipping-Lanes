@@ -6,9 +6,10 @@ uniform int quality = 1;
 void vertex() {
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	if (quality > 0) {
-		VERTEX.y += 0.18 * sin(world.x * 0.055 + world.z * 0.035 + water_time * 0.65);
-		VERTEX.y += 0.09 * sin(world.z * 0.09 - water_time * 0.85);
-		if (quality > 1) VERTEX.y += 0.04 * sin(world.x * 0.15 - world.z * 0.11 + water_time);
+		// Same numbers as OceanPresentation.swell_height.
+		VERTEX.y += 0.55 * sin(world.x * 0.040 + world.z * 0.026 + water_time * 0.55);
+		VERTEX.y += 0.28 * sin(world.z * 0.070 - world.x * 0.018 - water_time * 0.80);
+		if (quality > 1) VERTEX.y += 0.10 * sin(world.x * 0.11 - world.z * 0.08 + water_time * 1.1);
 	}
 }
 void fragment() {

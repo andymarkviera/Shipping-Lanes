@@ -15,9 +15,10 @@ vec2 cell_point(vec2 cell) {
 void vertex() {
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	if (quality > 0) {
-		VERTEX.y += 0.18 * sin(world.x * 0.055 + world.z * 0.035 + water_time * 0.65);
-		VERTEX.y += 0.09 * sin(world.z * 0.09 - water_time * 0.85);
-		if (quality > 1) VERTEX.y += 0.04 * sin(world.x * 0.15 - world.z * 0.11 + water_time);
+		// Same numbers as OceanPresentation.swell_height.
+		VERTEX.y += 0.55 * sin(world.x * 0.040 + world.z * 0.026 + water_time * 0.55);
+		VERTEX.y += 0.28 * sin(world.z * 0.070 - world.x * 0.018 - water_time * 0.80);
+		if (quality > 1) VERTEX.y += 0.10 * sin(world.x * 0.11 - world.z * 0.08 + water_time * 1.1);
 	}
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
@@ -34,6 +35,13 @@ void fragment() {
 	// Far water settles on the middle tone so the bands cannot shimmer at the horizon.
 	band = mix(band, 0.5, smoothstep(700.0, 1900.0, distance_to_eye));
 	vec3 water = mix(deep_color.rgb, surface_color.rgb, band);
+	// Rolling swells: a lighter flat band rides each crest so the swell reads
+	// on unshaded water. It fades out before the horizon.
+	float swell = 0.66 * sin(p.x * 0.040 + p.y * 0.026 + water_time * 0.55)
+		+ 0.34 * sin(p.y * 0.070 - p.x * 0.018 - water_time * 0.80);
+	float swell_aa = max(fwidth(swell), 0.004);
+	float crest = smoothstep(0.42 - swell_aa, 0.42 + swell_aa, swell) * (1.0 - smoothstep(350.0, 1100.0, distance_to_eye));
+	water = mix(water, mix(surface_color.rgb, foam_color.rgb, 0.3), 0.3 * crest);
 
 	// Swirl lines: cell borders, drawn only where a drifting mask allows, so they
 	// read as separate curved strokes that taper to a point.
