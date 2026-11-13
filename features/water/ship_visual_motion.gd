@@ -20,7 +20,7 @@ var body: CharacterBody3D
 var ocean: OceanPresentation
 var half_length: float = 30.0
 var half_width: float = 6.5
-var cruise_speed_mps: float = 8.0
+var cruise_speed_mps: float = ShipWake.FULL_STRENGTH_SPEED_MPS
 var full_turn_rate_rad: float = deg_to_rad(3.0)
 var speed_fraction: float = 0.0
 var lean: float = 0.0

@@ -668,5 +668,7 @@ nothing that relies on pausing, single-player for now.
 
 **Patch 2.1 status (November 13, 2026):** item 1 (3D bow splash) is written
 and passes the automatic checks on Linux; seen only as software-rendered
-screenshots by the agent. It waits for Andy's Windows playtest. Items 2 to 4
-are not started. Details in PROGRESS.md.
+screenshots by the agent. Item 2 (faster ships: starter 30 kn, about 21 s to
+full speed, about 16 s to stop) is written; its Godot checks have not run yet
+(only the Python checks ran) and wait for the Checks workflow. Both wait for
+Andy's Windows playtest. Items 3 and 4 are not started. Details in PROGRESS.md.

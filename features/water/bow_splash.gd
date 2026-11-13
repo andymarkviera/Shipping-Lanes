@@ -86,7 +86,9 @@ func throw_chunk() -> void:
 	var velocity: Vector3 = across * side * (1.5 + 5.5 * power) * random.randf_range(0.4, 1.0)
 	velocity += Vector3.UP * (4.0 + 8.5 * power) * random.randf_range(0.55, 1.0)
 	# Carried along with the ship for a moment, then left behind along the hull.
-	velocity += Vector3(ship.velocity.x, 0, ship.velocity.z) * random.randf_range(0.35, 0.8)
+	# (Fractions raised with the 30 kn top speed so the spray falls behind the bow
+	# at the same rate as it did at the old 10 m/s top speed.)
+	velocity += Vector3(ship.velocity.x, 0, ship.velocity.z) * random.randf_range(0.58, 0.87)
 	chunks.append({
 		"position": start,
 		"velocity": velocity,
