@@ -190,6 +190,8 @@ static func dress_port(port: Node3D) -> void:
 	port.add_child(root)
 	_tint(port, "Quay", Color("b9a98c"))
 	_tint(port, "QuayEdge", Color("f2b632"))
+	_tint(port, "QuayExtension", Color("b9a98c"))
+	_tint(port, "QuayExtensionEdge", Color("f2b632"))
 	# Fat bollards and a dark timber face along the berth.
 	_box(root, Vector3(1.0, 3.0, length - 2.0), Vector3(side * 19.6, 2.3, length / 2.0), Color("6b4a35"), cache)
 	for index: int in int(length / 20.0):
@@ -264,6 +266,8 @@ const FROST: Color = Color("d9edf4")
 static func _dress_icy(port: Node3D, root: Node3D, side: float, length: float, cache: Dictionary) -> void:
 	_tint(port, "Quay", FROST)
 	_tint(port, "QuayEdge", ICE)
+	_tint(port, "QuayExtension", FROST)
+	_tint(port, "QuayExtensionEdge", ICE)
 	_tint(port, "Warehouse", Color("9cc7d9"))
 	# A thick snow cap over the pitched roof.
 	var cap: PrismMesh = PrismMesh.new()

@@ -107,6 +107,7 @@ func _ready() -> void:
 	verify(preview.port.berth_readiness(preview.ship, "container_transfer", "cargo_test_container").eligible, "Actual preview ship is eligible without self-blocking")
 	verify(preview.readiness.text.begins_with("Berth: Ready to dock"), "Live readiness feedback reaches ready state")
 	await check_docking(preview)
+	await check_berths(preview)
 	check_loading(preview)
 	await check_services(preview)
 	var capture: String = ""
@@ -323,6 +324,66 @@ func check_docking(preview: Node3D) -> void:
 	authority.advance(.5)
 	verify(authority.cancel(1) and body.helm_available() and authority.reservations.is_empty(), "Cancel during the slide returns the helm")
 	body.global_transform = old_pose
+	authority.set_physics_process(true)
+
+## Patch 2.1 item 4: one ship per berth. An AI ship holds berth 1 the way a
+## future server would hand it out; the captain is sent to berth 2, a third
+## ship is told the port is full, and docked ships pass through each other.
+func check_berths(preview: Node3D) -> void:
+	var authority = preview.docking
+	authority.set_physics_process(false)
+	var port: Node3D = preview.port
+	var body: HandlingShip = preview.ship
+	var old_pose: Transform3D = body.global_transform
+	verify(port.berth_anchors.size() == 2 and port.berth_id(0) != port.berth_id(1) and port.berth_anchors[1].global_position.distance_to(port.berth_anchor.global_position) >= body.definition.hull_size_m.z + 20, "Port has two berths in a row, a hull length apart")
+	var berth_one: Transform3D = port.berth_anchors[0].global_transform
+	var ai: HandlingShip = HandlingShip.new()
+	CollisionRules.add_box_hull(ai, ai.definition.hull_size_m)
+	add_child(ai)
+	ai.global_transform = berth_one
+	body.global_transform = berth_one.translated_local(Vector3(-port.quay_side * 40, 0, 20))
+	body.velocity = Vector3.ZERO
+	await get_tree().physics_frame
+	verify(authority.register(2, ai, port) and authority.request_dock(2, "container_transfer", "cargo_test_container").ok and authority.members[2].berth_index == 0, "AI ship claims berth 1")
+	authority.advance(authority.MAX_SLIDE_SECONDS + .1)
+	verify(authority.state(2) == "docked" and authority.claims.holder(authority.berth_key(port, 0)) == 2, "AI ship holds berth 1")
+	verify(ai.collision_layer == CollisionRules.DOCKED_HULL and ai.collision_mask & CollisionRules.HULL == 0, "Docked ship collision with other ships is off")
+	await get_tree().physics_frame
+	verify(authority.readiness(1, "container_transfer", "cargo_test_container").eligible, "Taken berth 1 is skipped; berth 2 is ready")
+	verify(authority.request_dock(1, "container_transfer", "cargo_test_container").ok and authority.members[1].berth_index == 1 and authority.reservations.size() == 2, "Captain is sent to the next free berth")
+	verify(body.collision_layer == CollisionRules.DOCKED_HULL, "Collision is off while sliding into a berth")
+	authority.advance(authority.MAX_SLIDE_SECONDS + .1)
+	verify(authority.state(1) == "docked" and body.global_position.distance_to(port.berth_anchors[1].global_position) < .01, "Captain docks at berth 2")
+	var gap: float = absf((berth_one.affine_inverse() * body.global_position).z) - body.definition.hull_size_m.z / 2 - ai.definition.hull_size_m.z / 2
+	verify(gap > 10, "Ships at a port never overlap (%.0f m apart)" % gap)
+	var third: HandlingShip = HandlingShip.new()
+	CollisionRules.add_box_hull(third, third.definition.hull_size_m)
+	add_child(third)
+	third.global_transform = berth_one.translated_local(Vector3(-port.quay_side * 60, 0, 90))
+	await get_tree().physics_frame
+	authority.register(3, third, port)
+	var full: Dictionary = authority.request_dock(3, "container_transfer", "cargo_test_container")
+	verify(not full.ok and full.message == authority.PORT_FULL and authority.readiness(3, "container_transfer", "cargo_test_container").code == "FULL", "No free berth: Dock says the port is full")
+	authority.request_undock(1)
+	authority.advance(.6)
+	await get_tree().physics_frame
+	verify(authority.state(1) == "underway" and body.helm_available() and authority.claims.holder(authority.berth_key(port, 1)) == 0, "Undock gives the berth up")
+	verify(body.collision_layer == CollisionRules.DOCKED_HULL and authority.request_dock(3, "container_transfer", "cargo_test_container").message == authority.PORT_FULL, "Still in the berth: collision stays off and nobody slides in on top")
+	body.global_transform = third.global_transform.translated_local(Vector3(0, 0, 10))
+	await get_tree().physics_frame
+	authority.advance(.01)
+	verify(body.collision_layer == CollisionRules.DOCKED_HULL, "Collision stays off while overlapping another ship")
+	third.global_position += Vector3(0, 0, -400)
+	await get_tree().physics_frame
+	authority.advance(.01)
+	verify(body.collision_layer == CollisionRules.HULL and body.collision_mask == CollisionRules.SOLID_WATERCRAFT, "Collision comes back once out of the berth and clear of ships")
+	authority.disconnect_owner(2)
+	authority.disconnect_owner(3)
+	verify(authority.reservations.is_empty() and ai.collision_layer == CollisionRules.HULL, "Leaving the port frees every claim")
+	ai.free()
+	third.free()
+	body.global_transform = old_pose
+	await get_tree().physics_frame
 	authority.set_physics_process(true)
 
 func check_manifest() -> void:

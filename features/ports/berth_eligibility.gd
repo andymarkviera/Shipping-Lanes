@@ -87,7 +87,9 @@ static func evaluate_easy(berth: BerthDefinition, anchor: Transform3D, ship: Shi
 	var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
 	query.shape = shape
 	query.transform = target.translated_local(Vector3(0, 1, 0))
-	query.collision_mask = CollisionRules.HULL | CollisionRules.CARGO_VISUAL
+	# Patch 2.1 item 4: a docked or leaving ship has its ship collision off, but
+	# it still fills the berth, so it blocks here too. Ships never overlap.
+	query.collision_mask = CollisionRules.HULL | CollisionRules.DOCKED_HULL | CollisionRules.CARGO_VISUAL
 	query.collide_with_areas = true
 	query.exclude = exclude
 	if not space.intersect_shape(query, 1).is_empty():
