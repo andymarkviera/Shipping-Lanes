@@ -1,6 +1,8 @@
 extends Node
 var checks: int = 0
 var failures: int = 0
+## Full foam, splash and rocking strength (see ShipWake).
+const FULL: float = ShipWake.FULL_STRENGTH_SPEED_MPS
 func check(value: bool, label: String) -> void:
 	checks += 1
 	if not value:
@@ -72,16 +74,16 @@ func run() -> void:
 	scene.wake.set_process(false)
 	scene.ship.set_physics_process(false)
 	scene.set_physics_process(false)
-	scene.ship.velocity = Vector3(0, 0, 8)
+	scene.ship.velocity = Vector3(0, 0, FULL)
 	for tick: int in range(120):
-		scene.ship.position.z += 8.0 / 60.0
+		scene.ship.position.z += FULL / 60.0
 		scene.wake.advance(1.0 / 60.0)
 	check(scene.wake.samples.size() > 4, "Motion emits a lingering wake")
 	var old_center: Vector3 = scene.wake.samples[0].center
 	var wake_body: Transform3D = scene.ship.transform
 	scene.wake.advance(0.01)
 	check(scene.wake.samples[0].center == old_center, "Trail anchors stay in world space")
-	check(scene.ship.transform == wake_body and scene.ship.velocity == Vector3(0, 0, 8), "Wake cannot change navigation")
+	check(scene.ship.transform == wake_body and scene.ship.velocity == Vector3(0, 0, FULL), "Wake cannot change navigation")
 	check(scene.wake.strength == 1.0, "Cruising motion produces full foam strength")
 	var newest: Dictionary = scene.wake.section(scene.wake.samples.back())
 	var oldest: Dictionary = scene.wake.section(scene.wake.samples[0])
@@ -102,24 +104,24 @@ func run() -> void:
 	var full_peak: float = splash.crest_peak_m
 	var full_size: float = 0.0
 	for chunk: Dictionary in splash.chunks: full_size = maxf(full_size, chunk.size)
-	scene.ship.velocity = Vector3(0, 0, 3)
+	scene.ship.velocity = Vector3(0, 0, FULL * 0.375)
 	scene.wake.advance(0.01)
 	for tick: int in range(240): splash.update(1.0 / 60.0)
 	var slow_size: float = 0.0
 	for chunk: Dictionary in splash.chunks: slow_size = maxf(slow_size, chunk.size)
 	check(not splash.chunks.is_empty() and slow_size < full_size * 0.6 and splash.crest_peak_m < full_peak * 0.5, "Splash is smaller at low speed")
-	scene.ship.velocity = Vector3(0, 0, -8)
+	scene.ship.velocity = Vector3(0, 0, -FULL)
 	scene.wake.advance(0.01)
 	for tick: int in range(240): splash.update(1.0 / 60.0)
 	check(splash.chunks.all(func(chunk: Dictionary) -> bool: return chunk.position.z < scene.ship.position.z), "Reversing splashes at the stern")
-	check(scene.ship.transform == wake_body and scene.ship.velocity == Vector3(0, 0, -8), "Splash cannot change navigation")
-	scene.ship.velocity = Vector3(0, 0, 8)
+	check(scene.ship.transform == wake_body and scene.ship.velocity == Vector3(0, 0, -FULL), "Splash cannot change navigation")
+	scene.ship.velocity = Vector3(0, 0, FULL)
 	scene.wake.advance(0.01)
 	# Sailing feel: the hull rocks harder at speed and leans into a turn.
 	var motion: ShipVisualMotion = scene.visual_root
 	motion.set_process(false)
 	var swing: Dictionary = {}
-	for pace: float in [0.0, 8.0]:
+	for pace: float in [0.0, FULL]:
 		scene.ship.velocity = Vector3(0, 0, pace)
 		var low: float = INF
 		var high: float = -INF
@@ -129,7 +131,7 @@ func run() -> void:
 				low = minf(low, motion.rotation.x)
 				high = maxf(high, motion.rotation.x)
 		swing[pace] = high - low
-	check(swing[8.0] > swing[0.0], "Pitching grows with speed")
+	check(swing[FULL] > swing[0.0], "Pitching grows with speed")
 	check(motion.speed_fraction > 0.95, "Hull motion follows ship speed")
 	var upright: float = motion.lean
 	for tick: int in range(120):
@@ -138,7 +140,7 @@ func run() -> void:
 	check(motion.lean < upright - 0.5, "Hull leans into a turn")
 	check(absf(motion.rotation.z) <= ShipVisualMotion.MAX_ROLL_RAD and absf(motion.rotation.x) <= ShipVisualMotion.MAX_PITCH_RAD, "Rocking at speed stays bounded")
 	scene.ship.rotation.y = wake_body.basis.get_euler().y
-	scene.ship.velocity = Vector3(0, 0, 8)
+	scene.ship.velocity = Vector3(0, 0, FULL)
 	check(scene.ship.transform.is_equal_approx(wake_body), "Rocking cannot change navigation")
 	motion.set_process(true)
 	check(OceanPresentation.swell_height(10, 20, 3, 0) == 0.0 and absf(OceanPresentation.swell_height(10, 20, 3, 2)) <= 0.93, "Swell is flat on low water and bounded otherwise")
@@ -155,7 +157,7 @@ func run() -> void:
 	scene.ship.velocity = Vector3.ZERO
 	scene.wake.advance(0.1)
 	check(scene.wake.samples.is_empty(), "Teleport clears stale trails")
-	scene.ship.velocity = Vector3(0, 0, 8)
+	scene.ship.velocity = Vector3(0, 0, FULL)
 	for tick: int in range(100): scene.wake.advance(0.22)
 	check(scene.wake.samples.size() <= ShipWake.MAX_SAMPLES, "Wake history stays bounded")
 	for tier: int in range(3):

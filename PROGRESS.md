@@ -5866,3 +5866,72 @@ Limits:
   to rescale both.
 - The import again wrote `.uid` files for older scripts that lack one. They
   are not in this change. No workflow file changed.
+
+## Patch 2.1 item 2: Faster ships — November 13, 2026 (Godot checks NOT run)
+
+Issue #79. Only this item. No Godot check ran for this change: the agent runner
+has no Godot and was not allowed to fetch one this time. The PR must wait for
+the Checks workflow.
+
+New handling numbers (ship records in `features/catalog/records`):
+
+| Ship | Ahead m/s² | Astern m/s² | Drag 1/s | Top speed | Astern top |
+|---|---:|---:|---:|---:|---:|
+| Starter, Coastal | 3.087 (was 0.8) | 1.25 (was 0.5) | 0.2 (was 0.08) | 30.0 kn (was 19.4) | 7.3 kn (same) |
+| Swift | 3.704 | 1.25 | 0.2 | 36.0 kn (was 23.3) | 7.3 kn |
+| Harbor | 2.778 | 1.25 | 0.2 | 27.0 kn (was 17.5) | 7.3 kn |
+| Heavy lifter (empty) | 2.122 | 0.875 | 0.2 | 20.6 kn (was 13.4) | 5.1 kn |
+
+- Every ship keeps its old share of the starter's speed (Swift +20%, Harbor
+  -10%, heavy lifter about two thirds). All stay under the 20 m/s collision cap.
+- Starter, holding full ahead from a stop: 27 kn at 12.6 s, 29.3 kn at 16 s,
+  the HUD reads "30 kn" at about 21 s. Before, 95% of top speed took 38.5 s.
+- Starter, from full speed: throttle to neutral stops in 16.4 s over 81 m
+  (was 31 s); holding reverse stops in 9.6 s over 66 m (was 17.6 s).
+- These times come from a Python replay of `HandlingShip.advance_motion`,
+  written by the agent for this change (not in the repository). With the old
+  numbers it reproduced the recorded handling baselines.
+- Turn rate, thrusters, throttle and engine ramps, the neutral stop assist and
+  the Dock speed limit (3 m/s, about 6 kn) are unchanged.
+- Wake, bow splash and rocking were full strength at 8 m/s (80% of the old
+  top speed). They are now full at 12.35 m/s (80% of 30 kn), one constant in
+  `ship_wake.gd`, so each looks the same at the same throttle as before. Splash
+  chunks are carried along a little more so they fall behind the bow at the
+  old rate. No other wake, swell or rocking code changed.
+- Fuel burn per second is unchanged, so a trip of the same length burns about
+  a third less fuel. Job pay is by load and distance and has no time limit, so
+  pay is unchanged. The camera trails about 3 m at top speed (was 2 m).
+- `features/world/world_layout.json` (planning check only, not read by the
+  game): new top speeds; the trip-time targets are shortened to fit (starter
+  6-9 min, short 9-11, medium 11-16.5, long 16.5-24); the minimum shortcut
+  saving is 120 s (was 180 s); the four legs measured at the old speed are
+  removed and need measuring again.
+- Probes updated for the new numbers: `tools/simulation_checkpoint.gd`
+  (handling baselines, from the Python replay), `tools/handling_probe.gd` (two
+  expected values), `tools/water_probe.gd` (uses the new full-strength speed).
+
+Checks:
+
+- Passed on the agent's Linux runner: `python3 -m compileall services tools`,
+  the 76 service unit tests, the 6 `tools/world_layout` tests and
+  `traversal_budget.py` (WORLD_LAYOUT_PASS, 17 routes).
+- Could not run here: `tools/public_handoff` tests (4 of 18 need `psycopg`,
+  which is not installed on this runner; no file they cover changed).
+- Not run: every Godot check (import, `check_scripts`, boot, all probes,
+  `check_m1_voyage`), anything on Windows, any playtest. The agent read each
+  probe that moves a ship and replayed the handling and collision cases in
+  Python, but that is not a run.
+
+Limits:
+
+- Nobody has felt or seen the new speeds. The numbers are a first guess for
+  Andy to judge.
+- The turning circle at full speed is about 1.5 times wider (same turn rate,
+  higher speed).
+- In `collision_probe`, a 1 m/s coast into a wall now reaches it with only
+  about 0.1 m to spare (was 0.3 m). It may need a nudge if the Checks run
+  disagrees.
+- The bulk, gas and oil ship records use the built-in default handling and
+  are unchanged; the game does not sail them with their own handling.
+- WORLD_LAYOUT.md still shows the old trip-time tables. No workflow file
+  changed. No new runtime resource, so `export_presets.cfg` is unchanged.
