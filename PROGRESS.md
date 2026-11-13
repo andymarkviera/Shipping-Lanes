@@ -6244,3 +6244,51 @@ Limits: heavy ship 1 still tops out at about 20.6 kn, not the plan table's
 26 kn (item 3 keeps the current heavy lifter; Andy to decide). Cinder Point has
 no heavy berth (as before), so no heavy ship docks there. A big lifter's piece is staged at
 the same spot off each quay as ship 1's.
+
+## Patch 2.2 item 4 — Boat hangar screen (November 13, 2026)
+
+REBUILD_PLAN.md section 7, item 4. Not playtested; Andy has not played it.
+
+- SHIPS on the port card now opens `features/game/boat_hangar.gd`: a full-screen
+  toon boat shed (plank floor, water slip, red pitched roof, back doors swung
+  open onto sea and sky, six warm hanging lamps) in its own SubViewport world,
+  with one ship turning slowly in the slip. Every ship is drawn the same length;
+  its real size is in the stats. The world keeps running under it (no pause);
+  the helm is released while it is open.
+- Ladder: the 15 container, bulk and heavy-lift ships (no gas or oil). Left /
+  right: on-screen arrows, arrow keys, A/D, d-pad. Filter All / Container / Bulk
+  / Heavy lift at the top (also up/down, W/S). Card: name (ACTIVE / OWNED), family
+  and tier, size, top speed, capacity, price, wallet. Stats and model are read
+  from the same index every frame, so they cannot desync.
+- Not owned: Buy (or "Need X more" when short). Owned: Select (the old switch
+  rules: docked, no job aboard; the reason shows when refused), then back to the
+  game. Active ship: Active. Sell (two presses) kept from the old list. Presses
+  within 0.6 s of a Buy/Select/Sell are ignored, so a double press charges once.
+  Enter / A acts; Esc / B is Back and does not open the Esc menu.
+- Models: `chunky_look.gd` `model(kind, definition)` is the sailing look on its
+  own (dress_ship now calls it). All 15 are built once on first open and cached.
+- Fix: switching to a bigger ship at the same port failed with "Spawn
+  occupied", because the ship being replaced (its hull and its own spawn hold)
+  blocked the new spawn. `select_port` now ignores the outgoing ship while
+  reserving and restores both if the reservation still fails.
+- `check_m1_voyage` drives the hangar for its buy/switch/sell steps.
+  `export_presets.cfg` lists the new script.
+
+Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
+
+- New `tools/hangar_check.gd` passed 179 checks: in the game scene, SHIPS opens
+  the hangar without pausing; 15 models cached; arrows/keys cycle and wrap with
+  matching stats and one visible model; filters; short-wallet Buy; Esc goes back
+  without the menu; every ship bought (double press charges once) and selected
+  through the hangar, refused with a reason when undocked, docked and offered a
+  board it can carry; a reload keeps all 15 ships, the active ship and the wallet.
+- Passed: import, `check_scripts` (195), boot, stage 2 smoke set, stage 4
+  probes, `check_m1_voyage`, `check_helm_keys`, `voyage_probe`,
+  `sailing_save_probe`, `cargo_matrix_probe`, the container, bulk and heavy
+  ladder checks; stage 3 Python except `tools/public_handoff` (compileall,
+  service unit tests, world_layout, traversal_budget).
+- Not run: Windows, a playtest, screenshots (headless cannot render, so the
+  shed has not been seen by anyone), `tools/public_handoff` (needs psycopg).
+
+Limits: the old row list behind SHIPS is still built (hidden) because its
+refresh code is shared; it is no longer shown in the game.

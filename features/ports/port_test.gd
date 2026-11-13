@@ -20,6 +20,8 @@ var controls: PlayerControls
 var helm: ShipHelm
 ## Patch 2.0: the game's Esc menu (Resume, Settings, Main Menu, Quit). Null in test scenes.
 var game_menu: CanvasLayer
+## Patch 2.2 item 4: the full-screen boat hangar behind SHIPS.
+var hangar: CanvasLayer
 var camera: OrbitCameraRig
 var ocean: OceanPresentation
 var wake: ShipWake
@@ -218,6 +220,9 @@ func _ready() -> void:
 		add_child(game_menu)
 		game_menu.main_menu_requested.connect(leave)
 		game_menu.quit_requested.connect(quit_game)
+		hangar = preload("res://features/game/boat_hangar.gd").new()
+		hangar.view = self
+		add_child(hangar)
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
@@ -229,7 +234,9 @@ func _ready() -> void:
 	refuel_button = button(tabs, "REFUEL", refuel)
 	repair_button = button(tabs, "REPAIR", repair)
 	if game_mode:
-		button(tabs, "SHIPS", func(): ships_panel.visible = not ships_panel.visible; jobs_panel.hide())
+		# Patch 2.2 item 4: SHIPS opens the boat hangar. The old row list stays
+		# built (hidden) because refresh_ships still keeps its buttons current.
+		button(tabs, "SHIPS", func(): ships_panel.hide(); hangar.open())
 	button(tabs, "Close services", func(): jobs_panel.hide(); ships_panel.hide())
 	jobs_panel = VBoxContainer.new()
 	services.add_child(jobs_panel)
@@ -510,7 +517,18 @@ func select_port(index: int, restoring: bool = false) -> bool:
 		return false
 	var next_port: Node3D = world_ports[index]
 	var next_ship: HandlingShip = create_ship()
+	# Patch 2.2 item 4: switching ships at the same port. The ship being replaced
+	# (its hull and its own spawn hold) must not block its bigger successor; both
+	# come back if the reservation still fails.
+	var outgoing: Dictionary = {}
+	if is_instance_valid(ship) and next_port == port and not restoring:
+		outgoing = {"layer": ship.collision_layer, "hold": port.spawn_allocator.holds.get(spawn_ticket)}
+		ship.collision_layer = 0
+		port.spawn_allocator.holds.erase(spawn_ticket)
 	var allocation: Dictionary = next_port.reserve_spawn(next_ship.definition.hull_size_m)
+	if not allocation.ok and not outgoing.is_empty():
+		ship.collision_layer = outgoing.layer
+		if outgoing.hold != null: port.spawn_allocator.holds[spawn_ticket] = outgoing.hold
 	if not allocation.ok:
 		next_ship.free()
 		if is_instance_valid(ship): heavy_mode = ship.has_method("attach_payload")

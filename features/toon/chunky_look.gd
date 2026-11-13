@@ -121,26 +121,30 @@ static func dress_ship(ship: Node3D, kind: String) -> void:
 	var assembly: ShipAssembly = ship.get("assembly") as ShipAssembly
 	if assembly == null or assembly.visual == null or assembly.visual.get_child_count() == 0: return
 	(assembly.visual.get_child(0) as Node3D).hide()
+	assembly.visual.add_child(model(kind, ship.definition))
+
+## Patch 2.2 item 4: the toon model of one ladder kind on its own, for the boat
+## hangar. dress_ship uses the same build, so the hangar shows the sailing look.
+static func model(kind: String, definition: ShipDefinition) -> Node3D:
 	var colours: Array = SHIP_COLOURS.get(kind.get_slice("_", 0), SHIP_COLOURS["container"])
 	var main: Color = colours[0]
 	var trim: Color = colours[1]
 	var cache: Dictionary = {}
 	var root: Node3D = Node3D.new()
 	root.name = "ChunkyShip"
-	assembly.visual.add_child(root)
-	var size: Vector3 = ship.definition.hull_size_m
+	var size: Vector3 = definition.hull_size_m
 	var hull: MeshInstance3D = MeshInstance3D.new()
 	hull.name = "Hull"
 	root.add_child(hull)
 	if kind.begins_with("container_"):
-		_dress_box_ship(root, hull, ship.definition, int(kind.trim_prefix("container_")), main, trim, cache)
-		return
+		_dress_box_ship(root, hull, definition, int(kind.trim_prefix("container_")), main, trim, cache)
+		return root
 	if kind == "bulk" or kind.begins_with("bulk_"):
-		_dress_bulker(root, hull, ship.definition, 1 if kind == "bulk" else int(kind.trim_prefix("bulk_")), main, trim, cache)
-		return
+		_dress_bulker(root, hull, definition, 1 if kind == "bulk" else int(kind.trim_prefix("bulk_")), main, trim, cache)
+		return root
 	if kind == "heavy" or kind.begins_with("heavy_"):
-		_dress_heavy(root, hull, ship.definition, 1 if kind == "heavy" else int(kind.trim_prefix("heavy_")), main, trim, cache)
-		return
+		_dress_heavy(root, hull, definition, 1 if kind == "heavy" else int(kind.trim_prefix("heavy_")), main, trim, cache)
+		return root
 	var deck: float = 2.6
 	hull.mesh = hull_mesh(size.z, size.x, -3.2, deck, 3.5, 1.6, main, Color("c9b48a"))
 	# Stern house, bridge with wings, funnel and mast.
@@ -160,6 +164,7 @@ static func dress_ship(ship: Node3D, kind: String) -> void:
 	for z: float in hatches:
 		_box(root, Vector3(size.x - 4.4, 0.9, 8.0), Vector3(0, deck + 0.45, z), trim, cache)
 		_box(root, Vector3(size.x - 5.4, 0.4, 7.0), Vector3(0, deck + 1.0, z), WHITE.lerp(trim, 0.35), cache)
+	return root
 
 static func _tint(port: Node3D, label: String, colour: Color) -> void:
 	var mesh: MeshInstance3D = _mesh_of(port, label)
