@@ -199,6 +199,20 @@ func check_berth(port: Node3D) -> void:
 		verify(rule.evaluate(port.berth, pose, hull, contact, Vector3.ZERO, service, cargo, space).code == "BLOCKED", "Hull penetrating the quay remains blocked: " + hull.id)
 		var wide: Transform3D = pose.translated_local(Vector3(-port.quay_side * 15, 0, 35))
 		verify(rule.evaluate(port.berth, pose, hull, wide, Vector3.ZERO, service, cargo, space).eligible, "Wider side and length approach is eligible: " + hull.id)
+	# Patch 2.0 easy docking: near + slow, no angle rule, plain messages.
+	var args: Array = ["container_transfer", "cargo_test_container", space]
+	verify(rule.evaluate_easy(port.berth, pose, definition, backwards, Vector3.ZERO, args[0], args[1], args[2]).eligible, "Easy: backward facing hull can dock")
+	var crooked: Transform3D = pose.translated_local(Vector3(-port.quay_side * 60, 0, -120)) * Transform3D(Basis(Vector3.UP, deg_to_rad(70)), Vector3.ZERO)
+	verify(rule.evaluate_easy(port.berth, pose, definition, crooked, Vector3(0, 0, 2.5), args[0], args[1], args[2]).eligible, "Easy: crooked, off-centre and still moving slowly can dock")
+	var in_quay: Transform3D = pose.translated_local(Vector3(port.quay_side * 16, 0, 0))
+	verify(rule.evaluate_easy(port.berth, pose, definition, in_quay, Vector3.ZERO, args[0], args[1], args[2]).eligible, "Easy: a hull pressed on the quay can dock")
+	var fast: Dictionary = rule.evaluate_easy(port.berth, pose, definition, pose, Vector3(0, 0, 3.5), args[0], args[1], args[2])
+	verify(fast.code == "SPEED" and fast.message == "Slow down to dock.", "Easy: too fast says only what to do")
+	var far: Dictionary = rule.evaluate_easy(port.berth, pose, definition, pose.translated_local(Vector3(-port.quay_side * 90, 0, 0)), Vector3.ZERO, args[0], args[1], args[2])
+	verify(far.code == "POSITION" and far.message == "Sail closer to the berth to dock.", "Easy: too far says only what to do")
+	verify(rule.evaluate_easy(port.berth, pose, definition, pose, Vector3.ZERO, "unknown_service", "", space).code == "SERVICE", "Easy: unsupported service rejected")
+	var landing: Transform3D = rule.berth_pose(pose, crooked.translated(Vector3(0, 2, 0)))
+	verify(landing.basis.is_equal_approx(pose.basis) and landing.origin.is_equal_approx(pose.origin + Vector3(0, 2, 0)), "Easy: slide ends on the berth centre and heading at the ship's height")
 	definition.hull_size_m.x = 70
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "SIZE", "Oversized hull rejected")
 	definition.hull_size_m.x = 13
@@ -215,6 +229,7 @@ func check_berth(port: Node3D) -> void:
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "BLOCKED", "Other hull prevents docking")
 	var excluded: Array[RID] = [body.get_rid()]
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space, excluded).eligible, "Own hull can be excluded from clearance query")
+	verify(rule.evaluate_easy(port.berth, pose, definition, crooked, Vector3.ZERO, "container_transfer", "", space).code == "BLOCKED", "Easy: another hull in the berth prevents docking")
 	body.collision_layer = CollisionRules.CARGO_VISUAL
 	await get_tree().physics_frame
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "BLOCKED", "Cargo obstruction prevents docking")
@@ -225,7 +240,7 @@ func check_docking(preview: Node3D) -> void:
 	authority.set_physics_process(false)
 	var body: HandlingShip = preview.ship
 	var position_before: Vector3 = body.global_position
-	body.velocity = Vector3(0, 0, 1)
+	body.velocity = Vector3(0, 0, 4)
 	verify(not authority.request_dock(1, "container_transfer", "cargo_test_container").ok and authority.reservations.is_empty(), "Fast approach does not reserve berth")
 	body.velocity = Vector3.ZERO
 	authority.advance(.01)
@@ -281,6 +296,32 @@ func check_docking(preview: Node3D) -> void:
 	authority.request_undock(1)
 	authority.advance(.6)
 	verify(body.helm_available(), "Alongside undocking restores helm")
+	# Easy docking: Dock from a crooked, off-centre, slowly moving approach; the
+	# authority slides and turns the ship into the berth by itself.
+	var berth_pose: Transform3D = preview.port.berth_anchor.global_transform
+	var start: Transform3D = berth_pose.translated_local(Vector3(-preview.port.quay_side * 55, 0, -100)) * Transform3D(Basis(Vector3.UP, deg_to_rad(120)), Vector3.ZERO)
+	body.global_transform = start
+	body.velocity = start.basis.z * 2.0
+	verify(preview.port.dock_readiness(body, "container_transfer", "cargo_test_container").eligible and not preview.port.berth_readiness(body, "container_transfer", "cargo_test_container").eligible, "Easy rule accepts an approach the old strict rule refused")
+	verify(authority.request_dock(1, "container_transfer", "cargo_test_container").ok and body.docked and body.velocity == Vector3.ZERO, "Dock from a crooked slow approach takes the helm")
+	var last: float = start.origin.distance_to(berth_pose.origin)
+	var smooth: bool = true
+	var ticks: int = 0
+	while authority.state(1) == "docking" and ticks < 600:
+		authority.advance(1.0 / 60)
+		ticks += 1
+		var now: float = body.global_position.distance_to(berth_pose.origin)
+		if now > last + .001 or last - now > 2.0: smooth = false
+		last = now
+	verify(smooth and ticks > 60 and ticks <= int(authority.MAX_SLIDE_SECONDS * 60) + 2, "Slide moves steadily toward the berth, no jump (%d ticks)" % ticks)
+	verify(authority.state(1) == "docked" and body.global_position.distance_to(berth_pose.origin) < .01 and body.global_transform.basis.z.dot(berth_pose.basis.z) > .9999, "Slide ends docked on the berth centre and heading")
+	authority.request_undock(1)
+	authority.advance(.6)
+	verify(body.helm_available() and body.global_position.distance_to(berth_pose.origin) < .01, "Undock after a slide restores helm in the berth")
+	body.global_transform = start
+	authority.request_dock(1, "container_transfer", "cargo_test_container")
+	authority.advance(.5)
+	verify(authority.cancel(1) and body.helm_available() and authority.reservations.is_empty(), "Cancel during the slide returns the helm")
 	body.global_transform = old_pose
 	authority.set_physics_process(true)
 

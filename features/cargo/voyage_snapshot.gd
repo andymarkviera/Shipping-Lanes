@@ -215,7 +215,8 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 		if not h.active.is_empty(): body.release_guard = func(): return view.heavy_jobs.can_release(body)
 	if data.docked:
 		if not view.docking.request_dock(1, view.service_id(), view.cargo_id()).ok: return false
-		view.docking.advance(1.1)
+		# Long enough for the longest easy-docking slide (older saves may sit off centre).
+		view.docking.advance(view.docking.MAX_SLIDE_SECONDS + .1)
 		if view.docking.state(1) != "docked": return false
 	var operations: Dictionary = data.operations.duplicate(true)
 	for record: Dictionary in operations.records.values(): record.ship_id = body.state.instance_id

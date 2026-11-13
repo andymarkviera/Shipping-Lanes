@@ -1,6 +1,11 @@
 extends Node
 ## Server/local authority only. Caller must resolve peer identity and owned body.
 ## No client-writable reservations or client-supplied eligibility decisions.
+## Patch 2.0 easy docking: after Dock the authority slides and turns the ship
+## into the berth by itself. The slide lasts 1 to MAX_SLIDE_SECONDS.
+const MAX_SLIDE_SECONDS: float = 3.0
+const SLIDE_MPS: float = 20.0
+const SLIDE_TURN_RADPS: float = PI / 2
 var members: Dictionary = {}
 var reservations: Dictionary = {}
 
@@ -22,7 +27,7 @@ func request_dock(owner: int, service: String, cargo: String) -> Dictionary:
 	if entry.state not in ["underway", "approaching"]: return {"ok": false, "message": "Docking action already in progress."}
 	var id: String = entry.port.berth.id
 	if reservations.has(id): return {"ok": false, "message": "Berth occupied. Wait for it to clear."}
-	var readiness: Dictionary = entry.port.berth_readiness(entry.body, service, cargo)
+	var readiness: Dictionary = entry.port.dock_readiness(entry.body, service, cargo)
 	if not readiness.eligible: return {"ok": false, "message": readiness.message}
 	# No awaits between validation and reservation: simultaneous requests serialize.
 	reservations[id] = owner
@@ -31,9 +36,13 @@ func request_dock(owner: int, service: String, cargo: String) -> Dictionary:
 	entry.service = service
 	entry.cargo = cargo
 	entry.state = "docking"
-	entry.remaining = 1.0
+	entry.from = entry.body.global_transform.orthonormalized()
+	entry.to = entry.port.dock_pose(entry.body)
+	var turn: float = entry.from.basis.get_rotation_quaternion().angle_to(entry.to.basis.get_rotation_quaternion())
+	entry.duration = clampf(maxf(entry.from.origin.distance_to(entry.to.origin) / SLIDE_MPS, turn / SLIDE_TURN_RADPS), 1.0, MAX_SLIDE_SECONDS)
+	entry.remaining = entry.duration
 	freeze(entry.body)
-	return {"ok": true, "message": "Securing ship…"}
+	return {"ok": true, "message": "Docking…"}
 
 func freeze(body: HandlingShip) -> void:
 	body.docked = true
@@ -88,11 +97,15 @@ func advance(delta: float) -> void:
 		freeze(entry.body)
 		if entry.state == "docked": continue
 		if entry.state == "docking":
-			var ready: Dictionary = entry.port.berth_readiness(entry.body, entry.service, entry.cargo)
+			var ready: Dictionary = entry.port.dock_readiness(entry.body, entry.service, entry.cargo)
 			if not ready.eligible:
 				release(entry, owner)
 				continue
 		entry.remaining -= delta
+		if entry.state == "docking":
+			# Ease in and out; the last step lands exactly on the berth pose.
+			var t: float = smoothstep(0.0, 1.0, clampf(1.0 - entry.remaining / entry.duration, 0.0, 1.0))
+			entry.body.global_transform = entry.from.interpolate_with(entry.to, t)
 		if entry.remaining <= 0:
 			if entry.state == "docking": entry.state = "docked"
 			else: release(entry, owner)
