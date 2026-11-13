@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PortDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/port_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "port_south_pole"
+display_name = "South Pole"
+berth_ids = Array[String](["berth_south_pole_01"])
+scene_path = "res://features/ports/south_pole.tscn"
+service_ids = Array[String](["container_transfer", "heavy_transfer", "refuel", "repair"])
+spawn_position_m = Vector3(0, 0, -180)
+approach_position_m = Vector3(0, 0, -80)
+spawn_heading_degrees = 0.0
+recovery_positions_m = Array[Vector3]([Vector3(0, 0, -280), Vector3(0, 0, -380)])
