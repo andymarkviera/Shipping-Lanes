@@ -61,7 +61,7 @@ static func describe(view: Node3D) -> Dictionary:
 		result.stage = "DELIVER BULK CARGO"
 		result.cargo = "Cargo aboard: " + bulk_job.title
 		result.route = "%s · %s\nJob payment: %.2f credits" % [bulk_port.definition.display_name, distance_text(view.ship.global_position.distance_to(bulk_port.berth_anchor.global_position)), bulk_job.reward_minor / 100.0]
-		result.next = "Sail to the destination, stop alongside the quay, then Dock."
+		result.next = "Sail to the destination, slow down near the quay, then Dock."
 		if view.docking.state(1) == "docked":
 			result.next = "Open CARGO and select Deliver cargo at this port." if view.port == bulk_port else "Undock and sail to " + bulk_port.definition.display_name + "."
 	elif not job.is_empty():
@@ -78,7 +78,7 @@ static func describe(view: Node3D) -> Dictionary:
 			result.next = "Loading in progress. Stay docked; cargo appears when loading finishes."
 		else:
 			result.stage = "DELIVER CONTAINERS"
-			result.next = "Sail to the destination, stop alongside the quay, then Dock."
+			result.next = "Sail to the destination, slow down near the quay, then Dock."
 			if view.docking.state(1) == "docked":
 				result.next = "Open CARGO and select Deliver cargo at this port." if view.port == destination else "Undock and sail to " + destination.definition.display_name + "."
 	if view.get("game_mode") == true: game_hints(view, result)
@@ -92,7 +92,7 @@ static func describe(view: Node3D) -> Dictionary:
 static func game_hints(view: Node3D, result: Dictionary) -> void:
 	var docked: bool = view.docking.state(1) == "docked"
 	if result.stage == "NO ACTIVE JOB":
-		result.next = "Open CARGO, pick a job and click Accept selected job." if docked else "Sail up to a quay (see the minimap), stop alongside and click Dock. Jobs are under CARGO."
+		result.next = "Open CARGO, pick a job and click Accept selected job." if docked else "Sail up to a quay (see the minimap), slow down and click Dock. Jobs are under CARGO."
 		var ships: Dictionary = preload("res://features/game/progression.gd").SHIPS
 		for kind: String in ships:
 			if not view.fleet.has(kind) and view.reward_minor >= int(ships[kind].price_minor):

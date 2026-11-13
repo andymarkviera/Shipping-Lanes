@@ -5569,3 +5569,70 @@ Limits:
 - The import again wrote `.uid` files for older scripts that lack one. They are
   not in this change.
 - No gas, oil, refinery, cargo-fuel, online service or workflow file changed.
+
+## Patch 2.0 item 2: Easy docking — November 12, 2026 (run on Linux, not on Windows)
+
+REBUILD_PLAN.md section 5, item 2. Not playtested; Andy has not played it.
+
+What changed (single-player game and its test ports):
+
+- New easy rule (`berth_eligibility.gd` `evaluate_easy`, `test_port.gd`
+  `dock_readiness`): Dock works when the ship's centre is within 45 m of the
+  berth box and the ship is at 3 m/s (about 5.8 kn) or slower. No angle rule,
+  no "whole hull inside the box" rule, no check on where the hull is now. The
+  berth itself must be free (checked at the place the ship will end up).
+- Auto-slide (`docking_authority.gd`): after Dock the game takes the helm and
+  eases the ship to the berth centre and berth heading in 1 to 3 seconds
+  (longer for a longer slide or a bigger turn), then it is docked. Cancel
+  during the slide gives the helm back where the ship is.
+- Messages say only what to do: "Sail closer to the berth to dock.", "Slow
+  down to dock.", "Wait for the berth to clear.", "Ready to dock — select
+  Dock.". Voyage hints now say "slow down" instead of "stop alongside".
+- Save restore (`voyage_snapshot.gd`, `bulk_port_test.gd`) now waits out the
+  longest slide, so an older save docked off centre still loads docked.
+
+Kept as it was, on purpose: the old strict rule (`evaluate`,
+`berth_readiness`) is still in the file because the frozen online code calls
+it. The "Align with the berth direction" text now exists only on that online
+path; the game never shows it.
+
+Checks run on the agent's Linux runner, Godot 4.7.2 official (checksum matches
+the Checks job), headless:
+
+- Passed: import, `check_scripts`, boot, `check_catalog`, `check_controls`,
+  `check_flow`, `check_starter`, `check_helm_keys`, `check_m1_voyage`,
+  `units_probe`, `diagnostics_probe`, the twelve Stage 2 probes,
+  `collision_probe`, `composition_probe`, `ports_probe` (299 checks),
+  `voyage_probe`, `sailing_save_probe`, `public_physics_probe`.
+- `ports_probe` now also checks: backward, crooked, off-centre, quay-touching
+  and slowly moving approaches can dock; too fast and too far refuse with the
+  plain messages; another hull in the berth blocks; a Dock from 120 degrees
+  off and about 110 m away slides steadily (no jump, more than 1 s, at most
+  3 s) and ends on the berth centre and heading; Undock and Cancel work after
+  and during a slide.
+- Failed: `oil_interface_probe` times out, the same on unchanged main (it
+  needs its Python market fixture, which was not started). Not part of the
+  Checks job.
+- Not run: the Python stage (no Python file changed), `bulk_service_probe`
+  (no scene; it runs through a Python runner), anything on Windows, any
+  screenshot or look at the slide on screen, any playtest.
+
+Limits:
+
+- The slide was checked by numbers only. How it looks (camera, speed, a
+  180 degree turn) needs Andy's eyes on Windows.
+- The slide moves in a straight line and does not steer around the quay. From
+  an odd spot (for example around the quay corner) the hull can pass through
+  the quay edge for a moment.
+- The ship always ends on the berth heading, so a ship that arrives backwards
+  is turned around.
+- `check_m1_voyage` still docks from a near stop at the quay; the crooked
+  approach is proven in `ports_probe` on the same port scene script, not by a
+  key-press voyage in the game scene.
+- The on-hold oil, gas and bulk test ports share the docking authority, so
+  they get easy docking too. None of their files changed except the one-line
+  restore wait in `bulk_port_test.gd` (bulk is in 1.0).
+- The import again wrote `.uid` files for older scripts that lack one. They are
+  not in this change.
+- No online service, export preset or workflow file changed. No new runtime
+  resource was added.
