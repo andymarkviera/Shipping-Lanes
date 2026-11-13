@@ -123,6 +123,10 @@ func _draw() -> void:
 	var bow: Vector3 = view.ship.global_basis.z
 	var forward: Vector2 = Vector2(-bow.x, -bow.z).normalized() if Vector2(bow.x, bow.z).length() > 0.0001 else Vector2.UP
 	var side: Vector2 = Vector2(-forward.y, forward.x)
+	# Patch 2.2: the arrow grows with the hull, up to twice the starter's.
+	var grow: float = clampf(sqrt(view.ship.definition.hull_size_m.z / 64.0), 1.0, 2.0)
+	forward *= grow
+	side *= grow
 	var hull: PackedVector2Array = PackedVector2Array([middle + forward * 10, middle - forward * 6 + side * 6, middle - forward * 6 - side * 6])
 	draw_colored_polygon(hull, PLAYFUL.SUN)
 	draw_polyline(PackedVector2Array([hull[0], hull[1], hull[2], hull[0]]), PLAYFUL.INK, 2, true)

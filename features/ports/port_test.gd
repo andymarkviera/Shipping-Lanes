@@ -66,6 +66,8 @@ var jobs_panel: VBoxContainer
 var jobs_list: ItemList
 var heavy_controls: HBoxContainer
 var waypoint: Label3D
+## Patch 2.2 item 1: container job cards shown at a port, biggest first.
+const JOB_BOARD_SIZE: int = 6
 ## M2 prices in hundredths of a credit. The game only; Port Test stays free.
 const FUEL_MINOR_PER_LITER: int = 50
 const REPAIR_MINOR_PER_PERCENT: int = 500
@@ -488,7 +490,11 @@ func can_switch() -> bool:
 	return bulk_active.is_empty() and not loading.busy() and offers.active_job("preview_captain").is_empty() and heavy_jobs.active.is_empty() and (not is_instance_valid(ship) or ship.state.manifest.lines().is_empty())
 
 func create_ship() -> HandlingShip:
-	return preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate() if heavy_mode else preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
+	if heavy_mode: return preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate()
+	var body: HandlingShip = preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
+	# Patch 2.2 item 1: container ships 2-5 sail the same runtime with their own record.
+	if game_mode: body.definition = Progression.definition(ship_kind)
+	return body
 
 func select_port(index: int, restoring: bool = false) -> bool:
 	if index < 0 or index >= world_ports.size(): return false
@@ -578,6 +584,20 @@ func refresh_jobs() -> void:
 			jobs_list.set_item_metadata(jobs_list.item_count - 1, id)
 			job_cards.append({"id": id, "kind": "bulk", "count": 1, "what": bulk_job.title, "to": world_ports[int(bulk_job.destination)].definition.display_name, "pay": bulk_job.reward_minor})
 	var rows: Array[Dictionary] = heavy_jobs.list_at(port.definition.id) if heavy_mode else offers.list_at(port.definition.id)
+	# Patch 2.2 item 1: never list a container job bigger than this ship. Jobs
+	# sized for the biggest tier that fits come first, so a big ship sees its
+	# own jobs on top; within a tier the order is as before. The board keeps to
+	# JOB_BOARD_SIZE cards.
+	if game_mode and not heavy_mode and is_instance_valid(ship):
+		var room: int = int(ship.definition.cargo_capacities.get("container_slots", 0))
+		rows.assign(rows.filter(func(row: Dictionary) -> bool: return row.state == "available" and int(row.quantity) <= room))
+		var order: Dictionary = {}
+		for index: int in rows.size(): order[rows[index].id] = index
+		rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var tier_a: int = offers.job_tier(a.id)
+			var tier_b: int = offers.job_tier(b.id)
+			return tier_a > tier_b or (tier_a == tier_b and int(order[a.id]) < int(order[b.id])))
+		rows.resize(mini(rows.size(), JOB_BOARD_SIZE))
 	for row: Dictionary in rows:
 		if row.state != "available" or bulk_mode(): continue
 		var title: String = row.title + " → open ocean" if heavy_mode else "%d container%s → %s" % [row.quantity, "" if row.quantity == 1 else "s", PrototypeCatalog.display_name(row.destination_port_id)]

@@ -35,6 +35,11 @@ const RECORDS: Array[ContentDefinition] = [
 	preload("res://features/ports/north_pole_berth.tres"),
 	preload("res://features/ports/south_pole.tres"),
 	preload("res://features/ports/south_pole_berth.tres"),
+	# Patch 2.2 item 1: container ships 2-5.
+	preload("res://features/catalog/records/container_02_ship.tres"),
+	preload("res://features/catalog/records/container_03_ship.tres"),
+	preload("res://features/catalog/records/container_04_ship.tres"),
+	preload("res://features/catalog/records/container_05_ship.tres"),
 ]
 
 ## Presentation lookups, so callers never switch on a literal record ID.

@@ -9,7 +9,8 @@ const CHARACTER: int = 1 << 4
 ## Other ships pass through it; it still meets the shore.
 const DOCKED_HULL: int = 1 << 5
 const SOLID_WATERCRAFT: int = HULL | SHORE
-const SUPPORTED_SPEED_MPS: float = 20.0
+## Patch 2.2 item 1: 22 m/s covers container ship 5 (42 kn, 21.6 m/s).
+const SUPPORTED_SPEED_MPS: float = 22.0
 
 static func add_box_hull(body: CollisionObject3D, size: Vector3 = Vector3(13, 4, 64)) -> CollisionShape3D:
 	var collider: CollisionShape3D = CollisionShape3D.new()

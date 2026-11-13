@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 LAYOUT = ROOT / 'features/world/world_layout.json'
-CLASSES = ['S', 'M', 'L']
+CLASSES = ['S', 'M', 'L', 'XL']
 
 
 def load():

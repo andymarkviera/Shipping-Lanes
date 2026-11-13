@@ -60,6 +60,7 @@ static func valid(value: Variant) -> bool:
 	var spent: int = 0
 	var game: bool = d.get("version") == 5
 	if d.get("version") in [4, 5]:
+		Progression.migrate(d)
 		if d.size() != (24 if game else 23) or not Progression.save_valid(d): return false
 		spent = d.spent
 	elif d.get("version") == 3:
@@ -77,7 +78,8 @@ static func valid(value: Variant) -> bool:
 	for key: String in ["loading", "loading_offer"]:
 		if not d.get(key) is String: return false
 	if d.port >= ports.size() or d.clock > 9000000000000 or d.sequence > 1000000000 or not pose_valid(d.get("pose")) or absf(d.pose.origin.y) > .01: return false
-	var definition: ShipDefinition = Heavy.DEFINITION if d.heavy_mode else preload("res://features/catalog/records/starter_ship.tres")
+	# Patch 2.2: a container ship 2-5 checks its cargo and fuel against its own record.
+	var definition: ShipDefinition = Heavy.DEFINITION if d.heavy_mode else (Progression.definition(d.ship) if d.version >= 4 else preload("res://features/catalog/records/starter_ship.tres"))
 	if not number(d.get("fuel"), 0, definition.fuel_capacity_liters) or not number(d.get("condition"), 0, 1) or not d.get("manifest") is Array: return false
 	var manifest = Manifest.new(definition, PrototypeCatalog.RECORDS)
 	var lines: Array[Dictionary] = []

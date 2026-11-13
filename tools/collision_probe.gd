@@ -67,12 +67,12 @@ func _physics_process(_delta: float) -> void:
 			var relative: Vector3 = ship.position - item.origin
 			var ext_z: float = absf(cos(ship.rotation.y)) * 32 + absf(sin(ship.rotation.y)) * 6.5
 			var ext_x: float = absf(cos(ship.rotation.y)) * 6.5 + absf(sin(ship.rotation.y)) * 32
-			var valid: bool = ship.velocity.is_finite() and absf(relative.y) < 0.001 and ship.velocity.length() <= 20.001
+			var valid: bool = ship.velocity.is_finite() and absf(relative.y) < 0.001 and ship.velocity.length() <= CollisionRules.SUPPORTED_SPEED_MPS + 0.001
 			if item.kind not in ["ignore", "rotation", "side", "reverse"]: valid = valid and relative.z + ext_z < 39.951
 			if item.kind == "reverse": valid = valid and relative.z - ext_z > -39.951
 			if item.kind in ["side", "corner"]: valid = valid and relative.x + ext_x < 7.951
 			if item.kind == "rotation": valid = valid and relative.x - ext_x > -6.551
-			valid = valid and ship.position.distance_to(item.last) <= 20.0 / 60.0 + 0.005
+			valid = valid and ship.position.distance_to(item.last) <= CollisionRules.SUPPORTED_SPEED_MPS / 60.0 + 0.005
 			if item.valid and not valid: print("CONTACT_DIAGNOSTIC %s tick=%d position=%s velocity=%s step=%f" % [item.label, ticks, relative, ship.velocity, ship.position.distance_to(item.last)])
 			item.valid = item.valid and valid
 			item.last = ship.position

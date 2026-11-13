@@ -6090,3 +6090,62 @@ Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
 Limits: two berths per port is a first draft. The older test scenes (F3) get
 the second berth too. Undock still hands the helm back in place; the captain
 sails out of the berth.
+
+## Patch 2.2 item 1 — Container family ships 2-5 (November 13, 2026)
+
+REBUILD_PLAN.md section 7, item 1. Not playtested; Andy has not played it.
+
+- Ladder (`progression.gd` `SHIPS`, `CONTAINER_KINDS`; records
+  `container_0{2..5}_ship.tres`). Speed, length × beam, containers, price:
+  1 starter (unchanged) 30 kn, 64×13 m, 24, 800 · 2 Coastal feeder 33 kn,
+  96×18 m, 60, 12,000 · 3 Panamax 36 kn, 140×25 m, 112, 45,000 ·
+  4 Neo-Panamax 39 kn, 200×32 m, 180, 120,000 · 5 Ultra-large 42 kn,
+  270×38 m, 288, 300,000 credits. Drag falls 0.2 → 0.1, so it takes about
+  20 s → 40 s to reach full speed. Reverse, turn rate, thrusters and the
+  neutral stop also fall with size. Fuel, tank, camera, wake and rocking
+  scale with the hull. `CollisionRules.SUPPORTED_SPEED_MPS` went from 20 to
+  22 m/s so ships 4 and 5 reach 39 and 42 kn.
+- Models (`chunky_look.gd` `_dress_box_ship`): toon hulls sized from each
+  record, in the container family colours. Ship 2 has two deck cranes, ship 3
+  a tall stern house, ship 4 twin funnels, and ship 5 its bridge forward with
+  the funnel aft. Container stacks come from per-ship layouts written by
+  `tools/build_container_ladder.py`, with a 512-slot limit (was 256).
+- Jobs (`container_offers.gd`): every port also has two jobs per ship 2-5
+  (`container_t<tier>_…`). One is a 55-75% part load, the other a full ship.
+  Bigger ships earn 10-40% more per container. Above 24 containers the crane
+  is faster (0.15 s a box, about 65 s for 288). The board hides jobs the ship
+  cannot carry, lists jobs for the ship's own tier first and shows at most 6.
+  The starter's board and job IDs are unchanged.
+- Berths: the berth boxes at all six ports went from 180-230 m to 290 m long,
+  so every ship docks everywhere, polar ports included. Ship 5 is 38 m wide
+  and stays clear of the quay face on the berth centreline. A ship too big
+  for every berth now gets "Too big for this port…". The minimap arrow grows
+  with the hull.
+- Saves: the kind "container" is still ship 1. Version 4/5 saves that name a
+  ship by record ID map onto the ladder (`Progression.migrate`):
+  starter/harbor → ship 1, coastal/swift → ship 2. The manifest and fuel are
+  checked against the sailed ship's own record. `world_layout.json` lists the
+  new hulls, with a new XL class for ships 4-5.
+
+Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
+
+- Passed: import, `check_scripts` (191), boot, the whole stage 2 smoke set,
+  stage 4 (`collision_probe`, `composition_probe`, `ports_probe` 320),
+  `check_m1_voyage`, `voyage_probe`, `sailing_save_probe`, `check_helm_keys`.
+  New `tools/container_ladder_check.gd` passed 484 checks: ladder data, tier
+  jobs, old IDs, and in the game scene each ship spawns, wears its model and
+  docks at all six ports with no quay overlap. Its job board and saves pass too.
+- Passed: stage 3 (compileall, service unit tests, `tools/public_handoff` 48
+  with psycopg in a temporary venv, `tools/world_layout`, `traversal_budget.py`).
+- Updated for the new jobs or the new cap: counts in `ports_probe` and
+  `check_m1_voyage` now count only starter jobs, and `collision_probe` reads
+  the cap.
+- `voyage_probe` fails when rerun on top of its own earlier run's user data.
+  It passes on fresh data, which is how CI runs it.
+- Not run: anything on Windows, a playtest or screenshots (headless cannot
+  render).
+
+Limits: ships 2-5 sail the starter's runtime scene with their own record. The
+imported starter GLB is hidden under the toon model, as before, and Port Test
+(F3) still has only the starter. Upkeep and repair prices do not scale by
+tier. The hangar is item 4.

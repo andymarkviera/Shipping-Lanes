@@ -72,7 +72,7 @@ static func evaluate_easy(berth: BerthDefinition, anchor: Transform3D, ship: Shi
 		return result("CARGO", "This ship and berth cannot handle the selected cargo.")
 	var size: Vector3 = ship.hull_size_m + Vector3.ONE * berth.clearance_margin_m * 2
 	if size.x > berth.envelope_m.x or size.y > berth.envelope_m.y or size.z > berth.envelope_m.z:
-		return result("SIZE", "This ship is too large for the berth.")
+		return result("SIZE", "Too big for this port: its berths are too short for this ship.")
 	# Near: the ship's centre is inside the berth box grown by EASY_RANGE_M.
 	var offset: Vector3 = anchor.affine_inverse() * pose.origin
 	if absf(offset.x) > berth.envelope_m.x / 2 + EASY_RANGE_M or absf(offset.z) > berth.envelope_m.z / 2 + EASY_RANGE_M:
