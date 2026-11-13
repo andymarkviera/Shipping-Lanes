@@ -9,7 +9,13 @@ const WORLD = [
 	{"id": "port_slatewater_works", "at": Vector3(1500, 0, 0), "drop_side": -1.0},
 	{"id": "port_cinder_point", "at": Vector3(-200, 0, 2200), "drop_side": 1.0},
 	{"id": "port_gannet_light", "at": Vector3(1700, 0, -2200), "drop_side": -1.0},
+	# Patch 2.1 item 3: the two polar ports, far north (+Z) and far south.
+	{"id": "port_north_pole", "at": Vector3(3700, 0, 4000), "drop_side": 1.0},
+	{"id": "port_south_pole", "at": Vector3(-2300, 0, -4100), "drop_side": -1.0},
 ]
+## The four strait ports come first. Their container jobs keep the destinations
+## they had before the polar ports, so saved jobs still match their IDs.
+const STRAIT_PORTS: int = 4
 ## Land as flat rectangles: Rect2(x, z, width, depth) in metres. Two shores, the
 ## head of the strait and two islands. Each berth keeps open water straight ahead
 ## and astern, and the heavy pickup and drop areas are clear.
@@ -20,6 +26,19 @@ const LAND = [
 	Rect2(1600, -400, 1400, 1100), Rect2(1750, 700, 1250, 2300),
 	Rect2(-1500, 3000, 4500, 400),
 	Rect2(880, 1320, 240, 360), Rect2(450, -2050, 300, 300),
+]
+## Patch 2.1 item 3: snowy ice shelves beside the two polar quays, solid like land.
+const ICE_SHELVES = [Rect2(3050, 3700, 450, 460), Rect2(-2100, -4360, 450, 500)]
+## Patch 2.1 item 3: icebergs in the polar seas, solid like land. Vector3(x,
+## radius, z) in metres. They keep clear of the polar quays, their approaches
+## and their heavy-load drop areas.
+const ICEBERGS = [
+	Vector3(3000, 45, 4750), Vector3(4300, 60, 4800), Vector3(5200, 50, 4300), Vector3(2200, 70, 5000),
+	Vector3(3500, 55, 5400), Vector3(5000, 65, 5600), Vector3(1200, 50, 5500), Vector3(2700, 40, 5900),
+	Vector3(-300, 60, 5200), Vector3(6200, 45, 5000),
+	Vector3(-1500, 55, -4750), Vector3(-3800, 60, -4400), Vector3(-2000, 50, -6000), Vector3(-700, 70, -5100),
+	Vector3(-4400, 45, -5600), Vector3(200, 50, -4600), Vector3(-3300, 60, -6100), Vector3(1400, 55, -5600),
+	Vector3(-5200, 50, -4700), Vector3(2600, 45, -5000),
 ]
 ## Patch 2.1 item 3: the world repeats every WRAP_M metres east-west and
 ## north-south, so a ship that sails off one edge carries on from the opposite
@@ -65,11 +84,13 @@ static func others(origin: int) -> Array[int]:
 		if index != origin: result.append(index)
 	return result
 
-## Length of a leg in units of 100 m. Pay grows with it.
+## Length of a leg in units of 100 m, the short way round the world. Pay grows
+## with it. The strait legs are all shorter than half the world, so they are
+## unchanged; the leg between the poles goes over the edge.
 static func leg_units(a: int, b: int) -> int:
 	var from: Vector3 = WORLD[a].at
 	var to: Vector3 = WORLD[b].at
-	return roundi(from.distance_to(to) / 100.0)
+	return roundi(short_way(to - from).length() / 100.0)
 
 ## A bulk job from its ID, "bulk_<origin port>_<cargo>". Empty if there is none.
 static func bulk_job(id: String) -> Dictionary:

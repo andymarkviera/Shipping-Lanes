@@ -29,12 +29,25 @@ static func loading_seconds(quantity: int) -> float:
 ## load (10 to 16), slot 2 a full ship. The size changes each turn of a slot.
 static func game_quantity(port: int, slot: int, turn: int) -> int:
 	if slot == 0: return 4 + 2 * ((port + turn) % 3)
-	if slot == 1: return 10 + 2 * ((port + turn) % 4)
+	if slot == 1 or slot == 3: return 10 + 2 * ((port + turn) % 4)
 	return GAME_CAPACITY
+
+## Patch 2.1 item 3: job slots at a game port. Each strait port has a fourth
+## slot, a part load to the North Pole and the South Pole in turn. The polar
+## ports have the usual three, to every other port in turn.
+static func game_slots(port: int) -> int:
+	return 4 if port < Progression.STRAIT_PORTS else 3
+
+## Where the next job in a slot goes. The strait ports' first three slots keep
+## their old round of the other three strait ports, so saved jobs still match.
+static func game_destination(origin: int, slot: int, turn: int) -> int:
+	if slot == 3: return Progression.STRAIT_PORTS + turn % (Progression.WORLD.size() - Progression.STRAIT_PORTS)
+	if origin < Progression.STRAIT_PORTS: return Progression.others(origin)[(slot + turn) % (Progression.STRAIT_PORTS - 1)]
+	return Progression.others(origin)[(slot + turn) % (Progression.WORLD.size() - 1)]
 
 ## An untouched offer, rebuilt from its ID alone. Empty for an unknown ID.
 ## "container_seed_v1_<route>_<index>": the six Port Test jobs.
-## "container_load_<port>_<slot>_<turn>" (the game only): three slots per port.
+## "container_load_<port>_<slot>_<turn>" (the game only): game_slots per port.
 ## Each turn of a slot goes to the next port along and pays by load and distance.
 ## "container_game_<port>_<slot>_<turn>": the 1, 2 and 3 container jobs from
 ## before Patch 2.0. Still read so older saves load; no longer put on offer.
@@ -47,9 +60,10 @@ static func fresh(id: String, game: bool = false) -> Dictionary:
 	if parts[1] == "seed" and parts[2] == "v1" and int(parts[3]) < 2 and int(parts[4]) < 3:
 		var route: int = int(parts[3])
 		return blank(id,int(parts[4]) + 1, Progression.WORLD[route].id, Progression.WORLD[1 - route].id, (int(parts[4]) + 1) * 25000)
-	if not game or parts[1] not in ["game", "load"] or int(parts[2]) >= Progression.WORLD.size() or int(parts[3]) > 2: return {}
+	if not game or parts[1] not in ["game", "load"] or int(parts[2]) >= Progression.WORLD.size(): return {}
 	var origin: int = int(parts[2])
-	var destination: int = Progression.others(origin)[(int(parts[3]) + int(parts[4])) % (Progression.WORLD.size() - 1)]
+	if int(parts[3]) >= (game_slots(origin) if parts[1] == "load" else 3) or (parts[1] == "game" and origin >= Progression.STRAIT_PORTS): return {}
+	var destination: int = game_destination(origin, int(parts[3]), int(parts[4]))
 	if parts[1] == "load":
 		var quantity: int = game_quantity(origin, int(parts[3]), int(parts[4]))
 		return blank(id, quantity, Progression.WORLD[origin].id, Progression.WORLD[destination].id, quantity * Progression.leg_units(origin, destination) * PAY_PER_CONTAINER_100M)
@@ -57,8 +71,8 @@ static func fresh(id: String, game: bool = false) -> Dictionary:
 	var per_container: int = Progression.leg_units(origin, destination) * 5000 / 3 / 1000 * 1000
 	return blank(id,int(parts[3]) + 1, Progression.WORLD[origin].id, Progression.WORLD[destination].id, (int(parts[3]) + 1) * per_container)
 
-## The game only: keep three open jobs at every port. When a job is delivered or
-## abandoned, the next one for that slot is added. Offers never expire. Untaken
+## The game only: keep an open job in every slot at every port. When a job is
+## delivered or abandoned, the next one for that slot is added. Offers never expire. Untaken
 ## small jobs from before Patch 2.0 are withdrawn; taken or finished ones stay.
 func restock() -> void:
 	var latest: Dictionary = {}
@@ -69,7 +83,7 @@ func restock() -> void:
 		var slot: String = parts[2] + "_" + parts[3]
 		latest[slot] = maxi(int(latest.get(slot, -1)), int(parts[4]))
 	for port: int in Progression.WORLD.size():
-		for index: int in 3:
+		for index: int in game_slots(port):
 			var slot: String = "%d_%d" % [port, index]
 			var turn: int = int(latest.get(slot, -1))
 			if turn >= 0 and _offers["container_load_%s_%d" % [slot, turn]].state not in ["delivered", "abandoned"]: continue

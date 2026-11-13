@@ -5993,3 +5993,58 @@ Limits:
   (dozens), the swirl lines may get slightly coarser; a reload resets it.
 - The older test scenes (F3) do not wrap. Saves are unchanged. No workflow
   file changed. No new runtime resource, so `export_presets.cfg` is unchanged.
+
+## Patch 2.1 item 3B: polar ports and icebergs — November 13, 2026 (run on Linux, not on Windows)
+
+Issue #91. Second half of item 3, in two commits: the ports, then the icebergs.
+
+What changed:
+
+- Two new ports in the game scene: North Pole at (3700, 4000), north of all
+  the strait land, and South Pole at (-2300, -4100), south of it. Ice-white
+  dressing (`icy` on the port scene, `_dress_icy` in `chunky_look.gd`): frosty
+  quay, snow on the roof, containers, crane or fuel tank, snow drifts and
+  icicles. Each has a solid ice shelf beside the quay (`Progression.ICE_SHELVES`).
+  Both have container, heavy, refuel and repair services.
+- Jobs: each pole has three container jobs (to every other port in turn),
+  three bulk jobs and the three heavy jobs. Each strait port gets a fourth
+  container slot, a part load to the North Pole and the South Pole in turn.
+  The strait ports' first three slots keep their old destinations, so saved
+  jobs still match their IDs and old saves load.
+- Leg length (pay) is now measured the short way round the world. No strait
+  leg changes; the pole-to-pole leg (7.5 km) goes over the edge.
+- Twenty solid toon icebergs, ten round each pole (`Progression.ICEBERGS`,
+  `add_iceberg` in `port_test.gd`): a pale ice band at the waterline, a white
+  body and one or two peaks, ink outline, collider like land. Each sits at its
+  copy nearest the ship, so none is torn by the world's edge. They keep clear
+  of every quay, approach and heavy drop area.
+- Globe minimap: ice shelves in white, icebergs as small white dots.
+- `check_m1_voyage` checks the polar ports, their jobs, that saved strait jobs
+  keep their destinations, the icebergs' clearances and the edge copies.
+  `ports_probe` expects the new job counts. `export_presets.cfg` lists the six
+  new port resources. Wake, waves, rocking and bow splash are unchanged.
+
+Checks (agent's Linux runner, Godot 4.7.2 stable, headless, fresh user data):
+
+- Passed: import, `check_scripts`, boot, the whole stage 2 smoke set of the
+  Checks workflow, stage 4 (`collision_probe`, `composition_probe`,
+  `ports_probe`), `voyage_probe`, `check_m1_voyage` (M1_VOYAGE_CHECK_PASS),
+  `python3 -m compileall services tools`, the stage 3 service tests, the
+  `tools/world_layout` tests and `traversal_budget.py`.
+- A throwaway probe (not committed) placed a ship at each polar berth: Dock is
+  ready, and the spawn, recovery, heavy pickup and drop areas are clear.
+- Software-rendered screenshots (xvfb) of both polar ports and of icebergs.
+- Could not run: 4 `tools/public_handoff` tests need `psycopg` (not on this
+  runner; no file they cover changed). `content_extension_probe` (not in CI)
+  fails one ship check on main too. Nothing on Windows, no playtest.
+
+Limits:
+
+- Nobody has sailed to a pole on a real screen yet. Positions, iceberg sizes
+  and the ice colours are a first draft for Andy to judge.
+- The North Pole is reached round the east end of the strait, the South Pole
+  round the west end, or over an edge.
+- Bulk jobs from the strait ports still go only to strait ports.
+- `voyage_probe` fails if run twice in the same user data folder (old saves
+  left behind); it passes on a fresh folder, as in CI.
+- The older test scenes (F3) have no polar ports or icebergs.

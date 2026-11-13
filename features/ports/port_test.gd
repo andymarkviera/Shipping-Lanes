@@ -1,7 +1,8 @@
 extends Node3D
 const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.tscn"), preload("res://features/ports/slatewater_works.tscn")]
-## M4, the game only: two more ports. Positions come from Progression.WORLD.
-const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn")]
+## M4, the game only: two more ports, and (Patch 2.1 item 3) the two polar
+## ports. Positions come from Progression.WORLD.
+const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn"), preload("res://features/ports/north_pole.tscn"), preload("res://features/ports/south_pole.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
@@ -86,6 +87,8 @@ var sell_kind: String = ""
 var sell_deadline: int = 0
 ## M5, the game only: one-shot sounds by name ("chime" when paid, "thud" on a hit).
 var sfx: Dictionary = {}
+## Patch 2.1 item 3, the game only: the solid icebergs, in Progression.ICEBERGS order.
+var icebergs: Array[StaticBody3D] = []
 
 func play_sound(kind: String) -> void:
 	if sfx.has(kind): sfx[kind].play()
@@ -142,6 +145,8 @@ func _ready() -> void:
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
 		for rect: Rect2 in Progression.LAND: add_land(rect)
+		for rect: Rect2 in Progression.ICE_SHELVES: add_land(rect, true)
+		for index: int in Progression.ICEBERGS.size(): add_iceberg(index)
 		# The game's own container jobs: three per port, replaced as they are delivered.
 		offers._offers.clear()
 		offers.restock()
@@ -271,7 +276,8 @@ func _ready() -> void:
 		get_tree().auto_accept_quit = false
 
 ## M4 coastline: a solid sand slab level with the quays, with a green block on top.
-func add_land(rect: Rect2) -> void:
+## Land is sand with a green top; an ice shelf (polar ports) is pale ice with snow.
+func add_land(rect: Rect2, ice: bool = false) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.position = Vector3(rect.get_center().x, -2, rect.get_center().y)
 	body.collision_layer = CollisionRules.SHORE
@@ -286,13 +292,67 @@ func add_land(rect: Rect2) -> void:
 		var box: BoxMesh = BoxMesh.new()
 		box.size = shape.size if level == 0 else Vector3(rect.size.x - 120, 14, rect.size.y - 120)
 		var material: StandardMaterial3D = StandardMaterial3D.new()
-		material.albedo_color = Color("d6c692") if level == 0 else Color("7fa368")
+		material.albedo_color = (Color("bfe3ef") if level == 0 else Color("f7fbfd")) if ice else (Color("d6c692") if level == 0 else Color("7fa368"))
 		material.roughness = 0.9
 		var mesh: MeshInstance3D = MeshInstance3D.new()
 		mesh.mesh = box
 		mesh.material_override = material
 		mesh.position.y = level * 13
 		body.add_child(mesh)
+
+## Patch 2.1 item 3: a chunky toon iceberg, solid like land. A pale ice band at
+## the waterline, a white body and one or two white peaks, each a few-sided
+## drum so the toon outline reads as cut ice.
+func add_iceberg(index: int) -> void:
+	var entry: Vector3 = Progression.ICEBERGS[index]
+	var radius: float = entry.y
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "Iceberg%d" % index
+	body.position = Vector3(entry.x, 0, entry.z)
+	body.rotation.y = index * 1.7
+	body.collision_layer = CollisionRules.SHORE
+	body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+	add_child(body)
+	var shape: CylinderShape3D = CylinderShape3D.new()
+	shape.radius = radius
+	shape.height = 16.0
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	collider.shape = shape
+	body.add_child(collider)
+	var tall: float = radius * (0.45 + 0.1 * (index % 3))
+	# [bottom radius, top radius, height, centre y, centre x, colour]
+	var parts: Array = [
+		[radius, radius * 0.97, 3.0, -0.5, 0.0, Color("8fd0e3")],
+		[radius * 0.95, radius * 0.78, tall * 0.45, 1.0 + tall * 0.225, 0.0, Color("f2f8fb")],
+		[radius * 0.62, radius * 0.18, tall * 0.65, 1.0 + tall * 0.45 + tall * 0.325, radius * 0.12, Color("f7fbfd")],
+	]
+	if index % 2 == 0: parts.append([radius * 0.38, radius * 0.08, tall * 0.5, 1.0 + tall * 0.45 + tall * 0.25, -radius * 0.45, Color("e3f1f7")])
+	for part: Array in parts:
+		var drum: CylinderMesh = CylinderMesh.new()
+		drum.bottom_radius = part[0]
+		drum.top_radius = part[1]
+		drum.height = part[2]
+		drum.radial_segments = 6 + index % 3
+		drum.rings = 1
+		var material: StandardMaterial3D = StandardMaterial3D.new()
+		material.albedo_color = part[5]
+		material.roughness = 0.9
+		var mesh: MeshInstance3D = MeshInstance3D.new()
+		mesh.mesh = drum
+		mesh.material_override = material
+		mesh.position = Vector3(part[4], part[3], 0)
+		body.add_child(mesh)
+	icebergs.append(body)
+
+## Each iceberg sits at its copy nearest the ship, so icebergs near an edge of
+## the world are there on both sides of it. A move only ever happens half a
+## world away from the ship, far out of sight.
+func place_icebergs() -> void:
+	for index: int in icebergs.size():
+		var entry: Vector3 = Progression.ICEBERGS[index]
+		var at: Vector3 = Progression.nearest(Vector3(entry.x, 0, entry.z), ship.global_position)
+		at.y = 0.0
+		if icebergs[index].position.distance_to(at) > 1.0: icebergs[index].position = at
 
 ## Port Test services are free. The game charges (M2).
 func free_note() -> String:
@@ -660,7 +720,9 @@ func wrap_world() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(ship): return
-	if game_mode: wrap_world()
+	if game_mode:
+		wrap_world()
+		place_icebergs()
 	offer_time += delta
 	offers.advance_to(int(offer_time * 1000))
 	if docking.state(1) in ["underway", "approaching"] and not loading.busy():

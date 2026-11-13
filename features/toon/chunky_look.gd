@@ -252,3 +252,37 @@ static func dress_port(port: Node3D) -> void:
 			_drum(root, 1.6, 1.9, 2.4, at + Vector3(0, 0.6, 0), colour, cache)
 			_drum(root, 1.5, 0.5, 3.2, at + Vector3(0, 3.4, 0), colour, cache)
 			_ball(root, 0.8, 1.6, at + Vector3(0, 5.6, 0), CREAM, cache)
+	if port.get("icy") == true: _dress_icy(port, root, side, length, cache)
+
+## Patch 2.1 item 3: the polar ports. Ice-white quay, frosty walls, snow on the
+## roof, the containers and the quay, and a few icicles along the berth edge.
+## Looks only, like the rest of the dressing.
+const SNOW: Color = Color("f7fbfd")
+const ICE: Color = Color("bfe3ef")
+const FROST: Color = Color("d9edf4")
+
+static func _dress_icy(port: Node3D, root: Node3D, side: float, length: float, cache: Dictionary) -> void:
+	_tint(port, "Quay", FROST)
+	_tint(port, "QuayEdge", ICE)
+	_tint(port, "Warehouse", Color("9cc7d9"))
+	# A thick snow cap over the pitched roof.
+	var cap: PrismMesh = PrismMesh.new()
+	cap.size = Vector3(27, 5.2, 50.5)
+	_part(root, cap, Vector3(side * 72, 33.5, length * 0.7), SNOW, cache)
+	# Snow on top of the stacked containers and the fuel tank or crane.
+	for index: int in 3:
+		var top: float = 16.45 if index < 2 else 10.45
+		_box(root, Vector3(12.4, 0.9, 6.4), Vector3(side * 46, top, (32 if index < 2 else 24) + index * 16), SNOW, cache)
+	if port.get_node_or_null("FuelStore") != null: _ball(root, 8.5, 5, Vector3(side * 83, 18.4, 25), SNOW, cache)
+	if port.get_node_or_null("GantryBeam") != null: _box(root, Vector3(54.4, 1, 5.4), Vector3(side * 59, 37, 35), SNOW, cache)
+	# Snow drifts on the open quay and icicles hanging off the berth edge.
+	for index: int in int(length / 30.0):
+		var z: float = 15.0 + index * 30.0
+		_ball(root, 5.0 + (index % 2) * 2.0, 3.0, Vector3(side * (30.0 + (index % 2) * 4.0), 4.2, z), SNOW, cache)
+		var icicle: CylinderMesh = CylinderMesh.new()
+		icicle.top_radius = 0.7
+		icicle.bottom_radius = 0.05
+		icicle.height = 2.4
+		icicle.radial_segments = 6
+		icicle.rings = 1
+		_part(root, icicle, Vector3(side * 19.0, 2.0, z + 6.0), ICE, cache)
