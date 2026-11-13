@@ -67,7 +67,10 @@ func _draw() -> void:
 	for line: int in 12:
 		grid_line(radius, wrapf(origin.x + line * PI / 6, -PI, PI), true)
 		grid_line(radius, wrapf(origin.y + line * PI / 6, -PI, PI), false)
-	for land: Rect2 in Progression.LAND:
+	var ice_from: int = Progression.LAND.size()
+	for index_land: int in ice_from + Progression.ICE_SHELVES.size():
+		# Land is green; the polar ice shelves are white.
+		var land: Rect2 = Progression.LAND[index_land] if index_land < ice_from else Progression.ICE_SHELVES[index_land - ice_from]
 		# The whole block is drawn as its copy nearest the ship, so it is never torn.
 		var centre: Vector2 = land.get_center()
 		var near: Vector3 = Progression.nearest(Vector3(centre.x, 0, centre.y), ship) - Vector3(centre.x, 0, centre.y)
@@ -81,9 +84,10 @@ func _draw() -> void:
 				any_visible = any_visible or visible_on(point)
 				outline.append(on_disc(point, radius))
 		if any_visible and not Geometry2D.triangulate_polygon(outline).is_empty():
-			draw_colored_polygon(outline, PLAYFUL.LEAF)
+			var ice: bool = index_land >= ice_from
+			draw_colored_polygon(outline, Color("f7fbfd") if ice else PLAYFUL.LEAF)
 			outline.append(outline[0])
-			draw_polyline(outline, Color("3f9a3a"), 1.5, true)
+			draw_polyline(outline, Color("8fc3d6") if ice else Color("3f9a3a"), 1.5, true)
 	# Toon shading: a soft shadow on the lower right, a shine on the upper left.
 	draw_arc(middle, radius - 5, deg_to_rad(-10), deg_to_rad(100), 24, Color(PLAYFUL.INK, 0.16), 10, true)
 	draw_arc(middle, radius - 9, deg_to_rad(200), deg_to_rad(250), 12, Color(1, 1, 1, 0.45), 4, true)

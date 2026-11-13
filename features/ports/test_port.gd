@@ -6,6 +6,8 @@ extends Node3D
 @export var quay_length_m: float = 140.0
 ## Authored per scene so the dressing never depends on a port ID.
 @export_enum("gantry", "fuel_store") var landmark: String = "gantry"
+## Patch 2.1 item 3: the polar ports. The game dresses them with snow and ice.
+@export var icy: bool = false
 var spawn_allocator = preload("res://features/ports/spawn_clearance.gd").new()
 var recovery_anchors: Array[Marker3D] = []
 var spawn_anchor: Marker3D

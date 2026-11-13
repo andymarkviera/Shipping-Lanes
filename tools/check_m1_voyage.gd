@@ -256,11 +256,29 @@ func play() -> void:
 	var edge: Vector3 = game.Progression.WRAP_CENTRE + Vector3(wrap_m / 2 - 5, 0, 0)
 	expect(game.Progression.wrapped(edge + Vector3(10, 0, 0)).distance_to(edge - Vector3(wrap_m - 10, 0, 0)) < 0.01, "World wraps: 5 m past the east edge is 5 m inside the west edge")
 	expect(game.Progression.nearest(edge - Vector3(wrap_m - 10, 0, 0), edge).distance_to(edge + Vector3(10, 0, 0)) < 0.01, "World wraps: the nearest copy of a point is across the edge")
-	for rect: Rect2 in game.Progression.LAND:
+	for rect: Rect2 in game.Progression.LAND + game.Progression.ICE_SHELVES:
 		var middle: Vector3 = Vector3(rect.get_center().x, 0, rect.get_center().y) - game.Progression.WRAP_CENTRE
 		expect(absf(middle.x) + rect.size.x / 2 < wrap_m / 2 - 2000 and absf(middle.z) + rect.size.y / 2 < wrap_m / 2 - 2000, "World wraps: open sea between land %s and every edge" % rect)
 	var minimap_script: Script = game.minimap.get_script()
 	expect(minimap_script.sphere_point(home + Vector3(wrap_m, 0, 0), home).length() < 0.001 and absf(minimap_script.sphere_point(home + Vector3(0, 0, wrap_m / 4), home).y - PI / 2) < 0.001, "The globe turns once for one trip round the world")
+	# Patch 2.1 item 3: the polar ports, with jobs, beyond all the other land.
+	var north: Node3D = game.world_ports[4]
+	var south: Node3D = game.world_ports[5]
+	expect(north.definition.id == "port_north_pole" and south.definition.id == "port_south_pole" and north.icy and south.icy and north.has_node("ChunkyPort"), "The North Pole and South Pole ports are there, dressed in ice")
+	expect(north.position.z > 3400 + 500 and south.position.z < -3600 - 400, "The polar ports lie north and south of all the strait land")
+	for polar: Node3D in [north, south]:
+		var polar_jobs: Array[Dictionary] = game.offers.list_at(polar.definition.id)
+		var bulk_ok: bool = true
+		for bulk_id: String in game.Progression.bulk_ids(game.world_ports.find(polar)): bulk_ok = bulk_ok and game.Progression.bulk_job(bulk_id).get("reward_minor", 0) > 0
+		expect(polar_jobs.size() == 3 and bulk_ok, "%s has three container jobs and three bulk jobs" % polar.definition.display_name)
+	var offers_script: Script = game.offers.get_script()
+	var kept: bool = true
+	for check_id: Array in [["container_load_0_0_0", "port_slatewater_works"], ["container_load_0_1_3", "port_cinder_point"], ["container_load_3_2_5", "port_slatewater_works"], ["container_game_2_1_4", "port_gannet_light"]]:
+		kept = kept and offers_script.fresh(check_id[0], true).get("destination_port_id") == check_id[1]
+	expect(kept, "Saved strait jobs keep the destinations they had before the polar ports")
+	expect(offers_script.fresh("container_load_1_3_0", true).destination_port_id == "port_north_pole" and offers_script.fresh("container_load_1_3_1", true).destination_port_id == "port_south_pole" and offers_script.fresh("container_load_4_3_0", true).is_empty(), "Each strait port has a job to each pole in turn; the poles have three slots")
+	var straight: float = north.position.distance_to(south.position)
+	expect(game.Progression.leg_units(4, 5) * 100 < straight - 2000, "The leg between the poles goes the short way, over the edge (%d00 m, %.0f m straight)" % [game.Progression.leg_units(4, 5), straight])
 	if not expect(game.controls.input_allowed(), "New game: helm accepts input; " + why_stuck(game)): return
 
 	if not await berth_approach(game, brindle, "Brindle Quay berth"): return
@@ -288,11 +306,12 @@ func play() -> void:
 	expect(game.reward_minor == job.reward_minor and job.reward_minor > 0, "Delivery pays the job into the wallet (wallet %d, job %d)" % [game.reward_minor, job.reward_minor])
 	expect(game.ship.state.manifest.lines().is_empty(), "Delivered containers leave the ship")
 	await settle()
-	# M4: four ports, and the delivered job is replaced at Brindle Quay by a new one.
+	# M4 and Patch 2.1 item 3: six ports, and the delivered job is replaced at
+	# Brindle Quay by a new one: three strait jobs and one to a pole.
 	var open_jobs: int = 0
 	for row: Dictionary in game.offers.list_at("port_brindle_quay"):
 		if row.state == "available" and row.id != job.id: open_jobs += 1
-	expect(game.world_ports.size() == 4 and open_jobs == 3, "Four ports, and three open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
+	expect(game.world_ports.size() == 6 and open_jobs == 4, "Six ports, and four open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
 	expect(game.voyage_hud.money.is_visible_in_tree() and game.voyage_hud.money.text == "%.2f credits" % (job.reward_minor / 100.0), "The money is shown on the game HUD (%s)" % game.voyage_hud.money.text)
 	expect(not game.game_hud.hint.visible, "The controls hint is gone after the first delivery")
 	expect(game.game_hud.cards.is_visible_in_tree() and game.game_hud.cards.get_child_count() == game.jobs_list.item_count and game.jobs_list.item_count > 0 and not game.jobs_list.visible, "Docked with no job: one card per offer (%d cards)" % game.game_hud.cards.get_child_count())

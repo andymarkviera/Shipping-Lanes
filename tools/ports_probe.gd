@@ -648,7 +648,8 @@ func check_container_visuals(preview: Node3D) -> void:
 	stock._offers["container_game_0_1_0"] = offer_script.fresh("container_game_0_1_0", true)
 	stock._offers["container_game_0_1_0"].state = "delivered"
 	stock.restock()
-	verify(stock._offers.size() == 13 and not stock._offers.has("container_game_0_0_0") and stock.view("container_game_0_1_0").state == "delivered" and stock.list_at("port_brindle_quay").size() == 4, "Restock withdraws untaken old jobs, keeps finished ones and offers three bigger jobs per port")
+	# Patch 2.1 item 3: four slots at each strait port (one to a pole), three at each pole.
+	verify(stock._offers.size() == 23 and not stock._offers.has("container_game_0_0_0") and stock.view("container_game_0_1_0").state == "delivered" and stock.list_at("port_brindle_quay").size() == 5 and stock.list_at("port_north_pole").size() == 3, "Restock withdraws untaken old jobs, keeps finished ones and offers bigger jobs at every port, polar ports included")
 	verify(offer_script.loading_seconds(1) == 5.0 and offer_script.loading_seconds(3) == 15.0 and offer_script.loading_seconds(24) == 25.5, "Loading time grows with the load but a full ship loads in under half a minute")
 	verify(display.find_children("*", "CollisionObject3D", true, false).is_empty() and display.find_children("*", "CollisionShape3D", true, false).is_empty(), "Containers add no individual physics bodies or shapes")
 	verify(display.get_parent() == body.assembly.visual, "Container visuals follow the same bobbing/roll root as the hull")

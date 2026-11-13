@@ -30,6 +30,11 @@ const RECORDS: Array[ContentDefinition] = [
 	# M4: the game's fourth port.
 	preload("res://features/ports/gannet_light.tres"),
 	preload("res://features/ports/gannet_light_berth.tres"),
+	# Patch 2.1 item 3: the two polar ports.
+	preload("res://features/ports/north_pole.tres"),
+	preload("res://features/ports/north_pole_berth.tres"),
+	preload("res://features/ports/south_pole.tres"),
+	preload("res://features/ports/south_pole_berth.tres"),
 ]
 
 ## Presentation lookups, so callers never switch on a literal record ID.

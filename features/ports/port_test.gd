@@ -1,7 +1,8 @@
 extends Node3D
 const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.tscn"), preload("res://features/ports/slatewater_works.tscn")]
-## M4, the game only: two more ports. Positions come from Progression.WORLD.
-const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn")]
+## M4, the game only: two more ports, and (Patch 2.1 item 3) the two polar
+## ports. Positions come from Progression.WORLD.
+const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn"), preload("res://features/ports/north_pole.tscn"), preload("res://features/ports/south_pole.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
@@ -142,6 +143,7 @@ func _ready() -> void:
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
 		for rect: Rect2 in Progression.LAND: add_land(rect)
+		for rect: Rect2 in Progression.ICE_SHELVES: add_land(rect, true)
 		# The game's own container jobs: three per port, replaced as they are delivered.
 		offers._offers.clear()
 		offers.restock()
@@ -271,7 +273,8 @@ func _ready() -> void:
 		get_tree().auto_accept_quit = false
 
 ## M4 coastline: a solid sand slab level with the quays, with a green block on top.
-func add_land(rect: Rect2) -> void:
+## Land is sand with a green top; an ice shelf (polar ports) is pale ice with snow.
+func add_land(rect: Rect2, ice: bool = false) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.position = Vector3(rect.get_center().x, -2, rect.get_center().y)
 	body.collision_layer = CollisionRules.SHORE
@@ -286,7 +289,7 @@ func add_land(rect: Rect2) -> void:
 		var box: BoxMesh = BoxMesh.new()
 		box.size = shape.size if level == 0 else Vector3(rect.size.x - 120, 14, rect.size.y - 120)
 		var material: StandardMaterial3D = StandardMaterial3D.new()
-		material.albedo_color = Color("d6c692") if level == 0 else Color("7fa368")
+		material.albedo_color = (Color("bfe3ef") if level == 0 else Color("f7fbfd")) if ice else (Color("d6c692") if level == 0 else Color("7fa368"))
 		material.roughness = 0.9
 		var mesh: MeshInstance3D = MeshInstance3D.new()
 		mesh.mesh = box
