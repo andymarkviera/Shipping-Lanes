@@ -13,6 +13,10 @@ func configure(body: HandlingShip) -> void:
 	name = "ShipAssembly"
 	visual = ShipVisualMotion.new()
 	visual.name = "VisualRoot"
+	visual.body = ship
+	visual.half_length = ship.definition.wake_half_length_m
+	visual.half_width = ship.definition.wake_half_width_m
+	visual.full_turn_rate_rad = deg_to_rad(maxf(ship.definition.max_turn_rate_degrees, 0.1))
 	add_child(visual)
 	visual.add_child((load(ship.definition.scene_path) as PackedScene).instantiate())
 	visual.set_process(ship.definition.visual_bobbing)
@@ -50,6 +54,7 @@ func create_wake(ocean: OceanPresentation) -> ShipWake:
 	var wake: ShipWake = ShipWake.new()
 	wake.ship = ship
 	wake.ocean = ocean
+	visual.ocean = ocean
 	wake.half_length = ship.definition.wake_half_length_m
 	wake.half_width = ship.definition.wake_half_width_m
 	ocean.get_parent().add_child(wake)

@@ -5695,3 +5695,56 @@ Limits:
 - The import again wrote `.uid` files for older scripts that lack one. They are
   not in this change. No export preset or workflow file changed; no new runtime
   resource was added.
+
+## November 13, 2026: Patch 2.0 item 4, Sailing feel (issue #72)
+
+Written, checked headless on Linux. Nobody has looked at it on a screen yet:
+the headless runner draws nothing and does not compile shaders. Andy's Windows
+playtest is the first real look, and the amounts below are first guesses.
+
+What changed (all in `features/water`, plus two wiring lines in
+`ship_assembly.gd`; no new files):
+
+- Swells: the ocean now rolls with two long swells (up to about 0.8 m; a third
+  small one on high water) instead of the old 0.3 m ripple, and a lighter flat
+  band rides each crest so the swell shows on the unshaded water.
+- Rocking: the hull rides the same swell the water draws (sampled at bow, stern
+  and both sides, tilt doubled), with a faster chop and a lifted bow that grow
+  with speed, and it leans up to 6 degrees into a turn. Limits: 1.6 m heave,
+  7 degrees pitch, 11 degrees roll. Only the visible hull and deck cargo move;
+  the collision body, camera focus and saves do not.
+- Foam: a scalloped foam ring round the whole waterline, two white curls
+  peeling off the bow, and chunky white spray blobs at the bow above 30% of
+  cruise speed.
+- Wake: a 14 second V wake left in the water (about 110 m at full speed): a
+  churned middle, two outer and two inner lines that sway and pinch into
+  brush strokes, and a curl of foam every third step. It fades with age.
+- Low water quality keeps a flat sea, a gentler rock, a coarser ring and no
+  curls. The heavy lifter still does not rock (its record says so) but gets
+  the new foam and wake.
+
+Checks run on the agent's Linux runner, Godot 4.7.2 official, headless:
+
+- Passed: import, `check_scripts` (186 scripts), boot, `units_probe`,
+  `check_catalog`, `diagnostics_probe`, `check_controls`, `check_flow`,
+  `check_starter`, `check_helm_keys`, `check_m1_voyage`, all twelve Stage 2
+  probes, `collision_probe`, `composition_probe`, `ports_probe` (305),
+  `voyage_probe`, `sailing_save_probe`, `public_physics_probe`.
+- `water_probe` went from 52 to 69 checks. New: pitch grows with speed, the
+  hull leans into a turn, rocking stays inside its limits and cannot move the
+  navigation body, the wake opens into a V and fades, spray starts at speed and
+  stops at rest. Three old checks were changed because the motion they
+  measured was replaced on purpose: the 0.14 m bob limit, the loaded-hull
+  height, and the wait for the wake to clear (9 s to 15 s).
+- Failed once and fixed: `check_m1_voyage` reported "No vertices were added"
+  from the new wake when the ship was nearly stopped.
+- Not run: the Python stage (no Python file changed), `cargo_matrix_probe`,
+  the online-panel probes, anything on Windows, any screenshot, any playtest.
+
+Limits:
+
+- The swell is not checked against dock and beach heights by eye; water now
+  rises and falls about 0.8 m at the quays.
+- A moored ship rocks on the swell like any other.
+- The import again wrote `.uid` files for older scripts that lack one. They are
+  not in this change. No export preset or workflow file changed.
