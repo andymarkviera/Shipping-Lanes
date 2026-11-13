@@ -21,6 +21,13 @@ const LAND = [
 	Rect2(-1500, 3000, 4500, 400),
 	Rect2(880, 1320, 240, 360), Rect2(450, -2050, 300, 300),
 ]
+## Patch 2.1 item 3: the world repeats every WRAP_M metres east-west and
+## north-south, so a ship that sails off one edge carries on from the opposite
+## one. 4000 pi metres is a whole number of every swell and tone wave in the
+## ocean shader, so the water looks the same on both sides of the edge. The
+## land sits in the middle with at least 2.5 km of open sea to every edge.
+const WRAP_M: float = 4000.0 * PI
+const WRAP_CENTRE: Vector3 = Vector3(750, 0, -100)
 const SHIPS = {
 	"container": {"name": "Container ship", "price_minor": 80000},
 	"bulk": {"name": "Bulk carrier", "price_minor": 120000},
@@ -33,6 +40,18 @@ const RESALE_PERCENT: int = 50
 const BULK_CARGO = [["grain", "Grain, 4,000 t", 6000], ["coal", "Coal, 5,000 t", 8000], ["ore", "Iron ore, 6,000 t", 10000]]
 ## Pay of the six M3 bulk jobs, to read a version 4 save that lists delivered ones.
 const BULK_V4 = {"bulk_0_grain": 90000, "bulk_0_coal": 120000, "bulk_0_ore": 150000, "bulk_1_grain": 90000, "bulk_1_coal": 120000, "bulk_1_ore": 150000}
+
+## The same step taken the short way round the world.
+static func short_way(step: Vector3) -> Vector3:
+	return Vector3(wrapf(step.x, -WRAP_M / 2, WRAP_M / 2), step.y, wrapf(step.z, -WRAP_M / 2, WRAP_M / 2))
+
+## A position brought back inside the world's edges.
+static func wrapped(at: Vector3) -> Vector3:
+	return WRAP_CENTRE + short_way(at - WRAP_CENTRE)
+
+## The copy of `point` that is closest to `from`, which may be across an edge.
+static func nearest(point: Vector3, from: Vector3) -> Vector3:
+	return from + short_way(point - from)
 
 static func port_index(id: Variant) -> int:
 	for index: int in WORLD.size():
