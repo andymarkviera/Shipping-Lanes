@@ -5730,7 +5730,7 @@ Checks run on the agent's Linux runner, Godot 4.7.2 official, headless:
   `check_starter`, `check_helm_keys`, `check_m1_voyage`, all twelve Stage 2
   probes, `collision_probe`, `composition_probe`, `ports_probe` (305),
   `voyage_probe`, `sailing_save_probe`, `public_physics_probe`.
-- `water_probe` went from 52 to 69 checks. New: pitch grows with speed, the
+- `water_probe` went from 59 to 69 checks. New: pitch grows with speed, the
   hull leans into a turn, rocking stays inside its limits and cannot move the
   navigation body, the wake opens into a V and fades, spray starts at speed and
   stops at rest. Three old checks were changed because the motion they
