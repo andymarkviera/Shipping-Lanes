@@ -338,10 +338,10 @@ func check_manifest() -> void:
 	verify(manifest.lines()[0].quantity == 4, "Manifest read is defensive")
 	var second: Dictionary = manifest.lines()[0].duplicate(true)
 	second.batch_id = "lot_2"
-	second.quantity = 2
+	second.quantity = 20
 	second.job_id = "job_2"
 	second.acquisition_id = ""
-	verify(manifest.add(second).ok and manifest.usage().container_slots == 6, "Multiple jobs share aggregate capacity and exact limit is allowed")
+	verify(manifest.add(second).ok and manifest.usage().container_slots == 24, "Multiple jobs share aggregate capacity and exact limit is allowed")
 	var original: Array[Dictionary] = manifest.lines()
 	for change: Dictionary in [{"quantity": 1, "batch_id": "overflow"}, {"cargo_id": "cargo_test_industrial", "batch_id": "wrong_ship"}, {"quantity": 0}, {"quantity": -1}, {"quantity": 1.5}, {"quantity": 1000000001}, {"unit": "gram"}, {"origin_port_id": "missing"}, {"destination_port_id": "missing"}, {"acquisition_id": "", "job_id": ""}, {"batch_id": "lot_1"}]:
 		var bad: Dictionary = second.duplicate(true)
@@ -349,7 +349,7 @@ func check_manifest() -> void:
 		verify(not manifest.add(bad).ok and manifest.lines() == original, "Invalid/oversized addition leaves all cargo unchanged")
 	verify(not manifest.remove("lot_1", 99).ok and manifest.lines() == original, "Excessive removal is atomic")
 	verify(manifest.remove("lot_1", 2).ok and manifest.lines()[0].quantity == 2 and manifest.lines()[0].acquisition_id == "purchase_1", "Partial removal retains batch provenance")
-	verify(manifest.remove("lot_2", 2).ok and manifest.lines().size() == 1, "Full removal clears only selected job batch")
+	verify(manifest.remove("lot_2", 20).ok and manifest.lines().size() == 1, "Full removal clears only selected job batch")
 	var other = manifest_script.new(ship, PrototypeCatalog.RECORDS)
 	verify(other.lines().is_empty(), "Manifest instances isolated per ship")
 	var heavy = manifest_script.new(preload("res://features/catalog/records/heavy_lifter.tres"), PrototypeCatalog.RECORDS)
@@ -615,25 +615,55 @@ func check_container_visuals(preview: Node3D) -> void:
 	var display: Node3D = body.assembly.container_visuals
 	verify(display.shown_count == 0, "Empty manifest displays an empty deck")
 	verify(body.state.manifest.add(visual_batch(3)).ok and display.shown_count == 3, "Partial manifest immediately displays three containers")
-	var bad: Array[Dictionary] = [visual_batch(7)]
+	var bad: Array[Dictionary] = [visual_batch(25)]
 	verify(not body.state.manifest.replace(bad).ok and display.shown_count == 3, "Rejected capacity mutation cannot change visuals")
-	var full: Array[Dictionary] = [visual_batch(6)]
+	var full: Array[Dictionary] = [visual_batch(24)]
 	body.state.manifest.replace(full)
-	verify(display.shown_count == 6 and display.instances.multimesh.instance_count == 6, "Full capacity uses a bounded pool of six instances")
+	verify(display.shown_count == 24 and display.instances.multimesh.instance_count == 24, "Full capacity uses a bounded pool of 24 instances")
+	# Patch 2.0 (bigger loads): the deck is two tiers of twelve, and the game's jobs
+	# run from a handful to a full ship, paid per container.
+	var offer_script = preload("res://features/cargo/container_offers.gd")
+	# Read from the layout: headless Godot does not keep MultiMesh transforms.
+	var centres: PackedVector3Array = body.definition.container_layout.centres
+	var lower: int = 0
+	for i: int in centres.size():
+		if i < 12 and centres[i].y < 5.0 or i >= 12 and centres[i].y > 5.0: lower += 1
+	verify(centres.size() == 24 and lower == 24, "A full ship shows a two-tier stack, lower tier first")
+	verify(offer_script.GAME_CAPACITY == int(body.definition.cargo_capacities.container_slots), "Game offers are sized to the container ship's capacity")
+	var smallest: int = 999
+	var largest: int = 0
+	var pay_scaled: bool = true
+	for port_index: int in 4:
+		for slot: int in 3:
+			for turn: int in 6:
+				var made: Dictionary = offer_script.fresh("container_load_%d_%d_%d" % [port_index, slot, turn], true)
+				smallest = mini(smallest, int(made.quantity))
+				largest = maxi(largest, int(made.quantity))
+				pay_scaled = pay_scaled and made.reward_minor > 0 and made.reward_minor % made.quantity == 0 and made.reward_minor / made.quantity == offer_script.fresh("container_load_%d_2_%d" % [port_index, turn + slot + 1], true).reward_minor / 24
+	verify(smallest == 4 and largest == 24 and pay_scaled, "Game jobs run from a handful (4) to a full ship (24) and pay per container (%d to %d)" % [smallest, largest])
+	verify(offer_script.fresh("container_game_0_2_0", true).quantity == 3 and offer_script.fresh("container_load_0_0_0").is_empty(), "Older small game jobs still read from saves; game jobs stay out of Port Test")
+	var stock = offer_script.new()
+	stock._offers.clear()
+	stock._offers["container_game_0_0_0"] = offer_script.fresh("container_game_0_0_0", true)
+	stock._offers["container_game_0_1_0"] = offer_script.fresh("container_game_0_1_0", true)
+	stock._offers["container_game_0_1_0"].state = "delivered"
+	stock.restock()
+	verify(stock._offers.size() == 13 and not stock._offers.has("container_game_0_0_0") and stock.view("container_game_0_1_0").state == "delivered" and stock.list_at("port_brindle_quay").size() == 4, "Restock withdraws untaken old jobs, keeps finished ones and offers three bigger jobs per port")
+	verify(offer_script.loading_seconds(1) == 5.0 and offer_script.loading_seconds(3) == 15.0 and offer_script.loading_seconds(24) == 25.5, "Loading time grows with the load but a full ship loads in under half a minute")
 	verify(display.find_children("*", "CollisionObject3D", true, false).is_empty() and display.find_children("*", "CollisionShape3D", true, false).is_empty(), "Containers add no individual physics bodies or shapes")
 	verify(display.get_parent() == body.assembly.visual, "Container visuals follow the same bobbing/roll root as the hull")
 	var empty: Array[Dictionary] = []
 	var transforms: Array[Transform3D] = []
-	for i: int in 6: transforms.append(display.instances.multimesh.get_instance_transform(i))
+	for i: int in 24: transforms.append(display.instances.multimesh.get_instance_transform(i))
 	body.state.manifest.replace(full)
-	verify(display.shown_count == 6 and display.get_child_count() == 1, "Repeated identical state cannot create duplicate visual nodes")
+	verify(display.shown_count == 24 and display.get_child_count() == 1, "Repeated identical state cannot create duplicate visual nodes")
 	var other: HandlingShip = preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
 	other.position = Vector3(3000, 0, 0)
 	add_child(other)
-	verify(other.assembly.container_visuals.shown_count == 0 and display.shown_count == 6, "Two ships have independent cargo visibility")
+	verify(other.assembly.container_visuals.shown_count == 0 and display.shown_count == 24, "Two ships have independent cargo visibility")
 	other.queue_free()
 	body.state.manifest.remove("visual_fixture", 4)
-	verify(display.shown_count == 2, "Partial removal immediately updates visible count")
+	verify(display.shown_count == 20, "Partial removal immediately updates visible count")
 	body.state.manifest.replace(empty)
 	verify(display.shown_count == 0, "Emptying manifest removes all container visuals")
 	body.state.manifest.replace(full)

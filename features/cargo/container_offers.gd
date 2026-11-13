@@ -14,10 +14,30 @@ func _init() -> void:
 static func blank(id: String, quantity: int, origin: String, destination: String, reward_minor: int) -> Dictionary:
 	return {"id": id, "cargo_id": "cargo_test_container", "unit": "count", "quantity": quantity, "origin_port_id": origin, "destination_port_id": destination, "reward_minor": reward_minor, "expires_ms": -1, "state": "available", "owner_id": "", "ship_id": "", "accepted_ms": -1}
 
+## Patch 2.0 (bigger loads). The game's container ship carries 24 containers
+## (starter_ship.tres; ports_probe checks the two agree). Pay is per container
+## per 100 m sailed, in hundredths of a credit: 45.00 a container on the 1.5 km hop.
+const GAME_CAPACITY: int = 24
+const PAY_PER_CONTAINER_100M: int = 300
+
+## Seconds at the berth to load a job: 5 s a container for the first three (as
+## before), then half a second each, so a full deck takes about 25 s.
+static func loading_seconds(quantity: int) -> float:
+	return quantity * 5.0 if quantity <= 3 else 15.0 + (quantity - 3) * 0.5
+
+## Containers in a game job. Slot 0 is a handful (4, 6 or 8), slot 1 a part
+## load (10 to 16), slot 2 a full ship. The size changes each turn of a slot.
+static func game_quantity(port: int, slot: int, turn: int) -> int:
+	if slot == 0: return 4 + 2 * ((port + turn) % 3)
+	if slot == 1: return 10 + 2 * ((port + turn) % 4)
+	return GAME_CAPACITY
+
 ## An untouched offer, rebuilt from its ID alone. Empty for an unknown ID.
 ## "container_seed_v1_<route>_<index>": the six Port Test jobs.
-## "container_game_<port>_<slot>_<turn>" (the game only): three slots per port.
-## Each turn of a slot goes to the next port along and pays by distance.
+## "container_load_<port>_<slot>_<turn>" (the game only): three slots per port.
+## Each turn of a slot goes to the next port along and pays by load and distance.
+## "container_game_<port>_<slot>_<turn>": the 1, 2 and 3 container jobs from
+## before Patch 2.0. Still read so older saves load; no longer put on offer.
 static func fresh(id: String, game: bool = false) -> Dictionary:
 	var parts: PackedStringArray = id.split("_")
 	if parts.size() != 5 or parts[0] != "container": return {}
@@ -27,28 +47,33 @@ static func fresh(id: String, game: bool = false) -> Dictionary:
 	if parts[1] == "seed" and parts[2] == "v1" and int(parts[3]) < 2 and int(parts[4]) < 3:
 		var route: int = int(parts[3])
 		return blank(id,int(parts[4]) + 1, Progression.WORLD[route].id, Progression.WORLD[1 - route].id, (int(parts[4]) + 1) * 25000)
-	if not game or parts[1] != "game" or int(parts[2]) >= Progression.WORLD.size() or int(parts[3]) > 2: return {}
+	if not game or parts[1] not in ["game", "load"] or int(parts[2]) >= Progression.WORLD.size() or int(parts[3]) > 2: return {}
 	var origin: int = int(parts[2])
 	var destination: int = Progression.others(origin)[(int(parts[3]) + int(parts[4])) % (Progression.WORLD.size() - 1)]
+	if parts[1] == "load":
+		var quantity: int = game_quantity(origin, int(parts[3]), int(parts[4]))
+		return blank(id, quantity, Progression.WORLD[origin].id, Progression.WORLD[destination].id, quantity * Progression.leg_units(origin, destination) * PAY_PER_CONTAINER_100M)
 	# 250.00 credits per container on the 1.5 km hop, more on longer legs.
 	var per_container: int = Progression.leg_units(origin, destination) * 5000 / 3 / 1000 * 1000
 	return blank(id,int(parts[3]) + 1, Progression.WORLD[origin].id, Progression.WORLD[destination].id, (int(parts[3]) + 1) * per_container)
 
 ## The game only: keep three open jobs at every port. When a job is delivered or
-## abandoned, the next one for that slot is added. Offers never expire.
+## abandoned, the next one for that slot is added. Offers never expire. Untaken
+## small jobs from before Patch 2.0 are withdrawn; taken or finished ones stay.
 func restock() -> void:
 	var latest: Dictionary = {}
-	for id: String in _offers:
+	for id: String in _offers.keys():
 		var parts: PackedStringArray = id.split("_")
-		if parts[1] != "game": continue
+		if parts[1] == "game" and _offers[id].state == "available": _offers.erase(id)
+		if parts[1] != "load": continue
 		var slot: String = parts[2] + "_" + parts[3]
 		latest[slot] = maxi(int(latest.get(slot, -1)), int(parts[4]))
 	for port: int in Progression.WORLD.size():
 		for index: int in 3:
 			var slot: String = "%d_%d" % [port, index]
 			var turn: int = int(latest.get(slot, -1))
-			if turn >= 0 and _offers["container_game_%s_%d" % [slot, turn]].state not in ["delivered", "abandoned"]: continue
-			var id: String = "container_game_%s_%d" % [slot, turn + 1]
+			if turn >= 0 and _offers["container_load_%s_%d" % [slot, turn]].state not in ["delivered", "abandoned"]: continue
+			var id: String = "container_load_%s_%d" % [slot, turn + 1]
 			_offers[id] = fresh(id, true)
 
 func advance_to(world_ms: int) -> bool:

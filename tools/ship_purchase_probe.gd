@@ -107,7 +107,7 @@ func run() -> void:
 	check(registry.load_definitions(PrototypeCatalog.RECORDS).is_empty(), "catalog definitions valid")
 	for row: Dictionary in rows:
 		var definition: ShipDefinition = registry.get_definition(row.definition)
-		check(definition != null and definition.display_name == row.name and definition.fuel_capacity_liters == row.fuel_capacity_liters and definition.cargo_capacities.container_slots == 6, "preview matches definition " + row.definition)
+		check(definition != null and definition.display_name == row.name and definition.fuel_capacity_liters == row.fuel_capacity_liters and definition.cargo_capacities.container_slots == 24, "preview matches definition " + row.definition)
 	port.berth.service_ids = []
 	check(service.ship_quotes(2).is_empty(), "berth must support ship purchase")
 	port.berth.service_ids = ["ship_catalog"]
