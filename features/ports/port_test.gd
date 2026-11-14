@@ -15,6 +15,7 @@ const TROPICAL_BIOME = preload("res://features/sky/tropical_biome.gd")
 const TROPICAL_LOOK = preload("res://features/toon/tropical_look.gd")
 const RAIN_BIOME = preload("res://features/sky/rain_biome.gd")
 const CITY_LOOK = preload("res://features/toon/city_look.gd")
+const VOLCANO_LOOK = preload("res://features/toon/volcano_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 @export var save_enabled: bool = true
@@ -55,6 +56,8 @@ var lagoon_paint: ShaderMaterial
 ## Patch 2.5 item 6: the rainy city biome, painted over the others (game only),
 ## and the shared wall paint of its lit windows.
 var rain: Node
+## Patch 2.5 item 7: the volcano on Ember Isle (game only).
+var volcano: Node3D
 var city_paint: Array[ShaderMaterial] = []
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
@@ -224,6 +227,8 @@ func _ready() -> void:
 		if lagoons != null: add_child(lagoons)
 		var city_land: Node3D = CITY_LOOK.build_land(Progression.LAND, port_spots, city_paint)
 		if city_land != null: add_child(city_land)
+		volcano = VOLCANO_LOOK.new()
+		add_child(volcano)
 		for rect: Rect2 in Progression.ICE_SHELVES: add_land(rect, true)
 		for index: int in Progression.ICEBERGS.size(): add_iceberg(index)
 		bridges = Node3D.new()
@@ -976,6 +981,7 @@ func _process(_delta: float) -> void:
 	if desert != null: desert.update(ship.global_position, _delta)
 	if tropical != null: tropical.update(ship.global_position, _delta)
 	if rain != null: rain.update(ship.global_position, _delta)
+	if volcano != null: volcano.update(camera.camera.global_position, polar.sun)
 	# Patch 2.5 item 1B: the coast surf rides the same swell as the sea.
 	if surf_paint != null:
 		surf_paint.set_shader_parameter("water_time", ocean.elapsed)

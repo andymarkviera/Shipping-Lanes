@@ -6915,3 +6915,32 @@ passed.
 
 Not run: a rendered screenshot, Windows, frame timing on the target, a
 playtest. Nobody has seen the rain on screen yet.
+
+## Patch 2.5 item 7: Volcano island — November 14, 2026
+
+- Ember Isle: one volcano island, fixed in `progression.gd` (`VOLCANO`, LAND
+  block 27, its own landmass) at (4480, -4120) in the cold south-eastern sea.
+  It is over 1 km off every sea-lane leg, over 2.5 km off every port, over
+  600 m off every iceberg and 470 m off Ironreach. Sea routes are unchanged.
+  As a LAND block it gets a solid box, a toon coast and a place on the minimap
+  and globe for free.
+- New `features/toon/volcano_look.gd`: a chunky toon cone (ash skirt and rock
+  cone, toon paint and ink outline), a lava crater and three lava runs, a
+  solid cylinder collider, one pooled smoke emitter (48 puffs) and an orange
+  glow light. The lava glows softly by day and brightly at night, and the glow
+  light comes on only at night. The game has no day/night cycle yet, so "night"
+  is read from the sun: set below the horizon, or dimmed well under daytime
+  energy. Past 3.2 km the smoke and light switch off.
+- `export_presets.cfg` lists the script. New check `tools/volcano_check.gd` (24).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts`, `--quit-after 10`, `volcano_check` (24), `world_land_check`
+(169), `polar/desert/tropical/rain_biome_check`, `globe_map_check`,
+`debug_game_check`, `hangar_check`, `crane_check`, `mooring_check`,
+`small_boats_check`, `check_m1_voyage`, `check_catalog`, `check_controls`,
+`check_flow`, `check_starter`, the CI Stage 2 probe set, `traversal_budget.py`
+and the `tools/world_layout` tests: all passed.
+
+Not run: a rendered screenshot, Windows, frame timing on the target, a
+playtest. Nobody has seen the volcano on screen yet, and it has never been
+shown at a real night because the game has none yet.
