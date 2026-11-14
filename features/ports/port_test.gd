@@ -29,6 +29,8 @@ var docking = preload("res://features/ports/docking_authority.gd").new()
 var loading = preload("res://features/cargo/port_loading.gd").new()
 ## Patch 2.4 item 4, the game only: mooring lines on the docked ship.
 var mooring: Node3D
+## Patch 2.4 item 5, the game only: quay cranes move containers one at a time.
+var cranes: Node3D
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
@@ -136,6 +138,11 @@ func _ready() -> void:
 		mooring.docking = docking
 		docking.undock_seconds = mooring.LET_GO_SECONDS
 		add_child(mooring)
+		cranes = preload("res://features/ports/container_cranes.gd").new()
+		cranes.name = "QuayCranes"
+		cranes.docking = docking
+		cranes.loading_preview = crane_preview
+		add_child(cranes)
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.set_ship_context(true)
@@ -180,6 +187,7 @@ func _ready() -> void:
 		world_ports.append(place)
 		# Aesthetics 4: chunky port dressing. The game only; test scenes keep the blocks.
 		if game_mode: CHUNKY_LOOK.dress_port(place)
+		if game_mode: cranes.add_port(place)
 	# Aesthetics 2: toon shading and ink outlines on the ports and land.
 	TOON_LOOK.apply(self)
 	waypoint = Label3D.new()
@@ -589,6 +597,16 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	controls.wait_for_release = true
 	return true
 
+## Patch 2.4 item 5: how far the loading timer has got, for the quay cranes:
+## (containers of the job reached so far, job quantity), or zero.
+func crane_preview(_owner: int) -> Vector2i:
+	if not loading.busy(): return Vector2i.ZERO
+	var quantity: int = int(offers.view(loading.offer_id).get("quantity", 0))
+	return Vector2i(clampi(ceili(loading.progress_percent() / 100.0 * quantity), 0, quantity), quantity)
+
+func cranes_busy() -> bool:
+	return cranes != null and cranes.busy(1)
+
 ## Wording for the helm notice: how to get out of each state in this scene.
 func helm_hints() -> Dictionary:
 	var hints: Dictionary = {"leave": "Click \"Main menu\"", "docked": "Wait for docking to finish, then click \"Undock\" to sail.",
@@ -834,7 +852,7 @@ func _physics_process(delta: float) -> void:
 	# The game always shows Dock beside the throttle, greyed out with no berth in range.
 	dock_button.visible = game_mode or ship.global_position.distance_to(port.berth_anchor.global_position) < 150 or current in ["docking", "docked", "undocking"]
 	dock_button.text = "Undock" if current == "docked" else "Dock"
-	dock_button.disabled = loading.busy() or sink_seconds > 0.0 or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
+	dock_button.disabled = loading.busy() or cranes_busy() or sink_seconds > 0.0 or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
 	cancel_button.visible = current in ["docking", "undocking"]
 	readiness.text = "Berth: " + (current.capitalize() + ("…" if current != "docked" else "") if current in ["docking", "docked", "undocking"] else status.message)
@@ -890,7 +908,9 @@ func _process(_delta: float) -> void:
 	abandon_button.text = "Confirm abandon — no payment" if not abandon_job_id.is_empty() and Time.get_ticks_msec() <= abandon_deadline else "Abandon cargo (no payment)"
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
 	if not loading.busy() and offer_notice == "Accepted — loading your cargo.": offer_notice = loading.notice
-	loading_text.text = "Loading %.0f%% — please wait." % loading.progress_percent() if loading.busy() else offer_notice
+	if loading.busy(): loading_text.text = "Loading %.0f%% — please wait." % loading.progress_percent()
+	elif cranes_busy(): loading_text.text = "The cranes are working: %d container%s to go." % [cranes.remaining(1), "" if cranes.remaining(1) == 1 else "s"]
+	else: loading_text.text = offer_notice
 	waypoint.visible = false
 	if heavy_mode and not heavy_jobs.active.is_empty():
 		var target: Vector3 = ship.payload_body.global_position if heavy_jobs.active.state == "pickup" else heavy_jobs.active.drop
