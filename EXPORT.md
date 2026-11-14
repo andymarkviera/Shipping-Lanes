@@ -110,7 +110,7 @@ overlay is available with Ctrl+F3, off by default; no movement data is fabricate
 ## macOS export (Patch 2.6 item 1)
 
 The `macOS` preset in `export_presets.cfg` builds a universal app (Apple
-Silicon arm64 + Intel x86_64) named **Container Ship Sim**, bundle id
+Silicon arm64 + Intel x86_64) named **Shipping Lanes**, bundle id
 `com.andyviera.shippinglanes`, with the icon `features/app/app_icon.icns`
 (rebuild it with `python3 -I art_sources/app_icon/make_icon.py`). It exports
 the same files and include filter as the Windows preset. Signing is ad-hoc
@@ -123,17 +123,17 @@ Export on the Mac with the Godot 4.7.2 macOS editor:
 
 1. Editor > Manage Export Templates > install 4.7.2 (official).
 2. Project > Export > `macOS` > Export Project (untick "Export With Debug"
-   for a release). It writes `exports/macos/release/Container Ship Sim.zip`.
+   for a release). It writes `exports/macos/release/Shipping Lanes.zip`.
    From a terminal instead:
-   `godot --headless --export-release "macOS" "exports/macos/release/Container Ship Sim.zip"`
-3. Unzip it to get `Container Ship Sim.app` and move it to Applications.
+   `godot --headless --export-release "macOS" "exports/macos/release/Shipping Lanes.zip"`
+3. Unzip it to get `Shipping Lanes.app` and move it to Applications.
 
 Opening an unsigned (ad-hoc signed) app the first time: right-click (or
 Control-click) the app > Open > Open. If macOS says the app "is damaged" or
 won't offer Open, clear the download quarantine once in Terminal:
 
 ```sh
-xattr -dr com.apple.quarantine "/Applications/Container Ship Sim.app"
+xattr -dr com.apple.quarantine "/Applications/Shipping Lanes.app"
 ```
 
 Known limit: `addons/godot-sqlite` ships Windows and Linux libraries only, so

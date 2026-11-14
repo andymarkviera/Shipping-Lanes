@@ -38,7 +38,7 @@ func _ready() -> void:
 	theme = PLAYFUL.make()
 	add_child(PLAYFUL.Backdrop.new())
 	var title: Label = Label.new()
-	title.text = "CONTAINER SHIP SIM"
+	title.text = "SHIPPING LANES"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 36
