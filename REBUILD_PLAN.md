@@ -968,6 +968,14 @@ still reachable, no pausing reliance, no workflow edits. The game's visible
 title becomes **Shipping Lanes** everywhere (window title, export app names,
 title screen); internal IDs, save paths and bundle id do not change.
 
+**Andy, 11:36 AM: the text and aesthetic must look like the mockups, for
+real.** Match them closely, not loosely: the same red beveled SHIPPING and
+gold LANES logo on white swirl waves, the same flat saturated royal-blue sea
+with light-blue/white toon wave streaks and curled swirl foam, the same
+white rounded serif menu font with navy outline, the yellow wind-swirl
+cursor, the same layout and proportions. Compare a screenshot side by side
+with each mockup before calling an item done, and put both in the PR.
+
 1. **Title logo and attract screen.** A toon logo matching the reference:
    "SHIPPING" in big red beveled serif capitals with a dark outline, "LANES"
    in yellow-gold below it, sitting on white Wind Waker swirl waves. Build
