@@ -6808,3 +6808,34 @@ Checks (agent's Linux runner, official Godot 4.7.2):
   forced on, OpenGL under Xvfb. It renders: cold, pale, foggy, with snow.
 - Not run: Windows, frame timing on the target, sailing into the polar sea in
   a playtest, the full CI probe list.
+
+## Patch 2.5 item 4: Desert biome — November 14, 2026
+
+- Region: north Hearthland round Cinder Point (`port_cinder_point`, same ID,
+  berth, jobs and saves). Fully desert within 1,600 m of (-1700, 2300), none
+  past 2,300 m, eased in time (at least 1.5 s). Every other port is outside;
+  the desert is tapered out where the polar look is, and never shows in the
+  full polar sea.
+- New `features/sky/desert_biome.gd`: warm haze (closer sandy fog), warm sun
+  and ambient light, sandy horizon, few clouds, a desert sea tone, dry warm
+  grading. It paints over the polar look: `polar_biome.gd` gained one
+  `overlay` hook, called after each repaint, so the two never fight. At zero
+  it changes nothing; leaving restores the temperate look exactly.
+- New `features/toon/desert_look.gd`: seeded dunes and banded mesas over the
+  desert land blocks (one MultiMesh per kind, so few draw calls; dunes cast
+  no shadow), clear of the sea and 450 m from every quay, not solid. Desert
+  blocks get a sand top in place of green. Cinder Point gets a sandstone
+  quay, adobe sheds with terracotta roofs, flat-roofed houses, a domed tower
+  and cacti (looks only; colliders unchanged).
+- `export_presets.cfg` lists both scripts. `world_land_check` now allows five
+  shared land materials (the desert's sand top is the fifth).
+- New check `tools/desert_biome_check.gd` (41 checks).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts` (213), `--quit-after 10`, `desert_biome_check` (41),
+`polar_biome_check` (46), `world_land_check` (161), `globe_map_check` (48),
+`debug_game_check` (81), `hangar_check` (213), `check_flow`,
+`check_m1_voyage`: all passed.
+
+Not run: a rendered screenshot (software OpenGL under Xvfb timed out),
+Windows, frame timing on the target, a playtest, the full CI probe list.
