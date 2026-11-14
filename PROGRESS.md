@@ -6550,3 +6550,32 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
 - Not run: Stage 3 Python (no Python changed), Windows, screenshots and a
   playtest. Nobody has seen the looks on screen yet. Andy should check that
   the three pieces read clearly and sit right on every heavy ship's deck.
+
+## Patch 2.4 item 7: 3D globe map (November 14, 2026)
+
+- New `features/game/globe_map.gd`, added to the game scene only
+  (`port_test.gd`, game mode): M (the existing "Map" binding) opens a large
+  globe in a 3D SubViewport in the middle of the screen. The world is laid on
+  it like an atlas page: east-west wraps round, the north and south edges are
+  the poles. It shows land, ice shelves, icebergs, every port with its name
+  (polar ports too, current port in yellow), the ship as a yellow arrow sized
+  like the minimap's and a pulsing ring on the job's destination. Toon shading
+  and an ink rim.
+- It opens centred on the ship, north up. Dragging turns it about the screen's
+  axes, so it rolls freely in every direction, over the poles too. The wheel
+  zooms between set limits. M or Esc closes it before the Esc menu sees the key.
+  The hangar or Esc menu opening closes it. Nothing pauses; the helm keeps the
+  keyboard and the small minimap stays.
+- Limitation: the world wraps north-south, so a ship sailing over the north
+  edge jumps from the north pole to the south pole on the big globe.
+- `export_presets.cfg` lists the new script. No new resource files.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts` (204), new `globe_map_check` (46),
+  `check_m1_voyage`, `check_helm_keys`, `check_controls`, `check_flow`,
+  `hangar_check` (179), `debug_game_check` (72).
+- Not run: the rest of the CI Stage 2 set, Stage 3 Python (no Python changed),
+  Windows, screenshots and a playtest. Nobody has seen the globe on screen yet.
+  Andy should check that it reads clearly, drags smoothly and that the
+  north-south jump is acceptable.
