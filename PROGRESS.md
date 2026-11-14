@@ -7043,3 +7043,35 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
 `storage_probe`/`persistence_probe` need the Windows PowerShell runners'
 isolated-root arguments and were not run. Not run: a Mac export with the new
 frameworks, Forward+/Metal on a Mac, a Windows run, a playtest.
+
+## Patch 2.6 item 3: Mac controls and display — November 14, 2026
+
+- **Keys:** audit of every hard-coded key and default binding: letters, Space,
+  Esc and F3 (dev toggle, Fn+F3 on a MacBook) only; no numpad, Home/End,
+  Insert or Page keys are needed (they stay optional rebind targets). No game
+  shortcut uses Ctrl; text fields get Cmd copy/paste from Godot on macOS.
+- **Trackpad** (`player_controls.gd`, `orbit_camera_rig.gd`, `globe_map.gd`):
+  two-finger scroll up/down zooms the ship camera and the M globe, sideways
+  turns them; pinch zooms both. On macOS click-drag (and Ctrl-click drag) also
+  orbits the ship camera, alongside right-drag. Windows input is unchanged
+  (left-drag orbit is Mac-only; gestures only arrive from trackpads).
+- **Retina/HiDPI:** on macOS the window's content scale is set to the screen
+  scale (and follows `dpi_changed` when dragged between screens), so the HUD
+  is its normal size and fonts/3D render at full pixel resolution; the first
+  windowed start scales the window up to match (capped at 90% of the screen).
+  Windows/Linux skip this.
+- **Fullscreen/resize:** the fullscreen setting is now applied at start and
+  when it changes, not on every scene change, so the macOS green button /
+  Ctrl+Cmd+F is not undone when a scene loads.
+- **Cmd+Q:** Godot's Mac app menu sends Cmd+Q as the window close request,
+  which the game scene already answers by saving first (same as the Esc-menu
+  Quit). A fallback catches Cmd+Q if it reaches the game and sends the same
+  close request.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts`, `--quit-after 10`, `check_catalog`, `diagnostics_probe`,
+`check_controls`, `check_flow`, `check_starter`, `check_m1_voyage`, the CI
+Stage 2 probe set, `voyage_probe`, `sailing_save_probe`: all passed, plus a
+throwaway script (not committed) feeding pan/pinch gestures to
+`PlayerControls`. Not run: anything on a Mac (gesture deltas, Retina scale,
+window size, Cmd+Q are untested there), a Windows run, a playtest.

@@ -31,10 +31,14 @@ func bind_controls(source: PlayerControls) -> void:
 	if is_instance_valid(controls):
 		controls.camera_motion_requested.disconnect(orbit)
 		controls.command_requested.disconnect(command)
+		controls.camera_zoom_requested.disconnect(zoom)
+		controls.camera_turn_requested.disconnect(turn)
 	release_mouse()
 	controls = source
 	controls.camera_motion_requested.connect(orbit)
 	controls.command_requested.connect(command)
+	controls.camera_zoom_requested.connect(zoom)
+	controls.camera_turn_requested.connect(turn)
 
 func set_focus(target: CameraFocus) -> void:
 	focus = target
@@ -81,6 +85,11 @@ func zoom(direction: float) -> void:
 
 func orbit(motion: Vector2) -> void:
 	if not orbiting or not is_instance_valid(controls) or not controls.input_allowed(): return
+	turn(motion)
+
+## Trackpad two-finger sideways drag turns the view without a held button.
+func turn(motion: Vector2) -> void:
+	if not is_instance_valid(controls) or not controls.input_allowed() or not motion.is_finite(): return
 	orbit_offset = wrapf(orbit_offset - motion.x * 0.005, -PI, PI)
 	pitch_order = clampf(pitch_order + motion.y * 0.005, MIN_PITCH, MAX_PITCH)
 
@@ -90,7 +99,7 @@ func release_mouse() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed:
+	if event is InputEventMouseButton and not event.pressed and not Input.is_action_pressed("camera_orbit"):
 		release_mouse()
 
 func _notification(what: int) -> void:
