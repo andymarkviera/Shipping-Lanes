@@ -43,6 +43,10 @@ func apply_display_scale() -> void:
 	var window: Window = get_window()
 	var scale: float = clampf(DisplayServer.screen_get_scale(window.current_screen), 1.0, 4.0)
 	window.content_scale_factor = scale
+	# Apple Silicon performance: a 2x Retina window is 4x the 3D pixels. Render
+	# the 3D view at 1.5x the logical size (0.75 on Retina) and upscale with FSR
+	# (set in project.godot); HUD and text stay at full Retina resolution.
+	window.scaling_3d_scale = clampf(1.5 / scale, 0.5, 1.0)
 	if not hidpi_sized and window.mode == Window.MODE_WINDOWED:
 		hidpi_sized = true
 		var screen: Rect2i = DisplayServer.screen_get_usable_rect(window.current_screen)
@@ -57,6 +61,7 @@ func load_preferences() -> void:
 	preferences = DEFAULTS.duplicate(true)
 	settings_notice = ""
 	if not FileAccess.file_exists(preferences_path):
+		preferences.water_quality = InputPreferences.auto_water_quality()
 		return
 	var file: FileAccess = FileAccess.open(preferences_path, FileAccess.READ)
 	if file == null or file.get_length() > 65536:

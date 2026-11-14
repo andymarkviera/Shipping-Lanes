@@ -7075,3 +7075,31 @@ Stage 2 probe set, `voyage_probe`, `sailing_save_probe`: all passed, plus a
 throwaway script (not committed) feeding pan/pinch gestures to
 `PlayerControls`. Not run: anything on a Mac (gesture deltas, Retina scale,
 window size, Cmd+Q are untested there), a Windows run, a playtest.
+
+## Patch 2.6 item 4 — Apple Silicon performance (November 14, 2026)
+
+Quality settings for an M2 MacBook Air (16 GB, fanless). Every change is
+macOS-only (`.macos` project overrides or `OS.has_feature("macos")`), so the
+Windows build and its quality are unchanged.
+
+- **3D resolution:** on a Retina (2x) screen the 3D view renders at 0.75 of the
+  window's pixel size (1.5x the logical size), upscaled with FSR 1 (sharpness
+  0.3). HUD and text stay at full Retina resolution. Non-Retina Mac screens
+  render at 1.0. (`PlayerControls.apply_display_scale`, `rendering/scaling_3d/*.macos`)
+- **Frame cap:** `application/run/max_fps.macos=60`, together with V-Sync, gives
+  a steady 60 and stops an external 120 Hz monitor from doubling the heat.
+- **Sky radiance:** the animated toon sky would rebuild a 256 px radiance
+  cubemap every frame under Forward+/Metal, and nothing reads it (sky ambient
+  and reflections are off). On Mac it is 32 px. The visible sky does not change.
+- **Auto quality preset:** on first run (no saved settings), Apple Silicon
+  starts on Medium water and Intel Macs start on Low. Windows and Linux keep
+  Medium. Saved settings always win.
+- **No thermal-only effects:** checked. No SSAO/SSR/SDFGI/SSIL/volumetric fog/glow
+  is turned on anywhere. Fog is depth fog. Shadows stay as they are (2 splits,
+  500 m, hard edge). Rain, snow and smoke particle counts are unchanged.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts`, `check_controls`, `water_probe`, `sailing_save_probe`,
+`rain_biome_check` and `polar_biome_check` all passed. Not run: anything on a
+Mac (frame rate, FSR look, heat and the arm64 feature tag are untested there),
+a Windows run, a playtest.

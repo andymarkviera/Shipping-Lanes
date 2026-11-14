@@ -26,6 +26,12 @@ const LABELS: Dictionary = {
 @export_enum("Low", "Medium", "High") var water_quality: int = 1
 @export var bindings: Dictionary = DEFAULT_BINDINGS.duplicate()
 
+## Auto quality preset for a first run (no saved settings). Windows/Linux and
+## Apple Silicon Macs keep Medium; Intel Macs start on Low. Players can change it.
+static func auto_water_quality() -> int:
+	if OS.has_feature("macos") and not OS.has_feature("arm64"): return 0
+	return 1
+
 static func valid_key(code: int) -> bool:
 	return (code >= KEY_A and code <= KEY_Z) or (code >= KEY_0 and code <= KEY_9) \
 		or (code >= KEY_F1 and code <= KEY_F12) \
