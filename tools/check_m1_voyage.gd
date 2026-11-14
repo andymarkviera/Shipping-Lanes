@@ -192,13 +192,20 @@ func always_running(game: Node) -> void:
 	expect(current_scene == game and not paused, "Esc neither leaves the game nor pauses the tree")
 	var titles: Array = []
 	for node: Node in game.game_menu.panel.find_children("*", "Button", true, false): titles.append(node.text)
-	expect(titles == ["RESUME", "SETTINGS", "MAIN MENU", "QUIT"], "The menu offers Resume, Settings, Main Menu and Quit (%s)" % str(titles))
+	expect(titles == ["RESUME", "CONTROLS", "SETTINGS", "MAIN MENU", "QUIT"], "The menu offers Resume, Controls, Settings, Main Menu and Quit (%s)" % str(titles))
 	var from: Vector3 = ship.global_position
 	var clock: float = game.offer_time
 	for tick: int in 120: await physics_frame
 	expect(not game.controls.input_allowed() and game.helm.notice.reason() == "", "Menu open: helm keys are released and no warning banner shows (%s)" % game.helm.notice.reason())
 	expect(ship.commanded_throttle == order and flat_distance(ship.global_position, from) > 5.0 and game.offer_time > clock + 1.9,
 		"Menu open: the ship sails on and the world clock ticks (moved %.1f m, order %.2f)" % [flat_distance(ship.global_position, from), ship.commanded_throttle])
+	if not await click(game, "CONTROLS"): return
+	var listed: String = ""
+	for node: Node in game.game_menu.controls_grid.get_children(): listed += (node as Label).text + "|"
+	expect(game.game_menu.controls_panel.visible and not game.game_menu.panel.visible and listed.contains("Throttle up / down|%s / %s" % [OS.get_keycode_string(bindings.ship_throttle_up), OS.get_keycode_string(bindings.ship_throttle_down)]) and listed.contains("World map|M"),
+		"Controls lists the keys as bound (%s)" % listed)
+	await press_escape()
+	expect(not game.game_menu.controls_panel.visible and game.game_menu.panel.visible, "Esc on Controls returns to the menu")
 	if not await click(game, "SETTINGS"): return
 	expect(game.game_menu.settings.visible and not game.game_menu.panel.visible, "Settings opens from the menu")
 	await press_escape()
@@ -240,7 +247,8 @@ func play() -> void:
 	expect(game.reward_minor == 0, "New game starts with an empty wallet")
 	expect(not game.switch_button.visible, "The game does not offer the test heavy loader")
 	# M5: a new captain sees the helm keys and the next step; the two game sounds exist.
-	expect(game.game_hud.hint.is_visible_in_tree() and game.game_hud.hint_label.text.contains("throttle") and game.voyage_hud.instruction.text.contains("click Dock"), "New game shows the helm keys and the first step (%s)" % game.voyage_hud.instruction.text)
+	# Patch 2.5 item 8: no key hints on the HUD; the keys are in Esc > CONTROLS.
+	expect(game.game_hud.get("hint") == null and game.voyage_hud.instruction.text.contains("click Dock"), "New game shows the first step and no key hints on the HUD (%s)" % game.voyage_hud.instruction.text)
 	# Patch 2.0 item 5: the simplified HUD.
 	expect(game.minimap.get_script().resource_path.ends_with("globe_minimap.gd") and game.minimap.is_visible_in_tree(), "The minimap is the globe")
 	expect(not game.port_panel.visible and not game.helm.throttle_display.visible and not game.readiness.is_visible_in_tree(), "At sea the top-left panel and the old throttle panel are gone")
@@ -341,7 +349,6 @@ func play() -> void:
 		if row.state == "available" and row.id != job.id and game.offers.job_tier(row.id) == 1: open_jobs += 1
 	expect(game.world_ports.size() == 6 and open_jobs == 4, "Six ports, and four open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
 	expect(game.voyage_hud.money.is_visible_in_tree() and game.voyage_hud.money.text == "%.2f credits" % (job.reward_minor / 100.0), "The money is shown on the game HUD (%s)" % game.voyage_hud.money.text)
-	expect(not game.game_hud.hint.visible, "The controls hint is gone after the first delivery")
 	expect(game.game_hud.cards.is_visible_in_tree() and game.game_hud.cards.get_child_count() == game.jobs_list.item_count and game.jobs_list.item_count > 0 and not game.jobs_list.visible, "Docked with no job: one card per offer (%d cards)" % game.game_hud.cards.get_child_count())
 	expect(not game.details.visible and not game.helm.gauge_display.visible, "Developer readouts are hidden in the game by default")
 

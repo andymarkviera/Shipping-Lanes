@@ -6944,3 +6944,37 @@ and the `tools/world_layout` tests: all passed.
 Not run: a rendered screenshot, Windows, frame timing on the target, a
 playtest. Nobody has seen the volcano on screen yet, and it has never been
 shown at a real night because the game has none yet.
+
+## Patch 2.5 item 8: Polish pass — November 14, 2026
+
+- The game's HUD has no key hints any more. The first-voyage controls panel
+  (`game_hud.gd`) and `port_test.gd controls_hint()` are gone.
+- Esc menu: RESUME, CONTROLS, SETTINGS, MAIN MENU, QUIT. CONTROLS
+  (`game_menu.gd`) lists the keys as bound right now (throttle, steer,
+  thrusters, engine to zero, horn, map, recenter) plus mouse look, zoom, map
+  drag and Esc, with BACK; Esc returns to the menu. The "The world keeps
+  running." note is gone.
+- Plain words: the globe map's top line just says WORLD MAP; Settings is
+  "Settings" with "Click a key to change it. Esc cancels."; the Esc binding row
+  reads "Menu"; the title screen no longer says "four ports"; the game's port
+  card shows the ship's name and wallet (it said "Container ship" for every
+  ship); the game's helm banners for a paused or unloadable voyage no longer
+  say "see the panel text" or "open this scene again"; the heavy-lift pickup
+  hint drops "Crooked is fine — no angle matching required."
+- Unchanged: test fixtures (Port Test, handling, bulk, gas, oil), the debug
+  mode tag, quick travel and readout, the F3 developer overlay. No new runtime
+  resources, so `export_presets.cfg` is unchanged.
+- `check_m1_voyage` now checks there is no HUD hint, that CONTROLS lists the
+  bound throttle keys and M for the map, and that Esc on it returns to the menu.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts`, `--quit-after 10`, `check_m1_voyage`, `check_controls`,
+`check_flow`, `check_starter`, `check_catalog`, `check_helm_keys`, every
+`*_check.gd` (ladders, crane, debug_game, hangar, mooring, small boats, globe
+map, world land, polar/desert/tropical/rain biomes, volcano), the CI Stage 2
+probe set plus `voyage_probe`, `traversal_budget.py` and the
+`tools/world_layout` tests: all passed. `migration_probe`, `slots_probe` and
+`tools/public_handoff` (not in CI) fail the same way on unchanged main.
+
+Not run: a rendered screenshot, Windows, a playtest. Nobody has seen the
+Controls screen on screen yet.

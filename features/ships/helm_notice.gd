@@ -5,7 +5,8 @@ extends CanvasLayer
 const HOLD_SECONDS: float = 0.4
 var ship: HandlingShip
 var controls: PlayerControls
-## Scene wording. Text keys: "leave", "docked", "empty", "panel". "rescue": true shows
+## Scene wording. Text keys: "leave", "docked", "empty", "panel", "unfocused",
+## "paused", "switched_off". "rescue": true shows
 ## the free test-fuel button in scenes with no other refuel while adrift. The game
 ## sets "rescue_text" and "rescue_action" to turn that button into its paid tow.
 var hints: Dictionary = {}
@@ -61,9 +62,11 @@ func reason() -> String:
 	if not controls.ship_context_active: return ""
 	var leave: String = hint("leave", "Press Esc for the main menu")
 	if not ship.is_physics_processing():
+		if hints.has("switched_off"): return str(hints.switched_off)
 		return "SHIP SWITCHED OFF — this voyage could not be loaded.\n%s, then open this scene again." % leave
 	if ship.simulation_paused:
 		if not ship.pause_reason.is_empty(): return ship.pause_reason
+		if hints.has("paused"): return str(hints.paused)
 		return "PAUSED — the voyage is loading, saving or stopped by an error (see the panel text).\nStill paused after a few seconds? %s, then open this scene again." % leave
 	if ship.docked:
 		# The game's helm bar shows Undock itself: an empty "docked" hint keeps the banner away.

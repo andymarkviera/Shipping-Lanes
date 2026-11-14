@@ -16,7 +16,7 @@ const LABELS: Dictionary = {
 	"ship_thruster_left": "Thruster left", "ship_thruster_right": "Thruster right",
 	"ship_brake": "Brake command", "ship_throttle_zero": "Zero throttle",
 	"camera_recenter": "Recenter camera", "interact": "Interact", "map_toggle": "Map",
-	"horn": "Horn", "pause": "Pause / settings",
+	"horn": "Horn", "pause": "Menu",
 }
 
 @export_range(0.0, 1.0) var master_volume: float = 0.8
