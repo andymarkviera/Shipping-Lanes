@@ -1,6 +1,17 @@
 extends RefCounted
-## Read-only local chart targets; no pathfinding or gameplay authority.
+## Read-only local chart targets; no gameplay authority.
+## Patch 2.5 item 1: in the game the target also carries "route", the turning
+## points of the way there by sea round the land (Progression.course).
+const Progression = preload("res://features/game/progression.gd")
+
 static func target(view: Node3D) -> Dictionary:
+	var found: Dictionary = _target(view)
+	if not found.is_empty() and view.get("game_mode") == true and is_instance_valid(view.ship):
+		var index: int = Progression.port_index(found.get("port_id", ""))
+		found.route = Progression.course(view.ship.global_position, Progression.nearest(found.position, view.ship.global_position), index)
+	return found
+
+static func _target(view: Node3D) -> Dictionary:
 	if view.heavy_mode and not view.heavy_jobs.active.is_empty():
 		var carrying: bool = view.ship.attached
 		return {"position": view.heavy_jobs.active.drop if carrying else view.ship.payload_body.global_position, "label": "Ocean drop-off" if carrying else "Heavy pickup", "kind": "drop" if carrying else "pickup"}
@@ -10,7 +21,7 @@ static func target(view: Node3D) -> Dictionary:
 	if not job.is_empty():
 		for port: Node3D in view.world_ports:
 			if port.definition.id == job.destination_port_id:
-				return {"position": port.berth_anchor.global_position, "label": port.definition.display_name, "kind": "delivery"}
+				return {"position": port.berth_anchor.global_position, "label": port.definition.display_name, "kind": "delivery", "port_id": port.definition.id}
 	return {}
 
 static func chart_vector(world: Vector3) -> Vector2:

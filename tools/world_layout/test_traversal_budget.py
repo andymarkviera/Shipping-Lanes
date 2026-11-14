@@ -63,4 +63,37 @@ class TraversalBudgetTest(unittest.TestCase):
             self.assertTrue(self.broken(change), change.__name__)
 
 
+class GameWorldTest(unittest.TestCase):
+    """Patch 2.5 item 1A: the game's land, straits and sea lanes."""
+    def setUp(self):
+        self.layout = budget.load()
+        self.geo = budget.game_world(self.layout)
+
+    def test_game_world_agrees(self):
+        self.assertEqual(budget.game_world_failures(self.layout), [])
+
+    def test_source_is_read(self):
+        self.assertEqual(len(self.geo['world']), 6)
+        self.assertEqual(self.geo['world'][0]['id'], 'port_brindle_quay')
+        self.assertEqual(len(self.geo['straits']), 4)
+        self.assertEqual(self.geo['masses'][-1][2], len(self.geo['land']))
+        self.assertGreaterEqual(len(self.geo['bergs']), 16)
+
+    def test_lanes_wrap_the_short_way(self):
+        north, south = self.geo['world'][4]['at'], self.geo['world'][5]['at']
+        length, _ = budget.sea_route(self.geo, (north[0], north[2] - 450), (south[0], south[2] - 450))
+        self.assertLess(length, abs(north[2] - south[2]))
+
+    def test_disagreements_are_caught(self):
+        def over_port(geo): geo['land'].append((-300.0, -600.0, 400.0, 400.0))
+        def narrow(geo): geo['straits'][0]['width'] = 80.0
+        def no_lane(geo): geo['lanes'].remove(tuple(geo['straits'][1]['start']))
+        def walled(geo): geo['land'].append((-6000.0, -4300.0, 13000.0, 100.0))
+        def edge(geo): geo['land'].append((5200.0, 0.0, 400.0, 400.0))
+        for change in (over_port, narrow, no_lane, walled, edge):
+            geo = copy.deepcopy(self.geo)
+            change(geo)
+            self.assertTrue(budget.game_world_failures(self.layout, geo), change.__name__)
+
+
 if __name__ == '__main__': unittest.main()
