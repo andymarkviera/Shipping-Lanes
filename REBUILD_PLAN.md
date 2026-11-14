@@ -1017,10 +1017,12 @@ with each mockup before calling an item done, and put both in the PR.
 
 **Patch 2.7 status (November 14, 2026):** item 1 (title logo and Press Any
 Button screen) merged; item 2 (logo to the top-left, fleet container ship
-sails in with a toon wake) in a draft PR. Both checked on Linux (headless
-checks and xvfb screenshots) only, not yet seen on Windows or a Mac. Until
-item 3 the old yellow menu buttons sit under the corner logo. Items 3-4 not
-started.
+sails in with a toon wake) merged; item 3 (Start / Options / Credits / Quit
+Game in white bold serif with a navy outline, the bobbing yellow swirl cursor,
+move/select sounds; Options holds Settings, Controls, Debug Mode and Restart
+Progress; a short credits roll) in a draft PR. All checked on Linux (headless
+checks and xvfb screenshots) only, not yet seen on Windows or a Mac. Item 4
+not started.
 
 ## 13. Patch 2.8 (Andy, November 14, 2026): pirate ships
 

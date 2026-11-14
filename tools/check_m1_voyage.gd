@@ -237,8 +237,9 @@ func play() -> void:
 	change_scene_to_file("res://features/main/main.tscn")
 	var menu: Node = await open_scene(MAIN_SCRIPT, "Home menu")
 	if menu == null: return
-	expect(menu.menu.game_button.text == "PLAY", "No save yet: the button says PLAY")
-	if not await click(menu, "PLAY"): return
+	# Patch 2.7 item 3: Start begins a new game or continues; Options holds Restart Progress.
+	expect(menu.menu.game_button.text == "Start" and not menu.menu.restart_button.visible, "No save yet: Start and no Restart Progress")
+	if not await click(menu, "Start"): return
 	var game: Node = await open_game("New game")
 	if game == null: return
 	var brindle: Node3D = game.world_ports[0]
@@ -363,8 +364,8 @@ func play() -> void:
 	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the voyage")
 	if menu == null: return
-	expect(menu.menu.game_button.text == "CONTINUE", "With a save, the button says CONTINUE")
-	if not await click(menu, "CONTINUE"): return
+	expect(menu.menu.restart_button.visible, "With a save, Options offers Restart Progress")
+	if not await click(menu, "Start"): return
 	game = await open_game("Continue")
 	if game == null: return
 	expect(game.reward_minor == wallet, "Continue restores the wallet after the fuel bill (wallet %d)" % game.reward_minor)
@@ -430,7 +431,7 @@ func play() -> void:
 	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the shipyard")
 	if menu == null: return
-	if not await click(menu, "CONTINUE"): return
+	if not await click(menu, "Start"): return
 	game = await open_game("Continue on the bulk carrier")
 	if game == null: return
 	expect(game.ship_kind == "bulk" and game.bulk_active == "bulk_1_grain" and game.fleet.size() == 1 and game.reward_minor == wallet, "Continue restores the ship, the fleet, the bulk job and the wallet (ship %s, wallet %d)" % [game.ship_kind, game.reward_minor])
@@ -440,12 +441,13 @@ func play() -> void:
 	menu = await open_scene(MAIN_SCRIPT, "Home menu at the end")
 	if menu == null: return
 	# M2: Restart Progress erases the save after a confirmation.
-	if not await click(menu, "RESTART PROGRESS"): return
+	if not await click(menu, "Options"): return
+	if not await click(menu, "Restart Progress"): return
 	expect(menu.menu.restart_confirmation.visible, "Restart Progress asks for confirmation")
 	menu.menu.restart_confirmation.hide()
 	menu.menu.restart_confirmation.confirmed.emit()
 	await settle()
-	expect(menu.menu.game_button.text == "PLAY" and not menu.menu.restart_button.visible, "After Restart Progress the button says PLAY again")
+	expect(not menu.menu.restart_button.visible and menu.menu.save_notice.text.begins_with("Progress erased"), "After Restart Progress there is no save to erase")
 
 func run() -> void:
 	await process_frame

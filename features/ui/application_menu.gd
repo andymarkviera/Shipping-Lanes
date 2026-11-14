@@ -4,6 +4,13 @@ extends Control
 signal selected(action: String)
 ## Aesthetics 5: the playful look (theme and the drawn backdrop).
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
+## Patch 2.7 item 3: the mockup's text menu with the yellow swirl cursor.
+const SWIRL = preload("res://features/ui/swirl_menu.gd")
+## The pages drawn over the title backdrop, in the mockup's text style.
+const MENU_PAGES: Array[String] = ["title", "options", "credits", "controls"]
+## Mockup pixels (941 high): the first row's top and the words' left edge.
+const LIST_TOP: float = 478.0
+const LIST_LEFT: float = 165.0
 var pages: Dictionary = {}
 var first_buttons: Dictionary = {}
 var timer_details: Label
@@ -19,7 +26,7 @@ var slot_status: Label
 var slot_result: Label
 var recovery_confirmation: ConfirmationDialog
 var play_button: Button
-## The real game: PLAY for a new game, CONTINUE once a save exists.
+## The real game: Start begins a new game, or continues once a save exists.
 var game_button: Button
 var restart_button: Button
 var restart_confirmation: ConfirmationDialog
@@ -34,6 +41,8 @@ var backdrop: Control
 var heading: Label
 var home: VBoxContainer
 var can_continue_session: bool = false
+var controls_list: Control
+var menu_font: Font
 
 static func friends_client() -> bool:
 	return OS.get_cmdline_user_args().has("--friends-client") or FileAccess.file_exists(OS.get_executable_path().get_base_dir().path_join("friends-client.flag"))
@@ -64,22 +73,36 @@ func _ready() -> void:
 	footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	footer.position = Vector2(64, -40)
 	add_child(footer)
-	home = page("title")
-	home.position.y = 210
-	home.add_theme_constant_override("separation", 14)
 	if friends_client():
+		home = page("title")
+		home.position.y = 210
+		home.add_theme_constant_override("separation", 14)
 		button(home, "SERVERS", "servers")
 		button(home, "SETTINGS", "settings")
 		button(home, "QUIT", "exit")
 	else:
-		# The player menu: PLAY (it reads CONTINUE once a save exists), SETTINGS, QUIT.
-		game_button = button(home, "PLAY", "game")
-		button(home, "SETTINGS", "settings")
+		# Patch 2.7 item 3: Start (new game or continue), Options, Credits, Quit Game.
+		var list: Control = swirl_page("title")
+		game_button = list.add_item("Start", "game")
+		list.add_item("Options", "options")
+		list.add_item("Credits", "credits")
+		list.add_item("Quit Game", "exit")
+		var options: Control = swirl_page("options", "title")
+		options.add_item("Settings", "settings")
+		options.add_item("Controls", "controls")
 		# Patch 2.3 debug (temporary): a throwaway world with every ship. See features/debug.
-		button(home, "DEBUG", "debug")
+		options.add_item("Debug Mode", "debug")
 		# Shown only when there is a save to erase (see main.gd refresh_save_status).
-		restart_button = button(home, "RESTART PROGRESS", "restart")
-		button(home, "QUIT", "exit")
+		restart_button = options.add_item("Restart Progress", "restart")
+		options.add_item("Back", "title")
+		var credits: Control = swirl_page("credits", "title")
+		credits.add_line("Shipping Lanes", 0.9, SWIRL.GOLD)
+		credits.add_line("A game by Andy Viera", 0.6)
+		credits.add_line("Made with the Godot Engine", 0.6)
+		credits.add_line("Thanks for sailing!", 0.5)
+		credits.add_item("Back", "title")
+		controls_list = swirl_page("controls", "options")
+		controls_list.add_item("Back", "options")
 		restart_confirmation = ConfirmationDialog.new()
 		restart_confirmation.title = "Restart progress?"
 		restart_confirmation.dialog_text = "This erases your saved game: money, ship and jobs.\nIt cannot be undone."
@@ -110,10 +133,14 @@ func _ready() -> void:
 	save_notice.custom_minimum_size.x = 320
 	save_notice.position = Vector2(64, 470)
 	save_notice.size = Vector2(320, 180)
+	if menu_font == null: menu_font = SWIRL.menu_font()
+	save_notice.add_theme_font_override("font", menu_font)
+	save_notice.add_theme_color_override("font_outline_color", SWIRL.NAVY)
 	add_child(save_notice)
 	add_to_group(DevMode.GROUP)
 	dev_mode_changed()
 	if friends_client(): return
+	resized.connect(place_home)
 	var saves: VBoxContainer = page("saves")
 	saves.position.y = 135
 	saves.add_theme_constant_override("separation", 6)
@@ -176,6 +203,24 @@ func page(id: String) -> VBoxContainer:
 	pages[id] = column
 	return column
 
+## A page in the mockup's text style; Esc goes to `back`.
+func swirl_page(id: String, back: String = "") -> Control:
+	var list: Control = SWIRL.new()
+	if menu_font == null: menu_font = SWIRL.menu_font()
+	list.font = menu_font
+	add_child(list)
+	list.back_action = back
+	list.chosen.connect(func(action: String) -> void: selected.emit(action))
+	pages[id] = list
+	return list
+
+## The Controls screen from Patch 2.5, as text under the logo.
+func show_controls(rows: Array) -> void:
+	controls_list.clear_lines()
+	for row: Array in rows:
+		var line: Label = controls_list.add_line("%s:  %s" % row, 0.42)
+		controls_list.list.move_child(line, line.get_index() - 1)
+
 func label(parent: Control, text: String, size: int) -> void:
 	var item: Label = Label.new()
 	item.text = text
@@ -200,33 +245,43 @@ func show_page(id: String, can_continue: bool) -> void:
 	for key: String in pages:
 		pages[key].visible = key == id
 	if is_instance_valid(title_backdrop):
-		var on: bool = id == "title"
+		var on: bool = id in MENU_PAGES
 		title_backdrop.set_backdrop_visible(on)
 		backdrop.visible = not on
 		heading.visible = not on
-		place_home()
+	place_home()
+	if id == "credits": pages.credits.roll()
 	if pages.has(id) and id != "playing":
-		first_buttons[pages[id]].grab_focus()
+		if pages[id].has_method("focus_first"): pages[id].focus_first()
+		else: first_buttons[pages[id]].grab_focus()
 
 func use_title_backdrop(screen: TitleScreen) -> void:
 	title_backdrop = screen
-	if not resized.is_connected(place_home): resized.connect(place_home)
 	show_page(current_page, can_continue_session)
 
-## Under the corner logo while the title backdrop shows, else where it was.
+## Patch 2.7 item 3: the text lists sit under the corner logo where the mockup
+## has them, sized by screen height so 16:10 and ultrawide keep its look.
 func place_home() -> void:
-	var under_logo: bool = is_instance_valid(title_backdrop) and title_backdrop.visible
-	home.position.y = maxf(210.0, size.y * 0.47) if under_logo else 210.0
-	# The save notice and developer list move down with it.
-	var drop: float = home.position.y - 210.0
-	save_notice.position.y = 470.0 + drop
-	if dev_column != null: dev_column.position.y = 112.0 + drop
+	if friends_client() or size.y <= 0.0: return
+	var unit: float = size.y / SWIRL.MOCKUP_HEIGHT
+	for id: String in MENU_PAGES:
+		pages[id].position = Vector2(LIST_LEFT, LIST_TOP) * unit
+		pages[id].layout(unit)
+	# The save notice goes under the visible list; the developer list beside it.
+	var rows: float = 4.0
+	if current_page == "options": rows = 5.0 if restart_button.visible else 4.0
+	save_notice.add_theme_font_size_override("font_size", maxi(13, roundi(19.0 * unit)))
+	save_notice.add_theme_constant_override("outline_size", maxi(3, roundi(6.0 * unit)))
+	save_notice.position = Vector2(LIST_LEFT, LIST_TOP + rows * SWIRL.ROW + 6.0) * unit
+	save_notice.size = Vector2(maxf(320.0, 560.0 * unit), 0.0)
+	save_notice.custom_minimum_size.x = save_notice.size.x
+	dev_column.position = Vector2(maxf(470.0, 600.0 * unit), 112.0 + maxf(0.0, LIST_TOP * unit - 210.0))
 
 ## Called by DevMode when F3 is pressed, and whenever the page changes.
 func dev_mode_changed() -> void:
 	var dev: bool = DevMode.enabled and not friends_client()
 	footer.visible = dev or friends_client()
-	save_notice.visible = current_page == "title" and not friends_client()
+	save_notice.visible = current_page in ["title", "options"] and not friends_client()
 	if dev_column != null: dev_column.visible = dev and current_page == "title"
 	if continue_button != null: continue_button.visible = can_continue_session
 
