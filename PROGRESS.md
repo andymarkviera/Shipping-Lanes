@@ -6292,3 +6292,23 @@ Checks (agent's Linux runner, Godot 4.7.2 official, headless, fresh user data):
 
 Limits: the old row list behind SHIPS is still built (hidden) because its
 refresh code is shared; it is no longer shown in the game.
+
+## Patch 2.3 item 1: debug game mode (November 14, 2026)
+
+A temporary test tool. It is not a feature, and it is easy to remove: the code is in `features/debug/debug_game.gd`, and the few hooks elsewhere are marked "Patch 2.3 debug".
+
+- Title menu: a DEBUG button under PLAY and SETTINGS. The title screen is otherwise unchanged. The button sets one tree flag and opens the real game scene. Back at the title, `main.gd` clears the flag.
+- In a debug world the game scene creates no voyage persistence, so it never opens, reads or writes a save file or save slot. MAIN MENU and Quit throw the world away.
+- What the debug layer does:
+  - Shows a red DEBUG tag on its own top layer, so it stays visible over the hangar and the Esc menu.
+  - Owns all 15 ladder ships and holds 1,000,000,000 credits, topped up whenever the balance falls below half.
+  - Adds a HANGAR button that opens the hangar anywhere. Away from a berth, Select swaps ships on the spot, keeping position and heading. The ship starts stopped, with a full tank and full hull. When docked, it uses the normal switch.
+  - Has a quick-travel list for all six ports, polar ports included. It jumps the ship, stopped, to the port's spawn point. It is refused while docked or loading.
+  - Shows a readout: ship name, current kn, top kn, and the time to full speed. "Full speed" means within 0.5 kn of top speed, worked out from the engine ramp and drag in `HandlingShip`. The starter ship comes out at about 21 s.
+- Jobs, docking, wake, splash, world wrap and fuel all run as normal. The only rule relaxed is "dock to switch ships", and only in debug.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: the new `tools/debug_game_check.gd` (72 checks). A normal game writes a real save. A debug session then confirms no persistence, the tag, all 15 ships, credits refill, a hangar Select while undocked that keeps the ship in place, swaps to all 15 ships with the readout, and quick travel to all six ports with ship 5. MAIN MENU then clears the flag. The real save files are byte-for-byte identical (MD5), and the default save path is untouched.
+- Also passed: import, `check_scripts` (197), boot, `check_flow`, `check_controls`, `check_starter`, `check_catalog`, `hangar_check`, `check_m1_voyage`, `check_helm_keys`, the container, bulk and heavy ladder checks, `diagnostics_probe`, `ports_probe`, `voyage_probe` and `sailing_save_probe`.
+- Not run: Windows, a playtest, screenshots (the panel layout has not been seen), and the Python stages. `debug_game_check` is not in the CI job, because `.github/workflows` was not edited.

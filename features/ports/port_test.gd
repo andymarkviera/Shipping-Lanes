@@ -93,6 +93,9 @@ var sell_deadline: int = 0
 var sfx: Dictionary = {}
 ## Patch 2.1 item 3, the game only: the solid icebergs, in Progression.ICEBERGS order.
 var icebergs: Array[StaticBody3D] = []
+## Patch 2.3 debug: the temporary debug layer (features/debug). Null in a normal game.
+const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
+var debug: CanvasLayer
 
 func play_sound(kind: String) -> void:
 	if sfx.has(kind): sfx[kind].play()
@@ -121,6 +124,8 @@ func button(parent: Node, title: String, action: Callable) -> Button:
 func _ready() -> void:
 	# A check may point the game at an isolated save. Players never set this.
 	if game_mode: save_path = str(get_tree().get_meta("game_save_path", save_path))
+	# Patch 2.3 debug: a throwaway world. No persistence, so no save is opened.
+	if game_mode and DEBUG_GAME.active(get_tree()): save_enabled = false
 	add_child(docking)
 	add_child(loading)
 	controls = PlayerControls.new()
@@ -279,6 +284,10 @@ func _ready() -> void:
 		layer.add_child(game_hud)
 		game_hud.setup(self)
 	select_port(0)
+	if game_mode and DEBUG_GAME.active(get_tree()):
+		debug = DEBUG_GAME.new()
+		debug.view = self
+		add_child(debug)
 	if save_enabled and not OS.get_cmdline_user_args().has("--ports-check") and not OS.get_cmdline_user_args().has("--voyage-check"):
 		persistence = preload("res://features/cargo/voyage_persistence.gd").new()
 		add_child(persistence)
@@ -439,6 +448,8 @@ func deliver_reason() -> String:
 
 ## SHIPS panel, first button: buy a ship, or switch to one already owned.
 func ship_action(kind: String) -> void:
+	# Patch 2.3 debug: Select away from a berth swaps on the spot.
+	if is_instance_valid(debug) and debug.swap(kind): return
 	if kind == ship_kind or docking.state(1) != "docked": return
 	var entry: Dictionary = Progression.SHIPS[kind]
 	if not fleet.has(kind):
