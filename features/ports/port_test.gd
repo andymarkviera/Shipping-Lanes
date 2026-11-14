@@ -22,6 +22,8 @@ var helm: ShipHelm
 var game_menu: CanvasLayer
 ## Patch 2.2 item 4: the full-screen boat hangar behind SHIPS.
 var hangar: CanvasLayer
+## Patch 2.4 item 7: the big 3D globe map behind M. The game only.
+var globe_map: CanvasLayer
 var camera: OrbitCameraRig
 var ocean: OceanPresentation
 var wake: ShipWake
@@ -244,6 +246,12 @@ func _ready() -> void:
 		hangar = preload("res://features/game/boat_hangar.gd").new()
 		hangar.view = self
 		add_child(hangar)
+		# Patch 2.4 item 7: M opens the big globe map over the running world.
+		globe_map = preload("res://features/game/globe_map.gd").new()
+		globe_map.view = self
+		add_child(globe_map)
+		controls.command_requested.connect(func(action: StringName) -> void:
+			if action == &"map_toggle": globe_map.toggle())
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
