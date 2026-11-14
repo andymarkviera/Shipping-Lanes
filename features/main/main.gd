@@ -8,9 +8,12 @@ const GAME_SAVE: String = "user://worlds/game/voyage.db"
 ## Patch 2.3 debug (temporary): the throwaway debug world. See features/debug.
 const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
 const TITLE_SEEN: StringName = &"title_attract_seen"
+const GAME_MENU = preload("res://features/game/game_menu.gd")
 var developer_overlay: DeveloperOverlay
 var state: State = State.BOOT
 var settings_return: State = State.TITLE
+## The menu page Settings was opened from (Options), shown again on close.
+var settings_page: String = ""
 var session: TestSession
 var continuation: Dictionary = {}
 var slots: PrivateSaveSlots = PrivateSaveSlots.new()
@@ -167,7 +170,9 @@ func _ready() -> void:
 	# Patch 2.3 debug: back at the title, any debug world is over.
 	if get_tree().has_meta(DEBUG_GAME.META): get_tree().remove_meta(DEBUG_GAME.META)
 	menu.selected.connect(navigate)
-	$UI/Settings.closed.connect(func() -> void: transition(settings_return))
+	$UI/Settings.closed.connect(func() -> void:
+		transition(settings_return)
+		if settings_return == State.TITLE and settings_page in ["options", "controls"]: navigate(settings_page))
 	controls.command_requested.connect(func(action: StringName) -> void:
 		if action == &"pause":
 			pause_session())
@@ -221,7 +226,7 @@ func navigate(action: String) -> void:
 			for suffix: String in ["", "-wal", "-shm"]:
 				if FileAccess.file_exists(game_save + suffix): DirAccess.remove_absolute(game_save + suffix)
 			refresh_save_status()
-			menu.save_notice.text = "The save could not be erased. Close other copies of the game and try again." if FileAccess.file_exists(game_save) else "Progress erased. PLAY starts a new game at Brindle Quay."
+			menu.save_notice.text = "The save could not be erased. Close other copies of the game and try again." if FileAccess.file_exists(game_save) else "Progress erased. Start begins a new game at Brindle Quay."
 		"play":
 			if FileAccess.file_exists("user://public_services.json"): get_tree().change_scene_to_file("res://features/network/public_entry.tscn")
 			else: start_saved_session()
@@ -240,6 +245,11 @@ func navigate(action: String) -> void:
 		"continue": continue_session()
 		"servers": get_tree().change_scene_to_file("res://features/network/public_entry.tscn")
 		"settings": open_settings()
+		# Patch 2.7 item 3: Options and Credits are pages of the title menu.
+		"options", "credits": menu.show_page(action, not continuation.is_empty())
+		"controls":
+			menu.show_controls(GAME_MENU.rows_for(controls.preferences))
+			menu.show_page("controls", not continuation.is_empty())
 		"pause": pause_session()
 		"resume": transition(State.PLAYING)
 		"title": return_to_title()
@@ -305,6 +315,7 @@ func open_settings() -> void:
 	if state == State.SETTINGS:
 		return
 	settings_return = State.PAUSED if is_instance_valid(session) else state
+	settings_page = menu.current_page
 	transition(State.SETTINGS)
 	$UI/Settings.open(controls)
 
@@ -375,11 +386,11 @@ func refresh_save_status() -> void:
 	if ApplicationMenu.friends_client(): return
 	menu.slot_status.text = slots.status(menu.slot_picker.selected)
 	var game_saved: bool = FileAccess.file_exists(str(get_tree().get_meta("game_save_path", GAME_SAVE)))
-	menu.game_button.text = "CONTINUE" if game_saved else "PLAY"
 	menu.restart_button.visible = game_saved
 	menu.play_button.text = "LOCAL SAVE TEST" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE LOCAL SAVE TEST"
-	menu.save_notice.text = "CONTINUE resumes your saved voyage." if game_saved else "PLAY starts a new game at Brindle Quay.\n\nCarry cargo between ports, pay for fuel and repairs, and save up for bigger ships. The game saves by itself."
-	if DevMode.enabled: menu.save_notice.text += "\n\nTest saves — local slot %d: %s" % [active_slot + 1, slots.status(active_slot)]
+	# Patch 2.7 item 3: the mockup's menu has no notice; it only shows messages.
+	menu.save_notice.text = "Test saves — local slot %d: %s" % [active_slot + 1, slots.status(active_slot)] if DevMode.enabled else ""
+	if is_node_ready(): menu.place_home()
 
 ## F3 pressed: the menu notice gains or loses its test-save line.
 func dev_mode_changed() -> void:

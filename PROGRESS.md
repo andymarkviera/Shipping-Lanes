@@ -7166,3 +7166,34 @@ xvfb run `check_title` failed its 6 s wall-clock wait while software GL compiled
 shaders; the wait is now 15 s and later runs passed. Not run: an export,
 Windows, Mac, a real gamepad, frame-time measurement on real hardware, a
 playtest.
+
+## Patch 2.7 item 3 — menu list and yellow swirl cursor (November 14, 2026)
+
+- **Menu** (`features/ui/swirl_menu.gd`, used by `application_menu.gd`): the
+  home page is now the mockup's text list, Start, Options, Credits, Quit Game,
+  under the corner logo at `menu_ship_arrives.png`'s place and size (scaled by
+  screen height). White bold serif (Georgia on Windows/Mac, a system font, no
+  font file) with a navy outline and soft shadow. A yellow wind-swirl cursor,
+  drawn in code, glides to the selected word and bobs. Arrows, W/S, mouse hover
+  and click, gamepad d-pad/stick and A all move and choose; Esc/B goes back. A
+  short tick on move and a rising blip on select (generated tones).
+- **Start** begins a new game or continues the one save (the game has one
+  save; the local save slots stay developer tests). **Options** holds Settings,
+  Controls (the Patch 2.5 key list), Debug Mode (moved from the title), Restart
+  Progress (only with a save) and Back; Settings closes back to Options.
+  **Credits** rolls up: Shipping Lanes, a game by Andy Viera, made with the
+  Godot Engine. **Quit Game** quits; Cmd+Q still works on Mac. The save notice
+  is empty unless there is a message (the mockup has no text there). The
+  friends-client menu is unchanged.
+- `check_m1_voyage` now clicks Start, and Options > Restart Progress.
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`,
+`--quit-after 10`, `check_flow`, `check_controls`, `check_starter`,
+`check_title`, `check_m1_voyage`, `debug_game_check`, the friends-client menu
+check, `diagnostics_probe`, `session_probe`, `handling_probe`,
+`economy_probe`: all passed. `slots_probe` and `migration_probe` fail on this
+runner with identical output before and after the change. Under xvfb at
+1672x941: screenshots of home, Options, Controls and Credits, and a scripted
+S / Down / Esc walk. Not run: an export, Windows, Mac (Georgia only seen via its
+Linux fallback, DejaVu Serif), a real gamepad, sound on real hardware, a
+playtest.
