@@ -866,3 +866,57 @@ boat, the section 7 no-jank checklist applies to every item.
    5-10 line Windows playtest checklist for all of Patch 2.4.
 
 **Patch 2.4 status (November 14, 2026):** item 1 (hull trim), item 2 (faster turning: turn rates doubled, radius at most 460 m, big still wider) and item 3 (bigger ports: three 285 m berths and ~800 m quays at every port, polar too; docked hulls lie a 1.2-3 m fender gap off the quay, scaled to the beam) are each in a draft PR. Item 4 (mooring ropes: fairleads and bitts at bow and stern on every ladder model; after docking, toon bow and stern lines, plus springs on ships 120 m or longer, fly out to the quay bollards; Undock holds the ship 1 s while they let go and reel in) is in a draft PR too. Item 5 (containers one by one: six toon quay cranes on every berth, booms up while idle; a docked container ship gets 2 (ship 1) to 6 (ship 5) of them, and they lift each box from the quay onto its slot or back, bay by bay and bottom tier first; loading time stays the timer's, about 26 s for a full ship 1 and 65 s for a full ship 5; Undock waits for the last box) is in a draft PR too. Item 6 (heavy-lift loads: job 1, 2 and 3 at every port carry a wind turbine tower section, a transformer block and a tug hull on cradles, toon pieces built at the job load's real size, so bigger heavy lifters carry bigger pieces, shown on the floating load while loading and on deck) is in a draft PR too. Item 7 (globe map: M opens a big toon 3D globe in the middle of the screen with every port, polar ones included, icebergs, the ship's arrow and the job's destination; drag turns it freely round and over the poles, the wheel zooms, M or Esc closes; the world, helm and minimap keep running) is in a draft PR too. Item 8 (small boats: a Small boats family in the hangar and debug mode with a fishing boat, 200 credits, 12 kn; a speedboat, 400 credits, 36 kn; and an offshore racer, 600 credits, 42 kn; toon models with their own scaled wake and splash; no cargo jobs; the speedboat and racer jump the waves on a physics arc, the racer up to about 1.5 s in the air, and land with a soft dip and a spray ring, never flipping) is in a draft PR too. All eight were checked headless on Linux and await a Windows playtest.
+
+## 10. Patch 2.5 (Andy, November 14, 2026)
+
+Andy wants the world to look like a proper world. Same rules as Patch 2.4:
+one PR each, in this order (split into A/B parts when an item is too big for
+one agent run), Godot 4.7.2, Wind Waker look, nothing that relies on
+pausing, saves and on-hold gas/oil/refinery/cargo-fuel code intact, debug
+mode (section 8) keeps working (port quick-travel reaches every port), the
+section 7 no-jank checklist applies to every item, and frame time on the
+Windows target stays smooth. **Keep every existing port**: same IDs, same
+jobs, same saves; land is shaped around them, never on top of them.
+
+1. **Landmasses, straits and oceans.** Replace open water with real-feeling
+   geography on the wrapping world: several continents and big islands with
+   toon coastlines and beaches, open oceans between them, and narrow
+   straits and channels like real life (think Gibraltar, Malacca, Bosphorus,
+   a Panama-style canal cut) that ships thread through. Land is solid
+   (collision, ships cannot sail through it, local navigation and spawn
+   clearance respect it). Every port sits on a coast with clear sea access
+   and every port-to-port job stays reachable; update the world layout data,
+   traversal budget and its tests. The minimap and the M globe draw the land.
+2. **Bridges you pass under.** Put toon bridges across some straits and
+   channels (at least three, one of them a big suspension bridge). Deck
+   clearance is tall enough for the biggest ship in every family, pillars
+   are solid and sit out of the main channel, and the bridge reads well from
+   the chase camera when passing under.
+3. **North Pole biome.** Sailing into the polar region blends in a colder
+   look: cooler color grading, paler sky and water, a little fog, and light
+   snow falling around the camera. It fades in and out smoothly at the
+   region edge, like entering a new biome. Icebergs and polar ports stay.
+4. **Desert biome.** One region is desert-themed: sand dunes and mesas,
+   warm hazy grading, a dry palette, a desert-style look for the ports
+   already in that region (same ports, new dressing).
+5. **Tropical biome.** One region is tropical: palm islands, turquoise
+   shallows look (visual only, no hidden shallows), lush green coasts,
+   bright saturated grading, tropical dressing for its ports.
+6. **Rainy city port biome.** One region is a big city port: skyline,
+   cranes, lights in windows, and it is always raining there (rain
+   particles around the camera, wet darker grading, ripples). Same port
+   IDs and jobs; the rain fades in and out at the region edge.
+7. **Volcano.** Put one volcano island at a random-looking spot on the map
+   (choose it once, fixed in the layout data so it is the same every run
+   and in multiplayer later): toon cone, smoke plume, lava glow at night,
+   solid collision, away from shipping lanes and ports.
+8. **Polish pass: remove unneeded text.** Scour every scene, HUD panel,
+   menu, hangar, port screen and debug overlay for text that only exists
+   to explain things to the developer or AI (control hints stuck on
+   screen, placeholder labels, notes, technical names, step numbers). Keep
+   only what a player needs, in short plain words; move control help into
+   one tidy Controls screen in the pause/settings area (not on the HUD).
+   Debug mode may keep its readouts. The last item's PR carries a 5-10
+   line Windows playtest checklist for all of Patch 2.5.
+
+**Patch 2.5 status (November 14, 2026):** planned, not started.
