@@ -1012,3 +1012,33 @@ with each mockup before calling an item done, and put both in the PR.
 
 **Patch 2.7 status (November 14, 2026):** designed by Andy, starts after
 Patch 2.6.
+
+## 13. Patch 2.8 (Andy, November 14, 2026): pirate ships
+
+Andy wants massive, detailed pirate ships in the hangar's fun-boat section.
+Starts after Patch 2.7. Same rules as before (one PR each, Godot 4.7.2,
+Windows and Mac, saves intact, smooth frame time, debug mode owns them).
+The hangar's "Small boats" filter is renamed **Other boats** (same family
+ID underneath, saves unchanged) and holds the small boats plus the pirate
+ships. Like the small boats: no cargo jobs, just for sailing.
+
+1. **Pirate galleon (flagship).** A huge three-masted galleon, about the
+   length of a mid-size container ship, toon-styled but richly detailed:
+   carved stern castle with lit cabin windows, figurehead, gun decks with
+   rows of cannons, full rigging, ratlines, crow's nest, lanterns, ship's
+   wheel on deck, a big black Jolly Roger and pennants that flap. Slow and
+   heavy (about 10-12 kn), wide turns, deep roll in waves. Priced as a
+   prestige buy.
+2. **Pirate brigantine.** A smaller, faster two-masted pirate ship (about
+   14-16 kn), same detail level, its own colors and flag.
+3. **Living sails and rigging.** Sails unfurl when throttle goes up and
+   furl when stopped, billow and flutter with speed, flags and pennants
+   stream; ropes and sails sway with the roll. Own bow wave, wake and spray
+   scaled to each hull; float level at rest (Patch 2.4 trim checks apply).
+4. **Cannon salute (cosmetic).** A key fires a broadside: muzzle flashes,
+   toon smoke puffs and a boom, splashes out at sea. Purely cosmetic: no
+   damage, no combat, nothing hit. Short cooldown. Hangar cards and the
+   debug list include both ships. Item 4's PR carries a short playtest
+   checklist.
+
+**Patch 2.8 status (November 14, 2026):** planned, starts after Patch 2.7.
