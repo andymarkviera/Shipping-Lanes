@@ -43,6 +43,8 @@ var applied: float = -1.0
 var base: Dictionary = {}
 ## Patch 2.5 item 4: a biome painted over this one after every repaint (the desert).
 var overlay: Node
+## Patch 2.5 item 5 on: more biomes painted over it, after the overlay, in order.
+var overlays: Array[Node] = []
 
 ## Where the polar look is, 0..1, for a world position (any copy across the wrap).
 static func weight(at: Vector3) -> float:
@@ -171,3 +173,4 @@ func apply(value: float) -> void:
 		if falling and view_camera != null: snow.global_position = view_camera.global_position + Vector3(0, 22, 0)
 		snow.emitting = falling
 	if overlay != null: overlay.paint()
+	for layer: Node in overlays: layer.paint()
