@@ -25,7 +25,7 @@ varying vec3 spot;
 void vertex() { spot = VERTEX; }
 void fragment() {
 	vec3 p = normalize(spot);
-	vec2 uv = vec2(atan(p.x, p.z) / 6.2831853 + 0.5, 0.5 - asin(clamp(p.y, -1.0, 1.0)) / 3.1415927);
+	vec2 uv = vec2(atan(p.x, p.z + (abs(p.x) + abs(p.z) < 1e-6 ? 1e-6 : 0.0)) / 6.2831853 + 0.5, 0.5 - asin(clamp(p.y, -1.0, 1.0)) / 3.1415927);
 	vec3 colour = texture(map, uv).rgb;
 	// Toon light from the upper left, like the minimap: lit, then one shade band.
 	float light = dot(NORMAL, normalize(vec3(-0.5, 0.6, 0.65)));
