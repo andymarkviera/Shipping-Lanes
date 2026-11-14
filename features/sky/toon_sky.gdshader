@@ -57,7 +57,7 @@ void sky() {
 		color = mix(color, sun_color, step(0.9978, facing));
 	}
 
-	float turn = atan(EYEDIR.x, EYEDIR.z) / TAU + 0.5 + TIME * drift_speed;
+	float turn = atan(EYEDIR.x, EYEDIR.z + (abs(EYEDIR.x) + abs(EYEDIR.z) < 1e-6 ? 1e-6 : 0.0)) / TAU + 0.5 + TIME * drift_speed;
 	float lift = asin(clamp(EYEDIR.y, -1.0, 1.0)) / TAU;
 	// Small high clouds first, then the big bank that sits on the horizon.
 	vec2 high = cloud_ring(vec2(fract(turn * 0.7 + 0.31) * 18.0, (lift - 0.055) * 18.0), 18.0, 41.0, cloud_cover * 0.6);
