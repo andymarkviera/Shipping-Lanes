@@ -6878,3 +6878,40 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
 
 Not run: a rendered screenshot, Windows, frame timing on the target, a
 playtest. Nobody has seen the tropics on screen yet.
+
+## Patch 2.5 item 6: Rainy city port biome — November 14, 2026
+
+- Region: Ironreach's west coast round Slatewater Works
+  (`port_slatewater_works`, same ID, slot, berth, jobs and saves). Always
+  raining within 740 m of (1650, 700), dry past 1,150 m, eased in time (at
+  least 1.5 s). Brindle Quay (the start) and every other port stay dry; it
+  never overlaps the polar, desert or tropical looks.
+- New `features/sky/rain_biome.gd`: wet darker grading (less saturation and
+  brightness, a cool ramp), grey overcast sky, murky fog, dim sun, dark sea.
+  Painted last over the other biomes (`polar.overlays`). One pooled
+  `GPUParticles3D` (1,600 streaks) follows the camera and carries over a world
+  wrap; `amount_ratio` follows the blend, so the rain fades at the edge.
+  Rain rings on the sea: a `rain_amount` uniform in `stylized_ocean.gdshader`
+  (0 = off and skipped everywhere else), faded out past 180 m.
+- New `features/toon/city_look.gd`: a seeded skyline of 218 towers on the city
+  land as three MultiMeshes (slate, brick, concrete) plus roofs and red roof
+  lights; windows are a shader grid with lit panes that glows brighter in the
+  rain and blends flat far away (no shimmer); four yellow tower cranes. Not
+  solid, 200 m clear of every quay. City land gets a wet dark top.
+  Slatewater gets a wet slate quay, brick sheds, lit brick blocks behind the
+  quay and street lamps (looks only; colliders unchanged).
+- `export_presets.cfg` lists both scripts. `world_land_check` allows seven
+  shared land materials. New check `tools/rain_biome_check.gd` (54).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts` (219), `--quit-after 10`, `rain_biome_check` (54),
+`tropical_biome_check` (55), `desert_biome_check` (41), `polar_biome_check`
+(46), `world_land_check` (166), `globe_map_check`, `debug_game_check`,
+`hangar_check`, `crane_check`, `mooring_check`, `small_boats_check`,
+container/bulk/heavy ladder checks, `check_m1_voyage`, `check_catalog`,
+`check_controls`, `check_flow`, `check_starter`, the CI Stage 2 and Stage 4
+probe sets, `traversal_budget.py` and the `tools/world_layout` tests: all
+passed.
+
+Not run: a rendered screenshot, Windows, frame timing on the target, a
+playtest. Nobody has seen the rain on screen yet.
