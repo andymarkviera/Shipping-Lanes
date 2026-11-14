@@ -6,6 +6,7 @@ const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_poi
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const TOON_COAST = preload("res://features/toon/toon_coast.gd")
+const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
@@ -34,6 +35,8 @@ var loading = preload("res://features/cargo/port_loading.gd").new()
 var mooring: Node3D
 ## Patch 2.4 item 5, the game only: quay cranes move containers one at a time.
 var cranes: Node3D
+## Patch 2.5 item 2: the bridges over the straits, under one node.
+var bridges: Node3D
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
@@ -174,6 +177,10 @@ func _ready() -> void:
 		for rect: Rect2 in Progression.LAND: add_land(rect)
 		for rect: Rect2 in Progression.ICE_SHELVES: add_land(rect, true)
 		for index: int in Progression.ICEBERGS.size(): add_iceberg(index)
+		bridges = Node3D.new()
+		bridges.name = "Bridges"
+		add_child(bridges)
+		for index: int in Progression.BRIDGES.size(): bridges.add_child(TOON_BRIDGE.build(index))
 		# The game's own container jobs: three per port, replaced as they are delivered.
 		offers._offers.clear()
 		offers.restock()

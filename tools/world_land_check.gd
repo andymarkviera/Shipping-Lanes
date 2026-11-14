@@ -8,6 +8,9 @@ extends SceneTree
 ## ship driven at a coast stops at it, and the minimap course follows the route.
 ## Part B: toon coasts with surf and harbour walls; the globe atlas draws land
 ## as one shape per continent with the straits open.
+## Patch 2.5 item 2: bridges over the straits: at least three, one suspension;
+## the deck clears the tallest ship of every family; towers and piers are solid,
+## on land and out of the channel; a ship 5 sized box sweeps under each deck.
 ## Isolated save folder.
 ## Run: godot --headless --path . --script res://tools/world_land_check.gd
 
@@ -17,6 +20,8 @@ const Navigation = preload("res://features/ports/local_navigation.gd")
 const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const GLOBE_MAP = preload("res://features/game/globe_map.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
+const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
+const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 ## The biggest hull in any family (bulk ship 5), with room for its swing.
 const BIGGEST: Vector3 = Vector3(38, 8, 276)
 var failures: Array[String] = []
@@ -145,6 +150,8 @@ func run() -> void:
 	expect(coasts == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block has a toon coast (%d)" % coasts)
 	expect(paints.size() <= 4 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
 	expect(beaches >= Progression.LANDMASSES.size() and surfs.size() == 1, "Beaches have surf with one shared shader (%d beaches)" % beaches)
+	# The surf takes the sea's time on the game's next drawn frame.
+	for frame: int in 2: await process_frame
 	expect(game.surf_paint != null and float(game.surf_paint.get_shader_parameter("water_time")) > 0.0 and absf(float(game.surf_paint.get_shader_parameter("water_time")) - game.ocean.elapsed) < 0.5, "Surf rides the sea's swell")
 	# A port's side of the land is a harbour wall at deck height, not a beach.
 	var ports: Array[Vector2] = []
@@ -189,7 +196,95 @@ func run() -> void:
 	ship.command_throttle(0.0)
 	expect(deepest > start + 40.0, "The ship sailed at the shore (%.0f m)" % (deepest - start))
 	expect(deepest < shore, "Land is solid: the ship stops at the shore (centre %.0f m short)" % (shore - deepest))
+	await check_bridges(game)
 	finish()
+
+func top_of(node: Node, base: Transform3D) -> float:
+	var best: float = -INF
+	var visual: VisualInstance3D = node as VisualInstance3D
+	if visual != null and visual.is_visible_in_tree(): best = (base * visual.global_transform * visual.get_aabb()).end.y
+	for child: Node in node.get_children(): best = maxf(best, top_of(child, base))
+	return best
+
+func check_bridges(game: Node) -> void:
+	var styles: Array = Progression.BRIDGES.map(func(entry: Dictionary) -> String: return entry.style)
+	expect(Progression.BRIDGES.size() >= 3 and styles.has("suspension"), "At least three bridges, one a suspension bridge (%d)" % Progression.BRIDGES.size())
+	# The tallest ship of every family, dressed as in the game, plus the
+	# biggest heavy load on the biggest lifter's deck.
+	var tallest: float = 0.0
+	var tallest_kind: String = ""
+	var kind_before: String = game.ship_kind
+	var heavy_before: bool = game.heavy_mode
+	for kind: String in Progression.SHIPS:
+		game.ship_kind = kind
+		game.heavy_mode = Progression.heavy_tier(kind) > 0
+		var probe: Node3D = game.create_ship()
+		probe.position = Vector3(0, 0, -20000)
+		# Measured only: no sound, no physics.
+		probe.process_mode = Node.PROCESS_MODE_DISABLED
+		game.add_child(probe)
+		CHUNKY_LOOK.dress_ship(probe, kind)
+		var height: float = top_of(probe, probe.global_transform.affine_inverse())
+		if game.heavy_mode: height = maxf(height, 7.5 + 8.0 * sqrt(probe.definition.hull_size_m.x / 24.0))
+		if height > tallest:
+			tallest = height
+			tallest_kind = kind
+		probe.queue_free()
+	game.ship_kind = kind_before
+	game.heavy_mode = heavy_before
+	for frame: int in 3: await process_frame
+	print("WORLD LAND tallest ship %s %.1f m, bridge clearance %.0f m" % [tallest_kind, tallest, TOON_BRIDGE.deck_bottom()])
+	expect(tallest > 30.0 and TOON_BRIDGE.deck_bottom() >= tallest + 15.0, "Bridge decks clear the tallest ship (%s, %.1f m) by 15 m" % [tallest_kind, tallest])
+	var paints: Dictionary = {}
+	var space: PhysicsDirectSpaceState3D = game.get_world_3d().direct_space_state
+	for index: int in Progression.BRIDGES.size():
+		var entry: Dictionary = Progression.BRIDGES[index]
+		var strait: Dictionary = Progression.bridge_strait(index)
+		if not expect(not strait.is_empty(), "%s crosses a strait" % entry.name): continue
+		var bridge: Node3D = game.bridges.get_node_or_null(NodePath(entry.id))
+		if not expect(bridge != null, "%s is in the game" % entry.name): continue
+		var half: float = TOON_BRIDGE.half_span(index)
+		var way: Vector2 = TOON_BRIDGE.across(index)
+		var at: Vector2 = entry.at
+		var cut: Rect2 = Rect2(strait.from, Vector2.ZERO).expand(strait.to).grow(half)
+		expect(cut.has_point(at), "%s sits on its strait" % entry.name)
+		# Both ends land on land: every point past the shore is solid.
+		var landed: bool = true
+		var along: float = half + 10.0
+		while along <= TOON_BRIDGE.reach(index):
+			landed = landed and solid(at + way * along) and solid(at - way * along)
+			along += 10.0
+		expect(landed, "%s runs onto land at both ends" % entry.name)
+		# Towers and piers: solid, on land, out of the channel.
+		var piers: StaticBody3D = bridge.get_node("Piers")
+		var on_land: bool = piers.collision_layer == CollisionRules.SHORE and piers.get_child_count() >= 4
+		for collider: Node in piers.get_children():
+			var shape: CollisionShape3D = collider as CollisionShape3D
+			var size: Vector3 = (shape.shape as BoxShape3D).size
+			for corner: Vector3 in [Vector3(1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, 1), Vector3(-1, 0, -1)]:
+				var point: Vector3 = shape.global_transform * (corner * size / 2.0)
+				on_land = on_land and solid(Vector2(point.x, point.z)) and not cut.has_point(Vector2(point.x, point.z))
+		expect(on_land, "%s stands its %d towers and piers on land, out of the channel" % [entry.name, piers.get_child_count()])
+		# Looks: two merged meshes, the rigging culled sooner than the structure.
+		var body: MeshInstance3D = bridge.get_node("Bridge")
+		var rigging: MeshInstance3D = bridge.get_node("Rigging")
+		expect(body.visibility_range_end > 0.0 and rigging.visibility_range_end > 0.0 and rigging.visibility_range_end < body.visibility_range_end, "%s culls far away" % entry.name)
+		for mesh: MeshInstance3D in [body, rigging]:
+			for surface: int in mesh.mesh.get_surface_count(): paints[mesh.get_active_material(surface)] = true
+		# A ship 5 sized box, as tall as the tallest ship, sweeps under the deck.
+		var dir: Vector2 = (strait.to - strait.from).normalized()
+		var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
+		var box: BoxShape3D = BoxShape3D.new()
+		box.size = Vector3(BIGGEST.x * 1.5, tallest + 6.0, BIGGEST.z)
+		query.shape = box
+		query.collision_mask = CollisionRules.SHORE
+		var clear: bool = true
+		for step: int in range(-6, 7):
+			var centre: Vector2 = at + dir * step * 50.0
+			query.transform = Transform3D(Basis(Vector3.UP, atan2(dir.x, dir.y)), Vector3(centre.x, tallest / 2.0 - 3.0, centre.y))
+			clear = clear and space.intersect_shape(query, 1).is_empty()
+		expect(clear, "A ship 5 passes under %s" % entry.name)
+	expect(paints.size() <= 3 + TOON_BRIDGE.PAINT.size() and not paints.has(null), "Bridges share their materials (%d)" % paints.size())
 
 func finish() -> void:
 	print("WORLD LAND CHECK: %d checks, %d failed" % [checks, failures.size()])
