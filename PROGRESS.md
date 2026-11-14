@@ -7103,3 +7103,33 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
 `rain_biome_check` and `polar_biome_check` all passed. Not run: anything on a
 Mac (frame rate, FSR look, heat and the arm64 feature tag are untested there),
 a Windows run, a playtest.
+
+## Patch 2.7 item 1 — title logo and Press Any Button screen (November 14, 2026)
+
+- **Attract screen** (`features/title/title_screen.gd`): shown once per launch
+  over the existing menu. The game's own ocean shader (royal-blue palette,
+  `title_ocean.tres`) seen straight down in a small SubViewport, the mockup's
+  light-blue streaks and curled swirl foam drifting on top, the logo centre-top
+  and "Press Any Button" with its swirl flourishes pulsing below. Layout uses
+  the mockup's proportions; keep-aspect art scales cleanly on 16:10 and
+  ultrawide. Any key, mouse click or gamepad button fades it out (0.35 s) and
+  shows the menu; the press is consumed so it cannot also press a menu button.
+  Ctrl/Cmd/Alt shortcuts (Cmd+Q, Alt+F4) pass through; F3 still toggles debug
+  mode. Skipped on headless runs unless `--title-check` is given, so scripted
+  checks still start at the menu.
+- **Art:** `tools/build_title_art.gd` cuts the logo and the "Press Any Button"
+  line out of Andy's mockup (keyed, fringe removed, 2x Lanczos, 2456 px wide
+  logo) plus the streak layer. It is a cleaned-up crop, not hand-drawn vector
+  art.
+- **Name:** visible title is Shipping Lanes (window title, menu heading, macOS
+  app name and export zip, EXPORT.md). Bundle id, save paths and internal IDs
+  unchanged. The frozen online screens/login text still say Container Ship Sim.
+- **Export:** new files are picked up by the presets' "all resources" filter;
+  both presets now exclude `docs/*` so the mockups do not ship.
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`,
+`check_flow`, `check_controls`, `check_catalog`, `check_starter`,
+`check_m1_voyage`, `--diagnostics-check`, `--quit-after 10`, new `check_title`
+(headless and under xvfb at 1672x941, 1440x900, 2560x1080 with screenshots), a
+120-frame windowed boot under xvfb: all passed. Not run: an export, Windows,
+Mac, a real gamepad, a playtest.

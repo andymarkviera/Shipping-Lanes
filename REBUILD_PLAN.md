@@ -1015,8 +1015,9 @@ with each mockup before calling an item done, and put both in the PR.
    Retina. The last PR carries a 5-10 line playtest checklist for Windows
    and Mac.
 
-**Patch 2.7 status (November 14, 2026):** designed by Andy, starts after
-Patch 2.6.
+**Patch 2.7 status (November 14, 2026):** item 1 (title logo and Press Any
+Button screen) in a draft PR, checked on Linux (headless checks and xvfb
+screenshots) only, not yet seen on Windows or a Mac; items 2-4 not started.
 
 ## 13. Patch 2.8 (Andy, November 14, 2026): pirate ships
 

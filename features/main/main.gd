@@ -7,6 +7,7 @@ const GAME_SCENE: String = "res://features/game/game.tscn"
 const GAME_SAVE: String = "user://worlds/game/voyage.db"
 ## Patch 2.3 debug (temporary): the throwaway debug world. See features/debug.
 const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
+const TITLE_SEEN: StringName = &"title_attract_seen"
 var developer_overlay: DeveloperOverlay
 var state: State = State.BOOT
 var settings_return: State = State.TITLE
@@ -158,7 +159,7 @@ func _ready() -> void:
 		return
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_min_size(Vector2i(960, 640))
-		DisplayServer.window_set_title("Container Ship Sim")
+		DisplayServer.window_set_title("Shipping Lanes")
 	if not ApplicationMenu.friends_client():
 		developer_overlay = DeveloperOverlay.new()
 		add_child(developer_overlay)
@@ -173,7 +174,16 @@ func _ready() -> void:
 	active_slot = clampi(int(get_tree().get_meta("local_save_slot", 0)), 0, 2)
 	refresh_save_status()
 	transition(State.TITLE)
+	show_attract_screen()
 	print("Shipping Lanes: Main scene loaded successfully.")
+
+## Patch 2.7 item 1: the "Press Any Button" screen, once per launch (not when
+## coming back from a game). Skipped headless so scripted checks start at the menu.
+func show_attract_screen() -> void:
+	if get_tree().has_meta(TITLE_SEEN): return
+	if DisplayServer.get_name() == "headless" and not OS.get_cmdline_user_args().has("--title-check"): return
+	get_tree().set_meta(TITLE_SEEN, true)
+	add_child(TitleScreen.new())
 
 func navigate(action: String) -> void:
 	if ApplicationMenu.friends_client() and action not in ["servers", "settings", "title", "exit"]: return
