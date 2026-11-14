@@ -19,6 +19,11 @@ static func apply(sun: DirectionalLight3D, environment: Environment) -> void:
 	material.set_shader_parameter("horizon_color", HORIZON)
 	var sky: Sky = Sky.new()
 	sky.sky_material = material
+	# Mac (Forward+/Metal): the sky shader animates, which would rebuild a 256px
+	# radiance cubemap every frame that nothing reads (sky ambient and reflections
+	# are off). The smallest size keeps the look and saves a fanless M2 the heat.
+	if OS.has_feature("macos"):
+		sky.radiance_size = Sky.RADIANCE_SIZE_32
 	environment.sky = sky
 	environment.background_mode = Environment.BG_SKY
 	# Flat colour ambient and no sky reflections: cheap, and it suits the toon bands.
