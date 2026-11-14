@@ -8,6 +8,9 @@ uniform float water_time = 0.0;
 uniform int quality = 1;
 // Slides the swirl lines only. Zero unless the world has wrapped round.
 uniform vec2 swirl_origin = vec2(0.0);
+// Patch 2.5 item 6: rain rings on the water in the rainy city biome, 0..1.
+// Zero everywhere else, and then the rings cost nothing.
+uniform float rain_amount = 0.0;
 varying vec3 world_position;
 
 vec2 cell_point(vec2 cell) {
@@ -71,5 +74,18 @@ void fragment() {
 	float foam = (1.0 - smoothstep(width - aa, width + aa, edge)) * smoothstep(0.0, 0.2, stroke);
 	// Fade distant lines before they become sub-pixel sparkle.
 	foam *= 1.0 - smoothstep(220.0, 800.0, distance_to_eye);
+	// Rain rings: one drop per 2.6 m cell, a ring growing and fading from it.
+	if (rain_amount > 0.001) {
+		vec2 cell_uv = p / 2.6;
+		vec2 cell = floor(cell_uv);
+		vec2 seed = cell_point(cell + 17.0);
+		float age = fract(water_time * 0.85 + seed.x * 7.0);
+		vec2 centre = 0.3 + 0.4 * cell_point(cell + 53.0 + floor(water_time * 0.85 + seed.x * 7.0));
+		float d = length(fract(cell_uv) - centre);
+		float ring_aa = max(fwidth(d), 0.01);
+		float ring = 1.0 - smoothstep(0.0, 0.035 + ring_aa, abs(d - age * 0.28));
+		ring *= (1.0 - age) * step(seed.y, rain_amount * 0.85) * (1.0 - smoothstep(60.0, 180.0, distance_to_eye));
+		foam = max(foam, 0.6 * ring);
+	}
 	ALBEDO = mix(water, foam_color.rgb, foam);
 }
