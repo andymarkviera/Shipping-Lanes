@@ -106,3 +106,37 @@ Step 14 adds ClocksProbe: RunExport -Headless -ClocksProbe passes 22 checks.
 
 Step 15 DiagnosticsProbe passes nine checks in Release. The optional developer
 overlay is available with Ctrl+F3, off by default; no movement data is fabricated.
+
+## macOS export (Patch 2.6 item 1)
+
+The `macOS` preset in `export_presets.cfg` builds a universal app (Apple
+Silicon arm64 + Intel x86_64) named **Container Ship Sim**, bundle id
+`com.andyviera.shippinglanes`, with the icon `features/app/app_icon.icns`
+(rebuild it with `python3 -I art_sources/app_icon/make_icon.py`). It exports
+the same files and include filter as the Windows preset. Signing is ad-hoc
+(Godot's built-in signer, no Apple Developer account, no certificate) and
+notarization is off, so nothing costs money. The project now also imports
+ETC2/ASTC textures, which Godot requires for arm64; the Windows build still
+ships S3TC/BPTC only.
+
+Export on the Mac with the Godot 4.7.2 macOS editor:
+
+1. Editor > Manage Export Templates > install 4.7.2 (official).
+2. Project > Export > `macOS` > Export Project (untick "Export With Debug"
+   for a release). It writes `exports/macos/release/Container Ship Sim.zip`.
+   From a terminal instead:
+   `godot --headless --export-release "macOS" "exports/macos/release/Container Ship Sim.zip"`
+3. Unzip it to get `Container Ship Sim.app` and move it to Applications.
+
+Opening an unsigned (ad-hoc signed) app the first time: right-click (or
+Control-click) the app > Open > Open. If macOS says the app "is damaged" or
+won't offer Open, clear the download quarantine once in Terminal:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/Container Ship Sim.app"
+```
+
+Known limit: `addons/godot-sqlite` ships Windows and Linux libraries only, so
+the Mac app has no SQLite library yet and saving will not work on the Mac
+until the Mac compatibility pass (Patch 2.6 item 2) adds the macOS library
+and fixes any other Windows-only code.

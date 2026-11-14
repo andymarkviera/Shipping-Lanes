@@ -955,7 +955,9 @@ Developer account: the app ships unsigned/ad-hoc signed).
    line Mac playtest checklist (export on the Mac with the Godot 4.7.2 Mac
    editor, open the app, sail, dock, save, quit, reload).
 
-**Patch 2.6 status (November 14, 2026):** planned, starts after Patch 2.5.
+**Patch 2.6 status (November 14, 2026):** item 1 (macOS export preset) in
+a draft PR, exported on Linux only, not yet opened on a Mac; items 2-4 not
+started.
 
 ## 12. Patch 2.7 (Andy, November 14, 2026): main menu
 
