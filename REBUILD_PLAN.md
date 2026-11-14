@@ -865,4 +865,4 @@ boat, the section 7 no-jank checklist applies to every item.
    waves and lands without jitter or flipping. The last item's PR carries a
    5-10 line Windows playtest checklist for all of Patch 2.4.
 
-**Patch 2.4 status (November 13, 2026):** planned; not started.
+**Patch 2.4 status (November 14, 2026):** item 1 (hull trim) in a draft PR, checked headless on Linux, awaiting a Windows playtest; items 2-8 not started.
