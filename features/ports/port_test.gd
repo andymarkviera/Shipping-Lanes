@@ -11,6 +11,8 @@ const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const POLAR_BIOME = preload("res://features/sky/polar_biome.gd")
 const DESERT_BIOME = preload("res://features/sky/desert_biome.gd")
 const DESERT_LOOK = preload("res://features/toon/desert_look.gd")
+const TROPICAL_BIOME = preload("res://features/sky/tropical_biome.gd")
+const TROPICAL_LOOK = preload("res://features/toon/tropical_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 @export var save_enabled: bool = true
@@ -44,6 +46,10 @@ var bridges: Node3D
 var polar: Node
 ## Patch 2.5 item 4: the desert biome, painted over the polar look (game only).
 var desert: Node
+## Patch 2.5 item 5: the tropical biome, painted over the polar and desert looks
+## (game only), and the shared paint of its lagoon rings.
+var tropical: Node
+var lagoon_paint: ShaderMaterial
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
@@ -187,6 +193,10 @@ func _ready() -> void:
 		desert.name = "DesertBiome"
 		add_child(desert)
 		desert.setup(polar)
+		tropical = TROPICAL_BIOME.new()
+		tropical.name = "TropicalBiome"
+		add_child(tropical)
+		tropical.setup(polar)
 	var scenes: Array = PORTS.duplicate()
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
@@ -195,6 +205,11 @@ func _ready() -> void:
 		for place: Dictionary in Progression.WORLD: port_spots.append(Vector2(place.at.x, place.at.z))
 		var desert_land: Node3D = DESERT_LOOK.build_land(Progression.LAND, port_spots)
 		if desert_land != null: add_child(desert_land)
+		var tropical_land: Node3D = TROPICAL_LOOK.build_land(Progression.LAND, port_spots)
+		if tropical_land != null: add_child(tropical_land)
+		lagoon_paint = TROPICAL_LOOK.lagoon_material()
+		var lagoons: Node3D = TROPICAL_LOOK.build_lagoons(Progression.LAND, lagoon_paint)
+		if lagoons != null: add_child(lagoons)
 		for rect: Rect2 in Progression.ICE_SHELVES: add_land(rect, true)
 		for index: int in Progression.ICEBERGS.size(): add_iceberg(index)
 		bridges = Node3D.new()
@@ -218,6 +233,7 @@ func _ready() -> void:
 		# Aesthetics 4: chunky port dressing. The game only; test scenes keep the blocks.
 		if game_mode: CHUNKY_LOOK.dress_port(place)
 		if game_mode and DESERT_BIOME.weight(place.position) >= 0.5: DESERT_LOOK.dress_port(place)
+		if game_mode and TROPICAL_BIOME.weight(place.position) >= 0.5: TROPICAL_LOOK.dress_port(place)
 		if game_mode: cranes.add_port(place)
 	# Aesthetics 2: toon shading and ink outlines on the ports and land.
 	TOON_LOOK.apply(self)
@@ -368,11 +384,12 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 	collider.shape = shape
 	body.add_child(collider)
 	# Patch 2.5 item 4: desert blocks keep the beach but get a dry sand top.
-	var top_key: String = "ice1" if ice else ("desert1" if DESERT_LOOK.is_desert(rect) else "land1")
+	# Item 5: tropical blocks get a lush green one.
+	var top_key: String = "ice1" if ice else ("desert1" if DESERT_LOOK.is_desert(rect) else ("tropic1" if TROPICAL_LOOK.is_tropical(rect) else "land1"))
 	for key: String in ["ice0" if ice else "land0", top_key]:
 		if not land_paint.has(key):
 			var material: StandardMaterial3D = StandardMaterial3D.new()
-			material.albedo_color = {"ice0": Color("bfe3ef"), "ice1": Color("f7fbfd"), "land0": Color("e0cc93"), "land1": Color("7fa368"), "desert1": DESERT_LOOK.SAND_TOP}[key]
+			material.albedo_color = {"ice0": Color("bfe3ef"), "ice1": Color("f7fbfd"), "land0": Color("e0cc93"), "land1": Color("7fa368"), "desert1": DESERT_LOOK.SAND_TOP, "tropic1": TROPICAL_LOOK.LUSH_TOP}[key]
 			material.roughness = 0.9
 			land_paint[key] = material
 	var ports: Array[Vector2] = []
@@ -941,11 +958,15 @@ func _process(_delta: float) -> void:
 	if game_mode: ocean.global_position = Vector3(snappedf(ship.global_position.x, 50), 0, snappedf(ship.global_position.z, 50))
 	if polar != null: polar.update(ship.global_position, _delta)
 	if desert != null: desert.update(ship.global_position, _delta)
+	if tropical != null: tropical.update(ship.global_position, _delta)
 	# Patch 2.5 item 1B: the coast surf rides the same swell as the sea.
 	if surf_paint != null:
 		surf_paint.set_shader_parameter("water_time", ocean.elapsed)
 		surf_paint.set_shader_parameter("quality", ocean.quality)
 		surf_paint.set_shader_parameter("foam_color", ocean.palette.foam_color)
+	if lagoon_paint != null:
+		lagoon_paint.set_shader_parameter("water_time", ocean.elapsed)
+		lagoon_paint.set_shader_parameter("quality", ocean.quality)
 	details.visible = extras_visible()
 	if is_instance_valid(helm): helm.gauge_display.visible = extras_visible()
 	minimap.queue_redraw()

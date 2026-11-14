@@ -148,8 +148,9 @@ func run() -> void:
 		surfs[surf.material_override] = true
 		expect(surf.visibility_range_end > 0.0 and surf.visibility_range_end <= 2000.0, "%s surf is culled far away" % child.name)
 	expect(coasts == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block has a toon coast (%d)" % coasts)
-	# Sand, green top, ice, snow, and (Patch 2.5 item 4) the desert's sand top.
-	expect(paints.size() <= 5 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
+	# Sand, green top, ice, snow, (Patch 2.5 item 4) the desert's sand top and
+	# (item 5) the tropics' lush top.
+	expect(paints.size() <= 6 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
 	expect(beaches >= Progression.LANDMASSES.size() and surfs.size() == 1, "Beaches have surf with one shared shader (%d beaches)" % beaches)
 	# The surf takes the sea's time on the game's next drawn frame.
 	for frame: int in 2: await process_frame

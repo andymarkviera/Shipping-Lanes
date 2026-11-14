@@ -45,11 +45,15 @@ const LAND = [
 	Rect2(-1000, 3700, 1000, 400),
 	# The two islets in the strait.
 	Rect2(880, 1320, 240, 360), Rect2(450, -2050, 300, 300),
+	# Patch 2.5 item 5: the Palm Isles, three small islands in the tropical
+	# southern strait west of Gannet Light, clear of every lane and approach.
+	Rect2(-260, -2900, 240, 220), Rect2(120, -3380, 220, 200), Rect2(-330, -1950, 200, 200),
 ]
 ## Patch 2.5 item 1: the named landmasses, as [name, first LAND index, end index).
 const LANDMASSES = [
 	["Hearthland", 0, 10], ["Northern Neck", 10, 12], ["Ironreach", 12, 20],
 	["Kelp Isle", 20, 21], ["Gull Isle", 21, 22], ["Strait islets", 22, 24],
+	["Palm Isles", 24, 27],
 ]
 ## Patch 2.1 item 3: snowy ice shelves beside the two polar quays, solid like
 ## land. Patch 2.5 item 1: each runs on to its quay, so the poles sit on a coast.

@@ -6839,3 +6839,42 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
 
 Not run: a rendered screenshot (software OpenGL under Xvfb timed out),
 Windows, frame timing on the target, a playtest, the full CI probe list.
+
+## Patch 2.5 item 5: Tropical biome — November 14, 2026
+
+- Region: the southern strait round Gannet Light (`port_gannet_light`, same
+  ID, berth, jobs and saves). Fully tropical within 1,250 m of (1000, -2300),
+  none past 1,900 m, eased in time (at least 1.5 s). Every other port is
+  outside. The tropical look fades out where the polar look is and never
+  overlaps the desert.
+- New `features/sky/tropical_biome.gd`: clear air (fog pushed back), bright
+  sun, a vivid sky with an aqua horizon, a turquoise sea, bright saturated
+  grading. It paints after the polar and desert looks: `polar_biome.gd` gained
+  an `overlays` list next to its `overlay` hook. At zero it changes nothing.
+- Palm Isles: three small solid islands (about 200-240 m across) added at the
+  end of `Progression.LAND` as a new landmass. They are real land (collision,
+  navigation, minimap, globe). Sea routes and the traversal budget are
+  unchanged.
+- New `features/toon/tropical_look.gd`: seeded palms (leaning trunks and
+  drooping-frond crowns) along the beaches and on the hill tops, plus lush
+  bushes, as three MultiMeshes, not solid, 450 m from every quay. Tropical
+  land gets a lush green top. Turquoise lagoon rings (two toon bands, wavy
+  edges) sit round every tropical island. They ride the same swell as the
+  surf, use one shared material, are culled past 1.8 km and are paint only:
+  no collider, nothing in the navigation, no hidden shallows. Gannet Light
+  gets a whitewashed quay, pastel sheds under thatch, stilt huts, palms and a
+  thatched lookout (looks only; colliders unchanged).
+- `export_presets.cfg` lists both scripts. `world_land_check` now allows six
+  shared land materials. New check `tools/tropical_biome_check.gd` (55).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts` (216), `--quit-after 10`, `tropical_biome_check` (55),
+`desert_biome_check` (41), `polar_biome_check` (46), `world_land_check`
+(166), `globe_map_check` (48), `debug_game_check` (81), `hangar_check`
+(213), `crane_check`, `mooring_check`, container/bulk/heavy ladder checks,
+`check_m1_voyage`, `check_catalog`, `check_controls`, `check_flow`,
+`check_starter`, the CI Stage 2 probe set, `traversal_budget.py` and the
+`tools/world_layout` tests: all passed.
+
+Not run: a rendered screenshot, Windows, frame timing on the target, a
+playtest. Nobody has seen the tropics on screen yet.
