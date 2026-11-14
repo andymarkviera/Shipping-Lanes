@@ -5,6 +5,8 @@ const Session = preload("res://features/main/test_session.gd")
 ## The one real game scene (REBUILD_PLAN.md M1) and its single save.
 const GAME_SCENE: String = "res://features/game/game.tscn"
 const GAME_SAVE: String = "user://worlds/game/voyage.db"
+## Patch 2.3 debug (temporary): the throwaway debug world. See features/debug.
+const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
 var developer_overlay: DeveloperOverlay
 var state: State = State.BOOT
 var settings_return: State = State.TITLE
@@ -161,6 +163,8 @@ func _ready() -> void:
 		developer_overlay = DeveloperOverlay.new()
 		add_child(developer_overlay)
 		add_to_group(DevMode.GROUP)
+	# Patch 2.3 debug: back at the title, any debug world is over.
+	if get_tree().has_meta(DEBUG_GAME.META): get_tree().remove_meta(DEBUG_GAME.META)
 	menu.selected.connect(navigate)
 	$UI/Settings.closed.connect(func() -> void: transition(settings_return))
 	controls.command_requested.connect(func(action: StringName) -> void:
@@ -194,6 +198,9 @@ func navigate(action: String) -> void:
 				recovery_source = -1
 				refresh_save_status()
 		"game": get_tree().change_scene_to_file(GAME_SCENE)
+		"debug":
+			get_tree().set_meta(DEBUG_GAME.META, true)
+			get_tree().change_scene_to_file(GAME_SCENE)
 		"restart": menu.restart_confirmation.popup_centered(Vector2i(520, 160))
 		"confirm_restart":
 			# Restart Progress: erase the one game save (and SQLite's side files).

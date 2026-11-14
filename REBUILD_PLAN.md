@@ -621,7 +621,7 @@ on pausing the world.
      playful and readable.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
-**Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is done; Patch 2.3 (section 8, debug mode) is next. Patch 3 is a new main menu
+**Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is done; Patch 2.3 (section 8, debug mode) is written and waits for Andy's playtest. Patch 3 is a new main menu
 (Andy's design, later; do not start). Patch 4 is multiplayer (do not start).
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
@@ -804,4 +804,9 @@ later, so do not redesign it now.
    carries a short Windows playtest checklist (try all 15 ships, dock ship 5
    at a major port and a polar port, wrap the globe with a big ship).
 
-**Patch 2.3 status (November 13, 2026):** planned; not started.
+**Patch 2.3 status (November 14, 2026):** item 1 (debug game mode) is written
+and passes the automatic checks on Linux headless, including the new
+`tools/debug_game_check.gd` (the real save is unchanged after a debug
+session); not seen on a screen by anyone. It waits for Andy's Windows
+playtest. It lives in `features/debug/`; removal steps are at the top of
+`debug_game.gd`. Details in PROGRESS.md.

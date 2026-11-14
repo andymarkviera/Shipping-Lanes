@@ -67,6 +67,8 @@ func _ready() -> void:
 		# The player menu: PLAY (it reads CONTINUE once a save exists), SETTINGS, QUIT.
 		game_button = button(home, "PLAY", "game")
 		button(home, "SETTINGS", "settings")
+		# Patch 2.3 debug (temporary): a throwaway world with every ship. See features/debug.
+		button(home, "DEBUG", "debug")
 		# Shown only when there is a save to erase (see main.gd refresh_save_status).
 		restart_button = button(home, "RESTART PROGRESS", "restart")
 		button(home, "QUIT", "exit")

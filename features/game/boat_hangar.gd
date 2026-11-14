@@ -152,7 +152,8 @@ func action_reason(kind: String) -> String:
 			return "You need %s more credits." % credits(int(entry.price_minor) - view.reward_minor)
 		if view.docking.state(1) != "docked": return "Dock at a port to buy ships."
 		return ""
-	if view.docking.state(1) != "docked": return "Dock at a port to switch ships."
+	# Patch 2.3 debug: switching works anywhere in a debug world.
+	if view.docking.state(1) != "docked" and not is_instance_valid(view.get("debug")): return "Dock at a port to switch ships."
 	if not view.can_switch(): return "Finish or cancel your current job before changing ships."
 	return ""
 
