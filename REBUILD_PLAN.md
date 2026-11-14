@@ -920,3 +920,45 @@ jobs, same saves; land is shaped around them, never on top of them.
    line Windows playtest checklist for all of Patch 2.5.
 
 **Patch 2.5 status (November 14, 2026):** planned, not started.
+
+## 11. Patch 2.6 (Andy, November 14, 2026): macOS port
+
+Andy wants the game on macOS (he has a MacBook Air M2, 16 GB, Apple
+Silicon). Starts only after Patch 2.5 is done. Same rules: one PR each,
+Godot 4.7.2, Windows build keeps working exactly as before, saves and
+on-hold code intact, no .github/workflows edits (a CI macOS build job needs
+Andy's yes first; ask through Hark), nothing that costs money (no Apple
+Developer account: the app ships unsigned/ad-hoc signed).
+
+1. **macOS export preset.** Add a "macOS" preset to export_presets.cfg:
+   universal binary (arm64 + x86_64), ad-hoc signing, no notarization,
+   bundle id com.andyviera.shippinglanes, app name Container Ship Sim, an
+   .icns icon from the existing game icon, all runtime resources the
+   Windows preset includes. Extend EXPORT.md with the Mac export steps and
+   how to open an unsigned app (right-click > Open, or
+   `xattr -dr com.apple.quarantine`).
+2. **Mac compatibility pass.** Find and fix anything Windows-only: file
+   paths and save locations (use user://), path separators, any .exe or
+   Windows API use, case-sensitive file names, shaders that break on
+   Metal/MoltenVK, and the renderer settings (Forward+ on Apple Silicon,
+   with a safe fallback). Keep saves loading on both systems.
+3. **Mac controls and display.** Cmd works where Ctrl does, no control
+   needs a numpad or keys a MacBook lacks, the trackpad works (two-finger
+   scroll zooms the camera and the M globe, two-finger drag or click-drag
+   rotates), Retina/HiDPI scaling keeps the HUD crisp and the right size,
+   fullscreen and window resize behave on macOS, Cmd+Q quits cleanly
+   (saving like the Esc-menu quit).
+4. **Apple Silicon performance.** Tune quality defaults for an M2 MacBook
+   Air (16 GB, fanless): steady frame rate while sailing near ports,
+   biomes and weather, sensible auto quality preset, no thermal-only
+   effects. Record the settings in PROGRESS.md. Item 4's PR carries a 5-10
+   line Mac playtest checklist (export on the Mac with the Godot 4.7.2 Mac
+   editor, open the app, sail, dock, save, quit, reload).
+
+**Patch 2.6 status (November 14, 2026):** planned, starts after Patch 2.5.
+
+## 12. Patch 2.7 (Andy, November 14, 2026): main menu
+
+The new main menu (formerly called Patch 3). Starts after Patch 2.6. The
+design comes from Andy; details to be added here before work starts.
+Patch 4 (multiplayer) stays not started.
