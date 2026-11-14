@@ -27,6 +27,8 @@ var ocean: OceanPresentation
 var wake: ShipWake
 var docking = preload("res://features/ports/docking_authority.gd").new()
 var loading = preload("res://features/cargo/port_loading.gd").new()
+## Patch 2.4 item 4, the game only: mooring lines on the docked ship.
+var mooring: Node3D
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
@@ -128,6 +130,12 @@ func _ready() -> void:
 	if game_mode and DEBUG_GAME.active(get_tree()): save_enabled = false
 	add_child(docking)
 	add_child(loading)
+	if game_mode:
+		mooring = preload("res://features/ports/mooring_lines.gd").new()
+		mooring.name = "MooringLines"
+		mooring.docking = docking
+		docking.undock_seconds = mooring.LET_GO_SECONDS
+		add_child(mooring)
 	controls = PlayerControls.new()
 	add_child(controls)
 	controls.set_ship_context(true)
