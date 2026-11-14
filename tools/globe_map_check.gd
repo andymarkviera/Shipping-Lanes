@@ -88,6 +88,13 @@ func run() -> void:
 	var size: Vector2 = map.frame.size
 	var room: Vector2 = map.screen.get_viewport_rect().size
 	expect(size.x > 0 and absf(size.x - size.y) < 1 and (map.frame.position + size / 2).distance_to(room / 2) < 2, "Globe is a square in the middle")
+	# Patch 2.5 item 1B: the dotted course follows the sea route round the land.
+	var goal: Vector3 = game.world_ports[2].berth_anchor.global_position
+	var route: Array[Vector3] = Progression.course(game.ship.global_position, goal, 2)
+	map.draw_course({"position": goal, "route": route})
+	expect(map.course_dots > route.size(), "The globe draws the course along the route (%d dots, %d legs)" % [map.course_dots, route.size()])
+	map.draw_course({})
+	expect(map.course_dots == 0, "No job, no course on the globe")
 	# Over the poles: drag down half a turn, then on; the basis stays clean.
 	var start: Basis = map.spin.basis
 	var saw_pole: bool = false

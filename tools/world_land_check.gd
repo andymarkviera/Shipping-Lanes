@@ -6,12 +6,17 @@ extends SceneTree
 ## sea; each strait is a real narrow cut a ship 5 fits through. Then the game: a
 ## solid body per block, spawn clearance at every port for the biggest hull, a
 ## ship driven at a coast stops at it, and the minimap course follows the route.
+## Part B: toon coasts with surf and harbour walls; the globe atlas draws land
+## as one shape per continent with the straits open.
 ## Isolated save folder.
 ## Run: godot --headless --path . --script res://tools/world_land_check.gd
 
 const FOLDER: String = "user://world_land_check"
 const Progression = preload("res://features/game/progression.gd")
 const Navigation = preload("res://features/ports/local_navigation.gd")
+const TOON_COAST = preload("res://features/toon/toon_coast.gd")
+const GLOBE_MAP = preload("res://features/game/globe_map.gd")
+const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 ## The biggest hull in any family (bulk ship 5), with room for its swing.
 const BIGGEST: Vector3 = Vector3(38, 8, 276)
 var failures: Array[String] = []
@@ -121,10 +126,45 @@ func run() -> void:
 		if body == null or body.collision_layer != CollisionRules.SHORE or not body.get_child(0) is CollisionShape3D: continue
 		if (body.get_child(0) as CollisionShape3D).shape is BoxShape3D: bodies += 1
 	expect(bodies == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block is solid (%d bodies)" % bodies)
+	# Part B: every block has a toon coast; the blocks share their materials and
+	# the surf shares one shader that stops drawing far away.
 	var paints: Dictionary = {}
+	var surfs: Dictionary = {}
+	var coasts: int = 0
+	var beaches: int = 0
 	for child: Node in game.get_children():
-		if child is StaticBody3D and child.get_child_count() > 1 and child.get_child(0).shape is BoxShape3D and child.get_child(1) is MeshInstance3D: paints[(child.get_child(1) as MeshInstance3D).material_override] = true
-	expect(paints.size() <= 4, "Land shares its materials (%d)" % paints.size())
+		if not child is StaticBody3D or child.get_node_or_null("Coast") == null: continue
+		var coast: MeshInstance3D = child.get_node("Coast")
+		coasts += 1
+		for surface: int in coast.mesh.get_surface_count(): paints[coast.get_active_material(surface)] = true
+		var surf: MeshInstance3D = child.get_node_or_null("Surf")
+		if surf == null: continue
+		beaches += 1
+		surfs[surf.material_override] = true
+		expect(surf.visibility_range_end > 0.0 and surf.visibility_range_end <= 2000.0, "%s surf is culled far away" % child.name)
+	expect(coasts == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block has a toon coast (%d)" % coasts)
+	expect(paints.size() <= 4 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
+	expect(beaches >= Progression.LANDMASSES.size() and surfs.size() == 1, "Beaches have surf with one shared shader (%d beaches)" % beaches)
+	expect(game.surf_paint != null and float(game.surf_paint.get_shader_parameter("water_time")) > 0.0 and absf(float(game.surf_paint.get_shader_parameter("water_time")) - game.ocean.elapsed) < 0.5, "Surf rides the sea's swell")
+	# A port's side of the land is a harbour wall at deck height, not a beach.
+	var ports: Array[Vector2] = []
+	for place: Dictionary in Progression.WORLD: ports.append(Vector2(place.at.x, place.at.z))
+	for place: Dictionary in Progression.WORLD:
+		var walled: bool = false
+		for rect: Rect2 in Progression.LAND + Progression.ICE_SHELVES:
+			var harbour: Array[bool] = TOON_COAST.harbour_sides(rect, [Vector2(place.at.x, place.at.z)] as Array[Vector2])
+			walled = walled or harbour.has(true)
+		expect(walled, "%s has a harbour wall" % place.id)
+	# The globe atlas draws the land green and leaves the straits open.
+	var page: Image = GLOBE_MAP.atlas().get_image()
+	for mass: Array in Progression.LANDMASSES:
+		var centre: Vector2 = Progression.LAND[mass[1]].get_center()
+		var pixel: Vector2i = Vector2i(GLOBE_MAP.page_pixel(centre.x, centre.y))
+		expect(page.get_pixelv(pixel).is_equal_approx(Color(PLAYFUL.LEAF, 1.0)), "%s is green on the globe" % mass[0])
+	for strait: Dictionary in Progression.STRAITS:
+		var middle: Vector2 = (strait.from + strait.to) / 2
+		var pixel: Vector2i = Vector2i(GLOBE_MAP.page_pixel(middle.x, middle.y))
+		expect(page.get_pixelv(pixel).b > 0.6, "%s is open water on the globe" % strait.name)
 	# Spawn clearance at every port holds the biggest hull clear of the land.
 	for place: Node3D in game.world_ports:
 		if place == game.port: continue

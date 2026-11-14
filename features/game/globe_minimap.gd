@@ -10,6 +10,8 @@ const Progression = preload("res://features/game/progression.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 ## Metres of world per radian of globe: once round the world is one full turn.
 const METRES_PER_RADIAN: float = Progression.WRAP_M / TAU
+## Patch 2.5 item 1B: beach colour round the land on the minimap and globe.
+const SAND: Color = Color("f1dfa4")
 var view: Node3D
 var clock: float = 0.0
 
@@ -67,6 +69,10 @@ func _draw() -> void:
 	for line: int in 12:
 		grid_line(radius, wrapf(origin.x + line * PI / 6, -PI, PI), true)
 		grid_line(radius, wrapf(origin.y + line * PI / 6, -PI, PI), false)
+	# Patch 2.5 item 1B: land in three passes, so a continent made of blocks
+	# reads as one shape: an ink coastline, a sandy beach, then the fills, which
+	# cover the strokes inside the continent.
+	var shapes: Array = []
 	var ice_from: int = Progression.LAND.size()
 	for index_land: int in ice_from + Progression.ICE_SHELVES.size():
 		# Land is green; the polar ice shelves are white.
@@ -84,10 +90,12 @@ func _draw() -> void:
 				any_visible = any_visible or visible_on(point)
 				outline.append(on_disc(point, radius))
 		if any_visible and not Geometry2D.triangulate_polygon(outline).is_empty():
-			var ice: bool = index_land >= ice_from
-			draw_colored_polygon(outline, Color("f7fbfd") if ice else PLAYFUL.LEAF)
-			outline.append(outline[0])
-			draw_polyline(outline, Color("8fc3d6") if ice else Color("3f9a3a"), 1.5, true)
+			var ring: PackedVector2Array = outline.duplicate()
+			ring.append(outline[0])
+			shapes.append([outline, ring, index_land >= ice_from])
+	for shape: Array in shapes: draw_polyline(shape[1], Color("8fc3d6") if shape[2] else Color("2f7a33"), 5.0, true)
+	for shape: Array in shapes: draw_polyline(shape[1], Color("dff3f8") if shape[2] else SAND, 2.5, true)
+	for shape: Array in shapes: draw_colored_polygon(shape[0], Color("f7fbfd") if shape[2] else PLAYFUL.LEAF)
 	# Toon shading: a soft shadow on the lower right, a shine on the upper left.
 	draw_arc(middle, radius - 5, deg_to_rad(-10), deg_to_rad(100), 24, Color(PLAYFUL.INK, 0.16), 10, true)
 	draw_arc(middle, radius - 9, deg_to_rad(200), deg_to_rad(250), 12, Color(1, 1, 1, 0.45), 4, true)

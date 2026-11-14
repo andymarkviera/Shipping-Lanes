@@ -5,6 +5,7 @@ const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.ts
 const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn"), preload("res://features/ports/north_pole.tscn"), preload("res://features/ports/south_pole.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
+const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
@@ -319,12 +320,14 @@ func _ready() -> void:
 
 ## M4 coastline: a solid sand slab level with the quays, with a green block on top.
 ## Land is sand with a green top; an ice shelf (polar ports) is pale ice with snow.
-## Patch 2.5 item 1: the blocks of a landmass share four materials (so the toon
-## pass makes four shaders, not one per block) and the green top only steps
-## back from sides that face the sea, so a continent made of several blocks has
-## a beach round its coast and no sand seams across it. Land past the camera's
+## Patch 2.5 item 1: the blocks of a landmass share their materials (so the toon
+## pass makes few shaders, not one per block) and only sides that face the sea
+## get a coast, so a continent has no seams across it. Land past the camera's
 ## far plane (3 km) is culled.
+## Part B: toon coasts (TOON_COAST): a sloped beach, a green hill, surf at the
+## waterline and a harbour wall by each port. The SHORE box is unchanged.
 var land_paint: Dictionary = {}
+var surf_paint: ShaderMaterial
 func add_land(rect: Rect2, ice: bool = false) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.position = Vector3(rect.get_center().x, -2, rect.get_center().y)
@@ -336,33 +339,34 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 	var collider: CollisionShape3D = CollisionShape3D.new()
 	collider.shape = shape
 	body.add_child(collider)
-	# Insets of the top (west, east, south, north): 60 m where the side meets the sea.
-	var blocks: Array = Progression.ICE_SHELVES if ice else Progression.LAND
-	var inset: Array[float] = []
-	for side: int in 4:
-		var covered: bool = true
-		for step: int in 5:
-			var along: float = (step + 0.5) / 5.0
-			var probe: Vector2 = [Vector2(rect.position.x - 2, rect.position.y + rect.size.y * along), Vector2(rect.end.x + 2, rect.position.y + rect.size.y * along), Vector2(rect.position.x + rect.size.x * along, rect.position.y - 2), Vector2(rect.position.x + rect.size.x * along, rect.end.y + 2)][side]
-			covered = covered and blocks.any(func(other: Rect2) -> bool: return other != rect and other.has_point(probe))
-		inset.append(0.0 if covered else 60.0)
-	var top: Vector2 = Vector2(rect.size.x - inset[0] - inset[1], rect.size.y - inset[2] - inset[3])
 	for level: int in 2:
-		if level == 1 and minf(top.x, top.y) < 20: continue
 		var key: String = ("ice" if ice else "land") + str(level)
 		if not land_paint.has(key):
 			var material: StandardMaterial3D = StandardMaterial3D.new()
-			material.albedo_color = (Color("bfe3ef") if level == 0 else Color("f7fbfd")) if ice else (Color("d6c692") if level == 0 else Color("7fa368"))
+			material.albedo_color = (Color("bfe3ef") if level == 0 else Color("f7fbfd")) if ice else (Color("e0cc93") if level == 0 else Color("7fa368"))
 			material.roughness = 0.9
 			land_paint[key] = material
-		var box: BoxMesh = BoxMesh.new()
-		box.size = shape.size if level == 0 else Vector3(top.x, 14, top.y)
-		var mesh: MeshInstance3D = MeshInstance3D.new()
-		mesh.mesh = box
-		mesh.material_override = land_paint[key]
-		mesh.position.y = level * 13
-		if level == 1: mesh.position += Vector3((inset[0] - inset[1]) / 2, 0, (inset[2] - inset[3]) / 2)
-		body.add_child(mesh)
+	var ports: Array[Vector2] = []
+	for place: Dictionary in Progression.WORLD: ports.append(Vector2(place.at.x, place.at.z))
+	var sea: Array[bool] = TOON_COAST.sea_sides(rect, Progression.ICE_SHELVES if ice else Progression.LAND)
+	var harbour: Array[bool] = TOON_COAST.harbour_sides(rect, ports)
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	mesh.name = "Coast"
+	mesh.mesh = TOON_COAST.land_mesh(rect, sea, harbour, ice, land_paint[("ice" if ice else "land") + "0"], land_paint[("ice" if ice else "land") + "1"])
+	mesh.position.y = 2
+	body.add_child(mesh)
+	var surf: ArrayMesh = TOON_COAST.surf_mesh(rect, sea, harbour)
+	if surf == null: return
+	if surf_paint == null: surf_paint = TOON_COAST.surf_material()
+	var foam: MeshInstance3D = MeshInstance3D.new()
+	foam.name = "Surf"
+	foam.mesh = surf
+	foam.material_override = surf_paint
+	foam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Cheap distance cull: far surf is a few pixels wide.
+	foam.visibility_range_end = TOON_COAST.SURF_RANGE_M
+	foam.position.y = 2
+	body.add_child(foam)
 
 ## Patch 2.1 item 3: a chunky toon iceberg, solid like land. A pale ice band at
 ## the waterline, a white body and one or two white peaks, each a few-sided
@@ -905,6 +909,11 @@ func _process(_delta: float) -> void:
 	voyage_hud.refresh(self)
 	# The sea is one 4 km sheet. In the game's larger world it follows the ship.
 	if game_mode: ocean.global_position = Vector3(snappedf(ship.global_position.x, 50), 0, snappedf(ship.global_position.z, 50))
+	# Patch 2.5 item 1B: the coast surf rides the same swell as the sea.
+	if surf_paint != null:
+		surf_paint.set_shader_parameter("water_time", ocean.elapsed)
+		surf_paint.set_shader_parameter("quality", ocean.quality)
+		surf_paint.set_shader_parameter("foam_color", ocean.palette.foam_color)
 	details.visible = extras_visible()
 	if is_instance_valid(helm): helm.gauge_display.visible = extras_visible()
 	minimap.queue_redraw()

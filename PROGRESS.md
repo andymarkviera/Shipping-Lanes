@@ -6685,3 +6685,49 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
 - Not run: the rest of CI Stage 3 Python (no service code changed), Windows,
   screenshots, frame timing and a playtest. Nobody has seen the new land on
   screen yet.
+
+## Patch 2.5 item 1B: toon coasts, minimap and globe land (November 14, 2026)
+
+- New `features/toon/toon_coast.gd` builds the look of each land block from
+  part A. The SHORE collision box under it is unchanged. Each block gets:
+  - a sloped beach on every side that faces the sea, running from below the
+    waterline up to deck height (4 m);
+  - a green hill on top, sloping up to 18 m; ice shelves get the same shape in
+    ice and snow;
+  - a straight harbour wall at deck height on any side within 320 m of a port,
+    so every quay still backs onto land;
+  - a surf band at the waterline on its beaches. The surf follows the same
+    swell as the sea, so the white line moves up and down the sand. It uses one
+    shared alpha-scissor shader and is not drawn past 1.5 km.
+  - Sides covered by another block stay flat, so a continent has no seams.
+- Land uses one mesh with two surfaces per block. The blocks share their
+  materials, so the toon pass still makes two land shaders. There is one draw
+  call more per beach block (the surf), and the 3 km far plane still culls
+  distant land.
+- Minimap globe: each block is drawn as an ink coast, then a sand beach, then
+  green land. All the outlines go down before any fills, so a continent reads
+  as one shape and the seams between blocks are gone.
+- M globe: the atlas draws the ink before the fills too, with a 1 px coast so
+  the 140 m canal stays open. A new dotted course runs along the sea route
+  (`draw_course`), each leg taking the short way round the wrap.
+- Port IDs, jobs, saves, land data and sea routes are all unchanged. The
+  traversal budget therefore has nothing new to check; it still passes.
+- Tests:
+  - `world_land_check` is now 130 checks. New ones: every block has a coast, the
+    materials are shared, the surf uses one shader, is culled at range and
+    follows the sea's swell, every port has a harbour wall, each landmass is
+    green on the globe atlas, and each strait is open water there.
+  - `globe_map_check` is now 48 checks. New ones: the course is drawn along the
+    route, and with no job there is no course.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts` (207), `--quit-after 10`, `world_land_check`
+  (130), `globe_map_check` (48), `check_catalog`, `check_controls`,
+  `check_flow`, `check_starter`, `check_m1_voyage`, `check_helm_keys`,
+  `debug_game_check`, `hangar_check`, `small_boats_check`, `heavy_ladder_check`,
+  `mooring_check`, `crane_check`, every CI Stage 2 probe, `voyage_probe`,
+  `ports_probe`, `traversal_budget.py` (17 routes) and its unittest discovery.
+- Not run: CI Stage 3 Python (no service code changed), Windows, screenshots
+  and frame timing (headless renders nothing), and a playtest. Nobody has seen
+  the coasts, the surf or the globe course on screen yet.

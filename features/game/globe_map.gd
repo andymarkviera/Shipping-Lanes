@@ -14,6 +14,9 @@ const ZOOM_NEAR: float = 1.6
 const ZOOM_FAR: float = 4.2
 const ZOOM_STEP: float = 1.12
 const MAP_SIZE: Vector2i = Vector2i(1024, 512)
+## Patch 2.5 item 1B: the dotted course along the sea route, like the minimap.
+const COURSE_DOT_SPACING: float = 0.012
+const COURSE_DOT_SIZE: float = 0.007
 const SHADER: String = """
 shader_type spatial;
 render_mode unshaded, cull_back;
@@ -38,6 +41,8 @@ var camera: Camera3D
 var spin: Node3D
 var ship_marker: MeshInstance3D
 var goal_marker: MeshInstance3D
+var course_line: MeshInstance3D
+var course_dots: int = 0
 var port_markers: Array[MeshInstance3D] = []
 var zoom: float = 3.2
 var clock: float = 0.0
@@ -71,15 +76,18 @@ static func atlas() -> ImageTexture:
 		page.fill_rect(Rect2i(line * MAP_SIZE.x / 12, 0, 2, MAP_SIZE.y), Color("3fb4e2"))
 	for line: int in range(1, 6):
 		page.fill_rect(Rect2i(0, line * MAP_SIZE.y / 6, MAP_SIZE.x, 2), Color("3fb4e2"))
+	# Patch 2.5 item 1B: land in two passes, so a continent made of blocks reads
+	# as one shape: an ink coastline, then the fills, which cover the edges
+	# inside the continent. One pixel of ink keeps the canal open.
 	var ice_from: int = Progression.LAND.size()
+	var boxes: Array = []
 	for index: int in ice_from + Progression.ICE_SHELVES.size():
 		var block: Rect2 = Progression.LAND[index] if index < ice_from else Progression.ICE_SHELVES[index - ice_from]
 		var a: Vector2 = page_pixel(block.position.x, block.position.y)
 		var b: Vector2 = page_pixel(block.end.x, block.end.y)
-		var box: Rect2i = Rect2i(Vector2i(a.min(b).floor()), Vector2i((a.max(b) - a.min(b)).ceil()))
-		var ice: bool = index >= ice_from
-		page.fill_rect(box.grow(1), Color("8fc3d6") if ice else Color("3f9a3a"))
-		page.fill_rect(box, Color("f7fbfd") if ice else PLAYFUL.LEAF)
+		boxes.append([Rect2i(Vector2i(a.min(b).floor()), Vector2i((a.max(b) - a.min(b)).ceil())), index >= ice_from])
+	for box: Array in boxes: page.fill_rect(box[0].grow(1), Color("8fc3d6") if box[1] else Color("2f7a33"))
+	for box: Array in boxes: page.fill_rect(box[0], Color("f7fbfd") if box[1] else PLAYFUL.LEAF)
 	return ImageTexture.create_from_image(page)
 
 static func flat(colour: Color) -> StandardMaterial3D:
@@ -160,7 +168,7 @@ func _ready() -> void:
 	screen.hide()
 
 ## A small toon marker stuck to the globe.
-func marker(mesh: PrimitiveMesh, colour: Color, size: float) -> MeshInstance3D:
+func marker(mesh: Mesh, colour: Color, size: float) -> MeshInstance3D:
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.mesh = mesh
 	node.material_override = flat(colour)
@@ -201,6 +209,8 @@ func open() -> void:
 		ring.inner_radius = 0.8
 		ring.outer_radius = 1.0
 		goal_marker = marker(ring, PLAYFUL.SUN, 0.06)
+		course_line = marker(ImmediateMesh.new(), PLAYFUL.SUN, 1.0)
+		course_line.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
 	spin.basis = facing(view.ship.global_position)
 	zoom = 3.2
 	place()
@@ -273,3 +283,30 @@ func _process(delta: float) -> void:
 		var side: Vector3 = goal_up.cross(Vector3.FORWARD if absf(goal_up.y) > 0.9 else Vector3.UP).normalized()
 		goal_marker.basis = Basis(side, goal_up, side.cross(goal_up)) * (0.06 + 0.012 * sin(clock * 4.0))
 		goal_marker.position = goal_up * 1.012
+	draw_course(destination)
+
+## The dotted course on the globe: from the ship along the sea route to the
+## destination, each leg the short way round the world.
+func draw_course(destination: Dictionary) -> void:
+	var line: ImmediateMesh = course_line.mesh as ImmediateMesh
+	line.clear_surfaces()
+	course_dots = 0
+	if destination.is_empty(): return
+	var corners: Array = destination.get("route", [])
+	if corners.is_empty(): corners = [destination.position]
+	line.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	var from: Vector3 = view.ship.global_position
+	for corner: Vector3 in corners:
+		var step: Vector3 = Progression.short_way(corner - from)
+		var across: float = on_globe(from).distance_to(on_globe(from + step))
+		var dots: int = clampi(roundi(across / COURSE_DOT_SPACING), 1, 200)
+		for index: int in range(1, dots + 1):
+			var up: Vector3 = on_globe(from + step * (index / float(dots)))
+			var side: Vector3 = up.cross(Vector3.FORWARD if absf(up.y) > 0.9 else Vector3.UP).normalized() * COURSE_DOT_SIZE
+			var other: Vector3 = up.cross(side)
+			var middle: Vector3 = up * 1.006
+			for point: Vector3 in [middle + side, middle + other, middle - side, middle + side, middle - side, middle - other]:
+				line.surface_add_vertex(point)
+			course_dots += 1
+		from += step
+	line.surface_end()
