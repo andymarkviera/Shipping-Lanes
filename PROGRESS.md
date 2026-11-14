@@ -6516,3 +6516,37 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
   - whether a box every ~1.1-1.8 s per crane reads well or looks frantic;
   - that boxes appearing on, and vanishing from, the quay under the crane
     are acceptable (there are no trucks).
+
+## Patch 2.4 item 6: heavy-lift load looks (November 14, 2026)
+
+- New `features/cargo/heavy_load_looks.gd` builds three toon loads in code: a
+  white wind turbine tower section on two saddles, a green transformer block
+  with radiator fins, bushings and conservator on a skid, and a tug hull in
+  three steel cradles. Each one is built at its job load's real size (width,
+  height, length), stands on the deck and fills that envelope. So a bigger
+  heavy lifter's bigger load is a bigger piece.
+- Job `i` at a port wears look `i` on every tier (`heavy_ocean_job.gd`
+  `load_of` now returns `look`). Job titles name the piece ("Transformer
+  block, 1520 t"). Ship 1's titles changed from "Platform module" etc. to the
+  look names. Job IDs, sizes, masses, pay and saves are unchanged.
+- `heavy_lifter.gd` hangs the look under the existing `payload_visual`, undoing
+  its envelope scale, and hides the placeholder model. Pickup, release,
+  collider, draft, saves and the online code see the same node as before.
+  Fixtures and online keep the old placeholder model. The look shows on the
+  staged floating load while loading and on deck while carrying.
+- `heavy_ladder_check.gd` adds 95 checks: three different looks per tier;
+  each look fits its envelope, rests on the deck and fills the envelope; the
+  biggest piece grows each tier; in the game scene, every heavy ship's staged
+  load wears its look at real size.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts` (202), boot, the whole CI Stage 2 set,
+  `heavy_ladder_check` (707), `heavy_lifter_probe` (65), `voyage_probe` (101),
+  `debug_game_check` (72), `crane_check` (153), `mooring_check` (386),
+  `check_m1_voyage`.
+- Failed, as on `main` without this change: `heavy_transport_probe` and
+  `cargo_network_probe`, which need the private service and network.
+- Not run: Stage 3 Python (no Python changed), Windows, screenshots and a
+  playtest. Nobody has seen the looks on screen yet. Andy should check that
+  the three pieces read clearly and sit right on every heavy ship's deck.

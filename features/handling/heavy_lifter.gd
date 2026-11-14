@@ -2,6 +2,7 @@ extends HandlingShip
 const DEFINITION = preload("res://features/catalog/records/heavy_lifter.tres")
 const DECK = preload("res://features/ships/heavy_lifter_01/lift_deck.glb")
 const PAYLOAD = preload("res://features/ships/heavy_lifter_01/industrial_payload.glb")
+const LOOKS = preload("res://features/cargo/heavy_load_looks.gd")
 const RAISED: float = 2.6
 const LOWERED: float = -1.0
 # Centre-over-platform tolerance; heading deliberately remains unrestricted.
@@ -32,6 +33,9 @@ var release_guard: Callable
 var pickup_commit_guard: Callable
 var release_commit_guard: Callable
 var payload_mass_kg: float = 0.0
+## Patch 2.4 item 6: which heavy_load_looks.gd look the job load wears; -1 is
+## the original placeholder model (test fixtures and online).
+var payload_look: int = -1
 var empty_accelerations: Array[float] = []
 var loaded_draft_m: float = 0.0
 var assembly: ShipAssembly
@@ -251,10 +255,26 @@ func configure_payload(size: Vector3, mass_kg: float) -> bool:
 ## Patch 2.2 item 3: a heavy job's load, from heavy_ocean_job.gd load_of. Ship
 ## 1's prototype load (no mass) is always allowed; anything else must fit.
 func use_job_load(piece: Dictionary) -> bool:
+	payload_look = int(piece.get("look", -1))
 	if piece.size == BASE_PAYLOAD_SIZE and float(piece.mass_kg) == 0.0:
 		set_payload(BASE_PAYLOAD_SIZE, 0.0)
 		return true
 	return configure_payload(piece.size, piece.mass_kg)
+
+## Patch 2.4 item 6: dress the payload in its look, built at the load's real
+## size. It is a child of payload_visual undoing that node's envelope scale, so
+## pickup, release, saves and online code see the same payload_visual as before.
+func refresh_look() -> void:
+	var old: Node = payload_visual.get_node_or_null("HeavyLoadLook")
+	if old != null:
+		payload_visual.remove_child(old)
+		old.queue_free()
+	for child: Node in payload_visual.get_children():
+		if child is Node3D: (child as Node3D).visible = payload_look < 0
+	if payload_look < 0: return
+	var look: Node3D = LOOKS.build(payload_look, payload_size)
+	look.scale = BASE_PAYLOAD_SIZE / payload_size
+	payload_visual.add_child(look)
 
 func set_payload(size: Vector3, mass_kg: float) -> void:
 	payload_size = size
@@ -264,6 +284,7 @@ func set_payload(size: Vector3, mass_kg: float) -> void:
 	payload_collider.position.y = size.y * 0.5
 	payload_shape.position.y = deck_height + size.y * 0.5
 	payload_visual.transform = payload_pose()
+	refresh_look()
 
 ## Carrier-frame offset of the floating load from the platform centre, in metres.
 ## +X is port and +Z is the bow. Empty when no floating load can be picked up.

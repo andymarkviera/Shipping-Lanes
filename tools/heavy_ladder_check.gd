@@ -68,11 +68,53 @@ func check_data() -> void:
 				var berth: BerthDefinition = state.get_node_property_value(0, index)
 				expect(biggest.z + 2.0 * berth.clearance_margin_m <= berth.envelope_m.z and biggest.x + 2.0 * berth.clearance_margin_m <= berth.envelope_m.x, berth.id + " fits heavy ship 5")
 
+## Patch 2.4 item 6: each tier's three loads wear three different looks that
+## fill their envelope, rest on the deck and grow with the tier.
+func look_bounds(root: Node3D) -> AABB:
+	var box: AABB = AABB()
+	var first: bool = true
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		if node is MeshInstance3D:
+			var mesh_node: MeshInstance3D = node
+			var local: Transform3D = Transform3D.IDENTITY
+			var walk: Node = mesh_node
+			while walk != root:
+				local = (walk as Node3D).transform * local
+				walk = walk.get_parent()
+			var part: AABB = local * mesh_node.get_aabb()
+			box = part if first else box.merge(part)
+			first = false
+	return box
+
+func check_looks() -> void:
+	const Looks = preload("res://features/cargo/heavy_load_looks.gd")
+	var last: float = 0.0
+	for tier: int in range(1, 6):
+		var names: Dictionary = {}
+		for row: Dictionary in HeavyJobs.new().list_at("port_brindle_quay", tier): names[row.title.get_slice(",", 0)] = true
+		expect(names.size() == 3, "Tier %d's three jobs carry three different loads" % tier)
+		for index: int in 3:
+			var piece: Dictionary = HeavyJobs.load_of(tier, index)
+			expect(int(piece.get("look", -1)) == index, "Tier %d load %d wears look %d" % [tier, index, index])
+			var look: Node3D = Looks.build(index, piece.size)
+			var box: AABB = look_bounds(look)
+			look.free()
+			expect(absf(box.position.y) < 0.05 and box.end.y <= piece.size.y + 0.05 and box.size.y > piece.size.y * 0.9, "%s (tier %d) stands on the deck within its height" % [Looks.NAMES[index], tier])
+			expect(absf(box.position.x) <= piece.size.x * 0.5 + 0.05 and absf(box.end.x) <= piece.size.x * 0.5 + 0.05 and absf(box.position.z) <= piece.size.z * 0.5 + 0.05 and absf(box.end.z) <= piece.size.z * 0.5 + 0.05, "%s (tier %d) fits its load envelope" % [Looks.NAMES[index], tier])
+			expect(box.size.z > piece.size.z * 0.85 and box.size.x > piece.size.x * 0.75, "%s (tier %d) fills its load envelope" % [Looks.NAMES[index], tier])
+			if index == 2:
+				expect(box.size.z > last, "Tier %d's biggest piece is bigger than the tier before" % tier)
+				last = box.size.z
+
 func check_jobs() -> void:
 	var jobs = HeavyJobs.new()
 	var old: Array[Dictionary] = jobs.list_at("port_brindle_quay")
-	expect(old.size() == 3 and old[0].id == "port_brindle_quay_heavy_0" and old[0].title == "Platform module" and old[2].reward_minor == 100000, "Ship 1 heavy jobs unchanged")
+	expect(old.size() == 3 and old[0].id == "port_brindle_quay_heavy_0" and old[0].title == "Wind turbine tower section" and old[2].reward_minor == 100000, "Ship 1 heavy jobs unchanged")
 	expect(HeavyJobs.load_for("port_brindle_quay_heavy_1").size == Vector3(14, 8, 32), "Ship 1 keeps the prototype load")
+	check_looks()
 	for tier: int in range(2, 6):
 		var rows: Array[Dictionary] = jobs.list_at("port_north_pole", tier)
 		expect(rows.size() == 3 and rows[0].id == "port_north_pole_heavy_t%d_0" % tier and HeavyJobs.tier_of(rows[0].id) == tier, "Tier %d has three jobs with tier IDs" % tier)
@@ -136,6 +178,8 @@ func dock_everywhere(game: Node) -> void:
 			game.accept_selected()
 			if not expect(game.heavy_jobs.active.get("id", "") == job_id and ship.payload_body.visible, "%s load staged at %s (%s)" % [kind, port.definition.id, game.offer_notice]): continue
 			expect(ship.payload_size.is_equal_approx(HeavyJobs.load_for(job_id).size), "%s load is sized for its tier" % kind)
+			var dressed: Node3D = ship.payload_visual.get_node_or_null("HeavyLoadLook")
+			expect(ship.payload_look == 2 and dressed != null and dressed.visible and dressed.global_transform.basis.get_scale().is_equal_approx(Vector3.ONE), "%s staged load wears its own look at its real size" % kind)
 			if index != home:
 				expect(game.heavy_jobs.cancel_pickup(ship), "%s pickup cancels at %s" % [kind, port.definition.id])
 				continue
