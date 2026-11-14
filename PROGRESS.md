@@ -6527,7 +6527,7 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
   heavy lifter's bigger load is a bigger piece.
 - Job `i` at a port wears look `i` on every tier (`heavy_ocean_job.gd`
   `load_of` now returns `look`). Job titles name the piece ("Transformer
-  block, 1520 t"). Ship 1's titles changed from "Platform module" etc. to the
+  block, <mass> t"). Ship 1's titles changed from "Platform module" etc. to the
   look names. Job IDs, sizes, masses, pay and saves are unchanged.
 - `heavy_lifter.gd` hangs the look under the existing `payload_visual`, undoing
   its envelope scale, and hides the placeholder model. Pickup, release,
