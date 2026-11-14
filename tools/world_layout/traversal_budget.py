@@ -1,5 +1,10 @@
 """Step 88 world layout: route lengths, top speeds and time scale must agree.
 
+Patch 2.5 item 1A adds the game's own wrapping world (`game_world`): the land,
+straits and sea lanes in features/game/progression.gd are read here and every
+port must back onto a coast, keep open water at its berths and reach every
+other port by sea within the leg, time and fuel budget of every cargo hull.
+
 Reads features/world/world_layout.json and the ship, port and berth records it
 names. Lengths are great-circle metres on the navigation sphere. Standard library
 only; no Godot, database or network. Run from anywhere:
@@ -310,10 +315,186 @@ def hull_table(layout):
     return '\n'.join(lines)
 
 
+# Patch 2.5 item 1A: the game's own world, read from progression.gd.
+def _floats(text):
+    return [float(n) for n in re.findall(r'-?\d+(?:\.\d+)?', text)]
+
+
+def _const_block(source, name):
+    start = re.search(r'^const %s(?:: [\w\[\]]+)? = \[' % name, source, re.M).end()
+    depth, index = 1, start
+    while depth:
+        depth += {'[': 1, ']': -1}.get(source[index], 0)
+        index += 1
+    return re.sub(r'#[^\n]*', '', source[start:index - 1])
+
+
+def game_world(layout):
+    """Land, ice, icebergs, ports, lanes and straits of the game world."""
+    source = read(layout['game_world']['source'])
+    rects = lambda name: [tuple(_floats(m)) for m in re.findall(r'Rect2\(([^)]*)\)', _const_block(source, name))]
+    world = [dict(id=m[0], at=_floats(m[1]), drop_side=float(m[2])) for m in
+             re.findall(r'"id": "(\w+)", "at": Vector3\(([^)]*)\), "drop_side": (-?[\d.]+)', _const_block(source, 'WORLD'))]
+    straits = [dict(name=m[0], like=m[1], start=_floats(m[2]), end=_floats(m[3]), width=float(m[4])) for m in
+               re.findall(r'"name": "([^"]+)", "like": "(\w+)", "from": Vector2\(([^)]*)\), "to": Vector2\(([^)]*)\), "width_m": ([\d.]+)',
+                          _const_block(source, 'STRAITS'))]
+    masses = [(m[0], int(m[1]), int(m[2])) for m in re.findall(r'\["([^"]+)", (\d+), (\d+)\]', _const_block(source, 'LANDMASSES'))]
+    number = lambda name: float(re.search(r'const %s: float = ([\d.]+)' % name, source).group(1))
+    centre = _floats(re.search(r'const WRAP_CENTRE: Vector3 = Vector3\(([^)]*)\)', source).group(1))
+    return dict(
+        land=rects('LAND'), ice=rects('ICE_SHELVES'), masses=masses, world=world, straits=straits,
+        bergs=[tuple(_floats(m)) for m in re.findall(r'Vector3\(([^)]*)\)', _const_block(source, 'ICEBERGS'))],
+        lanes=[tuple(_floats(m)) for m in re.findall(r'Vector2\(([^)]*)\)', _const_block(source, 'SEA_LANES'))],
+        margin=number('LANE_MARGIN_M'), gate=number('GATE_M'), wrap=4000.0 * math.pi, centre=(centre[0], centre[2]))
+
+
+def _short(value, wrap):
+    return (value + wrap / 2) % wrap - wrap / 2
+
+
+def _inside(point, rect, grow=0.0):
+    x, z, w, d = rect
+    return x - grow <= point[0] <= x + w + grow and z - grow <= point[1] <= z + d + grow
+
+
+def _segment_hits(a, b, rect):
+    x, z, w, d = rect
+    low, high = 0.0, 1.0
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    for p, q in ((-dx, a[0] - x), (dx, x + w - a[0]), (-dz, a[1] - z), (dz, z + d - a[1])):
+        if abs(p) < 1e-9:
+            if q < 0: return False
+            continue
+        t = q / p
+        if p < 0: low = max(low, t)
+        else: high = min(high, t)
+        if low > high: return False
+    return True
+
+
+def harbour(port):
+    side = -port['drop_side']
+    x, _, z = port['at']
+    return (min(x - side * 25, x + side * 110), z - 60, 135.0, 1000.0)
+
+
+def obstacles(geo):
+    return geo['land'] + geo['ice'] + [harbour(p) for p in geo['world']] + [(x - r, z - r, 2 * r, 2 * r) for x, r, z in geo['bergs']]
+
+
+def clear_line(geo, a, b, margin=None):
+    """The same test as Progression.clear_line in the game."""
+    margin = geo['margin'] if margin is None else margin
+    wrap = geo['wrap']
+    to = (a[0] + _short(b[0] - a[0], wrap), a[1] + _short(b[1] - a[1], wrap))
+    for x, z, w, d in obstacles(geo):
+        for kx in (0, 1, -1):
+            for kz in (0, 1, -1):
+                block = (x + kx * wrap, z + kz * wrap, w, d)
+                grown = (block[0] - margin, block[1] - margin, w + 2 * margin, d + 2 * margin)
+                if _inside(a, grown) or _inside(to, grown):
+                    if _inside(a, block) or _inside(to, block): continue
+                    grown = block
+                if _segment_hits(a, to, grown): return False
+    return True
+
+
+def sea_route(geo, start, goal):
+    """Shortest way by sea through the lane points: (metres, turning points)."""
+    wrap = geo['wrap']
+    apart = lambda p, q: math.hypot(_short(q[0] - p[0], wrap), _short(q[1] - p[1], wrap))
+    nodes = [start, goal] + geo['lanes']
+    best, before, done = {0: 0.0}, {}, set()
+    while True:
+        open_nodes = [i for i in best if i not in done]
+        if not open_nodes: return None, []
+        here = min(open_nodes, key=best.get)
+        if here == 1: break
+        done.add(here)
+        for there in range(1, len(nodes)):
+            if there in done or not clear_line(geo, nodes[here], nodes[there]): continue
+            length = best[here] + apart(nodes[here], nodes[there])
+            if length < best.get(there, math.inf): best[there], before[there] = length, here
+    path = [1]
+    while path[-1]: path.append(before[path[-1]])
+    return best[1], [nodes[i] for i in reversed(path)]
+
+
+def game_world_failures(layout, geo=None):
+    """Patch 2.5 item 1A: every disagreement in the game's own world, as text."""
+    bad, plan = [], layout['game_world']
+    geo = geo or game_world(layout)
+    solid = lambda point: any(_inside(point, r) for r in geo['land'] + geo['ice'])
+    overlaps = lambda area: any(r[0] < area[0] + area[2] and area[0] < r[0] + r[2] and r[1] < area[1] + area[3] and area[1] < r[1] + r[3]
+                                for r in geo['land'] + geo['ice'])
+    half_wrap = geo['wrap'] / 2 - plan['edge_margin_m']
+    for x, z, w, d in geo['land'] + geo['ice']:
+        if abs(x + w / 2 - geo['centre'][0]) + w / 2 >= half_wrap or abs(z + d / 2 - geo['centre'][1]) + d / 2 >= half_wrap:
+            bad.append('land %s is too near the world edge' % ((x, z, w, d),))
+    covered, continents, islands = 0, 0, 0
+    for name, first, end in geo['masses']:
+        if first != covered or end <= first: bad.append('%s does not follow on in LAND' % name)
+        covered = end
+        area = sum(w * d for _, _, w, d in geo['land'][first:end])
+        if end - first >= 4 and area > 1.0e7: continents += 1
+        elif area > 3.0e5: islands += 1
+    if covered != len(geo['land']): bad.append('a land block belongs to no landmass')
+    if continents < plan['min_continents'] or islands < plan['min_islands']: bad.append('too few continents or islands')
+    for port in geo['world']:
+        side, (x, _, z) = -port['drop_side'], port['at']
+        if not solid((x + side * 105, z + 100)): bad.append('%s: quay does not back onto a coast' % port['id'])
+        if overlaps((min(x + side * 15, x - side * 350), z - 1400, 365, 2200)): bad.append('%s: land at its berths or approach' % port['id'])
+        if overlaps((min(x + port['drop_side'] * 450, x + port['drop_side'] * 850) - 150, z - 1350, 700, 700)):
+            bad.append('%s: land at its heavy drop area' % port['id'])
+    # Straits: real narrow cuts the biggest class fits through, with a lane.
+    beam = layout['size_classes'][CLASSES[-1]]['max_beam_m']
+    if sorted({s['like'] for s in geo['straits']}) != sorted(plan['straits_like']): bad.append('the straits are not the planned set')
+    for strait in geo['straits']:
+        a, b, half = strait['start'], strait['end'], strait['width'] / 2
+        if strait['width'] < plan['strait_beams'] * beam: bad.append('%s: too narrow for the largest class' % strait['name'])
+        if not clear_line(geo, a, b, half - 5): bad.append('%s: not open water across' % strait['name'])
+        length = math.hypot(b[0] - a[0], b[1] - a[1])
+        middle, across = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), (-(b[1] - a[1]) / length, (b[0] - a[0]) / length)
+        if not all(solid((middle[0] + k * across[0] * (half + 40), middle[1] + k * across[1] * (half + 40))) for k in (1, -1)):
+            bad.append('%s: no land close on both sides' % strait['name'])
+        if tuple(a) not in geo['lanes'] or tuple(b) not in geo['lanes']: bad.append('%s: no sea lane through it' % strait['name'])
+    # Every port reaches every other by sea, within every cargo hull's budget.
+    fleet = hulls(layout)
+    gates = {p['id']: (p['at'][0], p['at'][2] - geo['gate']) for p in geo['world']}
+    for a in gates:
+        for b in gates:
+            if a >= b: continue
+            length, _ = sea_route(geo, gates[a], gates[b])
+            if length is None:
+                bad.append('%s/%s: no way by sea' % (a, b))
+                continue
+            if length > plan['max_route_m']: bad.append('%s/%s: sea route %.0f m is too long' % (a, b, length))
+            for ship in fleet:
+                if leg_seconds(layout, ship, length) / 60 > layout['budget']['max_leg_minutes']:
+                    bad.append('%s/%s: too long for %s' % (a, b, ship['id']))
+                if leg_fuel(layout, ship, length) > layout['budget']['fuel_reserve_fraction'] * ship['tank']:
+                    bad.append('%s/%s: beyond the fuel range of %s' % (a, b, ship['id']))
+    return bad
+
+
+def game_route_table(layout):
+    geo = game_world(layout)
+    reference = hull(layout, layout['budget']['reference_hull'])
+    gates = {p['id']: (p['at'][0], p['at'][2] - geo['gate']) for p in geo['world']}
+    lines = ['| Game sea route | Length km | Turns | Starter min |', '|---|---:|---:|---:|']
+    for a in gates:
+        for b in gates:
+            if a >= b: continue
+            length, path = sea_route(geo, gates[a], gates[b])
+            if length is not None:
+                lines.append('| %s / %s | %.2f | %d | %s |' % (a, b, length / 1000, len(path) - 2, minutes(leg_seconds(layout, reference, length))))
+    return '\n'.join(lines)
+
+
 if __name__ == '__main__':
     plan = load()
-    found = failures(plan)
-    print(route_table(plan), hull_table(plan), sep='\n\n')
+    found = failures(plan) + game_world_failures(plan)
+    print(route_table(plan), hull_table(plan), game_route_table(plan), sep='\n\n')
     for line in found: print('FAIL', line)
     print('WORLD_LAYOUT_%s routes=%d failures=%d' % ('FAIL' if found else 'PASS', len(plan['routes']), len(found)))
     sys.exit(1 if found else 0)

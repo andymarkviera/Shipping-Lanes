@@ -176,6 +176,16 @@
       "constraint": "Visible gap between the mainland and the Skerries. No depth limit."
     }
   },
+  "game_world": {
+    "note": "Patch 2.5 item 1A: the game's own wrapping world. Land, straits and sea lanes live in the source file; this block holds what the traversal budget checks them against.",
+    "source": "features/game/progression.gd",
+    "edge_margin_m": 2000.0,
+    "max_route_m": 11000.0,
+    "strait_beams": 2.5,
+    "straits_like": ["Bosphorus", "Gibraltar", "Malacca", "Panama"],
+    "min_continents": 2,
+    "min_islands": 2
+  },
   "routes": [
     {"id": "brindle_slatewater", "from": "port_brindle_quay", "to": "port_slatewater_works", "via": [], "tier": "starter",
      "measured": {"outbound_m": 3068.27, "return_m": 4059.16, "outbound_s": 530.18, "return_s": 653.22, "source": "ECONOMY_GATE.md Step 67 fixture corridors"}},

@@ -919,7 +919,7 @@ jobs, same saves; land is shaped around them, never on top of them.
    Debug mode may keep its readouts. The last item's PR carries a 5-10
    line Windows playtest checklist for all of Patch 2.5.
 
-**Patch 2.5 status (November 14, 2026):** planned, not started.
+**Patch 2.5 status (November 14, 2026):** item 1 part A (landmasses, straits and oceans: two continents, Hearthland and Ironreach, built round the existing strait; the Northern Neck; Kelp Isle and Gull Isle; Needle Gut (Bosphorus-like, 200 m), Gannet Narrows (Gibraltar-like, 550 m), Kelp Strait (Malacca-like, 250 m, 4 km long) and the Ironreach Canal (Panama-like, 140 m); open oceans across the wrapping edges; solid land; every port on a coast with its berths, spawn and heavy drop area in open water; sea lanes and a land-aware route for the minimap course; Godot `world_land_check` and the game-world part of the traversal budget) is in a draft PR, checked headless on Linux. Part B (toon coastlines and beaches, the minimap and M globe drawing the new land properly, the globe's course line) is not started. Items 2-8 not started.
 
 ## 11. Patch 2.6 (Andy, November 14, 2026): macOS port
 

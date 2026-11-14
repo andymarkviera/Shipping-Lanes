@@ -16,19 +16,68 @@ const WORLD = [
 ## The four strait ports come first. Their container jobs keep the destinations
 ## they had before the polar ports, so saved jobs still match their IDs.
 const STRAIT_PORTS: int = 4
-## Land as flat rectangles: Rect2(x, z, width, depth) in metres. Two shores, the
-## head of the strait and two islands. Each berth keeps open water straight ahead
-## and astern, and the heavy pickup and drop areas are clear.
+## Land as flat rectangles: Rect2(x, z, width, depth) in metres. Each berth
+## keeps open water straight ahead and astern, and the heavy pickup and drop
+## areas are clear. Patch 2.5 item 1: real-feeling geography round the strait
+## the first four ports share: two continents, big islands, three straits and a
+## canal (LANDMASSES and STRAITS name them). All land stays at least 2 km inside
+## the world's edges, so the wrap never tears a coast; the oceans between the
+## continents run across the edges. Every port's quay backs onto land.
 const LAND = [
-	Rect2(-1500, -3600, 1000, 3200), Rect2(-1500, -400, 1400, 1100),
+	# Hearthland: the continent behind Brindle Quay and Cinder Point, with the
+	# South Pole on its southern tip and Gannet Narrows' western cape.
+	Rect2(-1500, -3700, 1000, 3300), Rect2(-1500, -400, 1400, 1100),
 	Rect2(-1500, 700, 1100, 1000), Rect2(-1500, 1700, 1200, 1300),
-	Rect2(1800, -3000, 1200, 1500), Rect2(1900, -1500, 1100, 1100),
-	Rect2(1600, -400, 1400, 1100), Rect2(1750, 700, 1250, 2300),
-	Rect2(-1500, 3000, 4500, 400),
+	Rect2(-3300, -2950, 1800, 1900), Rect2(-3500, -1050, 2000, 1700),
+	Rect2(-3150, 650, 1650, 1350), Rect2(-3400, 2000, 1900, 1000),
+	Rect2(-2200, -3860, 700, 910), Rect2(-1500, -4150, 2850, 450),
+	# The Northern Neck at the head of the strait, cut by Needle Gut.
+	Rect2(-1500, 3000, 2080, 400), Rect2(780, 3000, 2220, 400),
+	# Ironreach: the continent behind Slatewater Works and Gannet Light, cut by
+	# the Ironreach Canal, with Gannet Narrows' eastern cape.
+	Rect2(1800, -3000, 1200, 1500), Rect2(1900, -1500, 1100, 600),
+	Rect2(1900, -760, 1100, 360), Rect2(1600, -400, 1400, 1100),
+	Rect2(1750, 700, 1250, 2300), Rect2(1900, -4150, 1900, 1150),
+	Rect2(3000, -3000, 800, 2100), Rect2(3000, -760, 800, 3160),
+	# Kelp Isle, across Kelp Strait from Ironreach.
+	Rect2(4050, -2600, 900, 4000),
+	# Gull Isle, in the northern sea.
+	Rect2(-1000, 3700, 1000, 400),
+	# The two islets in the strait.
 	Rect2(880, 1320, 240, 360), Rect2(450, -2050, 300, 300),
 ]
-## Patch 2.1 item 3: snowy ice shelves beside the two polar quays, solid like land.
-const ICE_SHELVES = [Rect2(3050, 3700, 450, 460), Rect2(-2100, -4360, 450, 500)]
+## Patch 2.5 item 1: the named landmasses, as [name, first LAND index, end index).
+const LANDMASSES = [
+	["Hearthland", 0, 10], ["Northern Neck", 10, 12], ["Ironreach", 12, 20],
+	["Kelp Isle", 20, 21], ["Gull Isle", 21, 22], ["Strait islets", 22, 24],
+]
+## Patch 2.1 item 3: snowy ice shelves beside the two polar quays, solid like
+## land. Patch 2.5 item 1: each runs on to its quay, so the poles sit on a coast.
+const ICE_SHELVES = [Rect2(3050, 3700, 450, 460), Rect2(-2100, -4360, 450, 500), Rect2(3500, 3700, 100, 460), Rect2(-2200, -4360, 100, 500)]
+## Patch 2.5 item 1: the narrow ways through the land, like real ones. Each is
+## a straight cut from `from` to `to` (X, Z), `width_m` clear water across. The
+## sea lanes run down the middle; the narrowest still takes 2.5 beams of the
+## biggest ship.
+const STRAITS = [
+	{"id": "needle_gut", "name": "Needle Gut", "like": "Bosphorus", "from": Vector2(680, 2850), "to": Vector2(680, 3550), "width_m": 200.0},
+	{"id": "gannet_narrows", "name": "Gannet Narrows", "like": "Gibraltar", "from": Vector2(1625, -3550), "to": Vector2(1625, -4350), "width_m": 550.0},
+	{"id": "kelp_strait", "name": "Kelp Strait", "like": "Malacca", "from": Vector2(3925, -2800), "to": Vector2(3925, 1600), "width_m": 250.0},
+	{"id": "ironreach_canal", "name": "Ironreach Canal", "like": "Panama", "from": Vector2(1750, -830), "to": Vector2(3925, -830), "width_m": 140.0},
+]
+## Patch 2.5 item 1: sea-lane points (X, Z). Navigation finds the shortest way
+## between them that keeps LANE_MARGIN_M off all land, ice, icebergs and quays.
+## The first eight are the straits' mouths; the rest mark the open sea.
+const SEA_LANES: Array[Vector2] = [
+	Vector2(680, 2850), Vector2(680, 3550), Vector2(1625, -3550), Vector2(1625, -4350),
+	Vector2(1750, -830), Vector2(3925, -830), Vector2(3925, -2800), Vector2(3925, 1600),
+	Vector2(5500, -830), Vector2(5500, 3000), Vector2(5500, -3500), Vector2(-2600, -4800),
+	Vector2(-4200, -2000), Vector2(-4200, 1500), Vector2(-2500, 3550), Vector2(250, 3550),
+	Vector2(2400, 3550), Vector2(250, -4500), Vector2(3000, -4500), Vector2(1000, 4300),
+	Vector2(500, 900), Vector2(500, -900), Vector2(450, 2400),
+]
+const LANE_MARGIN_M: float = 60.0
+## Ships leave and reach every port through its gate, this far south of it.
+const GATE_M: float = 450.0
 ## Patch 2.1 item 3: icebergs in the polar seas, solid like land. Vector3(x,
 ## radius, z) in metres. They keep clear of the polar quays, their approaches
 ## and their heavy-load drop areas.
@@ -255,3 +304,132 @@ static func earned(d: Dictionary) -> int:
 	var total: int = int(d.get("banked", 0))
 	for id: String in d.bulk.done: total += int(BULK_V4[id])
 	return total
+
+## Patch 2.5 item 1: sea navigation round the land. Read-only helpers for the
+## minimap's course and the checks; no ship is steered by them.
+static var _obstacles: Array[Rect2] = []
+static var _links: Array = []
+static var _route_key: Array = []
+static var _route: Array[Vector3] = []
+
+## A port's quay and berths, kept clear by the sea lanes like land.
+static func harbour(index: int) -> Rect2:
+	var at: Vector3 = WORLD[index].at
+	var quay_side: float = -float(WORLD[index].drop_side)
+	return Rect2(minf(at.x - quay_side * 25, at.x + quay_side * 110), at.z - 60, 135, 1000)
+
+## Where ships leave and reach a port: open water straight astern of its berths.
+static func gate(index: int) -> Vector3:
+	return WORLD[index].at + Vector3(0, 0, -GATE_M)
+
+## Land, ice shelves, icebergs (as squares) and quays: everything a lane avoids.
+static func obstacles() -> Array[Rect2]:
+	if _obstacles.is_empty():
+		for block: Rect2 in LAND + ICE_SHELVES: _obstacles.append(block)
+		for index: int in WORLD.size(): _obstacles.append(harbour(index))
+		for berg: Vector3 in ICEBERGS: _obstacles.append(Rect2(berg.x - berg.y, berg.z - berg.y, berg.y * 2, berg.y * 2))
+	return _obstacles
+
+## True when the straight run from `a` to `b`, the short way round the world,
+## stays `margin` metres off every obstacle. An obstacle whose margin already
+## holds an end (a ship near a coast or in a harbour) only has to be missed
+## itself, and a harbour that holds an end is left out.
+static func clear_line(a: Vector2, b: Vector2, margin: float = LANE_MARGIN_M) -> bool:
+	var step: Vector3 = short_way(Vector3(b.x - a.x, 0, b.y - a.y))
+	var to: Vector2 = a + Vector2(step.x, step.z)
+	var span: Rect2 = Rect2(a, Vector2.ZERO).expand(to)
+	var blocks: Array[Rect2] = obstacles()
+	for index: int in blocks.size():
+		for shift: Vector2 in [Vector2.ZERO, Vector2(WRAP_M, 0), Vector2(-WRAP_M, 0), Vector2(0, WRAP_M), Vector2(0, -WRAP_M), Vector2(WRAP_M, WRAP_M), Vector2(WRAP_M, -WRAP_M), Vector2(-WRAP_M, WRAP_M), Vector2(-WRAP_M, -WRAP_M)]:
+			var block: Rect2 = Rect2(blocks[index].position + shift, blocks[index].size)
+			var grown: Rect2 = block.grow(margin)
+			if not grown.intersects(span.grow(1.0)): continue
+			if grown.has_point(a) or grown.has_point(to):
+				if block.has_point(a) or block.has_point(to): continue
+				grown = block
+			if _segment_hits(a, to, grown): return false
+	return true
+
+## Liang-Barsky: does the segment a-b touch the rectangle?
+static func _segment_hits(a: Vector2, b: Vector2, box: Rect2) -> bool:
+	var low: float = 0.0
+	var high: float = 1.0
+	var d: Vector2 = b - a
+	for pair: Vector2 in [Vector2(-d.x, a.x - box.position.x), Vector2(d.x, box.end.x - a.x), Vector2(-d.y, a.y - box.position.y), Vector2(d.y, box.end.y - a.y)]:
+		if is_zero_approx(pair.x):
+			if pair.y < 0: return false
+			continue
+		var t: float = pair.y / pair.x
+		if pair.x < 0: low = maxf(low, t)
+		else: high = minf(high, t)
+		if low > high: return false
+	return true
+
+static func _flat(at: Vector3) -> Vector2:
+	return Vector2(at.x, at.z)
+
+static func _apart(a: Vector2, b: Vector2) -> float:
+	var step: Vector3 = short_way(Vector3(b.x - a.x, 0, b.y - a.y))
+	return Vector2(step.x, step.z).length()
+
+## The shortest way by sea from `from` to `to` through the lane points: the
+## turning points after `from`, ending with `to`. Empty when there is none.
+static func sea_route(from: Vector3, to: Vector3) -> Array[Vector3]:
+	if _links.is_empty():
+		for i: int in SEA_LANES.size():
+			var row: PackedFloat32Array = PackedFloat32Array()
+			for j: int in SEA_LANES.size():
+				row.append(_apart(SEA_LANES[i], SEA_LANES[j]) if i != j and clear_line(SEA_LANES[i], SEA_LANES[j]) else INF)
+			_links.append(row)
+	var start: Vector2 = _flat(from)
+	var goal: Vector2 = _flat(to)
+	if clear_line(start, goal): return [to]
+	var count: int = SEA_LANES.size()
+	var to_goal: PackedFloat32Array = PackedFloat32Array()
+	var best: PackedFloat32Array = PackedFloat32Array()
+	var before: PackedInt32Array = PackedInt32Array()
+	var done: PackedByteArray = PackedByteArray()
+	for i: int in count:
+		to_goal.append(_apart(SEA_LANES[i], goal) if clear_line(SEA_LANES[i], goal) else INF)
+		best.append(_apart(start, SEA_LANES[i]) if clear_line(start, SEA_LANES[i]) else INF)
+		before.append(-1)
+		done.append(0)
+	var finish: float = INF
+	var last: int = -1
+	while true:
+		var next: int = -1
+		for i: int in count:
+			if done[i] == 0 and best[i] < INF and (next < 0 or best[i] < best[next]): next = i
+		if next < 0 or best[next] >= finish: break
+		done[next] = 1
+		if best[next] + to_goal[next] < finish:
+			finish = best[next] + to_goal[next]
+			last = next
+		for j: int in count:
+			if done[j] == 0 and best[next] + _links[next][j] < best[j]:
+				best[j] = best[next] + _links[next][j]
+				before[j] = next
+	var route: Array[Vector3] = []
+	if last < 0: return route
+	route.append(to)
+	while last >= 0:
+		route.push_front(Vector3(SEA_LANES[last].x, 0, SEA_LANES[last].y))
+		last = before[last]
+	return route
+
+## The way by sea to a port's berth (`index` >= 0: through its gate, unless the
+## ship is already in the port's own approach) or to an open-water point
+## (`index` -1). Kept until the ship or the target moves 50 m.
+static func course(from: Vector3, to: Vector3, index: int = -1) -> Array[Vector3]:
+	var key: Array = [Vector2i(roundi(from.x / 50.0), roundi(from.z / 50.0)), Vector2i(roundi(to.x / 50.0), roundi(to.z / 50.0)), index]
+	if key == _route_key: return _route
+	var route: Array[Vector3] = []
+	var local: Vector3 = short_way(from - WORLD[index].at) if index >= 0 else Vector3.ZERO
+	if index < 0: route = sea_route(from, to)
+	elif absf(local.x) < 400 and local.z > -GATE_M - 150 and local.z < 1000: route = [to]
+	else:
+		route = sea_route(from, gate(index))
+		if not route.is_empty(): route.append(to)
+	_route_key = key
+	_route = route
+	return route

@@ -101,9 +101,17 @@ func _draw() -> void:
 	var goal_at: Vector2 = sphere_point(destination.position, ship) if not destination.is_empty() else Vector2.ZERO
 	if not destination.is_empty():
 		# A dotted course from the ship to the destination, the short way round.
-		for step: int in range(1, 12):
-			var point: Vector2 = goal_at * (step / 12.0)
-			if visible_on(point): draw_circle(on_disc(point, radius), 1.8, PLAYFUL.SUN)
+		# Patch 2.5 item 1: it follows the sea route round the land.
+		var corners: Array = destination.get("route", [])
+		if corners.is_empty(): corners = [destination.position]
+		var from: Vector2 = Vector2.ZERO
+		for corner: Vector3 in corners:
+			var to: Vector2 = sphere_point(corner, ship)
+			var dots: int = clampi(roundi(from.distance_to(to) / 0.06), 1, 24)
+			for step: int in range(1, dots + 1):
+				var point: Vector2 = from.lerp(to, step / float(dots))
+				if visible_on(point): draw_circle(on_disc(point, radius), 1.8, PLAYFUL.SUN)
+			from = to
 	for port: Node3D in view.world_ports:
 		var point: Vector2 = sphere_point(port.berth_anchor.global_position, ship)
 		if not visible_on(point): continue

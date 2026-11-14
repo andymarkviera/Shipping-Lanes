@@ -319,6 +319,12 @@ func _ready() -> void:
 
 ## M4 coastline: a solid sand slab level with the quays, with a green block on top.
 ## Land is sand with a green top; an ice shelf (polar ports) is pale ice with snow.
+## Patch 2.5 item 1: the blocks of a landmass share four materials (so the toon
+## pass makes four shaders, not one per block) and the green top only steps
+## back from sides that face the sea, so a continent made of several blocks has
+## a beach round its coast and no sand seams across it. Land past the camera's
+## far plane (3 km) is culled.
+var land_paint: Dictionary = {}
 func add_land(rect: Rect2, ice: bool = false) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.position = Vector3(rect.get_center().x, -2, rect.get_center().y)
@@ -330,16 +336,32 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 	var collider: CollisionShape3D = CollisionShape3D.new()
 	collider.shape = shape
 	body.add_child(collider)
+	# Insets of the top (west, east, south, north): 60 m where the side meets the sea.
+	var blocks: Array = Progression.ICE_SHELVES if ice else Progression.LAND
+	var inset: Array[float] = []
+	for side: int in 4:
+		var covered: bool = true
+		for step: int in 5:
+			var along: float = (step + 0.5) / 5.0
+			var probe: Vector2 = [Vector2(rect.position.x - 2, rect.position.y + rect.size.y * along), Vector2(rect.end.x + 2, rect.position.y + rect.size.y * along), Vector2(rect.position.x + rect.size.x * along, rect.position.y - 2), Vector2(rect.position.x + rect.size.x * along, rect.end.y + 2)][side]
+			covered = covered and blocks.any(func(other: Rect2) -> bool: return other != rect and other.has_point(probe))
+		inset.append(0.0 if covered else 60.0)
+	var top: Vector2 = Vector2(rect.size.x - inset[0] - inset[1], rect.size.y - inset[2] - inset[3])
 	for level: int in 2:
+		if level == 1 and minf(top.x, top.y) < 20: continue
+		var key: String = ("ice" if ice else "land") + str(level)
+		if not land_paint.has(key):
+			var material: StandardMaterial3D = StandardMaterial3D.new()
+			material.albedo_color = (Color("bfe3ef") if level == 0 else Color("f7fbfd")) if ice else (Color("d6c692") if level == 0 else Color("7fa368"))
+			material.roughness = 0.9
+			land_paint[key] = material
 		var box: BoxMesh = BoxMesh.new()
-		box.size = shape.size if level == 0 else Vector3(rect.size.x - 120, 14, rect.size.y - 120)
-		var material: StandardMaterial3D = StandardMaterial3D.new()
-		material.albedo_color = (Color("bfe3ef") if level == 0 else Color("f7fbfd")) if ice else (Color("d6c692") if level == 0 else Color("7fa368"))
-		material.roughness = 0.9
+		box.size = shape.size if level == 0 else Vector3(top.x, 14, top.y)
 		var mesh: MeshInstance3D = MeshInstance3D.new()
 		mesh.mesh = box
-		mesh.material_override = material
+		mesh.material_override = land_paint[key]
 		mesh.position.y = level * 13
+		if level == 1: mesh.position += Vector3((inset[0] - inset[1]) / 2, 0, (inset[2] - inset[3]) / 2)
 		body.add_child(mesh)
 
 ## Patch 2.1 item 3: a chunky toon iceberg, solid like land. A pale ice band at
