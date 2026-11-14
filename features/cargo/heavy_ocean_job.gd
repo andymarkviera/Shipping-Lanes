@@ -12,8 +12,8 @@ func _init() -> void:
 ## size of each of the three loads as a share of the ship's biggest load.
 const TIER_PAY: Array[int] = [1, 6, 18, 42, 90]
 const LOAD_SHARE: Array[float] = [0.7, 0.85, 0.95]
-const TITLES = ["Platform module", "Research module", "Equipment module"]
-const TIER_TITLES = ["", "Wind turbine nacelle", "Refinery column", "Offshore jacket", "Oil platform deck"]
+## Patch 2.4 item 6: job i carries look i (heavy_load_looks.gd) on every tier.
+const LOOKS = preload("res://features/cargo/heavy_load_looks.gd")
 
 ## The three jobs at a port for one tier. Ship 1 keeps its M4 IDs
 ## ("<port>_heavy_<i>"); tiers 2-5 are "<port>_heavy_t<tier>_<i>".
@@ -21,7 +21,7 @@ func list_at(port_id: String, tier: int = 1) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for i: int in 3:
 		var id: String = ("%s_heavy_%d" % [port_id, i]) if tier == 1 else ("%s_heavy_t%d_%d" % [port_id, tier, i])
-		var title: String = TITLES[i] if tier == 1 else "%s, %d t" % [TIER_TITLES[tier - 1], roundi(load_of(tier, i).mass_kg / 1000.0)]
+		var title: String = LOOKS.NAMES[i] if tier == 1 else "%s, %d t" % [LOOKS.NAMES[i], roundi(load_of(tier, i).mass_kg / 1000.0)]
 		rows.append({"id": id, "title": title, "reward_minor": (70000 + i * 15000) * TIER_PAY[tier - 1], "tier": tier, "state": "completed" if completed.has(id) else ("accepted" if active.get("id", "") == id else "available")})
 	return rows
 
@@ -40,11 +40,11 @@ static func tier_of(id: String) -> int:
 ## Size and mass of load `index` for a tier: a share of that tier's biggest load.
 ## Tier 1 keeps the one prototype load.
 static func load_of(tier: int, index: int) -> Dictionary:
-	if tier <= 1: return {"size": Vector3(14, 8, 32), "mass_kg": 0.0}
+	if tier <= 1: return {"size": Vector3(14, 8, 32), "mass_kg": 0.0, "look": index}
 	var hull: Vector3 = (load("res://features/game/progression.gd").definition("heavy_%d" % tier) as ShipDefinition).hull_size_m
 	var k: Vector3 = Vector3(hull.x / 24.0, 1.0, hull.z / 90.0)
 	var share: float = LOAD_SHARE[index]
-	return {"size": Vector3(14, 8, 32) * Vector3(k.x, sqrt(k.x), k.z) * share, "mass_kg": 200000.0 * k.x * k.z * share}
+	return {"size": Vector3(14, 8, 32) * Vector3(k.x, sqrt(k.x), k.z) * share, "mass_kg": 200000.0 * k.x * k.z * share, "look": index}
 
 static func load_for(id: String) -> Dictionary:
 	return load_of(tier_of(id), int(id.get_slice("_", id.get_slice_count("_") - 1)))
