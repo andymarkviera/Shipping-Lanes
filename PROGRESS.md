@@ -6731,3 +6731,49 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
 - Not run: CI Stage 3 Python (no service code changed), Windows, screenshots
   and frame timing (headless renders nothing), and a playtest. Nobody has seen
   the coasts, the surf or the globe course on screen yet.
+
+## Patch 2.5 item 2: bridges you pass under (November 14, 2026)
+
+- Four toon bridges, one per strait (`Progression.BRIDGES`, built by
+  `features/toon/toon_bridge.gd` into the real game scene under `Bridges`):
+  - Gannet Narrows Bridge: the big red suspension bridge. Two 174 m towers,
+    main cables that sag to the deck, hangers every 15 m, anchor blocks on
+    both shores.
+  - Needle Gut Bridge: a green tied arch over the deck.
+  - Kelp Strait Bridge: a white cable-stayed bridge with fans of stays.
+  - Ironreach Canal Bridge: a blue through truss.
+- The deck underside is 70 m above the sea. The tallest ship in any family,
+  measured dressed as in the game, is the Valemax bulker at 49.8 m. Heavy
+  lifters stay under about 18 m even with their biggest load.
+- Towers and piers are solid (`SHORE` collision) and stand on land, out of the
+  channel. Each deck runs flat past the beach, then ramps down onto the hills
+  on stone piers. The deck has no collision: no ship reaches it, and the chase
+  camera passes under it smoothly instead of being pulled in.
+- Frame time: each bridge is two merged meshes (structure and rigging) with
+  shared materials. All four take about 5 ms to build and come to roughly
+  5,500 triangles in total. The rigging stops drawing at 3 km and the
+  structure at 9 km.
+- Ports, jobs, saves, land, sea lanes and routes are unchanged.
+- `world_land_check` is now 161 checks. New: at least three bridges with one
+  suspension bridge; the deck clears the measured tallest ship by 15 m; both
+  ends land on land; every tower and pier stands on land, out of the channel;
+  a ship 5 sized box sweeps under each bridge without hitting anything; the
+  bridges cull far away and share their materials.
+- Fixed a timing race in that check: the surf test could run before the game's
+  second drawn frame, so it now waits two frames.
+
+Checks (agent's Linux runner, official Godot 4.7.2):
+
+- Passed, headless: import, `check_scripts`, `--quit-after 10`,
+  `world_land_check` (161, 4 of 4 runs), `globe_map_check` (48),
+  `check_catalog`, `check_controls`, `check_flow`, `check_starter`,
+  `check_m1_voyage`, `check_helm_keys`, `debug_game_check`, `hangar_check`,
+  `small_boats_check`, `heavy_ladder_check`, `mooring_check`, `crane_check`,
+  every CI Stage 2 probe, `voyage_probe`, `ports_probe`, `traversal_budget.py`
+  (17 routes) and its unittests.
+- Screenshots: chase-camera views of all four bridges, rendered with OpenGL
+  under Xvfb on Linux. They read well, including from straight under the
+  Gannet deck.
+- Not run: Windows, frame timing on the target, and a playtest.
+- Known: `world_land_check` sometimes ends with "2 ObjectDB instances were
+  leaked". That happens on main too; it comes from game audio.

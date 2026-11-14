@@ -64,6 +64,24 @@ const STRAITS = [
 	{"id": "kelp_strait", "name": "Kelp Strait", "like": "Malacca", "from": Vector2(3925, -2800), "to": Vector2(3925, 1600), "width_m": 250.0},
 	{"id": "ironreach_canal", "name": "Ironreach Canal", "like": "Panama", "from": Vector2(1750, -830), "to": Vector2(3925, -830), "width_m": 140.0},
 ]
+## Patch 2.5 item 2: toon bridges across the straits, crossing each at `at`
+## (X, Z). Every tower and pier stands on land, out of the channel, and the
+## deck's underside is BRIDGE_CLEARANCE_M above the sea: the tallest ship in any
+## family (the Valemax bulker, about 49 m) passes under with room to spare.
+const BRIDGES = [
+	{"id": "gannet_narrows_bridge", "name": "Gannet Narrows Bridge", "strait": "gannet_narrows", "style": "suspension", "at": Vector2(1625, -3950)},
+	{"id": "needle_gut_bridge", "name": "Needle Gut Bridge", "strait": "needle_gut", "style": "arch", "at": Vector2(680, 3200)},
+	{"id": "kelp_strait_bridge", "name": "Kelp Strait Bridge", "strait": "kelp_strait", "style": "cable_stayed", "at": Vector2(3925, -2000)},
+	{"id": "ironreach_canal_bridge", "name": "Ironreach Canal Bridge", "strait": "ironreach_canal", "style": "truss", "at": Vector2(2500, -830)},
+]
+const BRIDGE_CLEARANCE_M: float = 70.0
+
+## A bridge's strait entry.
+static func bridge_strait(index: int) -> Dictionary:
+	for strait: Dictionary in STRAITS:
+		if strait.id == BRIDGES[index].strait: return strait
+	return {}
+
 ## Patch 2.5 item 1: sea-lane points (X, Z). Navigation finds the shortest way
 ## between them that keeps LANE_MARGIN_M off all land, ice, icebergs and quays.
 ## The first eight are the straits' mouths; the rest mark the open sea.
