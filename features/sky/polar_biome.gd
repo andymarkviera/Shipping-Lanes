@@ -41,6 +41,8 @@ var grade: Gradient
 var blend: float = -1.0
 var applied: float = -1.0
 var base: Dictionary = {}
+## Patch 2.5 item 4: a biome painted over this one after every repaint (the desert).
+var overlay: Node
 
 ## Where the polar look is, 0..1, for a world position (any copy across the wrap).
 static func weight(at: Vector3) -> float:
@@ -168,3 +170,4 @@ func apply(value: float) -> void:
 	if falling != snow.emitting:
 		if falling and view_camera != null: snow.global_position = view_camera.global_position + Vector3(0, 22, 0)
 		snow.emitting = falling
+	if overlay != null: overlay.paint()
