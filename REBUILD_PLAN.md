@@ -810,3 +810,59 @@ and passes the automatic checks on Linux headless, including the new
 session); not seen on a screen by anyone. It waits for Andy's Windows
 playtest. It lives in `features/debug/`; removal steps are at the top of
 `debug_game.gd`. Details in PROGRESS.md.
+
+## 9. Patch 2.4 (Andy, November 13, 2026)
+
+Andy's playtest of Patch 2.2/2.3 (debug mode) on Windows, with photos. Same
+rules as before: one PR each, in this order, Godot 4.7.2, Wind Waker look,
+nothing that relies on pausing, saves and on-hold gas/oil/refinery/cargo-fuel
+code intact, debug mode (section 8) keeps working and includes every new
+boat, the section 7 no-jank checklist applies to every item.
+
+1. **Hulls sitting wrong in the water (bug, first).** Andy's photo of the
+   largest container ship (ship 5, 42 kn) shows the bow dug down into the
+   water while sailing, as if the model is nose-heavy or its buoyancy/trim
+   points are wrong for its size. Check all 15 ladder ships at rest and at
+   full speed: each must float level at a sensible waterline (bow not
+   submerged, stern not sunk, no hull floating above the water), rocking and
+   squat stay mild and scale with size. Fix buoyancy points, center of mass
+   and model origin per hull. Add an automated check that each ship's
+   resting and full-speed pitch and draft stay within limits.
+2. **Faster turning.** Turning is too slow on every ship. Raise turn rate
+   (tighter turning circle) noticeably across all ships; big ships still turn
+   wider than small ones but no ship should feel like a slog. Note the
+   numbers in PROGRESS.md.
+3. **Bigger ports and proper berth spacing.** One ship 5 covers a whole port
+   today. Enlarge every port (quays, water area, berths; polar ports too) so
+   several big ships fit and the port still looks good. Docking leaves a
+   realistic gap from the quay scaled to the hull (the big ships currently
+   end up almost touching or inside the dock). Berth claiming from Patch 2.1
+   keeps working.
+4. **Mooring ropes.** Every ship model gets bollards/fairleads at bow and
+   stern. When a ship finishes docking, toon mooring lines animate out and tie
+   to the quay bollards like real life (bow, stern and spring lines on big
+   ships); on undock they let go and reel in before the ship moves.
+5. **Containers load one by one.** When a container ship loads or unloads,
+   containers appear (and disappear) one at a time, moved by the port crane,
+   instead of all at once. Loading time stays sensible for big ships (the
+   crane can work faster per tier, or several cranes on big berths).
+6. **Heavy-lift loads.** Three different heavy-lift cargo looks (for example
+   a wind-turbine blade/tower section, a big industrial transformer or
+   machinery block, and a harbor crane or boat hull on a cradle), each sized
+   to the heavy lifter tier carrying it, so bigger heavy lifters carry bigger
+   pieces. They sit on deck believably and show during loading.
+7. **M opens a 3D globe map.** Pressing M opens a large 3D globe in the middle
+   of the screen showing the whole world: ports (polar included), your ship,
+   icebergs region. Click-and-drag rotates the planet freely in every
+   direction (all the way around, over the poles), scroll zooms, M or Esc
+   closes. The world keeps running while it is open (no pausing). The small
+   minimap stays.
+8. **Small fun boats.** A new "Small boats" family in the hangar and debug
+   mode: a cigarette-style offshore racer (tiny, very fast, jumps waves a lot
+   with big airtime and splashes), a regular speedboat (fast, jumps waves
+   less), and a fishing boat (slow, chunky, cosy). Cheap; no cargo jobs.
+   Toon models, own wake and splash; jumping is physics-driven from the
+   waves and lands without jitter or flipping. The last item's PR carries a
+   5-10 line Windows playtest checklist for all of Patch 2.4.
+
+**Patch 2.4 status (November 13, 2026):** planned; not started.
