@@ -190,5 +190,73 @@ func run() -> void:
 	panel.queue_free()
 	remove_child(scene)
 	scene.queue_free()
+	check_ladder_trim()
 	print("WATER_CHECK_%s (%d checks)" % ["PASS" if failures == 0 else "FAIL", checks])
 	get_tree().quit(0 if failures == 0 else 1)
+
+## Patch 2.4 item 1: every ladder ship floats level at a sensible waterline,
+## empty and fully loaded, at rest and at full speed on high water. Hull points
+## follow chunky_look.hull_mesh: waterline y = 0, deck 2.6 s, keel -3.2 s, with
+## s = hull height / 4. Heavy lifters (visual_bobbing off) must sit still and level.
+func check_ladder_trim() -> void:
+	var progression: GDScript = load("res://features/game/progression.gd")
+	var kinds: Array[String] = []
+	kinds.append_array(progression.CONTAINER_KINDS)
+	kinds.append_array(progression.BULK_KINDS)
+	kinds.append_array(progression.HEAVY_KINDS)
+	check(kinds.size() == 15, "Fifteen ladder ships checked for trim")
+	for kind: String in kinds:
+		var definition: ShipDefinition = progression.definition(kind)
+		var body: CharacterBody3D = CharacterBody3D.new()
+		add_child(body)
+		var motion: ShipVisualMotion = ShipVisualMotion.new()
+		motion.body = body
+		motion.quality = 2
+		motion.configure_hull(definition)
+		body.add_child(motion)
+		motion.set_process(false)
+		var size: Vector3 = definition.hull_size_m
+		var s: float = size.y / 4.0
+		# Heavy lifters: the float's keel and the top of its side walls.
+		var heavy: bool = kind.begins_with("heavy")
+		var deck: float = 3.0 if heavy else 2.6 * s
+		var keel: float = -4.5 if heavy else -3.2 * s
+		var reach: float = size.z * 0.45
+		for loaded: bool in [false, true]:
+			motion.set_visual_load(1.0 if loaded else 0.0)
+			motion.load_sink_m = ShipVisualMotion.FULL_LOAD_SINK_M if loaded else 0.0
+			for pace: float in [0.0, FULL * 2.0]:
+				body.velocity = Vector3(0, 0, pace)
+				motion.speed_fraction = 0.0 if pace == 0.0 else 1.0
+				var dry: float = INF
+				var wet: float = -INF
+				var steepest: float = 0.0
+				var trim: float = 0.0
+				var rise: float = 0.0
+				var samples: int = 0
+				for tick: int in range(1800):
+					if definition.visual_bobbing: motion._process(1.0 / 30.0)
+					if tick < 60 or tick % 3 != 0: continue
+					var frame: Transform3D = motion.global_transform
+					for z: float in [-reach, reach]:
+						var top: Vector3 = frame * Vector3(0, deck, z)
+						var bottom: Vector3 = frame * Vector3(0, keel * 0.45, z)
+						dry = minf(dry, top.y - OceanPresentation.swell_height(top.x, top.z, motion.elapsed, 2))
+						wet = maxf(wet, bottom.y - OceanPresentation.swell_height(bottom.x, bottom.z, motion.elapsed, 2))
+					steepest = maxf(steepest, absf(motion.rotation.x))
+					trim += motion.rotation.x
+					rise += motion.position.y + (motion.load_sink_m if definition.visual_bobbing else 0.0)
+					samples += 1
+				trim /= samples
+				rise /= samples
+				var label: String = "%s %s %s" % [kind, "loaded" if loaded else "empty", "full speed" if pace > 0.0 else "at rest"]
+				print("TRIM %s: deck clear %.2f m (of %.2f), keel ends %.2f m, max pitch %.2f deg, mean trim %.2f deg, mean heave %.2f m" % [label, dry, deck, wet, rad_to_deg(steepest), rad_to_deg(trim), rise])
+				if definition.visual_bobbing:
+					check(dry >= 0.1 * deck, "Bow and stern decks stay above the water: " + label)
+					check(steepest <= motion.pitch_limit_rad + 0.0001 and sin(motion.pitch_limit_rad) * size.z * 0.5 <= 0.3 * deck + 0.001, "Pitch stays mild for the hull length: " + label)
+					check(trim <= deg_to_rad(0.05) and trim >= -deg_to_rad(0.5), "Trim stays level, never bow-down: " + label)
+				else:
+					check(motion.transform == Transform3D.IDENTITY, "Heavy lifter sits still and level: " + label)
+				check(wet <= 0.0, "Keel stays in the water at both ends: " + label)
+				check(absf(rise) <= 0.25, "Hull rides at its waterline: " + label)
+		body.queue_free()
