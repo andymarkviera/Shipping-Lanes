@@ -6348,3 +6348,42 @@ Checks (agent's Linux runner, official Godot 4.7.2 with a verified SHA-512, head
 - Not run: Windows, a playtest, screenshots, the Stage 3 Python and Stage 4.
   The smaller ships now rock noticeably less than in Patch 2.0. Andy should
   confirm that it still feels lively.
+
+## Patch 2.4 item 2: faster turning (November 14, 2026)
+
+- Every ship's `max_turn_rate_degrees` and `turn_acceleration_degrees` are doubled
+  in its catalog record, so each ship's full-speed turning circle is half its old
+  size. The ladder order is kept: bigger ships still turn wider. Rudder authority
+  at low speed, the handling code and save IDs are unchanged.
+- Turn rate in deg/s (old → new) and the full-speed, full-rudder radius in metres
+  (old → new):
+  - Container 1-5: 3.0→6.0 (295→147 m), 2.7→5.4 (360→180), 2.4→4.8 (442→221),
+    2.0→4.0 (575→287), 1.7→3.4 (728→364).
+  - Bulk 1-5: 3.0→6.0 (275→138), 2.7→5.4 (338→169), 2.4→4.8 (418→209),
+    2.0→4.0 (545→273), 1.7→3.4 (694→347).
+  - Heavy 1-5: 2.0→4.0 (304→152), 1.8→3.6 (475→237), 1.6→3.2 (590→295),
+    1.4→2.8 (737→368), 1.25→2.5 (896→448).
+  - Swift and coastal: 3.0→6.0. Harbor: 3.6→7.2. Turn acceleration is doubled too
+    (for example, the starter goes from 2.0 to 4.0 deg/s², and container 5 goes
+    from 0.9 to 1.8).
+- New checks in the three ladder checks: each tier's turning circle must be wider
+  than the tier before, and every ship must turn within 460 m at full speed.
+- Test updates for the new tuning:
+  - The `simulation_checkpoint` "turn" baseline was recaptured from the
+    production replay. Heading is 55.55 deg (was 27.77) and speed is unchanged.
+  - `handling_probe` now reads the yaw acceleration bound from the definition.
+  - `water_probe` turns at the ship's own max rate for the lean check. At the
+    same yaw rate the hull leans half as much as before, but at full rudder the
+    lean is unchanged.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts`, boot, `check_catalog`, the whole CI Stage 2
+  set (including `handling_probe` with 134 checks and `water_probe` with 336),
+  the container ladder check (493), bulk ladder, heavy ladder (612),
+  `hangar_check`, `debug_game_check`, `check_helm_keys` and `check_m1_voyage`.
+- Before the test updates, `handling_probe` and `water_probe` failed only on the
+  hard-coded old turn numbers. Both passed on the base commit.
+- Not run: Windows, a playtest, Stage 3 Python (no Python was changed), Stage 4,
+  and the network probes (online is frozen). Andy should check whether the big
+  ships now feel right or need more turn.

@@ -223,11 +223,11 @@ func check_maneuvers() -> void:
 	check(subject.yaw_rate == 0.0, "Stationary rudder has no turning authority")
 	subject.velocity.z = 4.0
 	subject.advance_motion(1.0 / 60.0)
-	check(subject.yaw_rate < 0.0 and absf(subject.yaw_rate) <= deg_to_rad(2.0) / 60.0 + 0.000001, "Yaw acceleration bounded without instant heading jump")
+	check(subject.yaw_rate < 0.0 and absf(subject.yaw_rate) <= deg_to_rad(subject.definition.turn_acceleration_degrees) / 60.0 + 0.000001, "Yaw acceleration bounded without instant heading jump")
 	var previous: float = subject.yaw_rate
 	subject.maneuver(-1.0, 0.0)
 	subject.advance_motion(1.0 / 60.0)
-	check(absf(subject.yaw_rate - previous) <= deg_to_rad(2.0) / 60.0 + 0.000001, "Rapid rudder reversal remains bounded")
+	check(absf(subject.yaw_rate - previous) <= deg_to_rad(subject.definition.turn_acceleration_degrees) / 60.0 + 0.000001, "Rapid rudder reversal remains bounded")
 	subject.rotation = Vector3.ZERO
 	subject.yaw_rate = 0.0
 	subject.velocity = Vector3(0, 0, -4)
