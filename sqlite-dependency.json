@@ -1,9 +1,9 @@
 {
-  "platform": "windows.x86_64, linux.x86_64",
-  "modifications": "GDExtension library list restricted to Windows and Linux x86_64; release binaries and license unmodified",
+  "platform": "windows.x86_64, linux.x86_64, macos.universal",
+  "modifications": "GDExtension library list restricted to Windows and Linux x86_64 and macOS universal (arm64 + x86_64); release binaries and license unmodified",
   "files": [
     {
-      "sha256": "F95613C6F1334213A7D21E23B024F13DDA5CA7BE1632845842C72F285AC86344",
+      "sha256": "6DDB7717ADDE27F28BE5413EBD330B734400419FE68F943118C438B2A20BA23F",
       "path": "addons/godot-sqlite/gdsqlite.gdextension"
     },
     {
@@ -25,6 +25,22 @@
     {
       "sha256": "6BC7D4F045BA1903C08931A4F8F39BE6A5424D37971D3F3A068F618846FC21EC",
       "path": "addons/godot-sqlite/bin/libgdsqlite.linux.template_release.x86_64.so"
+    },
+    {
+      "sha256": "C55DC5D3CE615763CFF76BAF921541DBCBA5385614C59F6D0501E6212A56CFE3",
+      "path": "addons/godot-sqlite/bin/libgdsqlite.macos.template_debug.framework/Resources/Info.plist"
+    },
+    {
+      "sha256": "485D955D7208BC39D168283B68367012DD73006D6C69A6DE888E64E3CFCAF75D",
+      "path": "addons/godot-sqlite/bin/libgdsqlite.macos.template_debug.framework/libgdsqlite.macos.template_debug"
+    },
+    {
+      "sha256": "CA5D82531050A45F936F7820E7C9013B21AB60238E0B0E67D31E6D563FD28DA8",
+      "path": "addons/godot-sqlite/bin/libgdsqlite.macos.template_release.framework/Resources/Info.plist"
+    },
+    {
+      "sha256": "98F9E74A14BE4F97A5C2B2095A427516543C3B0251B677E0BF507299F977ABE9",
+      "path": "addons/godot-sqlite/bin/libgdsqlite.macos.template_release.framework/libgdsqlite.macos.template_release"
     }
   ],
   "license": "MIT",

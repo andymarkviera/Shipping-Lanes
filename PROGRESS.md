@@ -7008,3 +7008,38 @@ templates, headless): import; `--export-release "macOS"` exit 0. The zip holds
 Export warning (known, for item 2): `addons/godot-sqlite` has no macOS
 library, so the Mac app cannot save yet. Not run: a Windows export (preset
 unchanged), opening the app on a Mac, a playtest.
+
+## Patch 2.6 item 2: Mac compatibility pass — November 14, 2026
+
+Audit of everything the game loads at runtime:
+- Saves and preferences already use `user://` only (slots, voyage.db,
+  preferences.json); no backslash paths, drive letters, `.exe` calls, Windows
+  API or environment-variable paths in the single-player game. Godot maps
+  `user://` to `~/Library/Application Support/Godot/app_userdata/Shipping
+  Lanes` on macOS. Save format is unchanged, so saves load on both systems.
+- Case-sensitive names: every `res://` reference in tracked `.gd/.tscn/.tres/
+  .cfg/.godot/.gdextension/.json` files matches the file's exact case; no two
+  tracked files differ only by case.
+- **Fixed: SQLite had no macOS library** (item 1's export warning), so the Mac
+  app could not save. Added the upstream godot-sqlite v4.9 macOS universal
+  frameworks (`libgdsqlite.macos.template_{debug,release}.framework`, from the
+  same `addons.zip` already pinned; archive hash matched) and their two lines
+  in `gdsqlite.gdextension`. `sqlite-dependency.json` lists and hashes the new
+  files. Windows/Linux binaries untouched.
+- **Renderer:** `project.godot` keeps Compatibility for Windows/Linux and sets
+  `rendering_method.macos="forward_plus"` with `driver.macos="metal"` and
+  `fallback_to_opengl3=true` (if Metal fails Godot drops to Compatibility).
+- **Shaders:** `atan(x, z)` in the toon sky and globe map is guarded at
+  x=z=0 (zenith / poles), which is undefined on Metal. The bow splash flat
+  normal now always faces the camera, so its white tops do not flip with the
+  OpenGL vs Metal derivative sign. Same look as before on Windows.
+- Left as-is (online, frozen): the friends-client flag/config files are read
+  next to the executable, which on macOS is inside the `.app` bundle.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts`, `--quit-after 10`, `check_catalog`, `check_controls`,
+`check_flow`, `check_starter`, `check_m1_voyage`, the CI Stage 2 probe set,
+`voyage_probe`, `sailing_save_probe` and every `tools/*_check.gd`: all passed.
+`storage_probe`/`persistence_probe` need the Windows PowerShell runners'
+isolated-root arguments and were not run. Not run: a Mac export with the new
+frameworks, Forward+/Metal on a Mac, a Windows run, a playtest.

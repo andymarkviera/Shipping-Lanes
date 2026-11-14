@@ -27,5 +27,8 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method.macos="forward_plus"
+rendering_device/driver.macos="metal"
+rendering_device/fallback_to_opengl3=true
 environment/defaults/default_clear_color=Color(0.025, 0.065, 0.1, 1)
 textures/vram_compression/import_etc2_astc=true

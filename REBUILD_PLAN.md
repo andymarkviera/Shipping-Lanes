@@ -956,8 +956,9 @@ Developer account: the app ships unsigned/ad-hoc signed).
    editor, open the app, sail, dock, save, quit, reload).
 
 **Patch 2.6 status (November 14, 2026):** item 1 (macOS export preset) in
-a draft PR, exported on Linux only, not yet opened on a Mac; items 2-4 not
-started.
+a draft PR, exported on Linux only, not yet opened on a Mac; item 2 (Mac
+compatibility pass) in a draft PR, checked on Linux only, not yet run on a
+Mac; items 3-4 not started.
 
 ## 12. Patch 2.7 (Andy, November 14, 2026): main menu
 
