@@ -6630,3 +6630,58 @@ so they have no route budget). Gas and oil hulls are still planned and checked,
 and `world_layout.json` is unchanged. Not run: the agent was not allowed to run
 Python on this runner, so the unittest discovery and `traversal_budget.py`
 still need a CI run.
+
+## Patch 2.5 item 1A: landmasses, straits and oceans (November 14, 2026)
+
+- `progression.gd` `LAND` now holds two continents built round the existing
+  strait. Hearthland is behind Brindle Quay and Cinder Point, with the South
+  Pole on its southern tip. Ironreach is behind Slatewater Works and Gannet
+  Light. Between them are the Northern Neck, Kelp Isle, Gull Isle and the two
+  old islets. `LANDMASSES` names the blocks.
+- `STRAITS` holds three straits and a canal:
+  - Needle Gut (Bosphorus-like, 200 m wide)
+  - Gannet Narrows (Gibraltar-like, 550 m)
+  - Kelp Strait (Malacca-like, 250 m wide, 4 km long)
+  - Ironreach Canal (Panama-like, 140 m)
+
+  Each one takes 2.5 beams of a ship 5. Open oceans run across the wrapping
+  edges. All land stays 2 km inside the edges, so wrap and polar behaviour are
+  unchanged. Each polar ice shelf now runs on to its quay.
+- Every port ID, position, job and save format is unchanged. Each quay backs
+  onto land. Berths, approach, spawn and the heavy drop area stay open water.
+- Land is solid: one SHORE box per block, as before. The blocks share four
+  materials, and the green top only steps back on sides that face the sea, so
+  there are no sand seams across a continent. The camera's 3 km far plane
+  culls distant land.
+- Navigation: `SEA_LANES` plus `Progression.sea_route`/`course` find the
+  shortest way that stays 60 m off land, ice, icebergs and quays, the short
+  way round the wrap. The route is cached until the ship moves 50 m.
+  `LocalNavigation.target` adds `route` in the game, and the globe minimap's
+  dotted course follows it. Nothing steers the ship.
+- Spawn clearance already queries SHORE. The new check proves a ship 5 spawns
+  clear at every port.
+- Tests:
+  - New `tools/world_land_check.gd` (88 checks): landmasses, coasts, port
+    water, all 30 port-to-port sea routes (longest 9.4 km), the straits, solid
+    bodies, shared materials, spawn clearance, a minimap course round the land,
+    and a ship driven full ahead at Kelp Isle stopping at the shore.
+  - `traversal_budget.py` reads the game world from `progression.gd`. It checks
+    the same rules plus every cargo hull's leg time and fuel on each sea route.
+    Settings are in the new `game_world` block of `world_layout.json`, with 4
+    new unit tests. The old planning layout is untouched.
+- Part B still needs: toon coastlines and beaches (shaped coast meshes instead
+  of boxes, sand, surf), the minimap and the M globe drawing the land properly
+  (both still draw the blocks as rectangles), and the globe's course line along
+  the route.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts`, `--quit-after 10`, `world_land_check` (88),
+  `check_catalog`, `check_controls`, `check_flow`, `check_starter`,
+  `check_m1_voyage`, `check_helm_keys`, `globe_map_check`, `debug_game_check`,
+  `hangar_check`, `small_boats_check`, `heavy_ladder_check`, `mooring_check`,
+  `crane_check`, every CI Stage 2 probe, `voyage_probe`, `ports_probe`,
+  `traversal_budget.py` and its unittest discovery (10).
+- Not run: the rest of CI Stage 3 Python (no service code changed), Windows,
+  screenshots, frame timing and a playtest. Nobody has seen the new land on
+  screen yet.
