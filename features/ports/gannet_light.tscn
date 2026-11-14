@@ -7,5 +7,5 @@ script = ExtResource("1")
 definition = ExtResource("2")
 berth = ExtResource("3")
 quay_side = 1
-quay_length_m = 190.0
+quay_length_m = 820.0
 landmark = "fuel_store"

@@ -56,12 +56,14 @@ const EASY_RANGE_M: float = 45.0
 const EASY_SPEED_MPS: float = 3.0
 
 ## Where the slide ends: the berth centre and heading, at the ship's own height.
-static func berth_pose(anchor: Transform3D, pose: Transform3D) -> Transform3D:
+## Patch 2.4 item 3: moved sideways by lateral_m (the port's hull-scaled quay
+## offset) so the hull lies a fender gap off the quay.
+static func berth_pose(anchor: Transform3D, pose: Transform3D, lateral_m: float = 0.0) -> Transform3D:
 	var target: Transform3D = anchor
-	target.origin += anchor.basis.y * (anchor.affine_inverse() * pose.origin).y
+	target.origin += anchor.basis.y * (anchor.affine_inverse() * pose.origin).y + anchor.basis.x * lateral_m
 	return target
 
-static func evaluate_easy(berth: BerthDefinition, anchor: Transform3D, ship: ShipDefinition, pose: Transform3D, velocity: Vector3, service: String, cargo_id: String, space: PhysicsDirectSpaceState3D, exclude: Array[RID] = []) -> Dictionary:
+static func evaluate_easy(berth: BerthDefinition, anchor: Transform3D, ship: ShipDefinition, pose: Transform3D, velocity: Vector3, service: String, cargo_id: String, space: PhysicsDirectSpaceState3D, exclude: Array[RID] = [], lateral_m: float = 0.0) -> Dictionary:
 	if berth == null or ship == null or not berth.eligibility_error().is_empty() or not ship.handling_error().is_empty():
 		return result("INVALID_DATA", "Berth or ship data is unavailable.")
 	if not pose.is_finite() or not anchor.is_finite() or not velocity.is_finite() or not anchor.basis.is_equal_approx(anchor.basis.orthonormalized()):
@@ -81,7 +83,7 @@ static func evaluate_easy(berth: BerthDefinition, anchor: Transform3D, ship: Shi
 		return result("SPEED", "Slow down to dock.")
 	# The berth itself must be free: checked where the ship will end up, not
 	# where it is now, so a crooked or quay-touching approach still docks.
-	var target: Transform3D = berth_pose(anchor, pose)
+	var target: Transform3D = berth_pose(anchor, pose, lateral_m)
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = size
 	var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
