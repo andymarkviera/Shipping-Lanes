@@ -9,6 +9,8 @@ const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const POLAR_BIOME = preload("res://features/sky/polar_biome.gd")
+const DESERT_BIOME = preload("res://features/sky/desert_biome.gd")
+const DESERT_LOOK = preload("res://features/toon/desert_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 @export var save_enabled: bool = true
@@ -40,6 +42,8 @@ var cranes: Node3D
 var bridges: Node3D
 ## Patch 2.5 item 3: the North Pole biome (game only).
 var polar: Node
+## Patch 2.5 item 4: the desert biome, painted over the polar look (game only).
+var desert: Node
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
@@ -179,10 +183,18 @@ func _ready() -> void:
 		polar.name = "PolarBiome"
 		add_child(polar)
 		polar.setup(environment.environment, light, ocean, camera.camera)
+		desert = DESERT_BIOME.new()
+		desert.name = "DesertBiome"
+		add_child(desert)
+		desert.setup(polar)
 	var scenes: Array = PORTS.duplicate()
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
 		for rect: Rect2 in Progression.LAND: add_land(rect)
+		var port_spots: Array[Vector2] = []
+		for place: Dictionary in Progression.WORLD: port_spots.append(Vector2(place.at.x, place.at.z))
+		var desert_land: Node3D = DESERT_LOOK.build_land(Progression.LAND, port_spots)
+		if desert_land != null: add_child(desert_land)
 		for rect: Rect2 in Progression.ICE_SHELVES: add_land(rect, true)
 		for index: int in Progression.ICEBERGS.size(): add_iceberg(index)
 		bridges = Node3D.new()
@@ -205,6 +217,7 @@ func _ready() -> void:
 		world_ports.append(place)
 		# Aesthetics 4: chunky port dressing. The game only; test scenes keep the blocks.
 		if game_mode: CHUNKY_LOOK.dress_port(place)
+		if game_mode and DESERT_BIOME.weight(place.position) >= 0.5: DESERT_LOOK.dress_port(place)
 		if game_mode: cranes.add_port(place)
 	# Aesthetics 2: toon shading and ink outlines on the ports and land.
 	TOON_LOOK.apply(self)
@@ -354,11 +367,12 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 	var collider: CollisionShape3D = CollisionShape3D.new()
 	collider.shape = shape
 	body.add_child(collider)
-	for level: int in 2:
-		var key: String = ("ice" if ice else "land") + str(level)
+	# Patch 2.5 item 4: desert blocks keep the beach but get a dry sand top.
+	var top_key: String = "ice1" if ice else ("desert1" if DESERT_LOOK.is_desert(rect) else "land1")
+	for key: String in ["ice0" if ice else "land0", top_key]:
 		if not land_paint.has(key):
 			var material: StandardMaterial3D = StandardMaterial3D.new()
-			material.albedo_color = (Color("bfe3ef") if level == 0 else Color("f7fbfd")) if ice else (Color("e0cc93") if level == 0 else Color("7fa368"))
+			material.albedo_color = {"ice0": Color("bfe3ef"), "ice1": Color("f7fbfd"), "land0": Color("e0cc93"), "land1": Color("7fa368"), "desert1": DESERT_LOOK.SAND_TOP}[key]
 			material.roughness = 0.9
 			land_paint[key] = material
 	var ports: Array[Vector2] = []
@@ -367,7 +381,7 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 	var harbour: Array[bool] = TOON_COAST.harbour_sides(rect, ports)
 	var mesh: MeshInstance3D = MeshInstance3D.new()
 	mesh.name = "Coast"
-	mesh.mesh = TOON_COAST.land_mesh(rect, sea, harbour, ice, land_paint[("ice" if ice else "land") + "0"], land_paint[("ice" if ice else "land") + "1"])
+	mesh.mesh = TOON_COAST.land_mesh(rect, sea, harbour, ice, land_paint[("ice" if ice else "land") + "0"], land_paint[top_key])
 	mesh.position.y = 2
 	body.add_child(mesh)
 	var surf: ArrayMesh = TOON_COAST.surf_mesh(rect, sea, harbour)
@@ -926,6 +940,7 @@ func _process(_delta: float) -> void:
 	# The sea is one 4 km sheet. In the game's larger world it follows the ship.
 	if game_mode: ocean.global_position = Vector3(snappedf(ship.global_position.x, 50), 0, snappedf(ship.global_position.z, 50))
 	if polar != null: polar.update(ship.global_position, _delta)
+	if desert != null: desert.update(ship.global_position, _delta)
 	# Patch 2.5 item 1B: the coast surf rides the same swell as the sea.
 	if surf_paint != null:
 		surf_paint.set_shader_parameter("water_time", ocean.elapsed)
