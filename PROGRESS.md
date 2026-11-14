@@ -6978,3 +6978,33 @@ probe set plus `voyage_probe`, `traversal_budget.py` and the
 
 Not run: a rendered screenshot, Windows, a playtest. Nobody has seen the
 Controls screen on screen yet.
+
+## Patch 2.6 item 1: macOS export preset — November 14, 2026
+
+- `export_presets.cfg` has a second preset, `macOS`: universal (arm64 +
+  x86_64), built-in ad-hoc signing, notarization off, bundle id
+  `com.andyviera.shippinglanes`, App Store category Games, HiDPI on, the same
+  export file list and include filter as `Windows Desktop`, output
+  `exports/macos/release/Container Ship Sim.zip`. The Windows preset is
+  byte-for-byte unchanged.
+- `project.godot`: `config/name.macos="Container Ship Sim"` (Mac app and
+  window name only; Windows still says Shipping Lanes) and
+  `import_etc2_astc=true`, which Godot requires for arm64 exports. Windows
+  still exports S3TC/BPTC only.
+- The repo had no game icon, so `features/app/app_icon.icns` is a new toon
+  container-ship icon (32-1024 px), drawn by
+  `art_sources/app_icon/make_icon.py` (Python standard library only).
+- EXPORT.md: Mac export steps and how to open an unsigned app (right-click >
+  Open, or `xattr -dr com.apple.quarantine`).
+
+Checks (agent's Linux runner, official Godot 4.7.2 and its official export
+templates, headless): import; `--export-release "macOS"` exit 0. The zip holds
+`Container Ship Sim.app` with a universal Mach-O (x86_64 + arm64), ad-hoc
+`_CodeSignature`, our icon, the right bundle id/name and
+`NSHighResolutionCapable`. `check_scripts`, boot `--quit-after 10`,
+`check_catalog`, `check_controls`, `check_flow`, `check_starter`,
+`check_m1_voyage` and the CI Stage 2 probe set: all passed.
+
+Export warning (known, for item 2): `addons/godot-sqlite` has no macOS
+library, so the Mac app cannot save yet. Not run: a Windows export (preset
+unchanged), opening the app on a Mac, a playtest.
