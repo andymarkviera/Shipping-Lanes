@@ -27,6 +27,12 @@ var restart_confirmation: ConfirmationDialog
 var dev_column: VBoxContainer
 var footer: Label
 var current_page: String = ""
+## Patch 2.7 item 2: the arrived title screen (logo top-left, cruising ship)
+## stands in for the drawn backdrop and heading on the home page.
+var title_backdrop: TitleScreen
+var backdrop: Control
+var heading: Label
+var home: VBoxContainer
 var can_continue_session: bool = false
 
 static func friends_client() -> bool:
@@ -36,8 +42,10 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	theme = PLAYFUL.make()
-	add_child(PLAYFUL.Backdrop.new())
+	backdrop = PLAYFUL.Backdrop.new()
+	add_child(backdrop)
 	var title: Label = Label.new()
+	heading = title
 	title.text = "SHIPPING LANES"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
@@ -56,7 +64,7 @@ func _ready() -> void:
 	footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	footer.position = Vector2(64, -40)
 	add_child(footer)
-	var home: VBoxContainer = page("title")
+	home = page("title")
 	home.position.y = 210
 	home.add_theme_constant_override("separation", 14)
 	if friends_client():
@@ -191,8 +199,28 @@ func show_page(id: String, can_continue: bool) -> void:
 	dev_mode_changed()
 	for key: String in pages:
 		pages[key].visible = key == id
+	if is_instance_valid(title_backdrop):
+		var on: bool = id == "title"
+		title_backdrop.set_backdrop_visible(on)
+		backdrop.visible = not on
+		heading.visible = not on
+		place_home()
 	if pages.has(id) and id != "playing":
 		first_buttons[pages[id]].grab_focus()
+
+func use_title_backdrop(screen: TitleScreen) -> void:
+	title_backdrop = screen
+	if not resized.is_connected(place_home): resized.connect(place_home)
+	show_page(current_page, can_continue_session)
+
+## Under the corner logo while the title backdrop shows, else where it was.
+func place_home() -> void:
+	var under_logo: bool = is_instance_valid(title_backdrop) and title_backdrop.visible
+	home.position.y = maxf(210.0, size.y * 0.47) if under_logo else 210.0
+	# The save notice and developer list move down with it.
+	var drop: float = home.position.y - 210.0
+	save_notice.position.y = 470.0 + drop
+	if dev_column != null: dev_column.position.y = 112.0 + drop
 
 ## Called by DevMode when F3 is pressed, and whenever the page changes.
 func dev_mode_changed() -> void:

@@ -7133,3 +7133,36 @@ Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`,
 (headless and under xvfb at 1672x941, 1440x900, 2560x1080 with screenshots), a
 120-frame windowed boot under xvfb: all passed. Not run: an export, Windows,
 Mac, a real gamepad, a playtest.
+
+## Patch 2.7 item 2 — logo moves and ship sails in (November 14, 2026)
+
+- **Arrival** (`features/title/title_screen.gd`): the press fades "Press Any
+  Button" (0.35 s), slides and shrinks the logo to the mockup's top-left spot
+  (1.2 s) and sails a container ship in from off-screen left to centre-right,
+  bow right, settling at 2.6 s with an ease-out. A second press skips to the
+  end. It then cruises in place: the live ocean, streaks and wake slide left,
+  the hull rolls and heaves a little. Layout from `menu_ship_arrives.png`
+  (ship 0.80 screen heights long); on 16:10 the ship pulls in to stay on screen.
+- **Ship:** a random tier 3-5 from the container ladder (tiers 1-2 are too short
+  for the mockup's full deck), the same chunky toon model the hangar shows,
+  every slot filled with bright boxes. Built at startup in its own transparent
+  SubViewport, which only renders from the press on, so the press does not hitch.
+- **Wake:** `features/title/menu_wake.gdshader`, a screen-space toon foam fan
+  under the ship: light-blue tongues with sea showing through, a broken white
+  rim and curled swirls on the edges. Its pattern scrolls with the water.
+- **Menu:** once arrived, the screen drops below the menu layer and becomes the
+  home page's backdrop. The old drawn sky and heading are hidden there and the
+  old buttons, save notice and developer list move down under the logo. Other
+  pages show the old backdrop, and the title viewports stop rendering while
+  hidden. Item 3 replaces the buttons.
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`,
+`--quit-after 10`, `check_catalog`, `diagnostics_probe`, `check_controls`,
+`check_flow`, `check_starter`, `check_m1_voyage`, the 13 CI smoke probes,
+`--title-check` boot, the extended `check_title` (headless and under xvfb with
+screenshots), main-scene screenshots under xvfb at 1672x941, 1440x900,
+1280x720 and 2560x1080, and a 120-frame windowed boot: all passed. On the first
+xvfb run `check_title` failed its 6 s wall-clock wait while software GL compiled
+shaders; the wait is now 15 s and later runs passed. Not run: an export,
+Windows, Mac, a real gamepad, frame-time measurement on real hardware, a
+playtest.
