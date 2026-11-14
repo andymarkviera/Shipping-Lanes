@@ -23,6 +23,10 @@ const BERTH_SPACING_M: float = 285.0
 ## Patch 2.4 item 3: the quay's timber face (see chunky_look.gd) is this far
 ## from the berth centreline. A docked ship lies off it by quay_gap_m().
 const QUAY_FACE_M: float = 19.1
+## Patch 2.4 item 4: the quay bollards (see chunky_look.gd), BOLLARD_STEP_M
+## apart along the quay, BOLLARD_X_M from the berth centreline.
+const BOLLARD_X_M: float = 23.5
+const BOLLARD_STEP_M: float = 20.0
 var berth_anchors: Array[Marker3D] = []
 
 ## Warehouses along the quay, as fractions of its length. Patch 2.4 item 3
@@ -134,6 +138,14 @@ static func quay_gap_m(ship: ShipDefinition) -> float:
 ## quay-side edge lies quay_gap_m() off the quay face (big hulls move outward).
 func quay_offset_m(ship: ShipDefinition) -> float:
 	return quay_side * (QUAY_FACE_M - ship.hull_size_m.x / 2 - quay_gap_m(ship))
+
+## Patch 2.4 item 4: port-local tie points on the head of every quay bollard.
+## Mooring lines (mooring_lines.gd) make fast to the nearest suitable one.
+func bollard_points() -> Array[Vector3]:
+	var points: Array[Vector3] = []
+	for index: int in int(quay_length_m / BOLLARD_STEP_M):
+		points.append(Vector3(quay_side * BOLLARD_X_M, 5.3, 10.0 + index * BOLLARD_STEP_M))
+	return points
 
 func berth_id(index: int) -> String:
 	return berth.id if index == 0 else "%s_%02d" % [berth.id.trim_suffix("_01"), index + 1]

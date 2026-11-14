@@ -138,12 +138,15 @@ static func model(kind: String, definition: ShipDefinition) -> Node3D:
 	root.add_child(hull)
 	if kind.begins_with("container_"):
 		_dress_box_ship(root, hull, definition, int(kind.trim_prefix("container_")), main, trim, cache)
+		_mooring_bitts(root, kind, definition, cache)
 		return root
 	if kind == "bulk" or kind.begins_with("bulk_"):
 		_dress_bulker(root, hull, definition, 1 if kind == "bulk" else int(kind.trim_prefix("bulk_")), main, trim, cache)
+		_mooring_bitts(root, kind, definition, cache)
 		return root
 	if kind == "heavy" or kind.begins_with("heavy_"):
 		_dress_heavy(root, hull, definition, 1 if kind == "heavy" else int(kind.trim_prefix("heavy_")), main, trim, cache)
+		_mooring_bitts(root, kind, definition, cache)
 		return root
 	var deck: float = 2.6
 	hull.mesh = hull_mesh(size.z, size.x, -3.2, deck, 3.5, 1.6, main, Color("c9b48a"))
@@ -164,7 +167,43 @@ static func model(kind: String, definition: ShipDefinition) -> Node3D:
 	for z: float in hatches:
 		_box(root, Vector3(size.x - 4.4, 0.9, 8.0), Vector3(0, deck + 0.45, z), trim, cache)
 		_box(root, Vector3(size.x - 5.4, 0.4, 7.0), Vector3(0, deck + 1.0, z), WHITE.lerp(trim, 0.35), cache)
+	_mooring_bitts(root, kind, definition, cache)
 	return root
+
+## Patch 2.4 item 4: mooring bitts at the bow and the stern on both sides, each
+## with a fairlead on the rail. The marker on each fairlead ("MooringBowL",
+## "MooringBowR", "MooringSternL", "MooringSternR") is where the mooring lines
+## (features/ports/mooring_lines.gd) leave the ship. Looks only, not solid.
+static func _mooring_bitts(root: Node3D, kind: String, definition: ShipDefinition, cache: Dictionary) -> void:
+	var size: Vector3 = definition.hull_size_m
+	var s: float = size.y / 4.0
+	# Rail height and half-beam at each end follow hull_mesh(): the bow end sits
+	# where the bow just starts to narrow, the stern end just ahead of the transom.
+	var rail: float = 3.5 * s
+	var deck: float = 2.6 * s
+	var ends: Dictionary = {"Bow": [size.z * 0.25, size.x / 2.0 * 0.98], "Stern": [-size.z / 2.0 + 3.0 * s, size.x / 2.0 * 0.9]}
+	var inboard: float = 1.4 * s
+	if kind == "heavy" or kind.begins_with("heavy_"):
+		# The heavy lifter's deck is low; its bitts stand on the side walls.
+		s = 1.0
+		rail = 3.5
+		deck = 3.5
+		ends = {"Bow": [20.0 * size.z / 90.0, 12.0 * size.x / 24.0], "Stern": [-38.0 * size.z / 90.0, 12.0 * size.x / 24.0]}
+		inboard = 1.5 * size.x / 24.0
+	for end: String in ends:
+		var z: float = float(ends[end][0])
+		var half: float = float(ends[end][1])
+		for side: float in [-1.0, 1.0]:
+			var lead: Vector3 = Vector3(side * half, rail, z)
+			_box(root, Vector3(0.6, 0.5, 1.4) * s, lead + Vector3(-side * 0.2 * s, 0.25 * s, 0), INK, cache)
+			for offset: float in [-0.75, 0.75]:
+				var at: Vector3 = Vector3(side * (half - inboard), deck, z + offset * s)
+				_drum(root, 0.32 * s, 0.32 * s, 1.3 * s, at + Vector3(0, 0.65 * s, 0), INK, cache)
+				_drum(root, 0.46 * s, 0.46 * s, 0.22 * s, at + Vector3(0, 1.3 * s, 0), INK, cache)
+			var marker: Marker3D = Marker3D.new()
+			marker.name = "Mooring%s%s" % [end, "L" if side < 0.0 else "R"]
+			marker.position = lead + Vector3(0, 0.35 * s, 0)
+			root.add_child(marker)
 
 static func _tint(port: Node3D, label: String, colour: Color) -> void:
 	var mesh: MeshInstance3D = _mesh_of(port, label)
@@ -195,10 +234,10 @@ static func dress_port(port: Node3D) -> void:
 	_tint(port, "QuayExtensionEdge", Color("f2b632"))
 	# Fat bollards and a dark timber face along the berth.
 	_box(root, Vector3(1.0, 3.0, length - 2.0), Vector3(side * 19.6, 2.3, length / 2.0), Color("6b4a35"), cache)
-	for index: int in int(length / 20.0):
-		var z: float = 10.0 + index * 20.0
-		_drum(root, 0.9, 0.9, 1.6, Vector3(side * 23.5, 4.8, z), INK, cache)
-		_drum(root, 1.3, 1.3, 0.5, Vector3(side * 23.5, 5.8, z), INK, cache)
+	# Patch 2.4 item 4: the mooring lines tie to these (test_port.bollard_points()).
+	for point: Vector3 in port.bollard_points():
+		_drum(root, 0.9, 0.9, 1.6, Vector3(point.x, 4.8, point.z), INK, cache)
+		_drum(root, 1.3, 1.3, 0.5, Vector3(point.x, 5.8, point.z), INK, cache)
 	# Warehouses: bright walls, a pitched red roof and big doors facing the water.
 	# Patch 2.4 item 3: the longer quays have several (Warehouse, Warehouse2, ...).
 	var roof: PrismMesh = PrismMesh.new()
