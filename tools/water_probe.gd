@@ -135,7 +135,7 @@ func run() -> void:
 	check(motion.speed_fraction > 0.95, "Hull motion follows ship speed")
 	var upright: float = motion.lean
 	for tick: int in range(120):
-		scene.ship.rotation.y += deg_to_rad(3.0) / 60.0
+		scene.ship.rotation.y += deg_to_rad(scene.ship.definition.max_turn_rate_degrees) / 60.0
 		motion._process(1.0 / 60.0)
 	check(motion.lean < upright - 0.5, "Hull leans into a turn")
 	check(absf(motion.rotation.z) <= ShipVisualMotion.MAX_ROLL_RAD and absf(motion.rotation.x) <= ShipVisualMotion.MAX_PITCH_RAD, "Rocking at speed stays bounded")
