@@ -8,6 +8,7 @@ const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
+const POLAR_BIOME = preload("res://features/sky/polar_biome.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 @export var save_enabled: bool = true
@@ -37,6 +38,8 @@ var mooring: Node3D
 var cranes: Node3D
 ## Patch 2.5 item 2: the bridges over the straits, under one node.
 var bridges: Node3D
+## Patch 2.5 item 3: the North Pole biome (game only).
+var polar: Node
 var offers = preload("res://features/cargo/container_offers.gd").new()
 var heavy_jobs = preload("res://features/cargo/heavy_ocean_job.gd").new()
 var delivery = preload("res://features/cargo/delivery_service.gd").new()
@@ -171,6 +174,11 @@ func _ready() -> void:
 	camera = OrbitCameraRig.new()
 	add_child(camera)
 	camera.bind_controls(controls)
+	if game_mode:
+		polar = POLAR_BIOME.new()
+		polar.name = "PolarBiome"
+		add_child(polar)
+		polar.setup(environment.environment, light, ocean, camera.camera)
 	var scenes: Array = PORTS.duplicate()
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
@@ -859,6 +867,7 @@ func wrap_world() -> void:
 	camera.shift(shift)
 	wake.shift(shift)
 	ocean.shift(shift)
+	if polar != null: polar.shift(shift)
 
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(ship): return
@@ -916,6 +925,7 @@ func _process(_delta: float) -> void:
 	voyage_hud.refresh(self)
 	# The sea is one 4 km sheet. In the game's larger world it follows the ship.
 	if game_mode: ocean.global_position = Vector3(snappedf(ship.global_position.x, 50), 0, snappedf(ship.global_position.z, 50))
+	if polar != null: polar.update(ship.global_position, _delta)
 	# Patch 2.5 item 1B: the coast surf rides the same swell as the sea.
 	if surf_paint != null:
 		surf_paint.set_shader_parameter("water_time", ocean.elapsed)
