@@ -199,17 +199,21 @@ static func dress_port(port: Node3D) -> void:
 		var z: float = 10.0 + index * 20.0
 		_drum(root, 0.9, 0.9, 1.6, Vector3(side * 23.5, 4.8, z), INK, cache)
 		_drum(root, 1.3, 1.3, 0.5, Vector3(side * 23.5, 5.8, z), INK, cache)
-	# Warehouse: bright walls, a pitched red roof and big doors facing the water.
-	_tint(port, "Warehouse", Color("e9dcb8"))
-	var flat_roof: MeshInstance3D = _mesh_of(port, "WarehouseRoof")
-	if flat_roof != null: flat_roof.hide()
-	var shed: Vector3 = Vector3(side * 72, 26, length * 0.7)
+	# Warehouses: bright walls, a pitched red roof and big doors facing the water.
+	# Patch 2.4 item 3: the longer quays have several (Warehouse, Warehouse2, ...).
 	var roof: PrismMesh = PrismMesh.new()
 	roof.size = Vector3(50, 10, 49)
-	_part(root, roof, shed + Vector3(0, 5, 0), Color("c8452f"), cache)
-	for offset: float in [-11.0, 11.0]:
-		_box(root, Vector3(0.8, 13, 13), Vector3(shed.x - side * 21.2, 10.5, shed.z + offset), Color("2f72b8"), cache)
-	_box(root, Vector3(0.6, 3, 40), Vector3(shed.x - side * 21.1, 21, shed.z), GLASS, cache)
+	for suffix: String in ["", "2", "3", "4"]:
+		var walls: Node3D = port.get_node_or_null("Warehouse" + suffix) as Node3D
+		if walls == null: continue
+		_tint(port, "Warehouse" + suffix, Color("e9dcb8"))
+		var flat_roof: MeshInstance3D = _mesh_of(port, "WarehouseRoof" + suffix)
+		if flat_roof != null: flat_roof.hide()
+		var shed: Vector3 = Vector3(side * 72, 26, walls.position.z)
+		_part(root, roof, shed + Vector3(0, 5, 0), Color("c8452f"), cache)
+		for offset: float in [-11.0, 11.0]:
+			_box(root, Vector3(0.8, 13, 13), Vector3(shed.x - side * 21.2, 10.5, shed.z + offset), Color("2f72b8"), cache)
+		_box(root, Vector3(0.6, 3, 40), Vector3(shed.x - side * 21.1, 21, shed.z), GLASS, cache)
 	# Stacked containers in bold colours. The lower three are the solid ones.
 	var bold: Array[Color] = [Color("d8452f"), Color("f2b632"), Color("2f9a8f")]
 	for index: int in 3:
@@ -269,11 +273,14 @@ static func _dress_icy(port: Node3D, root: Node3D, side: float, length: float, c
 	_tint(port, "QuayEdge", ICE)
 	_tint(port, "QuayExtension", FROST)
 	_tint(port, "QuayExtensionEdge", ICE)
-	_tint(port, "Warehouse", Color("9cc7d9"))
-	# A thick snow cap over the pitched roof.
+	# A thick snow cap over each pitched roof.
 	var cap: PrismMesh = PrismMesh.new()
 	cap.size = Vector3(27, 5.2, 50.5)
-	_part(root, cap, Vector3(side * 72, 33.5, length * 0.7), SNOW, cache)
+	for suffix: String in ["", "2", "3", "4"]:
+		var walls: Node3D = port.get_node_or_null("Warehouse" + suffix) as Node3D
+		if walls == null: continue
+		_tint(port, "Warehouse" + suffix, Color("9cc7d9"))
+		_part(root, cap, Vector3(side * 72, 33.5, walls.position.z), SNOW, cache)
 	# Snow on top of the stacked containers and the fuel tank or crane.
 	for index: int in 3:
 		var top: float = 16.45 if index < 2 else 10.45

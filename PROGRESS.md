@@ -6387,3 +6387,41 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
 - Not run: Windows, a playtest, Stage 3 Python (no Python was changed), Stage 4,
   and the network probes (online is frozen). Andy should check whether the big
   ships now feel right or need more turn.
+
+## Patch 2.4 item 3: bigger ports and quay gap (November 14, 2026)
+
+- Every port (polar ones included) now has three berths 285 m apart (was two,
+  150 m apart). Each berth fits a ship 5 (276 m), so three of the biggest ships
+  can dock at once. Berth 3's ID is `<berth>_03`. Old berth IDs and save IDs are
+  unchanged. Berth claiming from Patch 2.1 works as before.
+- The quays are now about 800 m long (Cinder Point is 790 m, so it ends just
+  short of the northern shore). The longer quays have three warehouses
+  (`Warehouse`, `Warehouse2`, `Warehouse3`). The chunky and icy dressing roofs,
+  tints and snow-caps each one. Bollards, the timber face, snow drifts and
+  icicles run the full length.
+- The quay gap is scaled per hull. The docking slide now ends with the hull's
+  quay-side edge 8% of its beam off the timber face, clamped to 1.2-3 m. The
+  starter sits 1.2 m off, and the 38 m-beam ship 5s sit 3 m off. Before, every
+  ship was centred on the berth line: small ships sat about 13 m out, and ship 5
+  sat 0.1 m from the face. The gap comes from `test_port.gd`
+  `quay_gap_m`/`quay_offset_m`, and `berth_eligibility.berth_pose` uses it. The
+  frozen online strict rule is unchanged.
+- `tools/ports_probe.gd` has new and updated checks for every port:
+  - the gap for 10 ladder hulls stays within 1.2-3 m and grows with the beam;
+  - each hull, docked at each berth, stays clear of the quay;
+  - three ship 5s fit end to end;
+  - the quay covers the last berth;
+  - the berth tests now use three berths (a second AI ship fills berth 3 for the
+    "port full" check), and the slide and undock positions use the gap.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts` (197), boot, the whole CI Stage 2 set,
+  `collision_probe`, `composition_probe` and `ports_probe` (489 checks, was 320).
+  These also passed: the container ladder (493), bulk ladder (512) and heavy
+  ladder (612) checks, `hangar_check` (179), `debug_game_check` (72),
+  `check_helm_keys` and `check_m1_voyage`.
+- Not run: Windows, a playtest, screenshots, Stage 3 Python and Stage 4, and the
+  network probes (online is frozen). Nobody has seen the longer quays or the
+  fender gap on screen yet. Andy should check that the ports look good and the
+  gap looks right.

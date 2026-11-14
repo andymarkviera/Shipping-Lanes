@@ -865,4 +865,4 @@ boat, the section 7 no-jank checklist applies to every item.
    waves and lands without jitter or flipping. The last item's PR carries a
    5-10 line Windows playtest checklist for all of Patch 2.4.
 
-**Patch 2.4 status (November 14, 2026):** item 1 (hull trim) and item 2 (faster turning: turn rates doubled, radius at most 460 m, big still wider) are each in a draft PR. Both were checked headless on Linux and await a Windows playtest. Items 3-8 are not started.
+**Patch 2.4 status (November 14, 2026):** item 1 (hull trim), item 2 (faster turning: turn rates doubled, radius at most 460 m, big still wider) and item 3 (bigger ports: three 285 m berths and ~800 m quays at every port, polar too; docked hulls lie a 1.2-3 m fender gap off the quay, scaled to the beam) are each in a draft PR. All three were checked headless on Linux and await a Windows playtest. Items 4-8 are not started.

@@ -164,6 +164,39 @@ func _ready() -> void:
 	print("PORTS_%s checks=%d" % ["PASS" if failures == 0 else "FAIL", checks])
 	get_tree().quit(0 if failures == 0 else 1)
 
+## Patch 2.4 item 3: every port fits three of the biggest ships, and each docked
+## hull lies a fender gap off the quay that grows with its beam.
+func check_port_size(port: Node3D, space: PhysicsDirectSpaceState3D) -> void:
+	var rule = preload("res://features/ports/berth_eligibility.gd")
+	var name_: String = port.definition.display_name
+	var biggest: float = 0.0
+	var last_gap: float = 0.0
+	var last_beam: float = 0.0
+	var hulls: Array[ShipDefinition] = []
+	for path: String in ["starter_ship", "bulk_01_ship", "container_02_ship", "heavy_lifter", "container_03_ship", "heavy_03_ship", "container_04_ship", "bulk_05_ship", "container_05_ship", "heavy_05_ship"]:
+		hulls.append(load("res://features/catalog/records/%s.tres" % path))
+	hulls.sort_custom(func(a: ShipDefinition, b: ShipDefinition) -> bool: return a.hull_size_m.x < b.hull_size_m.x)
+	for hull: ShipDefinition in hulls:
+		biggest = maxf(biggest, hull.hull_size_m.z)
+		var offset: float = port.quay_offset_m(hull)
+		var gap: float = port.QUAY_FACE_M - (port.quay_side * offset + hull.hull_size_m.x / 2)
+		verify(gap >= 1.2 - .001 and gap <= 3.0 + .001 and (hull.hull_size_m.x <= last_beam or gap >= last_gap - .001), "%s: %s docks %.1f m off the quay" % [name_, hull.id, gap])
+		last_gap = gap
+		last_beam = hull.hull_size_m.x
+		for index: int in port.berth_anchors.size():
+			var target: Transform3D = rule.berth_pose(port.berth_anchors[index].global_transform, port.berth_anchors[index].global_transform, offset)
+			var shape: BoxShape3D = BoxShape3D.new()
+			shape.size = hull.hull_size_m
+			var query: PhysicsShapeQueryParameters3D = PhysicsShapeQueryParameters3D.new()
+			query.shape = shape
+			query.transform = target.translated_local(Vector3(0, 1, 0))
+			query.collision_mask = CollisionRules.SHORE
+			query.margin = 0
+			verify(space.intersect_shape(query, 1).is_empty(), "%s berth %d: %s docks clear of the quay" % [name_, index + 1, hull.id])
+	verify(port.BERTH_SPACING_M >= biggest + 2 * port.berth.clearance_margin_m + 5 and port.berth.envelope_m.z >= biggest + 2 * port.berth.clearance_margin_m, "%s: three of the biggest ships (%.0f m) fit end to end" % [name_, biggest])
+	var quay_end: float = maxf(port.quay_length_m, port.berth_anchors[-1].position.z + 140.0)
+	verify(quay_end >= port.berth_anchors[-1].position.z + biggest / 2, "%s: the quay runs the length of the last berth" % name_)
+
 func check_berth(port: Node3D) -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
@@ -214,6 +247,7 @@ func check_berth(port: Node3D) -> void:
 	verify(rule.evaluate_easy(port.berth, pose, definition, pose, Vector3.ZERO, "unknown_service", "", space).code == "SERVICE", "Easy: unsupported service rejected")
 	var landing: Transform3D = rule.berth_pose(pose, crooked.translated(Vector3(0, 2, 0)))
 	verify(landing.basis.is_equal_approx(pose.basis) and landing.origin.is_equal_approx(pose.origin + Vector3(0, 2, 0)), "Easy: slide ends on the berth centre and heading at the ship's height")
+	check_port_size(port, space)
 	definition.hull_size_m.x = 70
 	verify(rule.evaluate(port.berth, pose, definition, pose, Vector3.ZERO, "container_transfer", "", space).code == "SIZE", "Oversized hull rejected")
 	definition.hull_size_m.x = 13
@@ -256,6 +290,8 @@ func check_docking(preview: Node3D) -> void:
 	verify(not authority.request_dock(1, "container_transfer", "cargo_test_container").ok, "Repeated request cannot duplicate reservation")
 	authority.advance(1.1)
 	verify(authority.state(1) == "docked", "Securing completes to docked")
+	# Patch 2.4 item 3: docking moves the hull to its fender gap; undocking must not move it again.
+	position_before = body.global_position
 	body.command_throttle(1)
 	body.maneuver(1, 1)
 	body.velocity = Vector3(0, 0, 1)
@@ -299,8 +335,9 @@ func check_docking(preview: Node3D) -> void:
 	verify(body.helm_available(), "Alongside undocking restores helm")
 	# Easy docking: Dock from a crooked, off-centre, slowly moving approach; the
 	# authority slides and turns the ship into the berth by itself.
-	var berth_pose: Transform3D = preview.port.berth_anchor.global_transform
-	var start: Transform3D = berth_pose.translated_local(Vector3(-preview.port.quay_side * 55, 0, -100)) * Transform3D(Basis(Vector3.UP, deg_to_rad(120)), Vector3.ZERO)
+	# Patch 2.4 item 3: the slide ends a hull-scaled fender gap off the quay.
+	var berth_pose: Transform3D = preview.port.berth_anchor.global_transform.translated_local(Vector3(preview.port.quay_offset_m(body.definition), 0, 0))
+	var start: Transform3D = preview.port.berth_anchor.global_transform.translated_local(Vector3(-preview.port.quay_side * 55, 0, -100)) * Transform3D(Basis(Vector3.UP, deg_to_rad(120)), Vector3.ZERO)
 	body.global_transform = start
 	body.velocity = start.basis.z * 2.0
 	verify(preview.port.dock_readiness(body, "container_transfer", "cargo_test_container").eligible and not preview.port.berth_readiness(body, "container_transfer", "cargo_test_container").eligible, "Easy rule accepts an approach the old strict rule refused")
@@ -335,13 +372,13 @@ func check_berths(preview: Node3D) -> void:
 	var port: Node3D = preview.port
 	var body: HandlingShip = preview.ship
 	var old_pose: Transform3D = body.global_transform
-	verify(port.berth_anchors.size() == 2 and port.berth_id(0) != port.berth_id(1) and port.berth_anchors[1].global_position.distance_to(port.berth_anchor.global_position) >= body.definition.hull_size_m.z + 20, "Port has two berths in a row, a hull length apart")
+	verify(port.berth_anchors.size() == port.BERTH_COUNT and port.BERTH_COUNT >= 3 and port.berth_id(0) != port.berth_id(1) and port.berth_id(1) != port.berth_id(2) and port.berth_anchors[1].global_position.distance_to(port.berth_anchor.global_position) >= body.definition.hull_size_m.z + 20, "Port has three berths in a row, a hull length apart")
 	var berth_one: Transform3D = port.berth_anchors[0].global_transform
 	var ai: HandlingShip = HandlingShip.new()
 	CollisionRules.add_box_hull(ai, ai.definition.hull_size_m)
 	add_child(ai)
 	ai.global_transform = berth_one
-	body.global_transform = berth_one.translated_local(Vector3(-port.quay_side * 40, 0, 20))
+	body.global_transform = berth_one.translated_local(Vector3(-port.quay_side * 40, 0, port.BERTH_SPACING_M * .6))
 	body.velocity = Vector3.ZERO
 	await get_tree().physics_frame
 	verify(authority.register(2, ai, port) and authority.request_dock(2, "container_transfer", "cargo_test_container").ok and authority.members[2].berth_index == 0, "AI ship claims berth 1")
@@ -353,13 +390,21 @@ func check_berths(preview: Node3D) -> void:
 	verify(authority.request_dock(1, "container_transfer", "cargo_test_container").ok and authority.members[1].berth_index == 1 and authority.reservations.size() == 2, "Captain is sent to the next free berth")
 	verify(body.collision_layer == CollisionRules.DOCKED_HULL, "Collision is off while sliding into a berth")
 	authority.advance(authority.MAX_SLIDE_SECONDS + .1)
-	verify(authority.state(1) == "docked" and body.global_position.distance_to(port.berth_anchors[1].global_position) < .01, "Captain docks at berth 2")
+	verify(authority.state(1) == "docked" and body.global_position.distance_to(port.berth_anchors[1].global_transform.translated_local(Vector3(port.quay_offset_m(body.definition), 0, 0)).origin) < .01, "Captain docks at berth 2, a fender gap off the quay")
 	var gap: float = absf((berth_one.affine_inverse() * body.global_position).z) - body.definition.hull_size_m.z / 2 - ai.definition.hull_size_m.z / 2
 	verify(gap > 10, "Ships at a port never overlap (%.0f m apart)" % gap)
+	# Patch 2.4 item 3: a second AI ship holds berth 3, so the port is full.
+	var ai_two: HandlingShip = HandlingShip.new()
+	CollisionRules.add_box_hull(ai_two, ai_two.definition.hull_size_m)
+	add_child(ai_two)
+	ai_two.global_transform = port.berth_anchors[2].global_transform
+	await get_tree().physics_frame
+	verify(authority.register(4, ai_two, port) and authority.request_dock(4, "container_transfer", "cargo_test_container").ok and authority.members[4].berth_index == 2, "Second AI ship claims berth 3")
+	authority.advance(authority.MAX_SLIDE_SECONDS + .1)
 	var third: HandlingShip = HandlingShip.new()
 	CollisionRules.add_box_hull(third, third.definition.hull_size_m)
 	add_child(third)
-	third.global_transform = berth_one.translated_local(Vector3(-port.quay_side * 60, 0, 90))
+	third.global_transform = berth_one.translated_local(Vector3(-port.quay_side * 60, 0, port.BERTH_SPACING_M * .6))
 	await get_tree().physics_frame
 	authority.register(3, third, port)
 	var full: Dictionary = authority.request_dock(3, "container_transfer", "cargo_test_container")
@@ -379,8 +424,10 @@ func check_berths(preview: Node3D) -> void:
 	verify(body.collision_layer == CollisionRules.HULL and body.collision_mask == CollisionRules.SOLID_WATERCRAFT, "Collision comes back once out of the berth and clear of ships")
 	authority.disconnect_owner(2)
 	authority.disconnect_owner(3)
+	authority.disconnect_owner(4)
 	verify(authority.reservations.is_empty() and ai.collision_layer == CollisionRules.HULL, "Leaving the port frees every claim")
 	ai.free()
+	ai_two.free()
 	third.free()
 	body.global_transform = old_pose
 	await get_tree().physics_frame
