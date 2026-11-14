@@ -6621,3 +6621,12 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
 - Not run: Stage 3 Python (no Python changed), Windows, screenshots and a
   playtest. Nobody has seen the boats jump on screen yet; Andy should judge the
   airtime, the landing splash and whether 42 kn is fast enough for the racer.
+
+Follow-up fix (CI Stage 3 Python): `tools/world_layout/traversal_budget.py`
+failed with "planned hulls do not match the ship records" because it expected
+every ShipDefinition record to have a planned cargo hull. It now leaves out
+ship records with no `cargo_type_ids` (the three small boats take no cargo jobs,
+so they have no route budget). Gas and oil hulls are still planned and checked,
+and `world_layout.json` is unchanged. Not run: the agent was not allowed to run
+Python on this runner, so the unittest discovery and `traversal_budget.py`
+still need a CI run.
