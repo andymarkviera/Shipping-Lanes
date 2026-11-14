@@ -132,14 +132,6 @@ var debug: CanvasLayer
 func play_sound(kind: String) -> void:
 	if sfx.has(kind): sfx[kind].play()
 
-## M5 first-voyage hint: the helm keys as they are bound in Settings.
-func controls_hint() -> String:
-	var keys: Dictionary = {}
-	for action: String in controls.preferences.bindings: keys[action] = OS.get_keycode_string(controls.preferences.bindings[action])
-	return "%s / %s throttle · %s / %s steer · %s / %s side thrusters\n%s engine to zero · %s horn · Right mouse look · Wheel zoom\nEsc opens the menu. Keys can be changed there, in Settings." % [
-		keys.ship_throttle_up, keys.ship_throttle_down, keys.ship_steer_left, keys.ship_steer_right,
-		keys.ship_thruster_left, keys.ship_thruster_right, keys.ship_throttle_zero, keys.horn]
-
 func button(parent: Node, title: String, action: Callable) -> Button:
 	var node: Button = Button.new()
 	node.text = title
@@ -724,6 +716,8 @@ func helm_hints() -> Dictionary:
 		hints.panel = ""
 		hints.docked = ""
 		hints.unfocused = "The ship holds its course. Click the game window to steer."
+		hints.paused = "PAUSED — one moment while the voyage saves or loads.\nStill paused? Press Esc, then Main Menu, and play again."
+		hints.switched_off = "SHIP UNAVAILABLE — this voyage could not be loaded.\nPress Esc, then Main Menu, and play again."
 	return hints
 
 func bind_port() -> void:
@@ -994,6 +988,8 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(helm): helm.gauge_display.visible = extras_visible()
 	minimap.queue_redraw()
 	details.text = "%s · %s\n%s: %.2f credits" % [port.definition.display_name, "Heavy loader" if heavy_mode else "Container ship", "Wallet" if game_mode else "Voyage wallet", reward_minor / 100.0]
+	# The game: the port name is the card's title, so just the ship and the wallet.
+	if game_mode: details.text = "%s\nWallet: %.2f credits" % [Progression.SHIPS[ship_kind].name if Progression.SHIPS.has(ship_kind) else "", reward_minor / 100.0]
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else ("Bulk jobs" if bulk_mode() else "Container jobs")
@@ -1044,7 +1040,7 @@ func _process(_delta: float) -> void:
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
 		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
-		# The game: nothing here. The keys show briefly on the first voyage (game_hud).
+		# The game: nothing here. The keys are listed in Esc > CONTROLS.
 		if game_mode: navigation.text = ""
 	if services.visible and not game_mode: navigation.text += "\nRefuel / repair: " + free_note()
 	if is_instance_valid(game_hud): game_hud.refresh(_delta)

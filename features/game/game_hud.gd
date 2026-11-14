@@ -2,13 +2,10 @@ extends Control
 ## Patch 2.0 item 5: the game's simplified HUD. It lays out what the game scene
 ## (port_test.gd in game_mode) already owns and adds four small things:
 ## - the helm bar: an R / N / D throttle slider, the speed in knots and Dock;
-## - a controls hint that shows briefly on the first voyage, then goes;
 ## - a notice under the job card that shows for a few seconds and fades;
 ## - the job hub: one card per offer (what, from, to, pay, Accept).
 ## It owns no cargo, money or docking state. Test scenes never create it.
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
-## Seconds under way that the controls hint stays on a new game.
-const HINT_SECONDS: float = 45.0
 const TOAST_SECONDS: float = 6.0
 const BOX_COLOURS: Array[Color] = [Color("e2574c"), Color("3d9be0"), Color("ffc940"), Color("7ed957")]
 var view: Node3D
@@ -17,9 +14,6 @@ var slider: HSlider
 var knots: Label
 var dock_hint: Label
 var dragging: bool = false
-var hint: PanelContainer
-var hint_label: Label
-var hint_left: float = HINT_SECONDS
 var toast: PanelContainer
 var toast_text: String = ""
 var toast_left: float = 0.0
@@ -33,7 +27,6 @@ func setup(scene: Node3D) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	theme = PLAYFUL.make()
 	build_bar()
-	build_hint()
 	build_toast()
 	arrange_port_card()
 
@@ -95,13 +88,6 @@ func build_bar() -> void:
 	view.dock_button.add_theme_font_size_override("font_size", 19)
 	dock_hint = text(column, 14, PLAYFUL.CREAM)
 	dock_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-
-func build_hint() -> void:
-	hint = PanelContainer.new()
-	hint.position = Vector2(20, 20)
-	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(hint)
-	hint_label = text(hint, 15)
 
 func build_toast() -> void:
 	toast = PanelContainer.new()
@@ -212,12 +198,7 @@ func refresh(delta: float) -> void:
 	dock_hint.text = str(status.get("message", "")) if near else ""
 	dock_hint.visible = near
 	view.dock_button.tooltip_text = "" if not view.dock_button.disabled or docked else "Sail up to a berth and slow down."
-	# Controls hint: a new game only, for the first while under way.
-	var fresh: bool = view.reward_minor == 0 and view.spent_minor == 0 and view.banked_minor == 0
-	if fresh and not docked and hint_left > 0.0: hint_left -= delta
-	hint.visible = fresh and not docked and hint_left > 0.0 and not view.heavy_controls.visible
-	hint.modulate.a = clampf(hint_left / 2.0, 0.0, 1.0)
-	if hint.visible: hint_label.text = view.controls_hint()
+	# Patch 2.5 item 8: no key hints on the HUD. They live in Esc > CONTROLS.
 	# Notice: shows when it changes, then fades. Loading progress stays up.
 	var words: String = view.loading_text.text
 	if words != toast_text:
