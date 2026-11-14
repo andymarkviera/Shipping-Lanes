@@ -1016,8 +1016,11 @@ with each mockup before calling an item done, and put both in the PR.
    and Mac.
 
 **Patch 2.7 status (November 14, 2026):** item 1 (title logo and Press Any
-Button screen) in a draft PR, checked on Linux (headless checks and xvfb
-screenshots) only, not yet seen on Windows or a Mac; items 2-4 not started.
+Button screen) merged; item 2 (logo to the top-left, fleet container ship
+sails in with a toon wake) in a draft PR. Both checked on Linux (headless
+checks and xvfb screenshots) only, not yet seen on Windows or a Mac. Until
+item 3 the old yellow menu buttons sit under the corner logo. Items 3-4 not
+started.
 
 ## 13. Patch 2.8 (Andy, November 14, 2026): pirate ships
 

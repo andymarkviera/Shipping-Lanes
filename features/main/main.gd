@@ -183,7 +183,10 @@ func show_attract_screen() -> void:
 	if get_tree().has_meta(TITLE_SEEN): return
 	if DisplayServer.get_name() == "headless" and not OS.get_cmdline_user_args().has("--title-check"): return
 	get_tree().set_meta(TITLE_SEEN, true)
-	add_child(TitleScreen.new())
+	var title: TitleScreen = TitleScreen.new()
+	# Patch 2.7 item 2: once the ship has sailed in, the menu shows over it.
+	title.dismissed.connect(menu.use_title_backdrop.bind(title))
+	add_child(title)
 
 func navigate(action: String) -> void:
 	if ApplicationMenu.friends_client() and action not in ["servers", "settings", "title", "exit"]: return
