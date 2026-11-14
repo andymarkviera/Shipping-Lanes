@@ -14,9 +14,7 @@ func configure(body: HandlingShip) -> void:
 	visual = ShipVisualMotion.new()
 	visual.name = "VisualRoot"
 	visual.body = ship
-	visual.half_length = ship.definition.wake_half_length_m
-	visual.half_width = ship.definition.wake_half_width_m
-	visual.full_turn_rate_rad = deg_to_rad(maxf(ship.definition.max_turn_rate_degrees, 0.1))
+	visual.configure_hull(ship.definition)
 	add_child(visual)
 	visual.add_child((load(ship.definition.scene_path) as PackedScene).instantiate())
 	visual.set_process(ship.definition.visual_bobbing)

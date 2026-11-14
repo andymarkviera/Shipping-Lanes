@@ -6312,3 +6312,39 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
 - Passed: the new `tools/debug_game_check.gd` (72 checks). A normal game writes a real save. A debug session then confirms no persistence, the tag, all 15 ships, credits refill, a hangar Select while undocked that keeps the ship in place, swaps to all 15 ships with the readout, and quick travel to all six ports with ship 5. MAIN MENU then clears the flag. The real save files are byte-for-byte identical (MD5), and the default save path is untouched.
 - Also passed: import, `check_scripts` (197), boot, `check_flow`, `check_controls`, `check_starter`, `check_catalog`, `hangar_check`, `check_m1_voyage`, `check_helm_keys`, the container, bulk and heavy ladder checks, `diagnostics_probe`, `ports_probe`, `voyage_probe` and `sailing_save_probe`.
 - Not run: Windows, a playtest, screenshots (the panel layout has not been seen), and the Python stages. `debug_game_check` is not in the CI job, because `.github/workflows` was not edited.
+
+## Patch 2.4 item 1: hull trim bug (November 14, 2026)
+
+Cause: the hulls themselves were fine (every chunky hull has its origin at
+mid-length with the waterline at y = 0, keel -3.2 s, deck 2.6 s, s = hull
+height / 4). The fault was in `ShipVisualMotion`: pitch was a fixed angle
+(up to 7 degrees, 1.2 degrees bow-up at speed, a 1.4 degree chop and a 2x swell
+tilt) on every ship, so on a 270 m hull a degree moves the ends by more than
+2 m. At full speed ship 5's deck went 2.66 m under water (bulk 5: 2.90 m).
+
+- `ShipVisualMotion.configure_hull(definition)` (used by `ShipAssembly`) sizes
+  the rocking per hull. Pitch, chop, trim and swell tilt scale by deck height
+  over hull length (ship 1 = 1.0, ship 5 about 0.47). The pitch limit keeps
+  the ends within 30% of their deck height. Roll scales with sqrt(beam), and
+  the lean is included. Trim at speed is 0.4 degrees bow-up on ship 1 (was 1.2),
+  and the speed heave chop is 0.2 m (was 0.3).
+- Max pitch now: ship 1 is 1.4 degrees (was up to about 5.6 at speed), ship 5 is
+  0.66 degrees. Heavy lifters keep `visual_bobbing = false` and sit still and
+  level as before. Wake, splash, load sink and the navigation body are unchanged.
+- The automated check is in `tools/water_probe.gd` `check_ladder_trim`, already
+  in CI Stage 2. All 15 ladder ships, empty and loaded, are run at rest and at
+  full speed on high water for 60 s. Bow and stern decks must stay at least 10%
+  of deck height above the local water. The keel stays wet at both ends. The
+  pitch stays within the hull's limit. The mean trim is between level and 0.5
+  degrees bow-up (never bow-down). The mean heave stays within 0.25 m of the
+  waterline. It prints a TRIM line per case. Ship 5 at full speed: 2.72 m of
+  deck clear empty, 1.88 m loaded.
+
+Checks (agent's Linux runner, official Godot 4.7.2 with a verified SHA-512, headless):
+
+- Passed: import, `check_scripts`, boot, and the whole CI Stage 2 set
+  (`water_probe` went from 75 to 336 checks; `handling_probe`, `feedback_probe`,
+  `heavy_lifter_probe`, `camera_probe` and the others are unchanged).
+- Not run: Windows, a playtest, screenshots, the Stage 3 Python and Stage 4.
+  The smaller ships now rock noticeably less than in Patch 2.0. Andy should
+  confirm that it still feels lively.
