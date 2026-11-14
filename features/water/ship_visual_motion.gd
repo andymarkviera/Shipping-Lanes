@@ -43,6 +43,37 @@ var roll_scale: float = 1.0
 var pitch_limit_rad: float = MAX_PITCH_RAD
 var roll_limit_rad: float = MAX_ROLL_RAD
 
+## Patch 2.4 item 8: planing small boats jump the waves. The wave face throws
+## the hull up (its rise rate times jump_lift); once the water drops away faster
+## than gravity pulls the hull down, the hull flies on a ballistic arc and lands
+## back on the surface. Presentation only, like the rest of this node: the body,
+## collider and camera stay on the water plane.
+signal landed(impact: float)
+const JUMP_GRAVITY_MPS2: float = 9.81
+## Wavelength of the chop a planing hull meets at speed: 2 pi / 0.26, about 24 m.
+const CHOP_PER_M: float = 0.26
+## A hull leaves the water only above this rise rate, and stays down this long
+## after landing, so it never chatters on the surface.
+const MIN_LAUNCH_MPS: float = 0.8
+const SETTLE_S: float = 0.25
+const JUMP_PITCH_LIMIT_RAD: float = deg_to_rad(14.0)
+const JUMP_ROLL_LIMIT_RAD: float = deg_to_rad(12.0)
+var jump_lift: float = 0.0
+var chop_height_m: float = 0.0
+var top_speed_mps: float = 10.0
+var airborne: bool = false
+var air_time: float = 0.0
+var longest_air_s: float = 0.0
+var jump_y: float = 0.0
+var jump_vy: float = 0.0
+var jump_pitch: float = 0.0
+var land_dip: float = 0.0
+var land_dip_vy: float = 0.0
+var settle: float = 0.0
+var travel_m: float = 0.0
+var last_surface: float = 0.0
+var has_surface: bool = false
+
 ## Sizes the rocking from a ship record: hull length, beam and deck height
 ## (chunky_look builds the deck 2.6 m above the waterline per 4 m of hull height).
 func configure_hull(definition: ShipDefinition) -> void:
@@ -55,6 +86,12 @@ func configure_hull(definition: ShipDefinition) -> void:
 	pitch_limit_rad = minf(MAX_PITCH_RAD, asin(clampf(PITCH_DECK_SHARE * deck_height_m / maxf(reach, 1.0), 0.0, 1.0)))
 	roll_scale = clampf(sqrt(REFERENCE_HALF_WIDTH_M / maxf(half_width, 0.1)), 0.4, 1.0)
 	roll_limit_rad = MAX_ROLL_RAD * roll_scale
+	jump_lift = maxf(definition.jump_lift, 0.0)
+	chop_height_m = maxf(definition.chop_height_m, 0.0)
+	top_speed_mps = maxf(definition.forward_acceleration_mps2 / maxf(definition.linear_drag_per_second, 0.001), 1.0)
+	if jump_lift > 0.0:
+		pitch_limit_rad = maxf(pitch_limit_rad, JUMP_PITCH_LIMIT_RAD)
+		roll_limit_rad = maxf(roll_limit_rad, JUMP_ROLL_LIMIT_RAD)
 
 func set_visual_load(fraction: float) -> void:
 	if is_finite(fraction):
@@ -103,6 +140,63 @@ func _process(delta: float) -> void:
 	var pitch: float = swell_pitch + (sin(clock * 0.55) * deg_to_rad(0.5) + sin(clock * 1.9) * deg_to_rad(1.4) * pace - SPEED_TRIM_RAD * speed_fraction) * strength * pitch_scale
 	var roll: float = swell_roll + (sin(clock * 0.73 + 0.8) * deg_to_rad(1.2) * (1.0 + 1.5 * pace) * strength + lean * TURN_LEAN_RAD) * roll_scale
 	heave_m = clampf(heave_m, -MAX_HEAVE_M, MAX_HEAVE_M)
-	position.y = heave_m - load_sink_m
+	if jump_lift > 0.0 and step > 0.0:
+		pitch = planing(step, swell_heave, signed_speed, pitch, strength)
+		position.y = jump_y + land_dip - load_sink_m
+	else:
+		position.y = heave_m - load_sink_m
 	rotation.x = clampf(pitch, -pitch_limit_rad, pitch_limit_rad)
 	rotation.z = clampf(roll, -roll_limit_rad, roll_limit_rad)
+
+## Patch 2.4 item 8: one step of a planing hull over the swell and the chop.
+## Returns the pitch to show. Sets jump_y (the hull's height) and land_dip.
+func planing(step: float, swell: float, signed_speed: float, pitch: float, strength: float) -> float:
+	var speed: float = absf(signed_speed)
+	var pace: float = clampf(speed / top_speed_mps, 0.0, 1.0)
+	travel_m += speed * step
+	# Chop only lifts: 0 in a trough, its full height on a crest, and it grows
+	# with speed. Two lengths so the jumps do not come like clockwork.
+	var phase: float = travel_m * CHOP_PER_M
+	var chop: float = chop_height_m * pace * pace * strength * (0.5 + 0.32 * sin(phase) + 0.18 * sin(phase * 1.53 + 1.7))
+	var slope: float = chop_height_m * pace * pace * strength * CHOP_PER_M * (0.32 * cos(phase) + 0.18 * 1.53 * cos(phase * 1.53 + 1.7))
+	var surface: float = swell + chop
+	var rise: float = (surface - last_surface) / step if has_surface else 0.0
+	last_surface = surface
+	has_surface = true
+	# The touch-down dip is a stiff, critically damped spring: it sinks the hull
+	# a little and brings it back up smoothly, never with a snap or a bounce.
+	land_dip_vy -= (land_dip * 64.0 + land_dip_vy * 16.0) * step
+	land_dip += land_dip_vy * step
+	settle = maxf(settle - step, 0.0)
+	var push: float = rise * jump_lift
+	if airborne:
+		air_time += step
+		jump_vy -= JUMP_GRAVITY_MPS2 * step
+		jump_y += jump_vy * step
+		if jump_y <= surface:
+			# Touch down: back on the water with a soft dip, no bounce.
+			var impact: float = -jump_vy
+			airborne = false
+			longest_air_s = maxf(longest_air_s, air_time)
+			jump_y = surface
+			jump_vy = rise
+			settle = SETTLE_S
+			land_dip_vy = -clampf(impact * 0.6, 0.0, 4.5)
+			landed.emit(clampf(impact / 6.0, 0.0, 1.0))
+	else:
+		var ballistic: float = jump_vy - JUMP_GRAVITY_MPS2 * step
+		if settle <= 0.0 and jump_vy > MIN_LAUNCH_MPS and ballistic > maxf(push, rise) and speed > 2.0:
+			# The water falls away faster than gravity: the hull flies.
+			airborne = true
+			air_time = 0.0
+			jump_vy = ballistic
+			jump_y += jump_vy * step
+		else:
+			jump_vy = maxf(push, rise)
+			jump_y = surface
+	# In the air the bow follows the arc; on the water it climbs the chop.
+	var target: float = pitch
+	if airborne: target = -atan2(jump_vy, maxf(speed, 4.0)) * 0.7 - deg_to_rad(2.0) * pace
+	else: target = pitch - atan(slope * jump_lift) * 0.8
+	jump_pitch = lerpf(jump_pitch, target, 1.0 - exp(-step * (5.0 if airborne else 9.0)))
+	return jump_pitch

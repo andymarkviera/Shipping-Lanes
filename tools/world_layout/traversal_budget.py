@@ -139,6 +139,11 @@ def fits(size_class, layout, beam, length):
     return beam <= limit['max_beam_m'] and length <= limit['max_length_m']
 
 
+def carries_cargo(path):
+    """True when a ship record lists at least one cargo type."""
+    return bool(strings(record(path).get('cargo_type_ids', '')))
+
+
 def within(value, window):
     return window[0] <= value < window[1]
 
@@ -158,10 +163,13 @@ def failures(layout):
     if scale['navigation_meters_per_world_meter'] != 1.0 or scale['game_seconds_per_real_second'] != 1.0:
         bad.append('scale differs from the UNITS_AND_TIME.md prototype defaults')
 
-    # Hulls: every ship record is planned, with its real top speed and size class.
+    # Hulls: every cargo ship record is planned, with its real top speed and size
+    # class. Records with no cargo types (Patch 2.4 small boats) take no cargo
+    # jobs and so have no route budget; they are left out.
     speed_cap = constant('features/collision/collision_rules.gd', 'SUPPORTED_SPEED_MPS')
     recorded = sorted(p.relative_to(ROOT).as_posix() for p in (ROOT / 'features/catalog/records').glob('*.tres')
-                      if 'script_class="ShipDefinition"' in p.read_text(encoding='utf-8'))
+                      if 'script_class="ShipDefinition"' in p.read_text(encoding='utf-8')
+                      and carries_cargo(p.relative_to(ROOT).as_posix()))
     if recorded != sorted(plan['record'] for plan in layout['hulls'].values()):
         bad.append('planned hulls do not match the ship records')
     for ship in fleet:

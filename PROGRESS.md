@@ -6579,3 +6579,54 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
   Windows, screenshots and a playtest. Nobody has seen the globe on screen yet.
   Andy should check that it reads clearly, drags smoothly and that the
   north-south jump is acceptable.
+
+## Patch 2.4 item 8: small boats family (November 14, 2026)
+
+- Three new ladder kinds in `progression.gd` (`SMALL_KINDS`, `small_tier`)
+  with their own records (`features/catalog/records/small_*_ship.tres`, save
+  IDs `ship_small_*` map to the kinds): fishing boat (16 × 5 m, 12 kn, 200
+  credits), speedboat (8.5 × 2.8 m, 36 kn, 400 credits) and offshore racer
+  (13 × 2.8 m, 42 kn, 600 credits). They sail the starter runtime, turn
+  sharply and reach full speed in a few seconds. No cargo: the job board stays
+  empty and Accept says "Small boats take no cargo jobs"; they dock (no cargo
+  check) to refuel and switch ships. Old save IDs are unchanged.
+- Toon models in `chunky_look.gd` (`_dress_small`), each with mooring fairleads.
+  Hangar: a fifth filter, "Small boats" ("boat N of 3", capacity "none, just
+  for fun"). Debug mode owns them through `Hangar.ladder()`.
+- Jumping (`ship_visual_motion.gd`, presentation only, body and collider stay
+  on the water plane): records set `jump_lift` and `chop_height_m`. On the
+  water the hull rides the swell plus a speed-dependent chop; the wave face
+  gives it lift × the water's rise rate. When the water falls away faster than
+  gravity, the hull flies a ballistic arc (9.81 m/s²), bow following the arc,
+  and lands with a critically damped dip and no relaunch for 0.25 s. Pitch is
+  capped at 14°, roll at 12°. Bow spray stops while airborne; `BowSplash.burst`
+  throws a spray ring on landing. Bow spray and crests scale with the hull
+  (ladder ships unchanged, factor 1).
+- Limitation: the racer's top speed is held to 42 kn by the existing 22 m/s
+  collision speed cap (`CollisionRules.SUPPORTED_SPEED_MPS`), which was not
+  raised. It feels fast through its acceleration and turning.
+- `export_presets.cfg` lists the three new records.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts` (205), `--quit-after 10`, new
+  `small_boats_check` (70: records, prices, models, migration, and 60 s at
+  full speed at 30 and 60 fps: racer longest jump 1.5 s, speedboat 0.5 s,
+  fishing boat none, no snaps, no chatter, no flip), `hangar_check` (213,
+  now 18 ships incl. buying, selecting and docking each small boat),
+  `debug_game_check` (81), `water_probe` (336), `mooring_check`,
+  `crane_check`, the three ladder checks, `globe_map_check`, `check_catalog`,
+  `check_controls`, `check_flow`, `check_starter`, `check_m1_voyage`,
+  `check_helm_keys`, and every CI Stage 2 probe (units to economy).
+- Not run: Stage 3 Python (no Python changed), Windows, screenshots and a
+  playtest. Nobody has seen the boats jump on screen yet; Andy should judge the
+  airtime, the landing splash and whether 42 kn is fast enough for the racer.
+
+Follow-up fix (CI Stage 3 Python): `tools/world_layout/traversal_budget.py`
+failed with "planned hulls do not match the ship records" because it expected
+every ShipDefinition record to have a planned cargo hull. It now leaves out
+ship records with no `cargo_type_ids` (the three small boats take no cargo jobs,
+so they have no route budget). Gas and oil hulls are still planned and checked,
+and `world_layout.json` is unchanged. Not run: the agent was not allowed to run
+Python on this runner, so the unittest discovery and `traversal_budget.py`
+still need a CI run.

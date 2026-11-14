@@ -20,6 +20,11 @@ extends ContentDefinition
 @export var wake_half_width_m: float = 6.5
 @export var cargo_anchor_m: Vector3 = Vector3(0, 2.65, 17)
 @export var visual_bobbing: bool = true
+## Patch 2.4 item 8: small planing boats. jump_lift > 0 lets the wave face
+## throw the hull into the air (ShipVisualMotion); 0 is a displacement hull
+## that only rides the swell. chop_height_m is the chop met at speed.
+@export var jump_lift: float = 0.0
+@export var chop_height_m: float = 0.0
 @export var neutral_snap_zone: float = 0.04
 @export var neutral_stop_speed_mps: float = 1.028889
 @export var neutral_stop_deceleration_mps2: float = 0.35
