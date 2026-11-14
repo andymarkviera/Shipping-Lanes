@@ -154,7 +154,7 @@ func _ready() -> void:
 	touch.gui_input.connect(on_touch)
 	screen.add_child(touch)
 	var hint: Label = Label.new()
-	hint.text = "World map  ·  drag to turn  ·  scroll to zoom  ·  M or Esc to close"
+	hint.text = "WORLD MAP"
 	hint.add_theme_font_size_override("font_size", 20)
 	hint.add_theme_color_override("font_color", PLAYFUL.CREAM)
 	hint.add_theme_color_override("font_outline_color", PLAYFUL.INK)

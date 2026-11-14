@@ -31,7 +31,7 @@ func _ready() -> void:
 	column.add_theme_constant_override("separation", 8)
 	margin.add_child(column)
 	var heading: Label = Label.new()
-	heading.text = "Controls & settings"
+	heading.text = "Settings"
 	heading.add_theme_font_size_override("font_size", 24)
 	column.add_child(heading)
 	volume = add_slider(column, "Master volume", 0.0, 1.0, false)
@@ -55,7 +55,7 @@ func _ready() -> void:
 	water_quality.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	water_row.add_child(water_quality)
 	var hint: Label = Label.new()
-	hint.text = "Select a key to change it. Escape cancels.\nCamera: hold right mouse to orbit; scroll wheel to zoom."
+	hint.text = "Click a key to change it. Esc cancels."
 	column.add_child(hint)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.custom_minimum_size.y = 155

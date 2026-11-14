@@ -231,7 +231,7 @@ func pickup_position_ready() -> bool:
 func alignment_hint() -> String:
 	if attached: return "Load aboard. Raise to sail; Lower at the ocean drop-off to deliver."
 	if pickup_position_ready(): return "Platform is under the load. Stop in neutral and press Raise."
-	return "Lower the platform and reverse underneath the centre of the load.\nCrooked is fine — no angle matching required."
+	return "Lower the platform and back under the middle of the load."
 
 static func load_within_limits(size: Vector3, mass_kg: float) -> bool:
 	if not size.is_finite() or not is_finite(mass_kg) or mass_kg <= 0 or mass_kg > MAX_PAYLOAD_KG: return false

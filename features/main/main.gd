@@ -365,7 +365,7 @@ func refresh_save_status() -> void:
 	menu.game_button.text = "CONTINUE" if game_saved else "PLAY"
 	menu.restart_button.visible = game_saved
 	menu.play_button.text = "LOCAL SAVE TEST" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE LOCAL SAVE TEST"
-	menu.save_notice.text = "CONTINUE resumes your saved voyage." if game_saved else "PLAY starts a new game at Brindle Quay.\n\nCarry cargo between four ports. Pay for fuel and repairs, and save up for bigger ships. The game saves by itself."
+	menu.save_notice.text = "CONTINUE resumes your saved voyage." if game_saved else "PLAY starts a new game at Brindle Quay.\n\nCarry cargo between ports, pay for fuel and repairs, and save up for bigger ships. The game saves by itself."
 	if DevMode.enabled: menu.save_notice.text += "\n\nTest saves — local slot %d: %s" % [active_slot + 1, slots.status(active_slot)]
 
 ## F3 pressed: the menu notice gains or loses its test-save line.
