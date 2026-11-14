@@ -959,6 +959,48 @@ Developer account: the app ships unsigned/ad-hoc signed).
 
 ## 12. Patch 2.7 (Andy, November 14, 2026): main menu
 
-The new main menu (formerly called Patch 3). Starts after Patch 2.6. The
-design comes from Andy; details to be added here before work starts.
-Patch 4 (multiplayer) stays not started.
+Andy's design (formerly "Patch 3"). Starts after Patch 2.6. References:
+`docs/reference/main_menu/title_press_any_button.png` and
+`docs/reference/main_menu/menu_ship_arrives.png` (Andy's mockups; they show
+the look, the real ship is an in-game 3D model). Same rules as 2.5/2.6:
+one PR each, Godot 4.7.2, Windows and Mac both work, saves intact, debug mode
+still reachable, no pausing reliance, no workflow edits. The game's visible
+title becomes **Shipping Lanes** everywhere (window title, export app names,
+title screen); internal IDs, save paths and bundle id do not change.
+
+1. **Title logo and attract screen.** A toon logo matching the reference:
+   "SHIPPING" in big red beveled serif capitals with a dark outline, "LANES"
+   in yellow-gold below it, sitting on white Wind Waker swirl waves. Build
+   it as crisp vector/texture art at 4K-safe size (the reference image may
+   be used as a starting point, cleaned up). Background is the live in-game
+   ocean seen from straight above, deep blue with the game's toon wave
+   streaks drifting. The logo sits center-top; "Press Any Button" below it
+   between two small swirl flourishes, gently pulsing. Any key, mouse click
+   or gamepad button continues.
+2. **Ship drives into frame.** On that press, "Press Any Button" fades, the
+   logo slides and shrinks to the top-left, and a container ship from the
+   game's own fleet (the in-game 3D model, loaded with colorful containers)
+   sails in from off-screen and settles center-right, top-down camera, bow
+   pointing right, leaving a big foamy toon wake trailing behind it to the
+   left. It keeps cruising in place (wake, foam and water keep moving) while
+   the menu is open. About 2-3 s, smooth easing, skippable by pressing again.
+   Use a ship from the fleet ladder; picking a random container tier each
+   launch is fine.
+3. **Menu list.** Left side under the logo, white rounded-serif text with a
+   dark navy outline: Start, Options, Credits, Quit Game. A yellow swirl
+   cursor (the wind-swirl icon) sits left of the selected item and bobs;
+   keyboard arrows/WASD, mouse hover/click and gamepad all work, with a
+   small sound on move and select. Start continues the save (or opens the
+   save slots if there are several), Options opens settings (graphics,
+   audio, controls screen from 2.5, and the Debug mode entry, which moves
+   here from the title), Credits rolls a short toon credits screen (Andy
+   Viera, made with Godot), Quit Game quits (Cmd+Q on Mac too).
+4. **Transitions and polish.** Start plays a short transition (the camera
+   follows the menu ship down to sea level, then fades into the game)
+   and returning to the main menu from the Esc menu plays the arrival
+   again. Scales cleanly on 16:9, 16:10 (MacBook) and ultrawide, crisp on
+   Retina. The last PR carries a 5-10 line playtest checklist for Windows
+   and Mac.
+
+**Patch 2.7 status (November 14, 2026):** designed by Andy, starts after
+Patch 2.6.
