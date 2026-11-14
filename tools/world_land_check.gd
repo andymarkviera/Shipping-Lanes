@@ -131,6 +131,7 @@ func run() -> void:
 		if body == null or body.collision_layer != CollisionRules.SHORE or not body.get_child(0) is CollisionShape3D: continue
 		if (body.get_child(0) as CollisionShape3D).shape is BoxShape3D: bodies += 1
 	expect(bodies == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block is solid (%d bodies)" % bodies)
+	# Patch 2.5 item 4: land, ice and desert sand, two materials each.
 	# Part B: every block has a toon coast; the blocks share their materials and
 	# the surf shares one shader that stops drawing far away.
 	var paints: Dictionary = {}
@@ -148,7 +149,7 @@ func run() -> void:
 		surfs[surf.material_override] = true
 		expect(surf.visibility_range_end > 0.0 and surf.visibility_range_end <= 2000.0, "%s surf is culled far away" % child.name)
 	expect(coasts == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block has a toon coast (%d)" % coasts)
-	expect(paints.size() <= 4 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
+	expect(paints.size() <= 6 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
 	expect(beaches >= Progression.LANDMASSES.size() and surfs.size() == 1, "Beaches have surf with one shared shader (%d beaches)" % beaches)
 	# The surf takes the sea's time on the game's next drawn frame.
 	for frame: int in 2: await process_frame

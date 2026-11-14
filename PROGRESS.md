@@ -6808,3 +6808,38 @@ Checks (agent's Linux runner, official Godot 4.7.2):
   forced on, OpenGL under Xvfb. It renders: cold, pale, foggy, with snow.
 - Not run: Windows, frame timing on the target, sailing into the polar sea in
   a playtest, the full CI probe list.
+
+## Patch 2.5 item 4: Desert biome — November 14, 2026
+
+- New `features/sky/desert_biome.gd`, in the real game scene only. The desert
+  is Hearthland's northern half round Cinder Point: fully desert within
+  1,400 m of (-1500, 2000), none beyond 2,100 m (Brindle Quay, the other ports,
+  every bridge and Gull Isle stay clear). Eased in time like the polar look.
+- Look: warm sandy haze (closer warm fog), warm sun and ambient light, a warm
+  pale horizon with fewer clouds, a teal-green sea and a dry warm grade (less
+  saturation, warm shadows and highlights). It sits under the polar look:
+  it sets the polar biome's starting values, so where they meet near the north
+  edge the polar look wins and nothing flickers. `polar_biome.gd` now grades
+  from those starting values (neutral outside the desert, so unchanged there).
+- Land: desert blocks are sand all over. Dunes (about 200) and mesas (red,
+  banded, pale overhanging cap) stand on the hilltops, clear of the coast,
+  ports and bridges, from a fixed seed. They are baked into four meshes (a few
+  draw calls in all, ink outlines intact); no new colliders.
+- Cinder Point: same ID, berth, jobs and quay. Sandy quay and walls, a row of
+  adobe houses with awnings, roof beams and cacti on the sand behind the
+  warehouses, a domed hall and a water tower on the terrace. Not solid.
+- `export_presets.cfg` lists the new script. `world_land_check` allows the
+  two desert land materials (6 shared materials, was 4).
+- New check `tools/desert_biome_check.gd` (56 checks).
+
+Checks (agent's Linux runner, official Godot 4.7.2):
+
+- Passed, headless: import, `check_scripts` (212), `--quit-after 10`,
+  `desert_biome_check` (56), `polar_biome_check` (46), `world_land_check`
+  (161), `globe_map_check` (48), `debug_game_check` (81), `hangar_check`
+  (213), `check_flow`, `check_m1_voyage`, `check_controls`, `check_starter`,
+  `check_catalog`.
+- Screenshots: chase camera off Cinder Point (OpenGL, Xvfb): warm haze, sand,
+  dunes, a mesa and the adobe town read well.
+- Not run: Windows, frame timing on the target, a playtest, the full CI probe
+  list. The minimap and globe still draw the desert land green.

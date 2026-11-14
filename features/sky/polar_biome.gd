@@ -57,6 +57,10 @@ func setup(world: Environment, light: DirectionalLight3D, sea: OceanPresentation
 		"fog": environment.fog_light_color, "fog_begin": environment.fog_depth_begin, "fog_end": environment.fog_depth_end,
 		"ambient": environment.ambient_light_color, "ambient_energy": environment.ambient_light_energy,
 		"sun": sun.light_color, "sun_energy": sun.light_energy,
+		# Patch 2.5 item 4: the grading the polar look starts from. Neutral
+		# here; the desert biome (desert_biome.gd) warms these under it.
+		"graded": false, "saturation": 1.0, "contrast": 1.0, "brightness": 1.0,
+		"grade_low": Color.BLACK, "grade_high": Color.WHITE,
 	}
 	if sky_material != null:
 		for key: String in ["top_color", "horizon_color", "cloud_shade_color", "cloud_cover"]: base[key] = sky_param(key)
@@ -157,12 +161,12 @@ func apply(value: float) -> void:
 		ocean.ocean_material.set_shader_parameter("deep_color", (base.deep as Color).lerp(POLAR_DEEP, value))
 		ocean.ocean_material.set_shader_parameter("surface_color", (base.surface as Color).lerp(POLAR_SURFACE, value))
 	# Colour grading only while it shows, so the temperate world costs nothing.
-	environment.adjustment_enabled = value > 0.0
-	environment.adjustment_saturation = lerpf(1.0, 0.82, value)
-	environment.adjustment_contrast = lerpf(1.0, 0.96, value)
-	environment.adjustment_brightness = lerpf(1.0, 1.03, value)
-	grade.set_color(0, Color.BLACK.lerp(POLAR_GRADE_LOW, value))
-	grade.set_color(1, Color.WHITE.lerp(POLAR_GRADE_HIGH, value))
+	environment.adjustment_enabled = value > 0.0 or base.graded
+	environment.adjustment_saturation = lerpf(base.saturation, 0.82, value)
+	environment.adjustment_contrast = lerpf(base.contrast, 0.96, value)
+	environment.adjustment_brightness = lerpf(base.brightness, 1.03, value)
+	grade.set_color(0, (base.grade_low as Color).lerp(POLAR_GRADE_LOW, value))
+	grade.set_color(1, (base.grade_high as Color).lerp(POLAR_GRADE_HIGH, value))
 	snow.amount_ratio = value
 	var falling: bool = value > 0.01
 	if falling != snow.emitting:
