@@ -268,16 +268,11 @@ static func dress_port(port: Node3D) -> void:
 		_ball(root, 10, 10, at + Vector3(0, 9, 0), WHITE, cache)
 		_drum(root, 1.2, 1.2, 2.0, at + Vector3(0, 14.5, 0), INK, cache)
 	if port.get_node_or_null("GantryBeam") != null:
-		# Crane: bright frame, a boom out over the berth, a cab and a hook block.
+		# Patch 2.4 item 5: the working quay cranes (container_cranes.gd) stand
+		# on every berth now, so the old landmark gantry stands down.
 		for label: String in ["GantryLegA", "GantryLegB", "GantryBeam"]:
-			_tint(port, label, Color("f0a326"))
-		for x: float in [34.0, 84.0]:
-			_box(root, Vector3(8, 2, 12), Vector3(side * x, 5, 35), INK, cache)
-		_box(root, Vector3(40, 2.4, 4), Vector3(side * 13, 35.3, 35), Color("f0a326"), cache)
-		_box(root, Vector3(7, 5, 7), Vector3(side * 30, 31.3, 35), WHITE, cache)
-		_box(root, Vector3(7.3, 1.8, 7.3), Vector3(side * 30, 31.8, 35), GLASS, cache)
-		_box(root, Vector3(0.5, 6, 0.5), Vector3(side * 4, 31, 35), INK, cache)
-		_box(root, Vector3(4, 1.2, 3), Vector3(side * 4, 27.6, 35), RUST, cache)
+			var part: MeshInstance3D = _mesh_of(port, label)
+			if part != null: part.hide()
 	# Harbour light at the far end of the quay: red and white bands, glass lantern.
 	var light: Vector3 = Vector3(side * 30, 4, length - 9)
 	_drum(root, 5.5, 5.5, 2, light + Vector3(0, 1, 0), Color("8f9aa3"), cache)
@@ -325,11 +320,12 @@ static func _dress_icy(port: Node3D, root: Node3D, side: float, length: float, c
 		var top: float = 16.45 if index < 2 else 10.45
 		_box(root, Vector3(12.4, 0.9, 6.4), Vector3(side * 46, top, (32 if index < 2 else 24) + index * 16), SNOW, cache)
 	if port.get_node_or_null("FuelStore") != null: _ball(root, 8.5, 5, Vector3(side * 83, 18.4, 25), SNOW, cache)
-	if port.get_node_or_null("GantryBeam") != null: _box(root, Vector3(54.4, 1, 5.4), Vector3(side * 59, 37, 35), SNOW, cache)
 	# Snow drifts on the open quay and icicles hanging off the berth edge.
+	# Patch 2.4 item 5: landward of the quay crane rails, clear of the stacks.
 	for index: int in int(length / 30.0):
 		var z: float = 15.0 + index * 30.0
-		_ball(root, 5.0 + (index % 2) * 2.0, 3.0, Vector3(side * (30.0 + (index % 2) * 4.0), 4.2, z), SNOW, cache)
+		if z < 62.0: continue
+		_ball(root, 3.0 + (index % 2), 2.4, Vector3(side * (44.5 + (index % 2) * 1.5), 4.2, z), SNOW, cache)
 		var icicle: CylinderMesh = CylinderMesh.new()
 		icicle.top_radius = 0.7
 		icicle.bottom_radius = 0.05
