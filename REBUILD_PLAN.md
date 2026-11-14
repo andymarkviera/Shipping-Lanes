@@ -621,7 +621,7 @@ on pausing the world.
      playful and readable.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
-**Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is next. Patch 3 is a new main menu
+**Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is done; Patch 2.3 (section 8, debug mode) is next. Patch 3 is a new main menu
 (Andy's design, later; do not start). Patch 4 is multiplayer (do not start).
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
@@ -771,3 +771,37 @@ ain't jank").** Every item must hold all of these:
 headless; not playtested on Windows. Item 4 (boat hangar screen) is built
 and passes the automatic checks on Linux headless; not seen on a screen by
 anyone. All of Patch 2.2 now waits for Andy's Windows playtest.
+
+## 8. Patch 2.3 (Andy, November 13, 2026)
+
+Andy wants a temporary debug game mode so he can try every boat on the map.
+It is a test tool, not a feature: keep it small, clearly labeled, and easy to
+remove later (one flag or one folder). Same rules as before: Godot 4.7.2,
+Wind Waker look, nothing that relies on pausing, saves and on-hold
+gas/oil/refinery/cargo-fuel code intact, Patch 2.0-2.2 behavior unchanged
+outside debug mode. Patch 3 (Andy's new main menu) will redo the title screen
+later, so do not redesign it now.
+
+1. **Debug game mode.** The title menu gets a DEBUG button beside PLAY and
+   SETTINGS (always visible for now). It starts a throwaway debug world:
+   - A "DEBUG" tag stays on screen the whole time.
+   - It never reads or writes the player's real save or save slots; quitting
+     throws it away (MAIN MENU returns to the title with the real save
+     untouched).
+   - Every ship in the Patch 2.2 ladder (all three families, ships 1-5) is
+     owned, and credits are effectively unlimited.
+   - The boat hangar opens anywhere (not only at ports) and Select swaps to
+     that ship on the spot, at the current position and heading, with no
+     docking needed.
+   - A quick-travel list jumps the active ship to any port, the polar ports
+     included, so big ships can be tried at every berth.
+   - A small readout shows the active ship's name, speed in knots, top speed
+     and time to full speed, so ship tuning can be judged.
+   - Jobs, docking, wake, splash, world wrap and everything else work as in a
+     normal game, so the real feel of each ship can be tested.
+   Use the existing DevMode/developer overlay pieces where they fit. Add a
+   check that a debug session leaves the real save files unchanged. The PR
+   carries a short Windows playtest checklist (try all 15 ships, dock ship 5
+   at a major port and a polar port, wrap the globe with a big ship).
+
+**Patch 2.3 status (November 13, 2026):** planned; not started.
