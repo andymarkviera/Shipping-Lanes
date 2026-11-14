@@ -227,6 +227,14 @@ func on_touch(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP: zoom = maxf(ZOOM_NEAR, zoom / ZOOM_STEP)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN: zoom = minf(ZOOM_FAR, zoom * ZOOM_STEP)
 		touch.accept_event()
+	elif event is InputEventPanGesture:
+		# Mac trackpad two-finger scroll: up/down zooms like the wheel, sideways spins.
+		if absf(event.delta.y) >= absf(event.delta.x): zoom = clampf(zoom * pow(ZOOM_STEP, event.delta.y * 0.35), ZOOM_NEAR, ZOOM_FAR)
+		else: turn(Vector2(event.delta.x * -40.0, 0.0))
+		touch.accept_event()
+	elif event is InputEventMagnifyGesture and event.factor > 0.0:
+		zoom = clampf(zoom / event.factor, ZOOM_NEAR, ZOOM_FAR)
+		touch.accept_event()
 
 ## Turns the globe about the screen's own axes, so it rolls freely every way,
 ## over the poles too: the surface follows the mouse.

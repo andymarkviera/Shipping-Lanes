@@ -4,6 +4,9 @@ extends Node
 
 signal command_requested(action: StringName)
 signal camera_motion_requested(motion: Vector2)
+## Trackpad gestures (macOS sends two-finger scroll and pinch as gestures, not wheel clicks).
+signal camera_zoom_requested(amount: float)
+signal camera_turn_requested(motion: Vector2)
 
 const DEFAULTS: InputPreferences = preload("res://features/settings/default_preferences.tres")
 const MOUSE_BINDINGS: Dictionary = {"camera_orbit": MOUSE_BUTTON_RIGHT,
@@ -15,10 +18,40 @@ var ship_context_active: bool = false
 var menu_open: bool = false
 var wait_for_release: bool = true
 var window_focused: bool = true
+## The window outlives scenes: these keep the Mac display setup to once per run.
+static var hidpi_sized: bool = false
+static var applied_fullscreen: int = -1
+const PAN_ZOOM: float = 0.35
+const PAN_TURN: float = 40.0
 
 func _ready() -> void:
 	load_preferences()
 	apply_preferences()
+	apply_display_scale()
+	if not get_window().dpi_changed.is_connected(apply_display_scale):
+		get_window().dpi_changed.connect(apply_display_scale)
+
+static func is_mac() -> bool:
+	return OS.has_feature("macos")
+
+## Retina/HiDPI: Godot sizes the window and HUD in pixels, so on a 2x Mac screen
+## they came out half size. Scale both by the screen's factor; the 3D view and
+## fonts still render at full pixel resolution, so the HUD stays crisp.
+## Windows and Linux report 1.0 and are left exactly as before.
+func apply_display_scale() -> void:
+	if not is_mac() or DisplayServer.get_name() == "headless": return
+	var window: Window = get_window()
+	var scale: float = clampf(DisplayServer.screen_get_scale(window.current_screen), 1.0, 4.0)
+	window.content_scale_factor = scale
+	if not hidpi_sized and window.mode == Window.MODE_WINDOWED:
+		hidpi_sized = true
+		var screen: Rect2i = DisplayServer.screen_get_usable_rect(window.current_screen)
+		var wanted: Vector2i = Vector2i((Vector2(window.size) * scale).round())
+		wanted = wanted.min(Vector2i((Vector2(screen.size) * 0.9).round()))
+		if wanted.x > window.size.x and wanted.y > window.size.y:
+			window.size = wanted
+			window.position = screen.position + (screen.size - wanted) / 2
+	hidpi_sized = true
 
 func load_preferences() -> void:
 	preferences = DEFAULTS.duplicate(true)
@@ -71,9 +104,17 @@ func apply_preferences() -> void:
 		var event: InputEventMouseButton = InputEventMouseButton.new()
 		event.button_index = MOUSE_BINDINGS[action]
 		InputMap.action_add_event(action, event)
+	# MacBook trackpads have no easy right-drag: click-drag (and Ctrl-click drag) also orbits.
+	if is_mac():
+		var drag: InputEventMouseButton = InputEventMouseButton.new()
+		drag.button_index = MOUSE_BUTTON_LEFT
+		InputMap.action_add_event("camera_orbit", drag)
 	AudioServer.set_bus_mute(0, preferences.master_volume == 0.0)
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(0.0001, preferences.master_volume)))
-	if DisplayServer.get_name() != "headless":
+	# Only on start and when the setting changes, so a scene change never undoes the
+	# macOS green button / Ctrl+Cmd+F, and the window never flickers between scenes.
+	if DisplayServer.get_name() != "headless" and applied_fullscreen != int(preferences.fullscreen):
+		applied_fullscreen = int(preferences.fullscreen)
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if preferences.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
 	wait_for_release = true
 
@@ -119,13 +160,41 @@ func _process(_delta: float) -> void:
 
 ## F3 is the one developer toggle. Read here because every scene has a PlayerControls.
 func _input(event: InputEvent) -> void:
+	# Cmd+Q quits like the window's close button (the game scene saves first).
+	# Godot's Mac app menu normally turns Cmd+Q into that close request itself;
+	# this catches it if the key reaches the game instead.
+	if is_mac() and event is InputEventKey and event.pressed and not event.echo and event.meta_pressed \
+			and (event.keycode == KEY_Q or event.physical_keycode == KEY_Q):
+		get_viewport().set_input_as_handled()
+		request_quit()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and (event.physical_keycode == KEY_F3 or event.keycode == KEY_F3) \
 			and not event.alt_pressed and not event.meta_pressed and not event.shift_pressed and not ApplicationMenu.friends_client():
 		DevMode.toggle(get_tree())
 		get_viewport().set_input_as_handled()
 
+## Same path as the window's close button: scenes that save (port_test.gd) turn
+## off auto_accept_quit and save in NOTIFICATION_WM_CLOSE_REQUEST.
+func request_quit() -> void:
+	var tree: SceneTree = get_tree()
+	if tree.auto_accept_quit:
+		tree.quit()
+	else:
+		tree.root.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_allowed():
+		return
+	if event is InputEventPanGesture:
+		# Two-finger scroll: up/down zooms, sideways turns the view.
+		var pan: Vector2 = event.delta
+		if absf(pan.y) >= absf(pan.x): camera_zoom_requested.emit(clampf(pan.y * PAN_ZOOM, -1.0, 1.0))
+		else: camera_turn_requested.emit(Vector2(pan.x * PAN_TURN * preferences.camera_sensitivity, 0.0))
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMagnifyGesture and event.factor > 0.0:
+		camera_zoom_requested.emit(clampf(-log(event.factor) / 0.12, -1.0, 1.0))
+		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseMotion and Input.is_action_pressed("camera_orbit"):
 		var motion: Vector2 = event.relative * preferences.camera_sensitivity
