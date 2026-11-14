@@ -53,8 +53,7 @@ func _process(delta: float) -> void:
 		var count: int = clampi(int(cargo_counts.get(id, 0)), 0, 6)
 		var visuals: Node3D = record.node.assembly.container_visuals
 		if visuals.instances != null:
-			visuals.shown_count = count
-			visuals.instances.multimesh.visible_instance_count = count
+			visuals.show_first(mini(count, visuals.capacity))
 		record.node.position = record.node.position.lerp(record.target, 1.0 - exp(-15.0 * delta))
 		record.node.rotation.y = lerp_angle(record.node.rotation.y, record.yaw, 1.0 - exp(-15.0 * delta))
 

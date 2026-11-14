@@ -6465,3 +6465,54 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
   on screen yet. Andy should check that they read as ropes, that the arc out and
   back looks right, and that the bitts don't clash with deck houses or cranes on
   the bigger ships.
+
+## Patch 2.4 item 5: containers one by one (November 14, 2026)
+
+- New `features/ports/container_cranes.gd` (the game only): every berth of
+  every port, polar too, has six toon ship-to-shore cranes on quay rails. Idle
+  cranes park with their booms raised. When a container ship is docked,
+  `cranes_for(capacity)` of them lower their booms and work: ship 1 gets 2,
+  ship 2 3, ship 3 4, ship 4 5 and ship 5 6. Each crane owns a band of whole
+  bays. It rolls to a bay, hoists, trolleys across and lowers one box at a
+  time, bottom tier first (top first when unloading). The cranes never come
+  closer than 13 m on the rails.
+- Looks only. The manifest and the loading timer (`port_loading.gd`) stay the
+  authority, and loading times are unchanged. The cranes start a move for each
+  container the timer has reached, at a pace that matches it. Full loads in the
+  check: ship 1, 24 boxes in 26.3 s (timer 25.5 s); ship 3, 112 in 41.2 s
+  (38.7 s); ship 5, 288 in 67.0 s (65.1 s). Delivery and Abandon empty the
+  manifest at once as before, and the cranes then take the boxes ashore one by
+  one, at the same pace. Undock stays greyed out until the last box is down. The
+  status line says "The cranes are working: N containers to go."
+- `container_visuals.gd` can now show or hide single slots. Without cranes
+  (test scenes, a ship at sea, a reload) it still shows the manifest straight
+  away, as before. `public_world_view.gd` goes through the same call. Nothing
+  new is saved, so old saves load unchanged.
+- The old landmark gantry at North Pole and Slatewater Works is hidden in the
+  game. The berth cranes replace it, and it stood in their path. Its nodes stay,
+  so the test scenes keep it. The polar snow drifts moved landward of the crane
+  rails.
+- New `tools/crane_check.gd` (153 checks). In the real game scene, ships 1, 3
+  and 5 dock and load a full job one box at a time, in about the timer's time,
+  never over an empty slot. Undock waits for the cranes, and the cranes stay
+  spaced on the rails. Abandoning the cargo takes it off one box at a time.
+  After undocking the booms go up. A bulk ship gets no crane work.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts` (201), boot, the whole CI Stage 2 set,
+  `collision_probe`, `composition_probe`, `ports_probe` (489), `voyage_probe`
+  (101), `crane_check` (153), `mooring_check` (386), the container (493), bulk
+  (512) and heavy (612) ladder checks, `hangar_check` (179),
+  `debug_game_check` (72) and `check_helm_keys`.
+- Failed, as on `main` without this change: `check_m1_voyage` passes but takes
+  70 s, over the 30 s rule. `content_extension_probe` still fails its one
+  check, "inspection reads capacity from the definition".
+- Not run: Stage 3 Python (no Python changed), Windows, screenshots, a
+  playtest and the network probes (online is frozen). Nobody has seen the
+  cranes on screen yet. Andy should check:
+  - how 108 cranes (6 ports x 3 berths x 6) run on Windows;
+  - whether the raised booms look right;
+  - whether a box every ~1.1-1.8 s per crane reads well or looks frantic;
+  - that boxes appearing on, and vanishing from, the quay under the crane
+    are acceptable (there are no trucks).
