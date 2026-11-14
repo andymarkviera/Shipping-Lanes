@@ -6425,3 +6425,43 @@ Checks (agent's Linux runner, official Godot 4.7.2, headless):
   network probes (online is frozen). Nobody has seen the longer quays or the
   fender gap on screen yet. Andy should check that the ports look good and the
   gap looks right.
+
+## Patch 2.4 item 4: mooring ropes (November 14, 2026)
+
+- Every ladder ship model (all 15, built in `chunky_look.gd`) now has a pair of
+  black bitts and a fairlead on the rail at the bow and the stern, on both
+  sides. Heavy lifters carry theirs on the side walls. A marker on each fairlead
+  (`MooringBowL/R`, `MooringSternL/R`) is where a line leaves the ship.
+- New `features/ports/mooring_lines.gd` (the game only). When a ship finishes
+  docking, toon rope lines arc out over 1.2 s and settle with a gentle sag
+  on the quay's existing bollards. The lines leave from the quay side, and
+  each makes fast to the nearest bollard where it should lead. Every ship gets
+  a bow line (leads forward) and a stern line (leads aft). Ships 120 m or longer
+  also get a fore and an aft spring. On Undock the lines let go and arc back
+  aboard. The docking authority's new `undock_seconds` (0.5 s as before; the game
+  sets 1.0 s) holds the ship in the berth until they are in. Cancelling Undock
+  puts them back out. The lines are only visuals and never change docking state.
+- `test_port.bollard_points()` is the single list of quay bollards. The port
+  dressing draws its bollards from it, in the same places as before.
+- Limitation: a ship 5 at berth 1 hangs about 40-65 m past the start of the
+  quay (layout from item 3), so its stern line goes to the aftmost bollard and
+  leads slightly forward. Andy should say whether berth 1 or the quay start
+  should move.
+- New `tools/mooring_check.gd` (386 checks): every model has its four
+  fairleads on the rail. In the real game scene, ships 1 and 5 of each family
+  dock and tie up with 2 or 4 lines on quay bollards that lead the right way.
+  On Undock each ship stays put while the lines come in, and the helm returns
+  only after that.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless):
+
+- Passed: import, `check_scripts` (199), boot, the whole CI Stage 2 set,
+  `collision_probe`, `composition_probe`, `ports_probe` (489), `voyage_probe`,
+  `mooring_check` (386), the container (493), bulk (512) and heavy (612) ladder
+  checks, `hangar_check` (179), `debug_game_check` (72), `check_helm_keys` and
+  `check_m1_voyage`.
+- Not run: Stage 3 Python (no Python changed), Windows, screenshots, a
+  playtest and the network probes (online is frozen). Nobody has seen the ropes
+  on screen yet. Andy should check that they read as ropes, that the arc out and
+  back looks right, and that the bitts don't clash with deck houses or cranes on
+  the bigger ships.

@@ -13,6 +13,9 @@ const MAX_SLIDE_SECONDS: float = 3.0
 const SLIDE_MPS: float = 20.0
 const SLIDE_TURN_RADPS: float = PI / 2
 const PORT_FULL: String = "Port full — every berth is taken."
+## How long Undock holds the ship in the berth before the helm is back. The
+## game (Patch 2.4 item 4) raises it so the mooring lines are reeled in first.
+var undock_seconds: float = 0.5
 var members: Dictionary = {}
 var claims = preload("res://features/ports/berth_claims.gd").new()
 ## Who holds which berth ("port_id/berth_id" -> owner). Read-only view of claims.
@@ -136,7 +139,7 @@ func cancel(owner: int) -> bool:
 func request_undock(owner: int) -> bool:
 	if state(owner) != "docked": return false
 	members[owner].state = "undocking"
-	members[owner].remaining = 0.5
+	members[owner].remaining = undock_seconds
 	return true
 
 func disconnect_owner(owner: int) -> void:
