@@ -11,8 +11,8 @@ const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const Progression = preload("res://features/game/progression.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
-const FAMILIES = [["All", ""], ["Container", "container"], ["Bulk", "bulk"], ["Heavy lift", "heavy"]]
-const FAMILY_NAMES = {"container": "Container", "bulk": "Bulk", "heavy": "Heavy lift"}
+const FAMILIES = [["All", ""], ["Container", "container"], ["Bulk", "bulk"], ["Heavy lift", "heavy"], ["Small boats", "small"]]
+const FAMILY_NAMES = {"container": "Container", "bulk": "Bulk", "heavy": "Heavy lift", "small": "Small boats"}
 ## Every ship is drawn this long in the shed; the real size is in the stats.
 const SHOWN_LENGTH: float = 64.0
 const TURN_RADIANS_PER_SECOND: float = 0.3
@@ -40,19 +40,21 @@ var action_button: Button
 var sell_button: Button
 var filter_buttons: Array[Button] = []
 
-## The whole ladder, container then bulk then heavy lift, smallest first.
+## The whole ladder, container then bulk then heavy lift, smallest first,
+## then the small boats (Patch 2.4 item 8), cheapest first.
 static func ladder() -> Array[String]:
 	var all: Array[String] = []
 	all.append_array(Progression.CONTAINER_KINDS)
 	all.append_array(Progression.BULK_KINDS)
 	all.append_array(Progression.HEAVY_KINDS)
+	all.append_array(Progression.SMALL_KINDS)
 	return all
 
 static func family_of(kind: String) -> String:
 	return kind.get_slice("_", 0)
 
 static func tier_of(kind: String) -> int:
-	return Progression.container_tier(kind) + Progression.bulk_tier(kind) + Progression.heavy_tier(kind)
+	return Progression.container_tier(kind) + Progression.bulk_tier(kind) + Progression.heavy_tier(kind) + Progression.small_tier(kind)
 
 static func top_knots(definition: ShipDefinition) -> float:
 	return definition.forward_acceleration_mps2 / definition.linear_drag_per_second / MPS_PER_KNOT
@@ -63,6 +65,7 @@ static func capacity_text(kind: String) -> String:
 	match family_of(kind):
 		"container": return "%s containers" % Progression.thousands(Progression.container_capacity(tier_of(kind)))
 		"bulk": return "%s t bulk" % Progression.thousands(Progression.bulk_capacity(tier_of(kind)))
+		"small": return "none, just for fun"
 	# The heavy lifter's mass limit grows with deck area from ship 1 (24 × 90 m, 200 t).
 	var size: Vector3 = definition.hull_size_m
 	return "%s t heavy load" % Progression.thousands(roundi(200.0 * size.x / 24.0 * size.z / 90.0))
@@ -193,7 +196,8 @@ func refresh() -> void:
 	var size: Vector3 = definition.hull_size_m
 	var owned: bool = view.fleet.has(kind)
 	name_label.text = str(entry.name).to_upper() + ("  · ACTIVE" if kind == view.ship_kind else ("  · OWNED" if owned else ""))
-	family_label.text = "%s · ship %d of 5 · %d of %d shown" % [FAMILY_NAMES[family_of(kind)], tier_of(kind), index + 1, kinds.size()]
+	var small: bool = family_of(kind) == "small"
+	family_label.text = "%s · %s %d of %d · %d of %d shown" % [FAMILY_NAMES[family_of(kind)], "boat" if small else "ship", tier_of(kind), Progression.SMALL_KINDS.size() if small else 5, index + 1, kinds.size()]
 	stats_label.text = "Size %d × %d m   ·   Top speed %.0f kn   ·   Capacity %s   ·   Price %s" % [
 		roundi(size.z), roundi(size.x), top_knots(definition), capacity_text(kind), credits(int(entry.price_minor))]
 	wallet_label.text = "Wallet: %s credits" % credits(view.reward_minor)

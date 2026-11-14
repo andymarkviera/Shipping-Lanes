@@ -53,6 +53,9 @@ func create_wake(ocean: OceanPresentation) -> ShipWake:
 	wake.ship = ship
 	wake.ocean = ocean
 	visual.ocean = ocean
+	# Patch 2.4 item 8: landing splash for jumping small boats.
+	wake.visual = visual
+	visual.landed.connect(wake.landed)
 	wake.half_length = ship.definition.wake_half_length_m
 	wake.half_width = ship.definition.wake_half_width_m
 	ocean.get_parent().add_child(wake)

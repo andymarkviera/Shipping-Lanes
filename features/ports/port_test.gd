@@ -451,7 +451,8 @@ func service_id() -> String:
 
 func cargo_id() -> String:
 	# Patch 2.2 item 2: a bulk ship docks for its abstract bulk jobs; no container check.
-	if bulk_mode(): return ""
+	# Patch 2.4 item 8: a small boat carries nothing; it docks to refuel and switch.
+	if bulk_mode() or small_mode(): return ""
 	return "cargo_test_industrial" if heavy_mode else "cargo_test_container"
 
 func ship_key() -> String:
@@ -459,6 +460,10 @@ func ship_key() -> String:
 
 func bulk_mode() -> bool:
 	return game_mode and Progression.bulk_tier(ship_kind) > 0
+
+## Patch 2.4 item 8: a small boat (no cargo, no jobs).
+func small_mode() -> bool:
+	return game_mode and Progression.small_tier(ship_kind) > 0
 
 func bulk_destination() -> Node3D:
 	return world_ports[int(Progression.bulk_job(bulk_active).destination)]
@@ -657,6 +662,8 @@ func refresh_jobs() -> void:
 			jobs_list.set_item_metadata(jobs_list.item_count - 1, id)
 			job_cards.append({"id": id, "kind": "bulk", "count": 1, "what": bulk_job.title, "to": world_ports[int(bulk_job.destination)].definition.display_name, "pay": bulk_job.reward_minor})
 	var rows: Array[Dictionary] = offers.list_at(port.definition.id)
+	# Patch 2.4 item 8: small boats take no cargo jobs; the board stays empty.
+	if small_mode(): rows = []
 	if heavy_mode:
 		# Patch 2.2 item 3: this ship's own tier first, then smaller loads, never a
 		# bigger one, at most JOB_BOARD_SIZE cards.
@@ -697,6 +704,7 @@ func accept_reason() -> String:
 	if docking.state(1) != "docked": return "Dock before accepting a job."
 	if loading.busy(): return "Loading in progress — wait or cancel loading."
 	if not bulk_active.is_empty() or not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty(): return "Finish or cancel your current job before accepting another."
+	if small_mode(): return "Small boats take no cargo jobs. Just enjoy the ride!"
 	if selected_offer.is_empty(): return "No jobs available here for this ship."
 	return ""
 

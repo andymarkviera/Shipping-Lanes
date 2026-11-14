@@ -80,6 +80,8 @@ func dock_anywhere(game: Node) -> bool:
 
 func board_fits(game: Node, kind: String) -> bool:
 	var tier: int = Hangar.tier_of(kind)
+	# Patch 2.4 item 8: small boats take no jobs, and the board says so.
+	if Hangar.family_of(kind) == "small": return game.job_cards.is_empty() and game.accept_reason().begins_with("Small boats take no cargo jobs")
 	if game.job_cards.is_empty(): return false
 	for card: Dictionary in game.job_cards:
 		var fits: bool = false
@@ -98,7 +100,7 @@ func give(game: Node, minor: int) -> void:
 func check_screen(game: Node) -> void:
 	var hangar: CanvasLayer = game.hangar
 	var ladder: Array[String] = Hangar.ladder()
-	expect(ladder.size() == 15 and ladder.all(func(k: String) -> bool: return Progression.SHIPS.has(k) and Hangar.family_of(k) in ["container", "bulk", "heavy"]), "The hangar ladder is the 15 container, bulk and heavy-lift ships, no gas or oil")
+	expect(ladder.size() == 18 and ladder.all(func(k: String) -> bool: return Progression.SHIPS.has(k) and Hangar.family_of(k) in ["container", "bulk", "heavy", "small"]), "The hangar ladder is the 15 container, bulk and heavy-lift ships and the 3 small boats, no gas or oil")
 	expect(not hangar.is_open(), "The hangar starts closed")
 	expect(await dock_anywhere(game), "The starter ship docks")
 	await settle()
@@ -106,7 +108,7 @@ func check_screen(game: Node) -> void:
 		if (node as Button).text == "SHIPS" and (node as Button).is_visible_in_tree(): (node as Button).pressed.emit()
 	await settle()
 	expect(hangar.is_open() and hangar.current() == "container" and not paused, "SHIPS opens the hangar on the active ship; the world is not paused")
-	expect(hangar.models.size() == 15, "All 15 models are built once and cached (%d)" % hangar.models.size())
+	expect(hangar.models.size() == 18, "All 18 models are built once and cached (%d)" % hangar.models.size())
 	expect(hangar.action_button.text == "Active" and hangar.action_button.disabled and hangar.name_label.text.contains("ACTIVE"), "The active ship is marked Active")
 	# Cycle the whole ladder by the arrow key and the on-screen arrow; stats follow.
 	for at: int in ladder.size() + 1:
@@ -125,9 +127,11 @@ func check_screen(game: Node) -> void:
 	expect(hangar.kinds == Progression.BULK_KINDS and hangar.current() == "bulk", "The Bulk filter shows the five bulk ships")
 	await key(KEY_DOWN)
 	expect(hangar.kinds == Progression.HEAVY_KINDS, "Down steps the filter to Heavy lift")
+	await key(KEY_DOWN)
+	expect(hangar.kinds == Progression.SMALL_KINDS and hangar.family_label.text.contains("boat 1 of 3"), "Down again steps the filter to the three Small boats")
 	button_named(game, "All").pressed.emit()
 	await settle()
-	expect(hangar.kinds.size() == 15, "All shows the whole ladder again")
+	expect(hangar.kinds.size() == 18, "All shows the whole ladder again")
 	# Short of money: Buy says how much more is needed and does nothing.
 	hangar.set_family("container")
 	hangar.step(1)
@@ -196,7 +200,7 @@ func run() -> void:
 		game = await open_game()
 		if game != null:
 			await settle()
-			expect(game.ship_kind == last and game.fleet.size() == 15 and game.reward_minor == wallet, "A reload keeps the active ship, all 15 ships and the wallet (ship %s, fleet %d, wallet %d / %d)" % [game.ship_kind, game.fleet.size(), game.reward_minor, wallet])
+			expect(game.ship_kind == last and game.fleet.size() == 18 and game.reward_minor == wallet, "A reload keeps the active ship, all 18 ships and the wallet (ship %s, fleet %d, wallet %d / %d)" % [game.ship_kind, game.fleet.size(), game.reward_minor, wallet])
 	if current_scene != null:
 		current_scene.queue_free()
 		for frame: int in 3: await process_frame
