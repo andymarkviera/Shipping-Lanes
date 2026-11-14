@@ -27,6 +27,10 @@ func wipe() -> void:
 	if dir != null:
 		for file: String in dir.get_files(): dir.remove(file)
 
+## Full-speed, full-rudder turning radius: top speed over max yaw rate.
+func turn_radius_m(ship: ShipDefinition) -> float:
+	return ship.forward_acceleration_mps2 / ship.linear_drag_per_second / deg_to_rad(ship.max_turn_rate_degrees)
+
 func check_data() -> void:
 	var last: ShipDefinition = null
 	for tier: int in range(1, 6):
@@ -43,10 +47,13 @@ func check_data() -> void:
 			expect(ship.hull_size_m.z > last.hull_size_m.z and ship.hull_size_m.x >= last.hull_size_m.x, "%s is bigger than the ship before" % kind)
 			expect(ship.linear_drag_per_second < last.linear_drag_per_second, "%s takes longer to reach full speed" % kind)
 			expect(ship.max_turn_rate_degrees < last.max_turn_rate_degrees and ship.reverse_acceleration_mps2 < last.reverse_acceleration_mps2, "%s turns wider and stops slower" % kind)
+			expect(turn_radius_m(ship) > turn_radius_m(last), "%s turning circle is wider than the ship before" % kind)
 			expect(Progression.bulk_capacity(tier) > Progression.bulk_capacity(tier - 1), "%s carries more" % kind)
 			expect(int(Progression.SHIPS[kind].price_minor) > int(Progression.SHIPS[Progression.BULK_KINDS[tier - 2]].price_minor) * 2, "%s costs far more" % kind)
 			expect(ship.fuel_full_output_lps > last.fuel_full_output_lps and ship.camera_distance_m > last.camera_distance_m and ship.wake_half_length_m > last.wake_half_length_m, "%s burns more and has a bigger camera and wake" % kind)
 		expect(ship.hull_size_m.x / 2.0 < 20.0, "%s clears the quay face" % kind)
+		# Patch 2.4 item 2: no ship feels like a slog (full-speed, full-rudder radius).
+		expect(turn_radius_m(ship) <= 460.0, "%s turns within 460 m at full speed (got %.0f m)" % [kind, turn_radius_m(ship)])
 		last = ship
 	expect(int(Progression.SHIPS.bulk.price_minor) == 120000, "Bulk ship 1 keeps the old bulk price")
 	expect(Progression.definition("bulk_5").hull_size_m.z >= 4.0 * 64.0, "Ship 5 is several times the starter")

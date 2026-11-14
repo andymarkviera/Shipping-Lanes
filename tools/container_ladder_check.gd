@@ -29,6 +29,10 @@ func wipe() -> void:
 	if dir != null:
 		for file: String in dir.get_files(): dir.remove(file)
 
+## Full-speed, full-rudder turning radius: top speed over max yaw rate.
+func turn_radius_m(ship: ShipDefinition) -> float:
+	return ship.forward_acceleration_mps2 / ship.linear_drag_per_second / deg_to_rad(ship.max_turn_rate_degrees)
+
 func check_data() -> void:
 	var last: ShipDefinition = null
 	for tier: int in range(1, 6):
@@ -45,6 +49,7 @@ func check_data() -> void:
 			expect(ship.hull_size_m.z > last.hull_size_m.z and ship.hull_size_m.x >= last.hull_size_m.x, "%s is bigger than the ship before" % kind)
 			expect(ship.linear_drag_per_second < last.linear_drag_per_second, "%s takes longer to reach full speed" % kind)
 			expect(ship.max_turn_rate_degrees < last.max_turn_rate_degrees and ship.reverse_acceleration_mps2 < last.reverse_acceleration_mps2, "%s turns wider and stops slower" % kind)
+			expect(turn_radius_m(ship) > turn_radius_m(last), "%s turning circle is wider than the ship before" % kind)
 			expect(capacity > Progression.container_capacity(tier - 1), "%s carries more" % kind)
 			expect(int(Progression.SHIPS[kind].price_minor) > int(Progression.SHIPS[Progression.CONTAINER_KINDS[tier - 2]].price_minor) * 2, "%s costs far more" % kind)
 			expect(ship.fuel_full_output_lps > last.fuel_full_output_lps and ship.camera_distance_m > last.camera_distance_m and ship.wake_half_length_m > last.wake_half_length_m, "%s burns more and has a bigger camera and wake" % kind)
@@ -53,6 +58,8 @@ func check_data() -> void:
 		var full: Manifest = Manifest.new(ship, PrototypeCatalog.RECORDS)
 		var line: Dictionary = {"batch_id": "b", "cargo_id": "cargo_test_container", "quantity": capacity, "unit": "count", "origin_port_id": "port_brindle_quay", "destination_port_id": "port_slatewater_works", "acquisition_id": "", "job_id": "j"}
 		expect(full.validate([line]).is_empty(), "%s holds a full load of %d" % [kind, capacity])
+		# Patch 2.4 item 2: no ship feels like a slog (full-speed, full-rudder radius).
+		expect(turn_radius_m(ship) <= 460.0, "%s turns within 460 m at full speed (got %.0f m)" % [kind, turn_radius_m(ship)])
 		last = ship
 	expect(abs(KNOTS[4] - 42.0) < 0.01 and Progression.definition("container_5").hull_size_m.z >= 4.0 * 64.0, "Ship 5 is several times the starter")
 	# Every berth fits ship 5.
