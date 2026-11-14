@@ -48,13 +48,20 @@ const LAND = [
 	# Patch 2.5 item 5: the Palm Isles, three small islands in the tropical
 	# southern strait west of Gannet Light, clear of every lane and approach.
 	Rect2(-260, -2900, 240, 220), Rect2(120, -3380, 220, 200), Rect2(-330, -1950, 200, 200),
+	# Patch 2.5 item 7: Ember Isle, the volcano island (VOLCANO), alone in the
+	# south-eastern sea, over 1.2 km off every sea-lane leg and 3 km off every port.
+	Rect2(4270, -4305, 420, 370),
 ]
 ## Patch 2.5 item 1: the named landmasses, as [name, first LAND index, end index).
 const LANDMASSES = [
 	["Hearthland", 0, 10], ["Northern Neck", 10, 12], ["Ironreach", 12, 20],
 	["Kelp Isle", 20, 21], ["Gull Isle", 21, 22], ["Strait islets", 22, 24],
-	["Palm Isles", 24, 27],
+	["Palm Isles", 24, 27], ["Ember Isle", 27, 28],
 ]
+## Patch 2.5 item 7: the one volcano. Chosen once and fixed here, so it is the
+## same every run (and online later): a toon cone on Ember Isle (LAND index
+## `land`), `base_m` round at the foot and `peak_m` to the crater.
+const VOLCANO = {"id": "ember_isle_volcano", "name": "Ember Isle", "land": 27, "at": Vector2(4480, -4120), "base_m": 140.0, "peak_m": 170.0}
 ## Patch 2.1 item 3: snowy ice shelves beside the two polar quays, solid like
 ## land. Patch 2.5 item 1: each runs on to its quay, so the poles sit on a coast.
 const ICE_SHELVES = [Rect2(3050, 3700, 450, 460), Rect2(-2100, -4360, 450, 500), Rect2(3500, 3700, 100, 460), Rect2(-2200, -4360, 100, 500)]
