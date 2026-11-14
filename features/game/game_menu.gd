@@ -92,11 +92,15 @@ func build_controls() -> void:
 
 ## The rows as they are bound right now (Settings can change them).
 func control_rows() -> Array:
+	return rows_for(controls.preferences)
+
+## Patch 2.7 item 3: the main menu's Options > Controls shows the same list.
+static func rows_for(preferences: InputPreferences) -> Array:
 	var rows: Array = []
 	for entry: Array in KEY_ROWS:
 		var keys: Array = []
 		for action: String in entry.slice(1):
-			keys.append(OS.get_keycode_string(controls.preferences.bindings.get(action, InputPreferences.DEFAULT_BINDINGS[action])))
+			keys.append(OS.get_keycode_string(preferences.bindings.get(action, InputPreferences.DEFAULT_BINDINGS[action])))
 		rows.append([entry[0], " / ".join(keys)])
 	rows.append_array(FIXED_ROWS)
 	return rows
