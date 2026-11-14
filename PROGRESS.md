@@ -6777,3 +6777,34 @@ Checks (agent's Linux runner, official Godot 4.7.2):
 - Not run: Windows, frame timing on the target, and a playtest.
 - Known: `world_land_check` sometimes ends with "2 ObjectDB instances were
   leaked". That happens on main too; it comes from game audio.
+
+## Patch 2.5 item 3: North Pole biome — November 14, 2026
+
+- New `features/sky/polar_biome.gd`, added to the real game scene only. Near
+  the world's north/south edge it blends in a colder look: cooler colour
+  grading (lower saturation, slight blue colour correction), paler sky and
+  clouds, paler icy sea, cooler sun and ambient light, closer pale fog, and
+  light snow falling round the camera.
+- Region: fully polar within 2,350 m of the north/south edge (both polar ports
+  and all icebergs), none beyond 2,950 m; a smoothstep over that 600 m band,
+  also eased in time (at least 1.5 s), so debug quick travel fades rather than
+  snaps. The world wraps north-south, so the North Pole sea runs on into the
+  South Pole sea; both share the look and there is no seam at the edge.
+- Frame time: one pooled `GPUParticles3D` (900 flakes, `amount_ratio` follows
+  the blend, stops emitting outside). Look values repaint only when the blend
+  changes; grading is off outside the polar sea. On a world wrap the snow
+  moves with the ship. Leaving restores the temperate look exactly.
+- Ports, jobs, saves, land, bridges, icebergs and the hangar are unchanged.
+  `export_presets.cfg` lists the new script.
+- New check `tools/polar_biome_check.gd` (46 checks).
+
+Checks (agent's Linux runner, official Godot 4.7.2):
+
+- Passed, headless: import, `check_scripts`, `--quit-after 10`,
+  `polar_biome_check` (46), `world_land_check` (161), `globe_map_check` (48),
+  `debug_game_check` (81), `hangar_check` (213), `check_flow`,
+  `check_m1_voyage`.
+- Screenshot: the chase camera at Brindle Quay before and with the polar look
+  forced on, OpenGL under Xvfb. It renders: cold, pale, foggy, with snow.
+- Not run: Windows, frame timing on the target, sailing into the polar sea in
+  a playtest, the full CI probe list.
