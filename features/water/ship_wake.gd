@@ -11,6 +11,9 @@ const LIFETIME: float = 14.0
 const MAX_SAMPLES: int = 40
 var ship: CharacterBody3D
 var ocean: OceanPresentation
+## Patch 2.4 item 8: the hull's motion, so a jumping boat's splash knows when it
+## is in the air and splashes when it lands. Optional.
+var visual: ShipVisualMotion
 var half_length: float = 30.0
 var half_width: float = 6.5
 var samples: Array[Dictionary] = []
@@ -48,6 +51,10 @@ func shift(by: Vector3) -> void:
 	for sample: Dictionary in samples: sample.center += by
 	if has_position: last_position += by
 	for chunk: Dictionary in splash.chunks: chunk.position += by
+
+## Patch 2.4 item 8: a jumping boat touched down (impact 0 to 1).
+func landed(impact: float) -> void:
+	if splash != null: splash.burst(impact)
 
 func travel_sign() -> float:
 	return 1.0 if ship.velocity.dot(ship.global_basis.z) >= 0.0 else -1.0

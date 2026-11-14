@@ -66,6 +66,10 @@ const SHIPS = {
 	"heavy_3": {"name": "Twin-crane heavy lifter", "price_minor": 15000000, "record": "res://features/catalog/records/heavy_03_ship.tres"},
 	"heavy_4": {"name": "Semi-submersible heavy ship", "price_minor": 40000000, "record": "res://features/catalog/records/heavy_04_ship.tres"},
 	"heavy_5": {"name": "Giant semi-submersible", "price_minor": 90000000, "record": "res://features/catalog/records/heavy_05_ship.tres"},
+	# Patch 2.4 item 8: the small boats. Cheap, just for fun, no cargo jobs.
+	"small_fishing": {"name": "Fishing boat", "price_minor": 20000, "record": "res://features/catalog/records/small_fishing_ship.tres"},
+	"small_speedboat": {"name": "Speedboat", "price_minor": 40000, "record": "res://features/catalog/records/small_speedboat_ship.tres"},
+	"small_racer": {"name": "Offshore racer", "price_minor": 60000, "record": "res://features/catalog/records/small_racer_ship.tres"},
 }
 ## The container ladder, smallest first. Tier 1 is "container".
 const CONTAINER_KINDS: Array[String] = ["container", "container_2", "container_3", "container_4", "container_5"]
@@ -80,6 +84,9 @@ const BULK_PAY_PERCENT: Array[int] = [100, 110, 120, 130, 140]
 ## save ID "heavy" and the current heavy lifter's record. Every heavy kind sails
 ## in heavy mode (lifting deck, one ocean load at a time).
 const HEAVY_KINDS: Array[String] = ["heavy", "heavy_2", "heavy_3", "heavy_4", "heavy_5"]
+## Patch 2.4 item 8: the small boats family, cheapest first. They carry no
+## cargo and take no jobs; the planing ones jump the waves (ShipVisualMotion).
+const SMALL_KINDS: Array[String] = ["small_fishing", "small_speedboat", "small_racer"]
 ## Ship record IDs and the ladder kind each one is saved as. The old container
 ## variants all had the starter's 24-slot hull: the starter and the slower
 ## harbor ship are ship 1; the coastal and the faster swift ship are ship 2,
@@ -94,6 +101,7 @@ const LADDER_IDS = {
 	"ship_bulk_prototype_01": "bulk", "ship_bulk_handysize_01": "bulk",
 	"ship_bulk_supramax_02": "bulk_2", "ship_bulk_panamax_03": "bulk_3",
 	"ship_bulk_capesize_04": "bulk_4", "ship_bulk_valemax_05": "bulk_5",
+	"ship_small_fishing_01": "small_fishing", "ship_small_speedboat_02": "small_speedboat", "ship_small_racer_03": "small_racer",
 }
 ## A sold ship pays back half its price.
 const RESALE_PERCENT: int = 50
@@ -144,6 +152,10 @@ static func bulk_tier(kind: String) -> int:
 ## 1 to 5 for a heavy-lift ship, 0 for any other kind.
 static func heavy_tier(kind: String) -> int:
 	return HEAVY_KINDS.find(kind) + 1
+
+## 1 to 3 for a small boat, 0 for any other kind.
+static func small_tier(kind: String) -> int:
+	return SMALL_KINDS.find(kind) + 1
 
 ## Deadweight tonnes a bulk tier carries, from its record.
 static func bulk_capacity(tier: int) -> int:

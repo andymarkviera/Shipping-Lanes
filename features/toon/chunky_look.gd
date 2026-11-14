@@ -148,6 +148,10 @@ static func model(kind: String, definition: ShipDefinition) -> Node3D:
 		_dress_heavy(root, hull, definition, 1 if kind == "heavy" else int(kind.trim_prefix("heavy_")), main, trim, cache)
 		_mooring_bitts(root, kind, definition, cache)
 		return root
+	if kind.begins_with("small_"):
+		_dress_small(root, hull, definition, kind, cache)
+		_mooring_bitts(root, kind, definition, cache)
+		return root
 	var deck: float = 2.6
 	hull.mesh = hull_mesh(size.z, size.x, -3.2, deck, 3.5, 1.6, main, Color("c9b48a"))
 	# Stern house, bridge with wings, funnel and mast.
@@ -204,6 +208,69 @@ static func _mooring_bitts(root: Node3D, kind: String, definition: ShipDefinitio
 			marker.name = "Mooring%s%s" % [end, "L" if side < 0.0 else "R"]
 			marker.position = lead + Vector3(0, 0.35 * s, 0)
 			root.add_child(marker)
+
+## Patch 2.4 item 8: the small boats, each in its own bright scheme. The offshore
+## racer is long, low and pointed with a bubble canopy and twin engines; the
+## speedboat is short with a windscreen, seats and an outboard; the fishing boat
+## is chunky and cosy with a wheelhouse, mast and boom, net drum and buoys.
+static func _dress_small(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition, kind: String, cache: Dictionary) -> void:
+	var size: Vector3 = definition.hull_size_m
+	var s: float = size.y / 4.0
+	var deck: float = 2.6 * s
+	var aft: float = -size.z / 2.0
+	var bow: float = size.z / 2.0
+	match kind:
+		"small_racer":
+			var red: Color = Color("e63946")
+			hull.mesh = hull_mesh(size.z, size.x, -2.4 * s, deck, 3.5 * s, 0.6 * s, red, WHITE)
+			# Racing stripes down both sides and a white nose.
+			for side: float in [-1.0, 1.0]:
+				_box(root, Vector3(0.12, 0.22, size.z * 0.62), Vector3(side * size.x * 0.49, deck * 0.7, -size.z * 0.08), CREAM, cache)
+			_box(root, Vector3(size.x * 0.5, 0.25, size.z * 0.18), Vector3(0, deck + 0.12, bow - size.z * 0.22), WHITE, cache)
+			# Low bubble canopy, then the engine deck with two engines and a wing.
+			var canopy: MeshInstance3D = _ball(root, size.x * 0.34, size.x * 0.42, Vector3(0, deck + 0.15, -size.z * 0.02), GLASS, cache)
+			canopy.scale = Vector3(1.0, 1.0, 2.6)
+			_box(root, Vector3(size.x * 0.8, 0.35, size.z * 0.22), Vector3(0, deck + 0.17, aft + size.z * 0.16), INK, cache)
+			for side: float in [-1.0, 1.0]:
+				var engine: MeshInstance3D = _drum(root, 0.28, 0.24, 0.9, Vector3(side * size.x * 0.22, deck * 0.55, aft - 0.3), INK, cache)
+				engine.rotation.x = PI / 2.0
+				_box(root, Vector3(0.12, 0.7, 0.6), Vector3(side * size.x * 0.38, deck + 0.5, aft + 0.6), red, cache)
+			_box(root, Vector3(size.x * 0.9, 0.12, 0.7), Vector3(0, deck + 0.85, aft + 0.6), CREAM, cache)
+		"small_speedboat":
+			var blue: Color = Color("2a9fd6")
+			hull.mesh = hull_mesh(size.z, size.x, -2.6 * s, deck, 3.5 * s, 0.8 * s, blue, Color("e8d9b5"))
+			# Windscreen, two seats, a stern bench and an outboard motor.
+			var screen: MeshInstance3D = _box(root, Vector3(size.x * 0.82, 0.55, 0.12), Vector3(0, deck + 0.42, size.z * 0.12), GLASS, cache)
+			screen.rotation.x = -0.5
+			_box(root, Vector3(size.x * 0.86, 0.1, 0.5), Vector3(0, deck + 0.68, size.z * 0.1), WHITE, cache)
+			for side: float in [-1.0, 1.0]:
+				_box(root, Vector3(0.6, 0.45, 0.6), Vector3(side * size.x * 0.2, deck + 0.22, -size.z * 0.05), WHITE, cache)
+				_box(root, Vector3(0.6, 0.6, 0.15), Vector3(side * size.x * 0.2, deck + 0.6, -size.z * 0.05 - 0.3), blue, cache)
+			_box(root, Vector3(size.x * 0.8, 0.4, 0.7), Vector3(0, deck + 0.2, aft + 1.0), WHITE, cache)
+			_box(root, Vector3(0.5, 0.9, 0.6), Vector3(0, deck + 0.35, aft - 0.15), INK, cache)
+			_box(root, Vector3(0.18, 1.0, 0.25), Vector3(0, deck - 0.5, aft - 0.2), INK, cache)
+			_box(root, Vector3(0.62, 0.2, 0.72), Vector3(0, deck + 0.85, aft - 0.15), WHITE, cache)
+		_:
+			# The fishing boat.
+			var teal: Color = Color("2f8f83")
+			var roof: Color = Color("f08a2c")
+			hull.mesh = hull_mesh(size.z, size.x, -3.2 * s, deck, 3.5 * s, 1.4 * s, teal, Color("b88a5a"))
+			_house(root, Vector3(0, deck, size.z * 0.12), Vector3(size.x * 0.62, 2.4, size.z * 0.22), roof, cache)
+			_funnel(root, Vector3(0, deck + 2.75, size.z * 0.12 - 1.0), 0.3, 1.4, roof, cache)
+			# Mast and boom behind the wheelhouse.
+			var mast_z: float = -size.z * 0.06
+			_drum(root, 0.12, 0.12, 6.0, Vector3(0, deck + 3.0, mast_z), WHITE, cache)
+			_ball(root, 0.25, 0.5, Vector3(0, deck + 6.1, mast_z), roof, cache)
+			var boom: MeshInstance3D = _drum(root, 0.09, 0.09, size.z * 0.36, Vector3(0, deck + 2.6, mast_z - size.z * 0.15), WHITE, cache)
+			boom.rotation.x = PI / 2.0 - 0.35
+			# Net drum and crates aft, buoys on the rail.
+			var net: MeshInstance3D = _drum(root, 0.7, 0.7, size.x * 0.55, Vector3(0, deck + 0.75, aft + 1.8), Color("6b4f3a"), cache)
+			net.rotation.z = PI / 2.0
+			_box(root, Vector3(0.9, 0.6, 0.9), Vector3(size.x * 0.22, deck + 0.3, aft + 4.0), Color("c98a4b"), cache)
+			_box(root, Vector3(0.9, 0.6, 0.9), Vector3(-size.x * 0.22, deck + 0.3, aft + 4.3), Color("c98a4b"), cache)
+			for side: float in [-1.0, 1.0]:
+				for z: float in [-size.z * 0.22, size.z * 0.28]:
+					_ball(root, 0.28, 0.56, Vector3(side * size.x * 0.5, 3.5 * s - 0.15, z), roof, cache)
 
 static func _tint(port: Node3D, label: String, colour: Color) -> void:
 	var mesh: MeshInstance3D = _mesh_of(port, label)
