@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Shipping Lanes"
-config/name.macos="Container Ship Sim"
+config/name.macos="Shipping Lanes"
 run/main_scene="res://features/main/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 run/max_fps.macos=60

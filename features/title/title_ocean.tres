@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="WaterPalette" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/water/water_palette.gd" id="1"]
+[resource]
+script = ExtResource("1")
+deep_color = Color(0.0, 0.29, 0.84, 1)
+surface_color = Color(0.0, 0.31, 0.86, 1)
+foam_color = Color(0.05, 0.37, 0.9, 1)
