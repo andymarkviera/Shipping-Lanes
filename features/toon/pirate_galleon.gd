@@ -6,9 +6,9 @@ extends RefCounted
 ## ship's wheel, set sails, a big black Jolly Roger and pennants that flap.
 ## Looks only: the collider, wake and rules come from the ship record.
 ##
-## Frame time: the whole ship is nine meshes (hull, structure, detail, rigging,
-## sails, glow, flags, two outline passes shared), built once and cached. The
-## small detail and the rigging stop drawing past DETAIL_RANGE_M / RIGGING_RANGE_M.
+## Frame time: the whole ship is seven meshes (hull, structure, detail, rigging,
+## sails, glow, flags; about 23,000 triangles), built once and cached. The small
+## detail and the rigging stop drawing past DETAIL_RANGE_M / RIGGING_RANGE_M.
 const TOON_SHADER: Shader = preload("res://features/toon/toon.gdshader")
 const OUTLINE_SHADER: Shader = preload("res://features/toon/toon_outline_custom.gdshader")
 const FLAG_SHADER: Shader = preload("res://features/toon/pirate_flag.gdshader")
@@ -24,8 +24,9 @@ const BREAKS: Array[float] = [-36.0, -18.0, 20.0]
 ## Past these distances from the camera the small parts are not drawn.
 const DETAIL_RANGE_M: float = 700.0
 const RIGGING_RANGE_M: float = 520.0
-## Nothing may stand taller than this: the bridges clear 70 m.
-const AIR_DRAFT_M: float = 67.0
+## Nothing may stand taller than this: the bridges (70 m) must clear the
+## tallest ship by 15 m (world_land_check), so the rig is broad rather than lofty.
+const AIR_DRAFT_M: float = 55.0
 
 const WOOD: Color = Color("8a5a33")
 const DARK_WOOD: Color = Color("5a3a24")
@@ -65,9 +66,9 @@ const JOLLY_ROGER: Array[String] = [
 ## Lower mast head (the top), crosstrees and truck heights, and each yard as
 ## [height, width]. The mizzen also carries the lateen yard.
 const MASTS = {
-	"Fore": {"z": 26.0, "r": 0.85, "top": 28.0, "cross": 42.0, "truck": 53.0, "yards": [[25.5, 23.5], [39.5, 18.5], [49.5, 13.0]], "foot": 17.0},
-	"Main": {"z": -2.0, "r": 0.95, "top": 31.0, "cross": 47.0, "truck": 60.0, "yards": [[28.0, 27.0], [44.5, 21.0], [55.5, 15.0]], "foot": 13.5},
-	"Mizzen": {"z": -30.0, "r": 0.7, "top": 27.5, "cross": 39.5, "truck": 47.0, "yards": [[26.0, 15.0], [37.5, 11.5]], "foot": 0.0},
+	"Fore": {"z": 26.0, "r": 0.85, "top": 24.5, "cross": 35.5, "truck": 43.5, "yards": [[22.8, 23.5], [33.3, 18.5], [41.0, 13.0]], "foot": 16.0},
+	"Main": {"z": -2.0, "r": 0.95, "top": 27.0, "cross": 39.5, "truck": 48.5, "yards": [[24.5, 27.0], [37.0, 21.0], [45.5, 15.0]], "foot": 13.5},
+	"Mizzen": {"z": -30.0, "r": 0.7, "top": 24.0, "cross": 33.5, "truck": 40.0, "yards": [[23.0, 15.0], [32.0, 11.5]], "foot": 0.0},
 }
 
 static var _meshes: Dictionary = {}
@@ -387,8 +388,8 @@ static func sails_mesh() -> ArrayMesh:
 			else:
 				_square_sail(surface, z, head_y, float(yards[index - 1][0]) + 1.0, head_w, float(yards[index - 1][1]) - 2.0, 2.0 - 0.3 * index)
 	# Lateen on the mizzen, jib from the fore topmast to the bowsprit.
-	_triangle_sail(surface, Vector3(1.1, 18.9, -24.0), Vector3(1.1, 36.5, -46.5), Vector3(1.1, 21.5, -50.0), Vector3(0.9, 0, 0))
-	_triangle_sail(surface, Vector3(0, 41.0, 26.9), Vector3(0, 22.3, 55.0), Vector3(0, 18.5, 33.0), Vector3(0.8, 0, 0))
+	_triangle_sail(surface, Vector3(1.1, 18.9, -24.0), Vector3(1.1, 32.7, -46.5), Vector3(1.1, 21.5, -50.0), Vector3(0.9, 0, 0))
+	_triangle_sail(surface, Vector3(0, 34.5, 26.9), Vector3(0, 22.3, 55.0), Vector3(0, 18.5, 33.0), Vector3(0.8, 0, 0))
 	surface.generate_normals()
 	surface.index()
 	var material: StandardMaterial3D = StandardMaterial3D.new()
@@ -431,7 +432,7 @@ static func flags_mesh() -> ArrayMesh:
 	var none: Array[String] = []
 	# The big Jolly Roger at the main truck, a second one on the ensign staff,
 	# and long red pennants at the fore and mizzen trucks.
-	_flag(arrays, Vector3(0, 66.3, float(MASTS.Main.z) - 0.3), 10.5, 7.0, JOLLY_ROGER, FLAG_BLACK, 0.0, 0.9)
+	_flag(arrays, Vector3(0, float(MASTS.Main.truck) + 6.2, float(MASTS.Main.z) - 0.3), 9.0, 6.0, JOLLY_ROGER, FLAG_BLACK, 0.0, 0.9)
 	_flag(arrays, Vector3(0, 30.6, -54.9), 7.5, 5.0, JOLLY_ROGER, FLAG_BLACK, 2.1, 0.7)
 	_flag(arrays, Vector3(0, float(MASTS.Fore.truck) + 2.3, float(MASTS.Fore.z) - 0.2), 12.0, 1.6, none, RED, 1.3, 0.8)
 	_flag(arrays, Vector3(0, float(MASTS.Mizzen.truck) + 2.3, float(MASTS.Mizzen.z) - 0.2), 10.0, 1.4, none, RED, 3.7, 0.7)
@@ -673,7 +674,7 @@ static func _bow(parts: Parts) -> void:
 		d.ball(Vector3(side * 0.34, 15.7, 53.9), Vector3.ONE * 0.16, BLACK, 5, 3)
 	s.ink = 1.0
 	# Bowsprit and the spritsail yard slung under it.
-	s.rod(Vector3(0, 13.0, 39.0), Vector3(0, 23.0, 56.0), 0.75, 0.38, WOOD, 8)
+	s.rod(Vector3(0, 13.0, 39.0), Vector3(0, 22.8, 55.6), 0.75, 0.38, WOOD, 8)
 	s.ink = 0.6
 	for side: float in [-1.0, 1.0]:
 		s.rod(Vector3(0, 18.6, 49.4), Vector3(side * 8.0, 18.6, 49.4), 0.32, 0.18, WOOD, 6)
@@ -703,7 +704,7 @@ static func _masts(parts: Parts) -> void:
 		s.rod(Vector3(0, cross - 0.8, z + radius * 0.6), Vector3(0, truck, z + radius * 0.2), radius * 0.36, radius * 0.2, WOOD, 6)
 		s.ball(Vector3(0, truck + 0.2, z + radius * 0.2), Vector3.ONE * 0.4, GOLD, 6, 4)
 		# Pennant staff above the truck.
-		s.rod(Vector3(0, truck, z + radius * 0.2 - 0.3), Vector3(0, truck + (6.5 if label == "Main" else 2.5), z - 0.3), 0.14, 0.09, WOOD, 5)
+		s.rod(Vector3(0, truck, z + radius * 0.2 - 0.3), Vector3(0, truck + (6.4 if label == "Main" else 2.5), z - 0.3), 0.14, 0.09, WOOD, 5)
 		s.ink = 1.0
 		for band: int in int((top - deck) / 5.0):
 			d.rod(Vector3(0, deck + 3.0 + band * 5.0, z), Vector3(0, deck + 3.4 + band * 5.0, z), radius * 0.98 + 0.06, radius * 0.97 + 0.06, GOLD, 10, false)
@@ -735,7 +736,7 @@ static func _masts(parts: Parts) -> void:
 				s.rod(Vector3(0, y, yard_z), Vector3(side * half, y, yard_z), 0.42, 0.2, DARK_WOOD, 6)
 				r.rod(Vector3(side * half, y, yard_z), Vector3(0, y + half * 0.45, z + radius * 0.5), 0.06, 0.06, ROPE, 4, false)
 				var brace: Vector3 = Vector3(side * 1.0, y - 6.0, aft_z) if label != "Mizzen" else Vector3(side * 6.0, rail_at(-51.0), -51.0)
-				if label == "Main" and y < 30.0: brace = Vector3(side * side_x(-40.0, 30.0), rail_at(-40.0), -40.0)
+				if label == "Main" and y < 26.0: brace = Vector3(side * side_x(-40.0, 30.0), rail_at(-40.0), -40.0)
 				r.rod(Vector3(side * half, y, yard_z), brace, 0.06, 0.06, ROPE, 4, false)
 			s.ink = 1.0
 		# Sheets from the foot of the course down to the rail.
@@ -772,7 +773,7 @@ static func _masts(parts: Parts) -> void:
 	var mizzen: Dictionary = MASTS.Mizzen
 	for stay: Array in [
 			[Vector3(0, fore.top, fore.z), Vector3(0, 19.6, 50.0)], [Vector3(0, fore.cross, fore.z), Vector3(0, 22.6, 55.4)],
-			[Vector3(0, fore.truck - 0.5, fore.z), Vector3(0, 23.0, 56.0)],
+			[Vector3(0, fore.truck - 0.5, fore.z), Vector3(0, 22.8, 55.6)],
 			[Vector3(0, main.top, main.z), Vector3(0, deck_at(fore.z - 1.5) + 2.5, fore.z - 1.0)], [Vector3(0, main.cross, main.z), Vector3(0, fore.top, fore.z)],
 			[Vector3(0, main.truck - 0.5, main.z), Vector3(0, fore.cross, fore.z)],
 			[Vector3(0, mizzen.top, mizzen.z), Vector3(0, deck_at(main.z - 1.5) + 8.0, main.z - 1.0)], [Vector3(0, mizzen.cross, mizzen.z), Vector3(0, main.top, main.z)],
@@ -780,9 +781,9 @@ static func _masts(parts: Parts) -> void:
 		r.rod(stay[0], stay[1], 0.1, 0.1, ROPE, 4, false)
 	# The lateen yard slung across the mizzen, its sheet and its lift.
 	s.ink = 0.7
-	s.rod(Vector3(1.1, 18.2, -23.2), Vector3(1.1, 37.4, -47.6), 0.36, 0.2, DARK_WOOD, 6)
+	s.rod(Vector3(1.1, 18.2, -23.2), Vector3(1.1, 33.5, -47.6), 0.36, 0.2, DARK_WOOD, 6)
 	s.ink = 1.0
-	r.rod(Vector3(1.1, 37.4, -47.6), Vector3(0, mizzen.cross, mizzen.z), 0.06, 0.06, ROPE, 4, false)
+	r.rod(Vector3(1.1, 33.5, -47.6), Vector3(0, mizzen.truck - 1.0, mizzen.z), 0.06, 0.06, ROPE, 4, false)
 	r.rod(Vector3(1.1, 21.5, -50.0), Vector3(3.0, rail_at(-51.5), -51.5), 0.07, 0.07, ROPE, 4, false)
 	r.rod(Vector3(1.1, 18.2, -23.2), Vector3(4.0, deck_at(-21.0), -20.0), 0.07, 0.07, ROPE, 4, false)
 
