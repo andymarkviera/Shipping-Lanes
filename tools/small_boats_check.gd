@@ -59,6 +59,21 @@ func run() -> void:
 		expect(speedboat > 0.05 and speedboat < racer * 0.7, "The speedboat jumps, but less than the racer, at %d fps (%.2f s)" % [fps, speedboat])
 		expect(air["small_fishing@%d" % fps] == 0.0, "The fishing boat never leaves the water at %d fps" % fps)
 	expect(absf(air["small_racer@30"] - air["small_racer@60"]) <= 0.35 * air["small_racer@60"], "Racer airtime does not depend on the frame rate")
+	# Patch 2.9 item 5: the cigarette-style racer model, level at rest, bow-up on the plane.
+	var racer_model: Node3D = CHUNKY_LOOK.model("small_racer", Progression.definition("small_racer"))
+	var racer_hull: MeshInstance3D = racer_model.get_node("Hull") as MeshInstance3D
+	var bounds: AABB = racer_hull.mesh.get_aabb()
+	expect(bounds.size.z / bounds.size.x >= 4.0, "The racer hull is long and narrow (%.1f : 1)" % (bounds.size.z / bounds.size.x))
+	expect(bounds.position.y < -1.0 and bounds.end.y < 2.0, "The racer hull is a low deep-V (keel %.2f m, deck %.2f m)" % [bounds.position.y, bounds.end.y])
+	expect(racer_model.get_child_count() >= 40, "The racer has seats, windscreen and four outboards (%d parts)" % racer_model.get_child_count())
+	racer_model.free()
+	var racer_def: ShipDefinition = Progression.definition("small_racer")
+	expect(racer_def.plane_trim_degrees > 0.0 and Progression.definition("small_speedboat").plane_trim_degrees == 0.0, "Only the racer has a planing trim")
+	var rest: Vector2 = trim(root_node, racer_def, 0.0)
+	expect(absf(rest.x) <= deg_to_rad(0.6) and absf(rest.y) < 0.05, "The racer floats level at rest (%.2f deg, %.2f m)" % [rad_to_deg(rest.x), rest.y])
+	var planing: Vector2 = trim(root_node, racer_def, 20.0)
+	expect(planing.x <= -deg_to_rad(3.5), "The racer rides bow-up on the plane (%.2f deg)" % rad_to_deg(planing.x))
+	expect(planing.y > 0.1, "The racer lifts on the plane so the stern stays clear (%.2f m)" % planing.y)
 	print("SMALL_BOATS_CHECK_%s (%d checks)" % ["PASS" if failures == 0 else "FAIL", checks])
 	quit(0 if failures == 0 else 1)
 
@@ -109,3 +124,28 @@ func ride(parent: Node3D, kind: String, fps: int, speed: float) -> float:
 	expect(shallow_landings <= maxi(1, jumps / 5), "%s does not chatter on the water (%d of %d jumps shorter than 0.1 s)" % [label, shallow_landings, jumps])
 	body.queue_free()
 	return motion.longest_air_s
+
+## Patch 2.9 item 5: average pitch and height of a hull held at one speed on
+## flat water (no ocean, so no swell or jumps) after it has settled.
+func trim(parent: Node3D, definition: ShipDefinition, speed: float) -> Vector2:
+	var body: CharacterBody3D = CharacterBody3D.new()
+	parent.add_child(body)
+	var motion: ShipVisualMotion = ShipVisualMotion.new()
+	motion.body = body
+	motion.quality = 0
+	motion.configure_hull(definition)
+	motion.jump_lift = 0.0
+	body.add_child(motion)
+	motion.set_process(false)
+	body.velocity = Vector3(0, 0, speed)
+	var pitch: float = 0.0
+	var height: float = 0.0
+	var samples: int = 0
+	for tick: int in range(30 * 60):
+		motion._process(1.0 / 60.0)
+		if tick >= 10 * 60:
+			pitch += motion.rotation.x
+			height += motion.position.y
+			samples += 1
+	body.queue_free()
+	return Vector2(pitch / samples, height / samples)

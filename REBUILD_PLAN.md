@@ -1164,6 +1164,10 @@ post) is in a draft PR, checked on Linux with before/after screenshots, not
 yet seen on Windows. Item 4 (speeds and knots: speedboat 50 kn, offshore
 racer 200 kn with the camera, wake, spray and wave-jumps kept in hand; the
 knots maths was right, and the HUD now shows the smoothed speed over ground)
-is in a draft PR, checked on Linux, not yet seen on Windows. Items 5-6 are
-planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
+is in a draft PR, checked on Linux, not yet seen on Windows. Item 5
+(cigarette boat remodel: long narrow stepped deep-V hull, pointed bow, low
+wraparound windscreen, open cockpit with bucket seats, quad outboards, yellow,
+red and black racing bands; bow-up trim and lift on the plane, level at rest;
+rooster tail from the transom) is in a draft PR, checked on Linux with
+before/after screenshots, not yet seen on Windows. Item 6 is planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
 2.9.1 (pirate ships).

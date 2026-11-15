@@ -16,6 +16,7 @@ wake_half_width_m = 1.4
 cargo_anchor_m = Vector3(0, 1, 0)
 jump_lift = 2.4
 chop_height_m = 0.9
+plane_trim_degrees = 5.0
 neutral_stop_deceleration_mps2 = 1.0
 forward_acceleration_mps2 = 61.7333
 reverse_acceleration_mps2 = 2.4

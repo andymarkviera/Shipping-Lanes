@@ -194,6 +194,13 @@ static func _mooring_bitts(root: Node3D, kind: String, definition: ShipDefinitio
 		deck = 3.5
 		ends = {"Bow": [20.0 * size.z / 90.0, 12.0 * size.x / 24.0], "Stern": [-38.0 * size.z / 90.0, 12.0 * size.x / 24.0]}
 		inboard = 1.5 * size.x / 24.0
+	elif kind == "small_racer":
+		# Patch 2.9 item 5: small flush cleats on the racer's low, narrow deck.
+		s = 0.22
+		deck = 2.6 * size.y / 4.0 + 0.1
+		rail = deck
+		ends = {"Bow": [size.z * 0.08, size.x / 2.0 * 0.95], "Stern": [-size.z / 2.0 + 1.5, size.x / 2.0 * 0.92]}
+		inboard = 0.35
 	for end: String in ends:
 		var z: float = float(ends[end][0])
 		var half: float = float(ends[end][1])
@@ -210,7 +217,7 @@ static func _mooring_bitts(root: Node3D, kind: String, definition: ShipDefinitio
 			root.add_child(marker)
 
 ## Patch 2.4 item 8: the small boats, each in its own bright scheme. The offshore
-## racer is long, low and pointed with a bubble canopy and twin engines; the
+## racer is a Cigarette-style powerboat (Patch 2.9 item 5, _dress_racer); the
 ## speedboat is short with a windscreen, seats and an outboard; the fishing boat
 ## is chunky and cosy with a wheelhouse, mast and boom, net drum and buoys.
 static func _dress_small(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition, kind: String, cache: Dictionary) -> void:
@@ -221,21 +228,7 @@ static func _dress_small(root: Node3D, hull: MeshInstance3D, definition: ShipDef
 	var bow: float = size.z / 2.0
 	match kind:
 		"small_racer":
-			var red: Color = Color("e63946")
-			hull.mesh = hull_mesh(size.z, size.x, -2.4 * s, deck, 3.5 * s, 0.6 * s, red, WHITE)
-			# Racing stripes down both sides and a white nose.
-			for side: float in [-1.0, 1.0]:
-				_box(root, Vector3(0.12, 0.22, size.z * 0.62), Vector3(side * size.x * 0.49, deck * 0.7, -size.z * 0.08), CREAM, cache)
-			_box(root, Vector3(size.x * 0.5, 0.25, size.z * 0.18), Vector3(0, deck + 0.12, bow - size.z * 0.22), WHITE, cache)
-			# Low bubble canopy, then the engine deck with two engines and a wing.
-			var canopy: MeshInstance3D = _ball(root, size.x * 0.34, size.x * 0.42, Vector3(0, deck + 0.15, -size.z * 0.02), GLASS, cache)
-			canopy.scale = Vector3(1.0, 1.0, 2.6)
-			_box(root, Vector3(size.x * 0.8, 0.35, size.z * 0.22), Vector3(0, deck + 0.17, aft + size.z * 0.16), INK, cache)
-			for side: float in [-1.0, 1.0]:
-				var engine: MeshInstance3D = _drum(root, 0.28, 0.24, 0.9, Vector3(side * size.x * 0.22, deck * 0.55, aft - 0.3), INK, cache)
-				engine.rotation.x = PI / 2.0
-				_box(root, Vector3(0.12, 0.7, 0.6), Vector3(side * size.x * 0.38, deck + 0.5, aft + 0.6), red, cache)
-			_box(root, Vector3(size.x * 0.9, 0.12, 0.7), Vector3(0, deck + 0.85, aft + 0.6), CREAM, cache)
+			_dress_racer(root, hull, size, cache)
 		"small_speedboat":
 			var blue: Color = Color("2a9fd6")
 			hull.mesh = hull_mesh(size.z, size.x, -2.6 * s, deck, 3.5 * s, 0.8 * s, blue, Color("e8d9b5"))
@@ -271,6 +264,127 @@ static func _dress_small(root: Node3D, hull: MeshInstance3D, definition: ShipDef
 			for side: float in [-1.0, 1.0]:
 				for z: float in [-size.z * 0.22, size.z * 0.28]:
 					_ball(root, 0.28, 0.56, Vector3(side * size.x * 0.5, 3.5 * s - 0.15, z), roof, cache)
+
+## Patch 2.9 item 5: a long, narrow deep-V offshore hull in the Cigarette Racing
+## style. Pointed bow at +Z, sharp chines, a step in the bottom just aft of
+## amidships and a flat transom; bold racing bands that sweep up toward the
+## stern. One smooth surface so the ink outline has no gaps. keel < 0 < deck.
+static func racer_hull_mesh(length: float, beam: float, keel: float, deck: float, colours: Array[Color]) -> ArrayMesh:
+	var surface: SurfaceTool = SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Section: deck crown, gunwale, sheer, sweep line, chine, chine lip, keel;
+	# then mirrored. colours: deck, gunwale, upper band, lower band, chine, bottom.
+	var stations: Array[float] = []
+	var steps: Array[float] = []
+	for index: int in 33:
+		var t: float = float(index) / 32.0
+		stations.append(t)
+		steps.append(0.0 if t < 0.4 else 1.0)
+		if index == 13:
+			# The step: the same station twice, the bottom ahead of it lower.
+			stations.append(t)
+			steps.append(1.0)
+	var half: float = beam / 2.0
+	var rings: Array[PackedVector3Array] = []
+	for index: int in stations.size():
+		var t: float = stations[index]
+		var bow: float = clampf((t - 0.55) / 0.45, 0.0, 1.0)
+		# Sharp entry: the width runs to a point at the stem with a finite angle.
+		var width: float = maxf(half * (1.0 - pow(bow, 1.7)) * lerpf(0.9, 1.0, clampf(t / 0.25, 0.0, 1.0)), 0.02)
+		var top: float = deck + 0.18 * bow * bow
+		var chine: float = 0.05 + 0.35 * bow * bow
+		var low: float = lerpf(keel, chine, pow(bow, 1.5)) - 0.08 * steps[index] * (1.0 - bow)
+		var sweep: float = lerpf(top - 0.22, chine + 0.2, smoothstep(0.15, 0.85, t))
+		var z: float = (t - 0.5) * length
+		var ring: PackedVector3Array = PackedVector3Array()
+		var section: Array[Vector2] = [Vector2(0.0, top + 0.12), Vector2(width * 0.86, top + 0.04), Vector2(width, top - 0.06), Vector2(width * 0.98, sweep), Vector2(width * 0.94, chine), Vector2(width * 0.84, chine - 0.06), Vector2(0.0, low)]
+		for point: Vector2 in section:
+			ring.append(Vector3(-point.x, point.y, z))
+		for back: int in range(5, 0, -1):
+			ring.append(Vector3(section[back].x, section[back].y, z))
+		rings.append(ring)
+	var count: int = rings[0].size()
+	for index: int in rings.size() - 1:
+		var a: PackedVector3Array = rings[index]
+		var b: PackedVector3Array = rings[index + 1]
+		for side: int in count:
+			var next: int = (side + 1) % count
+			var band: int = side if side < 6 else count - 1 - side
+			surface.set_color(colours[band].srgb_to_linear())
+			for corner: Vector3 in [a[side], b[side], b[next], a[side], b[next], a[next]]:
+				surface.add_vertex(corner)
+	# Flat transom.
+	var stern: PackedVector3Array = rings[0]
+	var middle: Vector3 = Vector3(0, (deck + keel) * 0.5, stern[0].z)
+	for side: int in count:
+		var band: int = side if side < 6 else count - 1 - side
+		surface.set_color(colours[band].srgb_to_linear())
+		for corner: Vector3 in [middle, stern[side], stern[(side + 1) % count]]:
+			surface.add_vertex(corner)
+	surface.generate_normals()
+	surface.index()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 0.9
+	surface.set_material(material)
+	return surface.commit()
+
+## Patch 2.9 item 5: the offshore racer dressed as a Cigarette-style powerboat:
+## long foredeck, low wraparound windscreen, open cockpit with bucket seats and
+## four outboards on the transom, in yellow, red and black racing colours.
+static func _dress_racer(root: Node3D, hull: MeshInstance3D, size: Vector3, cache: Dictionary) -> void:
+	var yellow: Color = Color("ffc425")
+	var red: Color = Color("e63946")
+	var s: float = size.y / 4.0
+	var deck: float = 2.6 * s
+	var aft: float = -size.z / 2.0
+	var beam: float = size.x
+	var colours: Array[Color] = [yellow, INK, red, yellow, WHITE, INK]
+	hull.mesh = racer_hull_mesh(size.z, beam, -2.6 * s, deck, colours)
+	var top: float = deck + 0.12
+	# Long foredeck: a black racing stripe down the middle and a white hatch.
+	_box(root, Vector3(beam * 0.16, 0.06, size.z * 0.4), Vector3(0, top + 0.01, size.z * 0.22), INK, cache)
+	_box(root, Vector3(beam * 0.3, 0.08, 0.7), Vector3(0, top, size.z * 0.12), WHITE, cache)
+	# Open cockpit: a dark well with a white coaming round it.
+	var cockpit_z: float = -size.z * 0.12
+	var cockpit_len: float = size.z * 0.26
+	_box(root, Vector3(beam * 0.62, 0.06, cockpit_len), Vector3(0, top + 0.01, cockpit_z), Color("3a3f4b"), cache)
+	for side: float in [-1.0, 1.0]:
+		_box(root, Vector3(0.1, 0.14, cockpit_len), Vector3(side * beam * 0.33, top + 0.06, cockpit_z), WHITE, cache)
+	# Two bucket seats up front, a bench behind: white with red bolsters.
+	var seat_z: float = cockpit_z + cockpit_len * 0.12
+	for side: float in [-1.0, 1.0]:
+		var x: float = side * beam * 0.15
+		_box(root, Vector3(0.48, 0.18, 0.48), Vector3(x, top + 0.12, seat_z), WHITE, cache)
+		_box(root, Vector3(0.48, 0.55, 0.14), Vector3(x, top + 0.38, seat_z - 0.26), WHITE, cache)
+		for wing: float in [-1.0, 1.0]:
+			_box(root, Vector3(0.08, 0.36, 0.42), Vector3(x + wing * 0.25, top + 0.3, seat_z - 0.04), red, cache)
+	_box(root, Vector3(beam * 0.56, 0.2, 0.5), Vector3(0, top + 0.12, cockpit_z - cockpit_len * 0.36), WHITE, cache)
+	_box(root, Vector3(beam * 0.56, 0.4, 0.12), Vector3(0, top + 0.3, cockpit_z - cockpit_len * 0.36 - 0.28), red, cache)
+	# Dash and wheel ahead of the seats.
+	_box(root, Vector3(beam * 0.5, 0.22, 0.3), Vector3(0, top + 0.13, cockpit_z + cockpit_len * 0.42), INK, cache)
+	var wheel: MeshInstance3D = _drum(root, 0.16, 0.16, 0.05, Vector3(-beam * 0.15, top + 0.32, cockpit_z + cockpit_len * 0.36), INK, cache)
+	wheel.rotation.x = PI / 2.0 - 0.4
+	# Low wraparound windscreen: a raked centre pane and two swept side panes.
+	var screen_z: float = cockpit_z + cockpit_len * 0.5 + 0.15
+	var centre: MeshInstance3D = _box(root, Vector3(beam * 0.4, 0.34, 0.05), Vector3(0, top + 0.17, screen_z), GLASS, cache)
+	centre.rotation.x = -0.75
+	for side: float in [-1.0, 1.0]:
+		var pane: MeshInstance3D = _box(root, Vector3(beam * 0.2, 0.3, 0.05), Vector3(side * beam * 0.27, top + 0.15, screen_z - 0.2), GLASS, cache)
+		pane.rotation = Vector3(-0.6, side * 0.75, 0)
+	# Engine deck behind the bench, then four outboards hung on the transom.
+	_box(root, Vector3(beam * 0.7, 0.1, size.z * 0.14), Vector3(0, top + 0.03, aft + size.z * 0.1), INK, cache)
+	for index: int in 4:
+		var x: float = (float(index) - 1.5) * beam * 0.2
+		_box(root, Vector3(0.42, 0.62, 0.62), Vector3(x, deck - 0.1, aft - 0.32), INK, cache)
+		_box(root, Vector3(0.44, 0.12, 0.64), Vector3(x, deck + 0.15, aft - 0.32), red, cache)
+		_box(root, Vector3(0.14, 1.4, 0.28), Vector3(x, deck - 1.0, aft - 0.36), INK, cache)
+		_box(root, Vector3(0.1, 0.18, 0.5), Vector3(x, deck - 1.75, aft - 0.3), INK, cache)
+	# Race number roundels on both sides of the bow.
+	for side: float in [-1.0, 1.0]:
+		var roundel: MeshInstance3D = _drum(root, 0.32, 0.32, 0.04, Vector3(side * beam * 0.49, deck - 0.35, size.z * 0.1), WHITE, cache)
+		roundel.rotation.z = PI / 2.0
+		roundel.rotation.y = side * 0.05
 
 static func _tint(port: Node3D, label: String, colour: Color) -> void:
 	var mesh: MeshInstance3D = _mesh_of(port, label)
