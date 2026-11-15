@@ -9,6 +9,9 @@ var impact_cooldowns: Dictionary = {}
 var commanded_throttle: float = 0.0
 var actual_throttle: float = 0.0
 var distance_m: float = 0.0
+## Patch 2.9 item 4: how fast the hull really moved over the last physics tick
+## (m/s). Unlike velocity it reads 0 when the hull is pinned against land.
+var ground_speed_mps: float = 0.0
 var rudder: float = 0.0
 var lateral_order: float = 0.0
 var yaw_rate: float = 0.0
@@ -152,6 +155,7 @@ func _physics_process(delta: float) -> void:
 		if velocity.dot(normal) < 0.0: velocity = velocity.slide(normal)
 	velocity = velocity.limit_length(speed_before)
 	distance_m += position.distance_to(previous)
+	ground_speed_mps = Vector2(position.x - previous.x, position.z - previous.z).length() / delta if delta > 0.0 else 0.0
 	if damage > 0: validated_impact.emit(damage)
 
 func turn_without_overlap(angle: float) -> void:

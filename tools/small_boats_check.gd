@@ -40,6 +40,9 @@ func run() -> void:
 			expect(model.find_child(marker, true, false) != null, "%s model has %s" % [kind, marker])
 		expect(model.get_child_count() > 8, "%s model is dressed (%d parts)" % [kind, model.get_child_count()])
 		model.free()
+	# Patch 2.9 item 4: speedboat 50 kn, offshore (cigarette) racer 200 kn.
+	expect(absf(Hangar.top_knots(Progression.definition("small_speedboat")) - 50.0) < 0.05, "The speedboat tops out at 50 kn")
+	expect(absf(Hangar.top_knots(Progression.definition("small_racer")) - 200.0) < 0.05, "The offshore racer tops out at 200 kn")
 	expect(top.small_racer > top.small_speedboat and top.small_speedboat > top.small_fishing, "The racer is fastest, the fishing boat slowest")
 	# A save naming a small boat by its record ID reads it as the kind.
 	var save: Dictionary = {"ship": "ship_small_racer_03", "fleet": {"container": {"fuel": 1.0, "condition": 1.0}, "ship_small_racer_03": {"fuel": 0.5, "condition": 1.0}}}

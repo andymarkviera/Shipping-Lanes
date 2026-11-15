@@ -52,6 +52,9 @@ signal landed(impact: float)
 const JUMP_GRAVITY_MPS2: float = 9.81
 ## Wavelength of the chop a planing hull meets at speed: 2 pi / 0.26, about 24 m.
 const CHOP_PER_M: float = 0.26
+## Patch 2.9 item 4: the chop is met at no more than this pace, so the 200 kn
+## racer jumps like it did at its old 42 kn instead of being flung skyward.
+const CHOP_PACE_LIMIT_MPS: float = 21.6
 ## A hull leaves the water only above this rise rate, and stays down this long
 ## after landing, so it never chatters on the surface.
 const MIN_LAUNCH_MPS: float = 0.8
@@ -153,7 +156,7 @@ func _process(delta: float) -> void:
 func planing(step: float, swell: float, signed_speed: float, pitch: float, strength: float) -> float:
 	var speed: float = absf(signed_speed)
 	var pace: float = clampf(speed / top_speed_mps, 0.0, 1.0)
-	travel_m += speed * step
+	travel_m += minf(speed, CHOP_PACE_LIMIT_MPS) * step
 	# Chop only lifts: 0 in a trough, its full height on a crest, and it grows
 	# with speed. Two lengths so the jumps do not come like clockwork.
 	var phase: float = travel_m * CHOP_PER_M
