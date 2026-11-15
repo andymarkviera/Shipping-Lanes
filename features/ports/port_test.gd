@@ -852,7 +852,7 @@ func accept_reason() -> String:
 	if docking.state(1) != "docked": return "Dock before accepting a job."
 	if loading.busy(): return "Loading in progress — wait or cancel loading."
 	if not bulk_active.is_empty() or not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty(): return "Finish or cancel your current job before accepting another."
-	if small_mode(): return "Small boats take no cargo jobs. Just enjoy the ride!"
+	if small_mode(): return "%s take no cargo jobs. Just enjoy the ride!" % ("Pirate ships" if Progression.PIRATE_KINDS.has(ship_kind) else "Small boats")
 	if selected_offer.is_empty(): return "No jobs available here for this ship."
 	return ""
 

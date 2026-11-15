@@ -91,7 +91,7 @@ func configure_hull(definition: ShipDefinition) -> void:
 	var reach: float = maxf(definition.hull_size_m.z * 0.5, half_length)
 	pitch_scale = clampf(deck_height_m / maxf(half_length, 1.0) / REFERENCE_DECK_PER_HALF_LENGTH, 0.1, 1.0)
 	pitch_limit_rad = minf(MAX_PITCH_RAD, asin(clampf(PITCH_DECK_SHARE * deck_height_m / maxf(reach, 1.0), 0.0, 1.0)))
-	roll_scale = clampf(sqrt(REFERENCE_HALF_WIDTH_M / maxf(half_width, 0.1)), 0.4, 1.0)
+	roll_scale = clampf(sqrt(REFERENCE_HALF_WIDTH_M / maxf(half_width, 0.1)), 0.4, 1.0) * clampf(definition.roll_gain, 0.1, 2.0)
 	roll_limit_rad = MAX_ROLL_RAD * roll_scale
 	jump_lift = maxf(definition.jump_lift, 0.0)
 	chop_height_m = maxf(definition.chop_height_m, 0.0)

@@ -871,6 +871,9 @@ const SHIPS = {
 	"small_fishing": {"name": "Fishing boat", "price_minor": 20000, "record": "res://features/catalog/records/small_fishing_ship.tres"},
 	"small_speedboat": {"name": "Speedboat", "price_minor": 40000, "record": "res://features/catalog/records/small_speedboat_ship.tres"},
 	"small_racer": {"name": "Offshore racer", "price_minor": 60000, "record": "res://features/catalog/records/small_racer_ship.tres"},
+	# Patch 2.9.1 item 1: the pirate galleon. A prestige buy in the same "small"
+	# (Other boats) family: no cargo jobs, just for sailing.
+	"small_galleon": {"name": "Pirate galleon", "price_minor": 20000000, "record": "res://features/catalog/records/pirate_galleon_ship.tres"},
 }
 ## The container ladder, smallest first. Tier 1 is "container".
 const CONTAINER_KINDS: Array[String] = ["container", "container_2", "container_3", "container_4", "container_5"]
@@ -887,7 +890,10 @@ const BULK_PAY_PERCENT: Array[int] = [100, 110, 120, 130, 140]
 const HEAVY_KINDS: Array[String] = ["heavy", "heavy_2", "heavy_3", "heavy_4", "heavy_5"]
 ## Patch 2.4 item 8: the small boats family, cheapest first. They carry no
 ## cargo and take no jobs; the planing ones jump the waves (ShipVisualMotion).
-const SMALL_KINDS: Array[String] = ["small_fishing", "small_speedboat", "small_racer"]
+## Patch 2.9.1: the family is shown as "Other boats" and also holds the pirate
+## ships (PIRATE_KINDS); the family ID stays "small" so saves are unchanged.
+const SMALL_KINDS: Array[String] = ["small_fishing", "small_speedboat", "small_racer", "small_galleon"]
+const PIRATE_KINDS: Array[String] = ["small_galleon"]
 ## Ship record IDs and the ladder kind each one is saved as. The old container
 ## variants all had the starter's 24-slot hull: the starter and the slower
 ## harbor ship are ship 1; the coastal and the faster swift ship are ship 2,
@@ -903,6 +909,7 @@ const LADDER_IDS = {
 	"ship_bulk_supramax_02": "bulk_2", "ship_bulk_panamax_03": "bulk_3",
 	"ship_bulk_capesize_04": "bulk_4", "ship_bulk_valemax_05": "bulk_5",
 	"ship_small_fishing_01": "small_fishing", "ship_small_speedboat_02": "small_speedboat", "ship_small_racer_03": "small_racer",
+	"ship_pirate_galleon_01": "small_galleon",
 }
 ## A sold ship pays back half its price.
 const RESALE_PERCENT: int = 50
