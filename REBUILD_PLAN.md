@@ -622,7 +622,7 @@ on pausing the world.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
 **Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is done; Patch 2.3 (section 8, debug mode) is written and waits for Andy's playtest. Patch 3 is a new main menu
-(Andy's design, later; do not start). Multiplayer is now **Patch 3.0** (Andy, November 15, 2026), the next patch after 2.9.1; not planned or started yet.
+(Andy's design, later; do not start). Multiplayer is now **Patch 3.0** (section 15), the next patch after 2.9.1.
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
 the automatic checks on Linux: 1 (Always running + Esc menu), 2 (Easy docking),
@@ -1197,3 +1197,81 @@ red and black racing bands; bow-up trim and lift on the plane, level at rest;
 rooster tail from the transom) is in a draft PR, checked on Linux with
 before/after screenshots, not yet seen on Windows. Item 6A (natural land: irregular continents, peninsulas, bays and islands baked from seed 2906 by `tools/world_layout/natural_land.py` into `features/world/natural_land.json` and the solid land blocks; smooth toon coasts in 1 km chunks culled past 3.6 km; minimap and M globe draw the new coasts; ports, straits, bridges, biomes and Ember Isle kept where they are for item 6B to move) is in a draft PR, checked on Linux with before/after screenshots, not yet seen on Windows. Item 6B is planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
 2.9.1 (pirate ships).
+
+## 15. Patch 3.0 (Andy, November 15, 2026): multiplayer
+
+Starts right after Patch 2.9.1. Andy's words (11:11 AM): "I have a server pc,
+I need a server package, and saves need to be consistent, and when I update
+the saves need to go to the next update, work with this launcher... when I
+press play it should take me straight to that server, only multiplayer, the
+debug mode will now be like a single player test everything thing. In the
+server package make it so it's just an update available button like the
+regular game launcher and it can access the server packages off a new repo."
+Launcher site: https://shipping-lanes.andyviera578.chatgpt.site (launcher repo
+`andymarkviera/Shipping-Lanes-Launcher`, game feed
+`andymarkviera/Shipping-Lanes-Releases`). Same rules as before: one PR each,
+Godot 4.7.2, Windows and Mac clients, smooth frame time, Wind Waker look,
+gas/oil/refinery/cargo-fuel code intact.
+
+Design (Hark's call):
+- **Authoritative dedicated server.** A headless Godot 4.7.2 export of the
+  same project (`--server` feature tag) runs the world: ports, jobs, money,
+  fleets, berths, icebergs and every ship. Clients send helm input and
+  actions; the server validates them (ACTION_VALIDATION.md rules) and
+  replicates state with interpolation, so ships glide, never snap. No
+  trading, gifting or combat between players (cannon salute stays cosmetic).
+- **Play = multiplayer only.** The main menu's Play connects straight to
+  Andy's server with no server list. The address comes from `server.json`
+  (`{"host": ..., "port": ...}`) in the public Shipping-Lanes-Releases repo,
+  read at Play, so Andy can move the server without a new build. A clear
+  "Server offline" / "Server is updating" card if it can't connect, with
+  Retry. Client and server must be the same version; a mismatch tells the
+  player to update in the launcher.
+- **Debug mode = single-player test mode.** The old offline world, with
+  everything unlocked as debug mode already does, for testing all features
+  without the server. Its saves are local and separate.
+- **Player identity.** First Play asks for a captain name once; the client
+  keeps a random install key; the server maps the key to the player record.
+  No passwords, no accounts, nothing that costs money.
+- **Saves that carry forward.** The server owns all multiplayer saves in one
+  folder beside it (SQLite or versioned JSON, the server's choice in
+  DECISIONS.md). Every save carries `schema_version`; each patch that changes
+  data ships a migration step, applied in order on server start, so any older
+  save loads in any newer server. Before migrating, the server copies the
+  save folder to `backups/<old_version>-<date>/` and keeps the last 5. An
+  update never deletes or resets a save. A check loads fixture saves from
+  every earlier 3.x version.
+- **Server package with its own updater.** "Shipping Lanes Server": the
+  headless server plus a small Server Launcher window (same style as the game
+  launcher) with Status (running/stopped, players online, version), Start,
+  Stop, Open saves folder, and an **Update available** button that appears
+  when a newer server release exists. Update = back up saves, stop the
+  server, download and swap in the new package, start it again (saves
+  migrate on start). It reads releases, no token, from a NEW public repo
+  `andymarkviera/Shipping-Lanes-Server-Releases`, assets named
+  `Shipping-Lanes-Server-Windows-x64.zip` and `Shipping-Lanes-Server-Linux-x64.zip`.
+  Server tag matches the game tag (`v3.0.0`, ...).
+- **Release pipeline.** Each patch from 3.0 on publishes the game release
+  (as today) and the server release to the new repo. Hark creates the repo;
+  the workflow change and adding that repo to the release token are Andy's
+  steps (approved in his 11:11 AM message; Hark tells him when).
+
+Items, in order:
+1. **Server split.** Headless server export and `--server` boot path; the
+   world simulation runs server-side; the client renders and sends input.
+   Local loopback test (server + 2 clients on one machine) as a check.
+2. **Replication.** Ships, docking, cranes, cargo jobs and payouts in sync for
+   several players; other players' boats shown in the world, the minimap and
+   the 3D M-map (Patch 2.9.1 item 5's ship list); captain names over boats.
+3. **Play goes straight to the server; debug mode becomes single-player test
+   mode.** `server.json` lookup, connect, offline/updating/mismatch cards.
+4. **Persistent, migrating saves.** schema_version, ordered migrations,
+   automatic backups, autosave every minute and on shutdown, fixture checks.
+5. **Server package and Server Launcher** with Start/Stop/Status and the
+   Update available button against Shipping-Lanes-Server-Releases.
+6. **Release pipeline for the server** (workflow change, needs Andy's token
+   step) and a short SERVER.md: install on the server PC, open the port,
+   update, where saves live. Item 6's PR carries the Windows+Mac playtest
+   checklist (two clients on the server PC's address).
+
+**Patch 3.0 status (November 15, 2026):** planned; starts after Patch 2.9.1.
