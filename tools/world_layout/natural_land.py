@@ -175,6 +175,10 @@ POLAR_CLEAR_M = 3300.0
 # over 1000 m) and every port (over 2500 m).
 VOLCANO_LANE_M = 1150.0
 VOLCANO_PORT_M = 2650.0
+# Sea kept between Ember Isle's block and the skeleton. At 650 m no spot on the
+# map also cleared the lanes; item 6A's spot had 470 m, and the bake cuts open
+# sea round the island whatever the skeleton had there.
+VOLCANO_SEA_M = 450.0
 # world_land_check: no straight coast over 400 m away from the quays.
 STRAIGHT_MAX_M = 380.0
 # The most of a port's berth or drop area the skeleton may cover at its spot.
@@ -331,7 +335,7 @@ def place_world(geo, layout, first=0, step=1):
         for _ in range(4000):
             vx, vz = round(rng.uniform(edge[0], edge[2]) / 10) * 10, round(rng.uniform(edge[1], edge[3]) / 10) * 10
             rect = (vx - ember[2] / 2, vz - ember[3] / 2, ember[2], ember[3])
-            if not clear(rect, solid + palms, 650) or not isles_ok([rect], world): continue
+            if not clear(rect, solid + palms, VOLCANO_SEA_M) or not isles_ok([rect], world): continue
             if any(segment_sdf((vx, vz), u, v) < VOLCANO_LANE_M for u, v in legs): continue
             if any(gap((vx, vz), q) < VOLCANO_LANE_M for q in geo['lanes']): continue
             if any(gap((vx, vz), (p['at'][0], p['at'][2])) < VOLCANO_PORT_M for p in world): continue
