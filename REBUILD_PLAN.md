@@ -1053,3 +1053,71 @@ ships. Like the small boats: no cargo jobs, just for sailing.
    checklist.
 
 **Patch 2.8 status (November 14, 2026):** planned, starts after Patch 2.7.
+
+## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
+
+Andy's playtest report with screenshots in `docs/reference/patch_2_9/`.
+Because these are problems Andy reported himself, Patch 2.9 runs right
+after Patch 2.7 item 4 and **before** Patch 2.8. Same rules as before (one
+PR each, Godot 4.7.2, Windows and Mac, every port ID, job and save loading,
+smooth frame time, debug mode keeps working). Each visual fix's PR shows a
+before/after screenshot next to the matching reference image.
+
+1. **City and "weird stuff" sweep.** The rainy city has big translucent
+   boxes around the skyscrapers (`city_skyscraper_boxes.jpg`,
+   `city_boxes_rain_night.jpg`): find what they are (LOD/impostor shells,
+   fog or rain volumes, bounds helpers, unlit placeholder meshes) and remove
+   or fix them so only the buildings show. Then sweep the whole world for
+   other oddities: blotchy shadow shapes floating over land
+   (`odd_shadows_on_land.jpg`), stray grey bars, z-fighting, floating or
+   clipping props, helper meshes left visible. Fix what is found and list
+   it in PROGRESS.md.
+2. **Container loader black bar.** The container cranes work well; keep
+   their behavior. Remove or fix the dark bar running across the end of
+   each crane (`crane_black_bar_1..3.jpg`, `cranes_overhead.jpg`): either a
+   stray rail/beam mesh or a shading artifact. Booms, trolley and spreader
+   stay.
+3. **Mooring ropes.** Ropes pass through the dock edge
+   (`mooring_rope_through_dock.jpg`). Each rope now runs from a fairlead on
+   the ship to a bollard on the quay and loops over it, with a sag that
+   never dips through the dock or the hull. Use the existing bollards (add
+   them where a berth lacks them). If clean attachment can't be made
+   reliable for every hull, remove the ropes instead.
+4. **Speeds and knots.** Speed boat top speed 50 kn. Cigarette boat top
+   speed 200 kn (deliberately absurd; keep it controllable: camera keeps
+   up, wake and spray scale, no tunnelling through land or bridges at that
+   speed). Andy feels the knots readout is off: audit it end to end (world
+   units per metre, ship lengths versus real ones, the m/s to kn factor,
+   how the HUD value is smoothed and rounded, and whether visual speed at
+   sea matches the number), fix whatever is wrong, and write the finding
+   in PROGRESS.md in one or two plain lines.
+5. **Cigarette boat remodel.** The current one looks ugly
+   (`cigarette_boat_current.jpg`). Rebuild it on a real offshore
+   "cigarette" powerboat (Cigarette Racing style): long narrow deep-V
+   stepped hull, sharp pointed bow, low wraparound windscreen, open
+   cockpit with bucket seats, long deck, a bold racing paint scheme, and
+   twin or quad outboards (or stern drives) at the transom. Toon-styled in
+   the Wind Waker look, rides bow-up on the plane at speed, rooster-tail
+   spray. Level trim at rest (Patch 2.4 checks).
+6. **New natural world (split into A and B).** Andy wants the map
+   restarted: the current land layout looks square. Generate a brand-new
+   world layout, natural-looking, with irregular continents, peninsulas,
+   bays and islands (no straight or boxy coastlines), from a fixed seed so
+   it is the same for every player, and bake it into the world layout
+   data.
+   - **6A. Land.** New continents and islands from the seed, toon coasts,
+     solid land (collision, navigation, spawn clearance), straits and
+     channels where the shapes meet, minimap and M globe draw the new land.
+   - **6B. Ports and regions.** North Pole and South Pole ports stay exactly
+     where they are. Every other port moves to a random coastal spot (from
+     the seed) with sea access, keeping its ID, name, jobs and saves. All
+     jobs reachable; traversal budget and tests updated. Re-place the
+     Patch 2.5 bridges (still one big suspension bridge, clearance for the
+     biggest ship), desert, tropical and rainy city regions and the volcano
+     island to fit the new world. Saves made on the old layout load: a ship
+     saved at sea or inside new land is moved to its last port or the
+     nearest one. Item 6B's PR carries a 5-10 line playtest checklist for
+     all of 2.9 (Windows and Mac).
+
+**Patch 2.9 status (November 14, 2026):** planned, starts after Patch 2.7
+item 4, before Patch 2.8.
