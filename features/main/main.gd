@@ -8,6 +8,8 @@ const GAME_SAVE: String = "user://worlds/game/voyage.db"
 ## Patch 2.3 debug (temporary): the throwaway debug world. See features/debug.
 const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
 const TITLE_SEEN: StringName = &"title_attract_seen"
+## Patch 2.7 item 4: Start is playing its camera dive into the game.
+var departing: bool = false
 const GAME_MENU = preload("res://features/game/game_menu.gd")
 var developer_overlay: DeveloperOverlay
 var state: State = State.BOOT
@@ -182,16 +184,32 @@ func _ready() -> void:
 	show_attract_screen()
 	print("Shipping Lanes: Main scene loaded successfully.")
 
-## Patch 2.7 item 1: the "Press Any Button" screen, once per launch (not when
-## coming back from a game). Skipped headless so scripted checks start at the menu.
+## Patch 2.7 item 1: the "Press Any Button" screen, once per launch. Skipped
+## headless so scripted checks start at the menu.
+## Patch 2.7 item 4: coming back to the main menu (from the game's Esc menu)
+## replays the ship's arrival, without "Press Any Button".
 func show_attract_screen() -> void:
-	if get_tree().has_meta(TITLE_SEEN): return
 	if DisplayServer.get_name() == "headless" and not OS.get_cmdline_user_args().has("--title-check"): return
+	if ApplicationMenu.friends_client() and get_tree().has_meta(TITLE_SEEN): return
+	var seen: bool = get_tree().has_meta(TITLE_SEEN)
 	get_tree().set_meta(TITLE_SEEN, true)
 	var title: TitleScreen = TitleScreen.new()
 	# Patch 2.7 item 2: once the ship has sailed in, the menu shows over it.
 	title.dismissed.connect(menu.use_title_backdrop.bind(title))
 	add_child(title)
+	if seen: title.replay()
+
+## Patch 2.7 item 4: Start follows the menu ship down to sea level and fades
+## into the game. Without the title backdrop (headless checks) it goes at once.
+func start_game() -> void:
+	if departing: return
+	var title: TitleScreen = menu.title_backdrop
+	if is_instance_valid(title) and title.visible and title.arrived:
+		departing = true
+		menu.clear_for_departure()
+		title.depart()
+		await title.departed
+	get_tree().change_scene_to_file(GAME_SCENE)
 
 func navigate(action: String) -> void:
 	if ApplicationMenu.friends_client() and action not in ["servers", "settings", "title", "exit"]: return
@@ -215,7 +233,7 @@ func navigate(action: String) -> void:
 				recovery_target = -1
 				recovery_source = -1
 				refresh_save_status()
-		"game": get_tree().change_scene_to_file(GAME_SCENE)
+		"game": start_game()
 		"debug":
 			get_tree().set_meta(DEBUG_GAME.META, true)
 			get_tree().change_scene_to_file(GAME_SCENE)

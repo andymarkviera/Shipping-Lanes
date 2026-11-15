@@ -255,6 +255,14 @@ func show_page(id: String, can_continue: bool) -> void:
 		if pages[id].has_method("focus_first"): pages[id].focus_first()
 		else: first_buttons[pages[id]].grab_focus()
 
+## Patch 2.7 item 4: Start's camera dive shows only the sea and the ship.
+func clear_for_departure() -> void:
+	for key: String in pages: pages[key].visible = false
+	save_notice.visible = false
+	footer.visible = false
+	if dev_column != null: dev_column.visible = false
+	get_viewport().gui_release_focus()
+
 func use_title_backdrop(screen: TitleScreen) -> void:
 	title_backdrop = screen
 	show_page(current_page, can_continue_session)

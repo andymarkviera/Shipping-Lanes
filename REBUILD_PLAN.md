@@ -1020,9 +1020,11 @@ Button screen) merged; item 2 (logo to the top-left, fleet container ship
 sails in with a toon wake) merged; item 3 (Start / Options / Credits / Quit
 Game in white bold serif with a navy outline, the bobbing yellow swirl cursor,
 move/select sounds; Options holds Settings, Controls, Debug Mode and Restart
-Progress; a short credits roll) in a draft PR. All checked on Linux (headless
-checks and xvfb screenshots) only, not yet seen on Windows or a Mac. Item 4
-not started.
+Progress; a short credits roll) merged; item 4 (Start dives the camera down
+to the ship and fades into the game, the Esc-menu Main menu fades back and
+replays the arrival, sharp 3D views on Retina) in a draft PR with the Windows
+and Mac playtest checklist. All checked on Linux (headless checks and xvfb
+screenshots) only, not yet seen on Windows or a Mac.
 
 ## 13. Patch 2.8 (Andy, November 14, 2026): pirate ships
 
