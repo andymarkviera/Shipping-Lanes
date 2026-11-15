@@ -7284,3 +7284,30 @@ an export, a playtest.
 Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
 (226 scripts), `crane_check` (153 checks, ships 1/3/5 load and unload): passed.
 Not run: Windows, Mac, an export, a playtest.
+
+## Patch 2.9 item 3 — mooring ropes (November 15, 2026)
+
+- **Cause:** each line was one sagging curve straight from the ship's
+  fairlead to the bollard head. On most ships the fairlead sits below the
+  quay top, so the line cut through the timber face and edge strip
+  (`mooring_rope_through_dock.jpg`).
+- **Fix** (`features/ports/mooring_lines.gd`, new `lie()` and `fly()`): the
+  rest line now goes out over the rail to just outside the hull at rail
+  height, sags across the gap (never deeper than lets it keep falling toward
+  the edge), rests over the quay edge clear of the timber face and edge
+  strip, runs to the existing bollard and makes a full loop round the post
+  under its head. While a line is thrown out or reeled in it follows the
+  same path with an upward heave, so it never clips more than at rest. Same
+  bollards, berths, timings and Undock hold; no new geometry on the quay.
+- **Check:** `tools/mooring_check.gd` now also checks every line of ships
+  1 and 5 of each family at their first port: no point of the rope tube is
+  below the edge strip or deck over the quay, below the rail inside the hull
+  edge, or inside a bollard post, and the line ends looped round its bollard.
+- **Screenshots** (Linux, xvfb, 1600x900, a scratch script that was not
+  committed): `docs/reference/patch_2_9/mooring_rope_ship1_{before,after}.png`
+  (before: the bow line vanishes into the quay edge; after: it lies over it
+  and loops the bollard) and `mooring_rope_ship5_{before,after}.png`.
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
+(226 scripts), `mooring_check` (422 checks): passed.
+Not run: Windows, Mac, an export, a playtest.

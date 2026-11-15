@@ -7,16 +7,31 @@ extends Node3D
 ## reel back aboard; the game sets the docking authority's undock_seconds to
 ## LET_GO_SECONDS, so the ship is held in the berth until they are in. Looks
 ## only: this reads the authority's state and never changes it.
+## Patch 2.9 item 3: each line now leans out over the rail clear of the hull,
+## sags in the gap, rests over the quay edge (never through it) and loops
+## round the bollard post under its head. See lie().
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const TIE_SECONDS: float = 1.2
 const LET_GO_SECONDS: float = 1.0
 const SPRING_LENGTH_M: float = 120.0
-const SEGMENTS: int = 12
 const SIDES: int = 6
 const ROPE: Color = Color("e9d29a")
+## Patch 2.9 item 3: quay and bollard shapes the lines must clear (port-local,
+## from test_port.gd and chunky_look.dress_port()). The timber face's outer
+## side is QUAY_FACE_M from the berth centreline; the edge strip's top is
+## EDGE_TOP_M; the bollard post has POST_RADIUS_M and its head starts
+## HEAD_DROP_M below bollard_points().y, so the loop sits LOOP_DROP_M below it.
+const EDGE_TOP_M: float = 4.2
+const POST_RADIUS_M: float = 0.9
+const LOOP_DROP_M: float = 0.3
+const CLEAR_M: float = 0.15
+const GAP_SEGMENTS: int = 8
+const LOOP_SEGMENTS: int = 12
 ## The docking authority whose ships are moored.
 var docking: Node
-## Owner -> {"body", "port", "ropes": [{"from": Node3D, "to": Vector3, "mesh"}], "out": 0..1}.
+## Owner -> {"body", "port", "ropes": [{"from": Node3D, "to": Vector3, "pick": Vector3,
+## "mesh"}], "out": 0..1, "hull_x": quay-side hull edge from the centreline,
+## "radius": rope radius}. "pick" is the bollard point in port space.
 ## "out" is how far the lines are out: 0 aboard, 1 made fast.
 var rigs: Dictionary = {}
 var material: Material
@@ -103,30 +118,80 @@ func make_rig(body: Node3D, port: Node3D) -> Dictionary:
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mesh.hide()
 		add_child(mesh)
-		made.append({"from": from, "to": port.global_transform * pick, "mesh": mesh})
-	return {"body": body, "port": port, "ropes": made, "out": 0.0}
+		made.append({"from": from, "to": port.global_transform * pick, "pick": pick, "mesh": mesh})
+	return {"body": body, "port": port, "ropes": made, "out": 0.0,
+		"hull_x": float(port.QUAY_FACE_M) - float(port.quay_gap_m(body.definition)),
+		"radius": clampf(body.definition.hull_size_m.x * 0.013, 0.2, 0.45)}
 
-## Each line: a heaving arc while it flies out (or back), a gentle sag once fast.
+## Each line: thrown out along its resting path with a heaving lift (or
+## reeled back), then lying in its rest shape once fast.
 func draw(rig: Dictionary) -> void:
-	var radius: float = clampf(rig.body.definition.hull_size_m.x * 0.013, 0.2, 0.45)
+	var radius: float = float(rig.radius)
 	var t: float = smoothstep(0.0, 1.0, float(rig.out))
-	var local: Transform3D = global_transform.affine_inverse()
+	var to_port: Transform3D = rig.port.global_transform.affine_inverse()
+	var local: Transform3D = global_transform.affine_inverse() * rig.port.global_transform
 	for rope: Dictionary in rig.ropes:
 		var mesh: MeshInstance3D = rope.mesh
 		var shape: ImmediateMesh = mesh.mesh as ImmediateMesh
 		shape.clear_surfaces()
 		mesh.visible = t > 0.001 and is_instance_valid(rope.from)
 		if not mesh.visible: continue
-		var a: Vector3 = local * (rope.from as Node3D).global_position
-		var b: Vector3 = local * rope.to
-		var span: float = a.distance_to(b)
-		var tip: Vector3 = a.lerp(b, t) + Vector3.UP * sin(PI * t) * span * 0.2
-		var sag: float = span * lerpf(0.02, 0.07, t)
-		var points: PackedVector3Array = PackedVector3Array()
-		for index: int in SEGMENTS + 1:
-			var u: float = float(index) / SEGMENTS
-			points.append(a.lerp(tip, u) - Vector3.UP * sag * 4.0 * u * (1.0 - u))
+		var rest: PackedVector3Array = lie(to_port * (rope.from as Node3D).global_position, rope.pick, float(rig.port.quay_side), float(rig.port.QUAY_FACE_M), float(rig.hull_x), radius)
+		var points: PackedVector3Array = rest if t >= 0.999 else fly(rest, t)
+		for index: int in points.size(): points[index] = local * points[index]
 		tube(shape, points, radius)
+
+## The port-space rest line of a rope (Patch 2.9 item 3). from: the fairlead;
+## pick: the bollard point; side: the quay side; face: the timber face's
+## distance from the berth centreline; hull_x: the hull's quay-side edge.
+## 1. Out over the rail to just outside the hull, at rail height, so no
+##    point below the rail is inside the hull.
+## 2. A sag across the gap that only falls toward the quay edge (never below
+##    it), to a point clear of the timber face and above the edge strip.
+## 3. Straight to the bollard post (both ends above the quay deck).
+## 4. A full loop round the post under its head.
+static func lie(from: Vector3, pick: Vector3, side: float, face: float, hull_x: float, radius: float) -> PackedVector3Array:
+	var edge_x: float = face - radius - CLEAR_M
+	var lead: Vector3 = Vector3(side * clampf(maxf(absf(from.x), hull_x + radius + CLEAR_M), 0.0, edge_x - 0.05), from.y, from.z)
+	var centre: Vector3 = pick - Vector3.UP * LOOP_DROP_M
+	var loop: float = POST_RADIUS_M + radius + 0.05
+	var back: Vector3 = Vector3(lead.x - centre.x, 0.0, lead.z - centre.z)
+	back = back.normalized() if back.length() > 0.01 else Vector3(side * -1.0, 0.0, 0.0)
+	var land: Vector3 = centre + back * loop
+	var k: float = clampf((side * edge_x - lead.x) / (land.x - lead.x), 0.0, 1.0) if absf(land.x - lead.x) > 0.01 else 0.0
+	var edge: Vector3 = Vector3(side * edge_x, maxf(EDGE_TOP_M + radius, lerpf(lead.y, land.y, k)), lerpf(lead.z, land.z, k))
+	var points: PackedVector3Array = PackedVector3Array([from])
+	# Sag no deeper than a quarter of the drop keeps the curve falling all the
+	# way to the edge point, so it never dips below the quay edge.
+	var sag: float = clampf(minf(lead.distance_to(edge) * 0.05, (lead.y - edge.y) / 4.0), 0.0, 2.0)
+	for index: int in GAP_SEGMENTS + 1:
+		var u: float = float(index) / GAP_SEGMENTS
+		points.append(lead.lerp(edge, u) - Vector3.UP * sag * 4.0 * u * (1.0 - u))
+	var start: float = atan2(back.z, back.x)
+	for index: int in LOOP_SEGMENTS + 1:
+		var angle: float = start + TAU * float(index) / LOOP_SEGMENTS
+		points.append(centre + Vector3(cos(angle), 0.0, sin(angle)) * loop)
+	return points
+
+## The first t of the rest line, lifted in a heaving arc that is highest at
+## the flying end and gone once the line is fast. Lifting only raises it, so
+## it never clips more than the rest line does.
+static func fly(rest: PackedVector3Array, t: float) -> PackedVector3Array:
+	var total: float = 0.0
+	for index: int in rest.size() - 1: total += rest[index].distance_to(rest[index + 1])
+	var reach: float = maxf(total * t, 0.001)
+	var lift: float = sin(PI * t) * rest[0].distance_to(rest[rest.size() - 1]) * 0.2
+	var points: PackedVector3Array = PackedVector3Array([rest[0]])
+	var walked: float = 0.0
+	for index: int in rest.size() - 1:
+		var step: float = rest[index].distance_to(rest[index + 1])
+		var end: float = minf(walked + step, reach)
+		var at: Vector3 = rest[index].lerp(rest[index + 1], (end - walked) / maxf(step, 0.0001))
+		points.append(at + Vector3.UP * lift * sin(PI * 0.5 * end / reach))
+		walked += step
+		if walked >= reach: break
+	if points.size() < 2: points.append(rest[0] + Vector3.UP * 0.01)
+	return points
 
 ## A round toon rope along the points (clockwise faces outward).
 static func tube(shape: ImmediateMesh, points: PackedVector3Array, radius: float) -> void:

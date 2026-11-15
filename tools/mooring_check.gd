@@ -92,6 +92,27 @@ func moor(game: Node, kind: String) -> void:
 			var from: Vector3 = to_port * (rope.from as Node3D).global_position
 			expect(absf(from.x - port.quay_side * port.BOLLARD_X_M) < ship.definition.hull_size_m.x / 2.0, "%s line leaves from its quay-side rail" % kind)
 			expect(from.distance_to(to_port * rope.to) < ship.definition.hull_size_m.z, "%s line is a sensible length" % kind)
+			# Patch 2.9 item 3: the rest line never clips the quay edge or the
+			# hull and ends looped round the bollard post.
+			var rig: Dictionary = game.mooring.rigs[1]
+			var r: float = float(rig.radius)
+			var path: PackedVector3Array = LINES.lie(from, rope.pick, port.quay_side, port.QUAY_FACE_M, rig.hull_x, r)
+			var clear: bool = true
+			for seg: int in range(1, path.size()):
+				var a: Vector3 = path[seg - 1]
+				var b: Vector3 = path[seg]
+				for step: int in 5:
+					var p: Vector3 = a.lerp(b, step / 4.0)
+					var out: float = absf(p.x)
+					# Over the timber face and quay deck: tube bottom above the edge strip / deck.
+					if out + r >= port.QUAY_FACE_M - 0.01 and p.y - r < (LINES.EDGE_TOP_M if out < 21.0 + r else 4.0) - 0.01: clear = false
+					# Inside the hull's quay-side edge: only at rail height or above.
+					if out - r < rig.hull_x and seg > 1 and p.y < from.y - 0.01: clear = false
+					# Never through the bollard post.
+					if seg > 1 and Vector2(p.x - rope.pick.x, p.z - rope.pick.z).length() < LINES.POST_RADIUS_M + r - 0.01: clear = false
+			expect(clear, "%s line clears the quay edge, hull and bollard" % kind)
+			var last: Vector3 = path[path.size() - 1]
+			expect(Vector2(last.x - rope.pick.x, last.z - rope.pick.z).length() < LINES.POST_RADIUS_M + r + 0.2 and absf(last.y - (rope.pick.y - LINES.LOOP_DROP_M)) < 0.01, "%s line loops round the bollard" % kind)
 		# Bow line leads ahead of the bow, stern line astern of the stern.
 		var ahead: Vector3 = to_port.basis * ship.global_basis.z
 		if ropes.size() >= 2:
