@@ -1026,7 +1026,7 @@ replays the arrival, sharp 3D views on Retina) in a draft PR with the Windows
 and Mac playtest checklist. All checked on Linux (headless checks and xvfb
 screenshots) only, not yet seen on Windows or a Mac.
 
-## 13. Patch 2.8 (Andy, November 14, 2026): pirate ships
+## 13. Patch 2.9.1 (Andy, November 14, 2026; planned as 2.8): pirate ships
 
 Andy wants massive, detailed pirate ships in the hangar's fun-boat section.
 Starts after Patch 2.7. Same rules as before (one PR each, Godot 4.7.2,
@@ -1054,13 +1054,13 @@ ships. Like the small boats: no cargo jobs, just for sailing.
    debug list include both ships. Item 4's PR carries a short playtest
    checklist.
 
-**Patch 2.8 status (November 14, 2026):** planned, starts after Patch 2.7.
+**Patch 2.9.1 status (November 14, 2026):** planned, renamed from 2.8 by Andy; starts after Patch 2.9.
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 
 Andy's playtest report with screenshots in `docs/reference/patch_2_9/`.
 Because these are problems Andy reported himself, Patch 2.9 runs right
-after Patch 2.7 item 4 and **before** Patch 2.8. Same rules as before (one
+after Patch 2.7 item 4 and **before** the pirate ships (now Patch 2.9.1). Same rules as before (one
 PR each, Godot 4.7.2, Windows and Mac, every port ID, job and save loading,
 smooth frame time, debug mode keeps working). Each visual fix's PR shows a
 before/after screenshot next to the matching reference image.
@@ -1122,4 +1122,4 @@ before/after screenshot next to the matching reference image.
      all of 2.9 (Windows and Mac).
 
 **Patch 2.9 status (November 14, 2026):** planned, starts after Patch 2.7
-item 4, before Patch 2.8.
+item 4, before Patch 2.9.1 (pirate ships).
