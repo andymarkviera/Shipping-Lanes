@@ -5,6 +5,9 @@ extends SceneTree
 ## to the top-left, and the screen stays as a backdrop below the menu layer; a
 ## second press skips the arrival. With a display, `-- --screenshot=<path>`
 ## saves the attract screen and `--arrived-screenshot=<path>` the arrival.
+## Patch 2.7 item 4: a replay sails straight in without "Press Any Button";
+## Start's dive tilts the camera down to the ship, ignores presses, fades the
+## screen and fires `departed` (`--dive-screenshot=<path>` saves mid-dive).
 ## Run: godot --headless --path . --script res://tools/check_title.gd
 var failures: int = 0
 
@@ -53,8 +56,41 @@ func run() -> void:
 		if event is InputEventKey and shots.has("--arrived-screenshot"): await shoot(shots["--arrived-screenshot"], 30)
 		title.queue_free()
 		await process_frame
+	await check_replay_and_departure(shots)
 	print("TITLE_CHECK %s" % ("passed" if failures == 0 else "failed: %d" % failures))
 	quit(1 if failures else 0)
+
+func check_replay_and_departure(shots: Dictionary) -> void:
+	var title: TitleScreen = TitleScreen.new()
+	root.add_child(title)
+	await process_frame
+	title.replay()
+	check(title.arriving >= 0.0 and not title.press.visible, "A replay must sail in without Press Any Button")
+	var started: int = Time.get_ticks_msec()
+	while not title.arrived and Time.get_ticks_msec() - started < 15000: await process_frame
+	check(title.arrived, "The replayed arrival must finish")
+	var left: Array[bool] = [false]
+	title.departed.connect(func() -> void: left[0] = true)
+	title.depart()
+	check(title.layer >= 10, "The dive must draw above the menu")
+	for frame: int in 20: await process_frame
+	send(key(KEY_SPACE, false))
+	check(not left[0] and title.departing > 0.0, "A press must not cut the dive short")
+	if shots.has("--dive-screenshot"):
+		while title.departing < 1.2: await process_frame
+		await shoot(shots["--dive-screenshot"], 0)
+	started = Time.get_ticks_msec()
+	while not left[0] and Time.get_ticks_msec() - started < 15000: await process_frame
+	check(left[0], "The dive must end in `departed`")
+	check(title.ship_camera.rotation.x > -PI / 3.0 and title.ship_camera.size < title.ship_view_size, "The camera must end low and close on the ship")
+	check(is_instance_valid(title.fade) and title.fade.veil.modulate.a >= 1.0, "The screen must be covered when `departed` fires")
+	# No scene change here: the veil still lifts by itself.
+	var fade: ScreenFade = title.fade
+	title.queue_free()
+	fade.reveal()
+	started = Time.get_ticks_msec()
+	while is_instance_valid(fade) and Time.get_ticks_msec() - started < 5000: await process_frame
+	check(not is_instance_valid(fade), "The fade must lift and free itself")
 
 func shoot(path: String, frames: int) -> void:
 	for frame: int in frames: await process_frame
