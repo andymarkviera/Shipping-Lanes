@@ -341,7 +341,13 @@ func draw(port: Node3D, crane: Dictionary) -> void:
 	else:
 		crane.carried.hide()
 	crane.trolley.position = Vector3(hook.x, BOOM_Y - 1.6, hook.z)
-	crane.spreader.transform = Transform3D(basis * Basis.from_scale(crane.spreader_size), hook)
+	# Patch 2.9 item 2: the spreader is built at its real size, not a unit box
+	# stretched by its node; a stretched box's ink outline grew into the dark
+	# bar across each crane (crane_black_bar_*.jpg).
+	if crane.spreader_built != crane.spreader_size:
+		crane.spreader_built = crane.spreader_size
+		crane.spreader.mesh = unit_box(ORANGE, crane.spreader_size)
+	crane.spreader.transform = Transform3D(basis, hook)
 	var top: float = BOOM_Y - 2.6
 	crane.rope.position = Vector3(hook.x, (top + hook.y) / 2.0, hook.z)
 	crane.rope.scale = Vector3(1, maxf(0.1, top - hook.y), 1)
@@ -369,14 +375,14 @@ func make_crane(port: Node3D, z: float) -> Dictionary:
 	node.add_child(trolley)
 	var rope: MeshInstance3D = instance(unit_box(INK, Vector3(0.3, 1, 0.3)))
 	node.add_child(rope)
-	var spreader: MeshInstance3D = instance(unit_box(ORANGE, Vector3.ONE))
+	var spreader: MeshInstance3D = instance(unit_box(ORANGE, Vector3(2.8, 0.6, 6.5)))
 	node.add_child(spreader)
 	var carried: MeshInstance3D = MeshInstance3D.new()
 	carried.visibility_range_end = SEEN_M
 	carried.hide()
 	node.add_child(carried)
 	var crane: Dictionary = {"node": node, "boom": boom, "trolley": trolley, "rope": rope, "spreader": spreader,
-		"carried": carried, "z": z, "park_z": z, "raised": 1.0, "move": {}, "work": -1, "band": [], "want": z, "index": 0, "spreader_size": Vector3(2.8, 0.6, 6.5)}
+		"carried": carried, "z": z, "park_z": z, "raised": 1.0, "move": {}, "work": -1, "band": [], "want": z, "index": 0, "spreader_size": Vector3(2.8, 0.6, 6.5), "spreader_built": Vector3(2.8, 0.6, 6.5)}
 	draw(port, crane)
 	return crane
 
@@ -432,7 +438,9 @@ func frame_mesh(side: float) -> ArrayMesh:
 	# Back boom (fixed) from the sea legs to the counterweight end.
 	parts.append([ORANGE, Vector3(BACK_Q - SEA_LEG_Q, 2.4, 2.4), Vector3(side * (SEA_LEG_Q + BACK_Q) / 2.0, BOOM_Y, 0)])
 	parts.append([WHITE, Vector3(10.0, 4.5, 7.0), Vector3(side * (BACK_Q - 6.0), BOOM_Y + 3.4, 0)])
-	parts.append([INK, Vector3(3.0, 3.0, 4.0), Vector3(side * (BACK_Q - 1.0), BOOM_Y - 2.6, 0)])
+	# Counterweight and boom head are white, not ink: as black blocks they read
+	# as a dark bar at each end of the crane (Patch 2.9 item 2).
+	parts.append([WHITE, Vector3(3.0, 3.0, 4.0), Vector3(side * (BACK_Q - 1.0), BOOM_Y - 2.6, 0)])
 	# A-frame head tower over the sea legs, where the boom stays hang from.
 	parts.append([ORANGE, Vector3(1.4, 14.0, 1.4), Vector3(side * (SEA_LEG_Q + 1.0), BOOM_Y + 7.0, 0)])
 	parts.append([ORANGE, Vector3(1.4, 14.0, 1.4), Vector3(side * (LAND_LEG_Q - 1.0), BOOM_Y + 7.0, 0)])
@@ -444,7 +452,7 @@ func boom_mesh(side: float) -> ArrayMesh:
 	var length: float = SEA_LEG_Q - BOOM_TIP_Q
 	return build("boom_%d" % side, [
 		[ORANGE, Vector3(length, 2.4, 2.4), Vector3(-side * length / 2.0, 0, 0)],
-		[INK, Vector3(2.0, 3.0, 3.0), Vector3(-side * (length - 1.0), 0.3, 0)],
+		[WHITE, Vector3(2.0, 3.0, 3.0), Vector3(-side * (length - 1.0), 0.3, 0)],
 		[WHITE, Vector3(length * 0.6, 0.4, 0.4), Vector3(-side * length * 0.3, 1.8, 0)]])
 
 func trolley_mesh() -> ArrayMesh:

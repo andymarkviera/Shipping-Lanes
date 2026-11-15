@@ -7260,3 +7260,27 @@ Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`,
 `rain_biome_check`, `desert_biome_check`, `tropical_biome_check`,
 `polar_biome_check`, `check_title` (xvfb): all passed. Not run: Windows, Mac,
 an export, a playtest.
+
+## Patch 2.9 item 2 — container crane black bar (November 15, 2026)
+
+- **Cause:** the spreader was a 1 m unit box stretched to 2.8 x 0.6 x 6.5 m by
+  its node. Its ink-outline shell was stretched by the same 6.5 along the quay,
+  which made a dark bar about 20 m wide across each crane at hook height. In
+  fog it looked grey and see-through (`crane_black_bar_1..3.jpg`). Item 1's
+  outline fix had already shrunk the bar. This item removes the cause: the
+  spreader mesh is now built at its real size (one mesh per container size,
+  rebuilt only when the size changes), so nothing depends on the outline
+  shader's scale handling. The ink-black boom-head and counterweight blocks
+  at the two ends of each crane (the black squares in the photos) are now
+  white, the same colour as the machinery house. The bogies stay dark.
+  Booms, trolley, spreader, rope and all crane behaviour are unchanged. Only
+  `features/ports/container_cranes.gd` changed.
+- **Screenshots** (Linux, xvfb, 1600x900, a scratch script that was not
+  committed): `docs/reference/patch_2_9/crane_black_bar_{before,after}.png`
+  (from about 400 m out; "before" uses the outline shader from before item 1,
+  as Andy played it) and `cranes_close_{before,after}.png` (current main
+  compared with this fix).
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
+(226 scripts), `crane_check` (153 checks, ships 1/3/5 load and unload): passed.
+Not run: Windows, Mac, an export, a playtest.
