@@ -140,3 +140,14 @@ Known limit: `addons/godot-sqlite` ships Windows and Linux libraries only, so
 the Mac app has no SQLite library yet and saving will not work on the Mac
 until the Mac compatibility pass (Patch 2.6 item 2) adds the macOS library
 and fixes any other Windows-only code.
+
+## Publishing a patch for the launcher
+
+When a patch is complete, publish a GitHub release in this repo tagged `vMAJOR.MINOR.PATCH` (for example `v2.9.0`, `v2.9.1`), with the patch notes as its body and these four assets, named exactly:
+
+- `Shipping-Lanes-Windows-x64.zip`
+- `Shipping-Lanes-macOS.zip`
+- `Shipping-Lanes-Launcher-Windows.exe`
+- `Shipping-Lanes-Launcher-macOS.zip`
+
+`.github/workflows/publish_release.yml` mirrors every published release (assets and notes only, never source) to the public repo `andymarkviera/Shipping-Lanes-Releases`. The launcher reads `https://api.github.com/repos/andymarkviera/Shipping-Lanes-Releases/releases/latest` with no token. To re-mirror an older release, run the workflow by hand with its tag.
