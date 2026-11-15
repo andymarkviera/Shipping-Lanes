@@ -62,6 +62,10 @@ const SETTLE_S: float = 0.25
 const JUMP_PITCH_LIMIT_RAD: float = deg_to_rad(14.0)
 const JUMP_ROLL_LIMIT_RAD: float = deg_to_rad(12.0)
 var jump_lift: float = 0.0
+## Patch 2.9 item 5: bow-up trim on the plane, reached from about a third of
+## cruise speed, and how far the hull rises with it (the stern stays wet).
+var plane_trim_rad: float = 0.0
+var plane: float = 0.0
 var chop_height_m: float = 0.0
 var top_speed_mps: float = 10.0
 var airborne: bool = false
@@ -91,6 +95,7 @@ func configure_hull(definition: ShipDefinition) -> void:
 	roll_limit_rad = MAX_ROLL_RAD * roll_scale
 	jump_lift = maxf(definition.jump_lift, 0.0)
 	chop_height_m = maxf(definition.chop_height_m, 0.0)
+	plane_trim_rad = deg_to_rad(clampf(definition.plane_trim_degrees, 0.0, 8.0))
 	top_speed_mps = maxf(definition.forward_acceleration_mps2 / maxf(definition.linear_drag_per_second, 0.001), 1.0)
 	if jump_lift > 0.0:
 		pitch_limit_rad = maxf(pitch_limit_rad, JUMP_PITCH_LIMIT_RAD)
@@ -143,11 +148,14 @@ func _process(delta: float) -> void:
 	var pitch: float = swell_pitch + (sin(clock * 0.55) * deg_to_rad(0.5) + sin(clock * 1.9) * deg_to_rad(1.4) * pace - SPEED_TRIM_RAD * speed_fraction) * strength * pitch_scale
 	var roll: float = swell_roll + (sin(clock * 0.73 + 0.8) * deg_to_rad(1.2) * (1.0 + 1.5 * pace) * strength + lean * TURN_LEAN_RAD) * roll_scale
 	heave_m = clampf(heave_m, -MAX_HEAVE_M, MAX_HEAVE_M)
+	plane = smoothstep(0.15, 0.6, speed_fraction) if plane_trim_rad > 0.0 else 0.0
+	pitch -= plane_trim_rad * plane
+	var plane_lift: float = sin(plane_trim_rad * plane) * half_length * 0.45
 	if jump_lift > 0.0 and step > 0.0:
 		pitch = planing(step, swell_heave, signed_speed, pitch, strength)
-		position.y = jump_y + land_dip - load_sink_m
+		position.y = jump_y + land_dip - load_sink_m + plane_lift
 	else:
-		position.y = heave_m - load_sink_m
+		position.y = heave_m - load_sink_m + plane_lift
 	rotation.x = clampf(pitch, -pitch_limit_rad, pitch_limit_rad)
 	rotation.z = clampf(roll, -roll_limit_rad, roll_limit_rad)
 

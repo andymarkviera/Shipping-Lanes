@@ -7350,3 +7350,36 @@ and heavy ladder checks, `check_m1_voyage`, `mooring_check` and
 `world_land_check`: all passed.
 Not run: Windows, Mac, an export, a playtest. 200 kn has not been seen on
 screen, and frame time at 200 kn has not been measured.
+
+## Patch 2.9 item 5 — cigarette boat remodel (November 15, 2026)
+
+- **Model:** the offshore racer is rebuilt as a Cigarette Racing-style
+  powerboat (`chunky_look.gd` `racer_hull_mesh` and `_dress_racer`): a long,
+  narrow (4.6:1) deep-V hull with sharp chines, a step in the bottom just aft
+  of amidships, a pointed bow and a flat transom; yellow, red and black racing
+  bands that sweep up toward the stern, a black deck stripe and race-number
+  roundels; long foredeck with a hatch, low wraparound windscreen, open
+  cockpit with two bucket seats, a bench, dash and wheel; four outboards on
+  the transom. Its mooring bitts are small flush cleats on the low deck (the
+  fairlead markers stay). Toon shaded and outlined like every other model.
+- **On the plane:** new record field `plane_trim_degrees` (0 for every other
+  hull, 5 for the racer). `ShipVisualMotion` trims the bow up from about a
+  third of cruise speed and lifts the hull with it so the stern stays wet, not
+  sunk; at rest it floats level. Wave-jumps are unchanged.
+- **Rooster tail:** `BowSplash` throws a plume of spray up from behind the
+  transom of a planing hull while it is on the water going ahead (none in the
+  air or astern); spray pool 96 -> 140 chunks, half rate on low quality.
+- **Checks added:** `small_boats_check` checks the hull is long, narrow and
+  deep-V, the model is fully dressed, the racer is level at rest (pitch
+  within 0.6 deg, height within 5 cm) and bow-up (at least 3.5 deg) and lifted
+  on the plane, and that only the racer has a planing trim.
+- **Screenshots:** `docs/reference/patch_2_9/cigarette_boat_{before,after}.png`
+  (Linux, xvfb, 1600x900, model on a flat sea).
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
+(226 scripts), `check_catalog`, `check_flow`, `check_starter`,
+`small_boats_check` (79), `mooring_check`, `hangar_check`, `debug_game_check`,
+`water_probe`, `contracts_probe`, `feedback_probe`, `camera_probe`,
+`handling_probe`, `collision_probe`: all passed.
+Not run: Windows, Mac, an export, a playtest. The rooster tail and the
+bow-up ride have not been seen in the live game on screen.

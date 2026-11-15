@@ -5,7 +5,7 @@ extends Node3D
 ## spray that kick up, arc out and fall back into the water. All of it grows
 ## with speed and is gone when the ship stops. Works in world space.
 const SPLASH_SHADER = preload("res://features/water/bow_splash.gdshader")
-const MAX_CHUNKS: int = 96
+const MAX_CHUNKS: int = 140
 ## Fraction of full foam strength below which there is no splash at all.
 const START_STRENGTH: float = 0.1
 const GRAVITY: float = 16.0
@@ -23,6 +23,10 @@ var crest_peak_m: float = 0.0
 ## Patch 2.4 item 8: 1 for every ladder ship; small boats throw a smaller splash
 ## (their wake half-width over ship 1's 6.5 m, at least 0.35).
 var spray_scale: float = 1.0
+## Patch 2.9 item 5: hulls that trim bow-up on the plane throw a rooster tail
+## from the transom, 0 when stopped, 1 at full foam strength.
+var rooster: float = 0.0
+var rooster_owed: float = 0.0
 
 func _ready() -> void:
 	top_level = true
@@ -74,6 +78,16 @@ func update(delta: float) -> void:
 			throw_chunk()
 	else:
 		owed = 0.0
+	rooster = 0.0
+	if is_instance_valid(wake.visual) and wake.visual.plane_trim_rad > 0.0 and wake.travel_sign() > 0.0:
+		rooster = power * wake.visual.plane
+	if rooster > 0.0:
+		rooster_owed += maxf(delta, 0.0) * (10.0 + 26.0 * rooster) * (0.5 if ocean.quality == 0 else 1.0)
+		while rooster_owed >= 1.0:
+			rooster_owed -= 1.0
+			throw_rooster()
+	else:
+		rooster_owed = 0.0
 	move_chunks(maxf(delta, 0.0))
 	draw_chunks()
 	draw_crest()
@@ -99,6 +113,26 @@ func throw_chunk() -> void:
 		"position": start,
 		"velocity": velocity,
 		"size": (0.6 + 1.7 * power) * random.randf_range(0.55, 1.2) * spray_scale,
+		"age": 0.0,
+		"axis": Vector3(random.randf_range(-1.0, 1.0), random.randf_range(-1.0, 1.0), random.randf_range(-1.0, 1.0)).normalized(),
+		"spin": random.randf_range(-5.0, 5.0),
+	})
+
+## Patch 2.9 item 5: one lump of the rooster tail, thrown up from the props
+## behind the transom; it hangs back from the boat in a tall plume and falls.
+func throw_rooster() -> void:
+	if chunks.size() >= MAX_CHUNKS: return
+	var ship: CharacterBody3D = wake.ship
+	var forward: Vector3 = ship.global_basis.z
+	var start: Vector3 = ship.global_position - forward * (wake.half_length + 0.4) + ship.global_basis.x * random.randf_range(-0.4, 0.4) * wake.half_width
+	start.y = water_height(start.x, start.z) + 0.1
+	var velocity: Vector3 = Vector3(ship.velocity.x, 0, ship.velocity.z) * random.randf_range(0.55, 0.8)
+	velocity += Vector3.UP * (5.0 + 7.0 * rooster) * random.randf_range(0.7, 1.0)
+	velocity += ship.global_basis.x * random.randf_range(-1.0, 1.0)
+	chunks.append({
+		"position": start,
+		"velocity": velocity,
+		"size": (0.5 + 1.0 * rooster) * random.randf_range(0.6, 1.2),
 		"age": 0.0,
 		"axis": Vector3(random.randf_range(-1.0, 1.0), random.randf_range(-1.0, 1.0), random.randf_range(-1.0, 1.0)).normalized(),
 		"spin": random.randf_range(-5.0, 5.0),
