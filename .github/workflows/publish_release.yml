@@ -1,0 +1,77 @@
+name: Publish release
+
+# Mirrors a release of this private repo to the public repo
+# andymarkviera/Shipping-Lanes-Releases, so the launcher can read
+# https://api.github.com/repos/andymarkviera/Shipping-Lanes-Releases/releases/latest
+# without a token. Only the release assets and notes are copied, never source.
+#
+# Needs the repository secret RELEASES_TOKEN: a fine-grained token with
+# Contents read/write on Shipping-Lanes-Releases only.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag of the release in this repo to mirror"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+env:
+  PUBLIC_REPO: andymarkviera/Shipping-Lanes-Releases
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Resolve tag
+        id: tag
+        env:
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${EVENT_TAG:-$INPUT_TAG}"
+          if [ -z "$tag" ]; then echo "No tag given"; exit 1; fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Download assets and notes from this repo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D dist
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json name,body,isPrerelease > meta.json
+          jq -r '.body // ""' meta.json > notes.md
+          ls -la dist
+          if [ -z "$(ls -A dist)" ]; then echo "Release $TAG has no assets"; exit 1; fi
+
+      - name: Publish to the public releases repo
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then echo "RELEASES_TOKEN secret is missing"; exit 1; fi
+          name="$(jq -r '.name // empty' meta.json)"
+          [ -n "$name" ] || name="$TAG"
+          flag="--latest"
+          if [ "$(jq -r '.isPrerelease' meta.json)" = "true" ]; then flag="--prerelease"; fi
+          if gh release view "$TAG" -R "$PUBLIC_REPO" >/dev/null 2>&1; then
+            gh release edit "$TAG" -R "$PUBLIC_REPO" --title "$name" --notes-file notes.md
+            gh release upload "$TAG" dist/* -R "$PUBLIC_REPO" --clobber
+          else
+            # --target is required because the public repo does not share this repo's commits.
+            gh release create "$TAG" dist/* -R "$PUBLIC_REPO" --title "$name" --notes-file notes.md --target main $flag
+          fi
+          echo "Published $TAG to https://github.com/$PUBLIC_REPO/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
