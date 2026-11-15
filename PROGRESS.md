@@ -7197,3 +7197,34 @@ runner with identical output before and after the change. Under xvfb at
 S / Down / Esc walk. Not run: an export, Windows, Mac (Georgia only seen via its
 Linux fallback, DejaVu Serif), a real gamepad, sound on real hardware, a
 playtest.
+
+## Patch 2.7 item 4 — transitions and scaling (November 15, 2026)
+
+- **Start** (`title_screen.gd` `depart`, `main.gd` `start_game`): the menu
+  and logo fade, the camera follows the menu ship from straight above down to a
+  low side view (34 degrees, closing in 1.9x) over 1.9 s while the wake and sea
+  keep moving, then the screen fades to the sea's blue and the game loads under
+  it. Presses during the dive are ignored (Cmd/Ctrl/Alt shortcuts still work).
+- **Back to the main menu**: the game's Esc-menu Main menu (`port_test.gd`
+  `leave`, after the save checkpoint as before) fades to the same blue, and the
+  main menu replays the ship's arrival (no "Press Any Button"; a press skips).
+  The fade (`features/title/screen_fade.gd`, new, in both export presets) lives
+  on the tree root, waits a few frames into the new scene so its load hitch is
+  hidden, then lifts. Headless runs skip both fades, so scripted checks are
+  unchanged. Friends-client menu unchanged (no replay).
+- **Scaling**: the title's 3D views now render at the window's real pixel size
+  instead of the logical size, so on a 2x Retina screen the ship is drawn at
+  full resolution (the sea is capped at 1.5x like the game's Mac 3D view).
+  Layout was already scaled by screen height; checked again at 16:9, 16:10 and
+  21:9.
+- `check_title` now also checks the replay, the dive, the fade and that the
+  fade frees itself.
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`,
+`--quit-after 10`, `--title-check` boot, `check_title` (headless and under xvfb
+at 1672x941, 1440x900 and 2560x1080 with screenshots), `check_flow`,
+`check_controls`, `check_starter`, `check_catalog`, `check_m1_voyage`,
+`debug_game_check`, friends-client menu check: all passed. Not run: the full
+Start-to-game-and-back loop on a screen (checked in parts only), a Retina
+display (content scale 2 was not simulated), an export, Windows, Mac, a real
+gamepad, frame-time measurement on real hardware, a playtest.

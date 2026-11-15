@@ -10,9 +10,15 @@ extends CanvasLayer
 ## cruises in place (layout from docs/reference/main_menu/menu_ship_arrives.png).
 ## Pressing again skips. Once arrived the screen stays as the menu's backdrop,
 ## on a layer below the menu.
+## Patch 2.7 item 4: Start sends the camera down after the ship to sea level and
+## fades into the game (`depart`); coming back to the main menu replays the
+## arrival without "Press Any Button" (`replay`). The 3D views render at the
+## window's full pixel size, so the ship stays crisp on Retina screens.
 
 ## The ship has arrived (or the arrival was skipped): the menu can show.
 signal dismissed
+## Start's camera dive is over and the screen is covered: change scene now.
+signal departed
 const LOGO: Texture2D = preload("res://features/title/title_logo.png")
 const PRESS: Texture2D = preload("res://features/title/press_any_button.png")
 ## The mockup's light-blue wave streaks and curled swirl foam, sea removed.
@@ -44,6 +50,12 @@ const CRUISE_SPEED: float = 0.075
 ## Container ladder tiers long enough to carry the mockup's full deck of boxes.
 const MENU_SHIPS: Array[String] = ["container_3", "container_4", "container_5"]
 ## Bright box colours like the mockup's deck load.
+## Start: the camera follows the ship down from straight above to a low side
+## view (degrees above the sea) while closing in, then fades into the game.
+const DEPART_SECONDS: float = 1.9
+const DEPART_PITCH: float = 34.0
+const DEPART_ZOOM: float = 1.9
+const DEPART_FADE: float = 0.5
 const BOX_COLOURS: PackedColorArray = [Color("d7263d"), Color("2a6fdb"), Color("f28c28"), Color("f6c445"), Color("2ec4d6"), Color("b5233a"), Color("3b4cc0")]
 
 var clock: float = 0.0
@@ -51,6 +63,11 @@ var clock: float = 0.0
 var arriving: float = -1.0
 var arrived: bool = false
 var water_shift: float = 0.0
+## Seconds since Start; -1 until then.
+var departing: float = -1.0
+var fade: ScreenFade
+var ship_view_size: float = 1.0
+var ship_rest: Vector2 = Vector2.ZERO
 var viewport: SubViewport
 var ocean: OceanPresentation
 var sea_camera: Camera3D
@@ -90,16 +107,13 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(root)
 	# The sea: the game's own ocean in its own small world, camera straight down.
-	var holder: SubViewportContainer = SubViewportContainer.new()
-	holder.stretch = true
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.add_child(holder)
 	viewport = SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
 	viewport.positional_shadow_atlas_size = 0
-	holder.add_child(viewport)
+	# The sea has no fine detail: like the game's 3D view on a Mac (Patch 2.6
+	# item 4) it renders at up to 1.5x the logical size, keeping the GPU cool.
+	view_rect(viewport, 1.5)
 	ocean = OceanPresentation.new()
 	ocean.palette = OCEAN_PALETTE
 	ocean.quality = 1
@@ -119,6 +133,25 @@ func _ready() -> void:
 	press.resized.connect(func() -> void: press.pivot_offset = press.size * 0.5)
 	root.resized.connect(func() -> void: refresh_layout())
 	refresh_layout.call_deferred()
+
+## A full-screen picture of a 3D view. Unlike a stretching SubViewportContainer
+## it renders at the window's real pixel size, so a 2x Retina screen (content
+## scale 2) gets a sharp ship and sea instead of a half-size image scaled up.
+func view_rect(view: SubViewport, max_scale: float) -> void:
+	var picture: TextureRect = TextureRect.new()
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_SCALE
+	picture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(picture)
+	picture.add_child(view)
+	picture.texture = view.get_texture()
+	picture.resized.connect(fit_view.bind(picture, view, max_scale))
+	fit_view(picture, view, max_scale)
+
+func fit_view(picture: TextureRect, view: SubViewport, max_scale: float) -> void:
+	var scale_factor: float = clampf(get_window().content_scale_factor, 1.0, max_scale)
+	view.size = Vector2i((picture.size * scale_factor).round()).max(Vector2i.ONE)
 
 ## Straight down: screen up is -Z, screen right is +X.
 func top_down_camera(height_m: float) -> Camera3D:
@@ -144,18 +177,13 @@ func build_wake() -> void:
 ## chunky toon model the hangar shows, every slot loaded. Built up front so the
 ## press does not hitch; its viewport only draws once the arrival starts.
 func build_ship() -> void:
-	var holder: SubViewportContainer = SubViewportContainer.new()
-	holder.stretch = true
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.add_child(holder)
 	ship_view = SubViewport.new()
 	ship_view.own_world_3d = true
 	ship_view.transparent_bg = true
 	ship_view.msaa_3d = Viewport.MSAA_2X
 	ship_view.positional_shadow_atlas_size = 0
 	ship_view.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	holder.add_child(ship_view)
+	view_rect(ship_view, 4.0)
 	var environment: Environment = Environment.new()
 	environment.background_mode = Environment.BG_CLEAR_COLOR
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -171,7 +199,8 @@ func build_ship() -> void:
 	ship_kind = MENU_SHIPS[randi() % MENU_SHIPS.size()]
 	var definition: ShipDefinition = PROGRESSION.definition(ship_kind)
 	ship_width_m = definition.hull_size_m.x
-	ship_camera = top_down_camera(definition.hull_size_m.z / SHIP_SCREEN_LENGTH)
+	ship_view_size = definition.hull_size_m.z / SHIP_SCREEN_LENGTH
+	ship_camera = top_down_camera(ship_view_size)
 	ship_view.add_child(ship_camera)
 	ship_camera.current = true
 	ship = Node3D.new()
@@ -256,6 +285,7 @@ func _process(delta: float) -> void:
 	sea.offset += STREAK_DRIFT * delta - Vector2(slide * MOCKUP.y, 0.0)
 	sea.queue_redraw()
 	sea_camera.position.x = water_shift * SEA_VIEW_METRES
+	if departing >= 0.0: update_departure(delta)
 	# The ocean mesh follows in big steps; its waves are drawn in world space.
 	ocean.position.x = snappedf(sea_camera.position.x, 500.0)
 	if arriving < 0.0:
@@ -278,6 +308,7 @@ func update_arrival() -> void:
 	var from_x: float = -aspect * 0.5 - SHIP_SCREEN_LENGTH * 0.5 - 0.05
 	var t: float = clampf((arriving - SHIP_START) / (ARRIVAL_SECONDS - SHIP_START), 0.0, 1.0)
 	var at: Vector2 = Vector2(lerpf(from_x, rest.x, 1.0 - pow(1.0 - t, 3.0)), rest.y)
+	ship_rest = at
 	ship.position.x = at.x * ship_camera.size
 	ship.position.z = at.y * ship_camera.size
 	wake_material.set_shader_parameter("aspect", aspect)
@@ -293,6 +324,13 @@ func settle() -> void:
 	dismissed.emit()
 
 func _input(event: InputEvent) -> void:
+	if departing >= 0.0:
+		# Nothing else reacts during the dive; Cmd/Ctrl/Alt shortcuts still work.
+		var held: InputEventKey = event as InputEventKey
+		if held != null and (held.meta_pressed or held.ctrl_pressed or held.alt_pressed): return
+		if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			get_viewport().set_input_as_handled()
+		return
 	if arrived or not visible: return
 	var key: InputEventKey = event as InputEventKey
 	if key != null:
@@ -328,3 +366,52 @@ func set_backdrop_visible(on: bool) -> void:
 	set_process(on)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	if arriving >= 0.0: ship_view.render_target_update_mode = viewport.render_target_update_mode
+
+## Back from a game: the ship sails in again, straight to the menu (no "Press
+## Any Button"). Pressing still skips.
+func replay() -> void:
+	press.visible = false
+	dismiss()
+
+## Start: the logo fades, the camera follows the ship down to sea level, then the
+## screen fades to the sea's blue and `departed` fires. Pressing does nothing.
+func depart() -> void:
+	if departing >= 0.0: return
+	if not arrived:
+		arriving = ARRIVAL_SECONDS
+		update_arrival()
+		settle()
+	departing = 0.0
+	layer = 10
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	sea_camera.far = 2000.0
+	ship_camera.far = 1000.0
+
+func update_departure(delta: float) -> void:
+	# A slow frame must not skip the dive.
+	departing += minf(delta, 1.0 / 30.0)
+	var e: float = smoothstep(0.0, DEPART_SECONDS, departing)
+	logo.modulate.a = 1.0 - clampf(departing / 0.45, 0.0, 1.0)
+	var pitch: float = deg_to_rad(lerpf(90.0, DEPART_PITCH, e))
+	var zoom: float = lerpf(1.0, DEPART_ZOOM, e)
+	# The point the camera looks at moves from the screen centre onto the ship.
+	var focus: Vector2 = ship_rest * e
+	orbit(ship_camera, Vector3(focus.x, 0.0, focus.y) * ship_view_size, pitch, ship_view_size / zoom)
+	orbit(sea_camera, Vector3(water_shift + focus.x, 0.0, focus.y) * SEA_VIEW_METRES, pitch, SEA_VIEW_METRES / zoom)
+	# The flat streaks and wake lie on the sea: an ortho camera tilted by pitch
+	# squashes the sea's screen-up axis by sin(pitch), so a 2D scale matches it.
+	var scale_by: Vector2 = Vector2(zoom, zoom * sin(pitch))
+	var centre: Vector2 = root.size * 0.5
+	for layer_item: Control in [sea, wake]:
+		layer_item.scale = scale_by
+		layer_item.position = centre - centre * scale_by - focus * root.size.y * scale_by
+	if fade == null and departing >= DEPART_SECONDS - DEPART_FADE:
+		fade = ScreenFade.cover(get_tree(), DEPART_FADE)
+		fade.covered.connect(func() -> void: departed.emit(), CONNECT_ONE_SHOT)
+
+## Aim a camera at a sea point from `pitch` above the horizon, looking toward
+## screen-up (-Z), so the ship (bow right) is seen from its side.
+func orbit(camera: Camera3D, target: Vector3, pitch: float, view_size: float) -> void:
+	camera.rotation = Vector3(-pitch, 0.0, 0.0)
+	camera.position = target + Vector3(0.0, sin(pitch), cos(pitch)) * 200.0
+	camera.size = view_size

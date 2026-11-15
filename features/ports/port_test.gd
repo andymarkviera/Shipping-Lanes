@@ -23,6 +23,8 @@ const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 ## True in features/game/game.tscn: the real game (REBUILD_PLAN.md M1). False: Port Test.
 @export var game_mode: bool = false
 var persistence: Node
+## Patch 2.7 item 4: the fade back to the main menu has started.
+var leaving: bool = false
 var world_ports: Array[Node3D] = []
 var port: Node3D
 var ship: HandlingShip
@@ -894,8 +896,14 @@ func deliver() -> void:
 	refresh_jobs()
 
 func leave() -> void:
+	if leaving: return
 	if is_instance_valid(persistence) and not persistence.blocked:
 		if not persistence.checkpoint(): return
+	# Patch 2.7 item 4: fade to the title sea's blue; the main menu then replays
+	# the ship's arrival as the fade lifts. Headless checks leave at once.
+	if DisplayServer.get_name() != "headless":
+		leaving = true
+		await ScreenFade.cover(get_tree(), 0.35).covered
 	loading.disconnect_ship()
 	get_tree().auto_accept_quit = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
