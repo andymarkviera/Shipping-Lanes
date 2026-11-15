@@ -1121,5 +1121,9 @@ before/after screenshot next to the matching reference image.
      nearest one. Item 6B's PR carries a 5-10 line playtest checklist for
      all of 2.9 (Windows and Mac).
 
-**Patch 2.9 status (November 14, 2026):** planned, starts after Patch 2.7
-item 4, before Patch 2.8.
+**Patch 2.9 status (November 15, 2026):** item 1 (city boxes and visual
+sweep: the ink-outline shell now grows in world metres instead of being
+stretched by each object's scale, which removes the translucent boxes round
+the skyline and the blotchy mesa shadows over the desert) is in a draft PR,
+checked on Linux with before/after screenshots, not yet seen on Windows.
+Items 2-6 are planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch 2.8.
