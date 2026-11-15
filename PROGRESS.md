@@ -7228,3 +7228,35 @@ at 1672x941, 1440x900 and 2560x1080 with screenshots), `check_flow`,
 Start-to-game-and-back loop on a screen (checked in parts only), a Retina
 display (content scale 2 was not simulated), an export, Windows, Mac, a real
 gamepad, frame-time measurement on real hardware, a playtest.
+
+## Patch 2.9 item 1 — city boxes and visual oddities sweep (November 15, 2026)
+
+- **Cause:** the ink outline (`features/toon/toon_outline.gdshader`, an inverted
+  hull) pushed vertices out in the mesh's own space, so the push was multiplied
+  by the node's or MultiMesh instance's scale. The city towers are unit boxes
+  scaled up to about 32 x 166 x 32 m, so each outline shell became a dark box tens
+  to hundreds of metres across. Fog made them look translucent
+  (`city_skyscraper_boxes.jpg`, `city_boxes_rain_night.jpg`). The desert mesas
+  (scaled cylinders that cast shadows) had the same oversized shells, and those
+  shells threw the large blotchy octagon shadows over the land
+  (`odd_shadows_on_land.jpg`).
+- **Fix:** the shader divides the push by the object's per-axis scale, so the
+  line is a few centimetres to a few metres wide in the world, depending on
+  camera distance. This is what the shader's comment always said it did.
+  Unscaled meshes are unchanged. Scaled ones (city towers and roofs, mesas,
+  dunes, palms, bushes, hangar models, crane ropes) now get the same line
+  width as everything else. No other files changed.
+- **Sweep:** checked the city skyline, desert, tropical and volcano dressing:
+  no fog volumes, LOD shells or helper meshes are left visible. The outline was
+  the only cause found. One thing is still open: a pale straight strip across the
+  desert land, probably a seam between two land blocks (visible in the after shot). That land is replaced
+  in item 6A, so it is left for that item. The crane bar and the ropes are
+  items 2 and 3.
+- **Screenshots:** `docs/reference/patch_2_9/city_skyscraper_boxes_{before,after}.png`
+  and `odd_shadows_on_land_{before,after}.png` (Linux, xvfb, 1600x900).
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`,
+`check_flow`, `check_starter`, `check_catalog`, `check_controls`,
+`rain_biome_check`, `desert_biome_check`, `tropical_biome_check`,
+`polar_biome_check`, `check_title` (xvfb): all passed. Not run: Windows, Mac,
+an export, a playtest.
