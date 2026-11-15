@@ -7446,3 +7446,41 @@ container, bulk and heavy ladder checks, `geography_probe`,
 `economy_probe`: all passed.
 Not run: Windows, Mac, an export, a playtest; frame time on Andy's PC not
 measured (load-time build and chunk culling only checked headless).
+
+## Patch 2.9 item 6B (draft, not ready) — November 15, 2026
+
+PR #180. **Done:** `natural_land.py` now draws the four strait ports from the
+seed (`PLACE_SEED` 2912) and gives each one a coastal spot. The quay backs onto
+land, the berths and drop area are open sea, and every route is within budget.
+The North and South Pole ports have not moved. The generator also places the
+Palm Isles, Ember Isle (volcano), the four bridge crossings and the desert,
+tropical and rain centres, then re-bends the land round them. Port IDs are
+unchanged. Each moved port keeps its old spot as `"was"`/`"was_side"` in
+`Progression.WORLD`.
+
+**Not done (blocks merge):**
+- Nothing reads `"was"` yet. `leg_units` uses the new spots, so container pay
+  changes on 5 of the 6 strait legs (for example, Brindle–Slatewater goes from 15
+  to 62 units). `voyage_snapshot.valid()` compares saved offers with rebuilt ones,
+  so old game saves that hold these offers are rejected. Saved heavy jobs are also
+  rejected, because their drop is checked against the new port spot.
+- Saves made on the old layout are not moved. `restore()` puts the ship back at
+  its saved pose, which can now be inside land or far from any port.
+- The header comment on `Progression.WORLD` still says that Brindle Quay and
+  Slatewater Works do not move.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
+`check_scripts`, `traversal_budget.py` (17 routes, 0 failures),
+`globe_map_check`, `debug_game_check`, `check_flow`, `check_starter`,
+`check_catalog`, `check_controls`, `check_helm_keys`, `check_title`,
+`small_boats_check`, `mooring_check`, `hangar_check`, the geography,
+collision, world size, water, camera, units, handling, heavy lifter, fuel,
+economy, sailing save and ports probes all passed.
+**Failed on this branch and passed on `origin/main`:** `world_land_check`
+(474 m straight coast), `volcano_check` (292 m from a sea lane),
+`tropical_biome_check`, `desert_biome_check`, `rain_biome_check`,
+`polar_biome_check` (start-port look and restore expectations),
+`check_m1_voyage` (iceberg across the edge; turn-in point south-west of
+Slatewater) and `crane_check` (container_3 stacking). `persistence_probe`
+fails on both branches. CI's smoke set passes but does not run these checks.
+Not run: Windows, Mac, an export or a playtest.
