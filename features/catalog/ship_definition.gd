@@ -25,6 +25,8 @@ extends ContentDefinition
 ## that only rides the swell. chop_height_m is the chop met at speed.
 @export var jump_lift: float = 0.0
 @export var chop_height_m: float = 0.0
+## Patch 2.9 item 5: bow-up trim of a planing hull at speed (0 = none). Level at rest.
+@export var plane_trim_degrees: float = 0.0
 @export var neutral_snap_zone: float = 0.04
 @export var neutral_stop_speed_mps: float = 1.028889
 @export var neutral_stop_deceleration_mps2: float = 0.35
