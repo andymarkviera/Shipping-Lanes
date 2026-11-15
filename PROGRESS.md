@@ -7383,3 +7383,66 @@ Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
 `handling_probe`, `collision_probe`: all passed.
 Not run: Windows, Mac, an export, a playtest. The rooster tail and the
 bow-up ride have not been seen in the live game on screen.
+
+## Patch 2.9 item 6A — natural seeded world land (November 15, 2026)
+
+- **Generator:** `tools/world_layout/natural_land.py` (standard library,
+  seed 2906) bends the old Patch 2.5 block layout with a seeded domain warp
+  and fractal noise into irregular continents, peninsulas, bays and islands,
+  and adds two new seeded isles (Driftwood Isle, Tern Isle) in open sea. It
+  bakes `features/world/natural_land.json` (a 25 m grid of metres from the
+  coast, plus each coast's outline for the maps; added to both export
+  presets) and rewrites `Progression.LAND`/`LANDMASSES` (now 730 blocks: the
+  land's 25 m samples merged into rectangles, one landmass's blocks together)
+  and the volcano's land index. Same seed, same world on every machine.
+- **Kept until 6B:** every port, strait, bridge, biome region and Ember Isle
+  stays where it is, so the shapes are bent round them: open water at every
+  berth, approach, heavy drop area and every sea route the ports used; land
+  behind every quay; each strait its full width with rounded headlands under
+  both ends of its bridge; sea round icebergs and Ember Isle; 2 km of sea at
+  every world edge. Judgement call: the continents keep their rough places
+  (Hearthland west, Ironreach east, Kelp Isle beyond) so nothing breaks
+  before 6B moves the ports; their coasts are all new.
+- **Solid:** one StaticBody per landmass with a box per block (same 12 m
+  boxes as before). Navigation (`clear_line`) tests each block once (its
+  nearest wrapped copy) instead of nine times; the lane graph is built at
+  load, not on the first minimap course.
+- **Toon coast:** `toon_coast.gd` `natural_chunk` contours the grid by
+  marching squares into 70 one-kilometre chunks: the old beach and hill
+  profile by distance from the coast, flat hill tops merged per row (43k
+  triangles in all), biome hill-top colours, steep harbour walls by the
+  quays, surf along the waterline. Chunks are culled past 3.6 km and surf
+  past 1.5 km. Build time about 0.4 s at load on the Linux runner.
+- **Dressing:** desert dunes and mesas, tropical palms and bushes and the city
+  skyline are placed on the grid by distance inland (beach palms follow the
+  coast 42 m in); lagoons ring each small tropical isle by its real coast.
+- **Maps:** the minimap globe draws each coast outline (cut at the horizon so a
+  continent stays one fill); the M globe's atlas is painted from the grid
+  with an ink coastline; the Port Test minimap draws the outlines.
+- **Checks changed:** `world_land_check` (a body per landmass, coast chunks
+  culled, shared materials, harbour walls, seed 2906, no straight coast over
+  400 m away from the quays, bridge ends land within 35 m of the channel
+  because the grid is 25 m), `volcano_check`, `tropical_biome_check`,
+  `desert_biome_check`, `rain_biome_check` read the natural land.
+- **Screenshots:** `docs/reference/patch_2_9/natural_land_{before,after}*.png`
+  (Linux, xvfb, 1600x900: the southern strait and Palm Isles, and the globe
+  atlas page).
+- **Limits:** the four port quays still have straight harbour walls (6B moves
+  the ports). A save made at sea where new land now stands would load inside
+  it; 6B moves such ships to a port. The land is the same 25 m grid for
+  looks and collision, so the solid edge can sit up to about 18 m off the
+  drawn waterline.
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
+(226 scripts), `traversal_budget.py` (17 routes), `world_land_check` (151),
+`volcano_check`, `tropical_biome_check`, `desert_biome_check`,
+`rain_biome_check`, `polar_biome_check`, `globe_map_check`,
+`debug_game_check`, `check_m1_voyage`, `check_flow`, `check_starter`,
+`check_catalog`, `check_controls`, `check_helm_keys`, `check_title`,
+`small_boats_check`, `mooring_check`, `hangar_check`, `crane_check`, the
+container, bulk and heavy ladder checks, `geography_probe`,
+`collision_probe`, `world_size_probe`, `water_probe`, `camera_probe`,
+`units_probe`, `handling_probe`, `heavy_lifter_probe`, `fuel_probe`,
+`economy_probe`: all passed.
+Not run: Windows, Mac, an export, a playtest; frame time on Andy's PC not
+measured (load-time build and chunk culling only checked headless).

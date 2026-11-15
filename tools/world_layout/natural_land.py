@@ -1,0 +1,522 @@
+"""Patch 2.9 item 6A: the natural world land, baked from one fixed seed.
+
+Seeded fractal noise and a domain warp turn the old Patch 2.5 block layout
+into irregular continents, peninsulas, bays and islands (no straight or boxy
+coasts), and a few new seeded islands fill the open sea. Until item 6B moves
+the ports, the shapes are bent round what must stay: every port keeps open
+water at its berths, approach and heavy drop area and land behind its quay;
+every sea route the ports used stays open; each strait keeps its width with
+land on both banks and under each bridge's ends; icebergs keep sea round
+them; Ember Isle stays alone round its volcano.
+
+Writes:
+  features/world/natural_land.json   the signed coast depth grid (metres
+                                     inland, + land / - sea) and a simplified
+                                     outline per landmass for the maps
+  features/game/progression.gd       the LAND cover rectangles, LANDMASSES and
+                                     the volcano's land index (between markers)
+
+Standard library only. Same seed, same world, on every machine:
+
+    python3 tools/world_layout/natural_land.py
+"""
+import base64
+import heapq
+import json
+import math
+import random
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import traversal_budget as tb  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[2]
+SEED = 2906
+CELL = 25.0
+ORIGIN = (-3600.0, -4450.0)
+COUNT = (348, 348)
+# Depth is stored in one byte a sample: DEPTH_STEP metres a step, 0 at 128.
+DEPTH_STEP = 2.0
+WARP_M = 760.0
+NOISE_M = 330.0
+# Keep-clear sea edges wobble out by up to this much, so they are never straight.
+WOBBLE_M = 190.0
+# The Patch 2.5 blocks, kept only as the rough skeleton the seed bends.
+SKELETON = [
+    ("Hearthland", [(-1500, -3700, 1000, 3300), (-1500, -400, 1400, 1100), (-1500, 700, 1100, 1000), (-1500, 1700, 1200, 1300),
+                    (-3300, -2950, 1800, 1900), (-3500, -1050, 2000, 1700), (-3150, 650, 1650, 1350), (-3400, 2000, 1900, 1000),
+                    (-2200, -3860, 700, 910), (-1500, -4150, 2850, 450)]),
+    ("Northern Neck", [(-1500, 3000, 2080, 400), (780, 3000, 2220, 400)]),
+    ("Ironreach", [(1800, -3000, 1200, 1500), (1900, -1500, 1100, 600), (1900, -760, 1100, 360), (1600, -400, 1400, 1100),
+                   (1750, 700, 1250, 2300), (1900, -4150, 1900, 1150), (3000, -3000, 800, 2100), (3000, -760, 800, 3160)]),
+    ("Kelp Isle", [(4050, -2600, 900, 4000)]),
+    ("Gull Isle", [(-1000, 3700, 1000, 400)]),
+    ("Strait islets", [(880, 1320, 240, 360), (450, -2050, 300, 300)]),
+    ("Palm Isles", [(-260, -2900, 240, 220), (120, -3380, 220, 200), (-330, -1950, 200, 200)]),
+    ("Ember Isle", [(4270, -4305, 420, 370)]),
+]
+# Names for the new seeded islands, in the order the seed finds them.
+NEW_ISLES = ["Tern Isle", "Driftwood Isle", "Cormorant Rock", "Saltmarsh Isle", "Puffin Isle", "Breaker Isle"]
+
+
+class Noise:
+    """Seeded smooth value noise on a lattice, summed in octaves."""
+
+    def __init__(self, seed):
+        rng = random.Random(seed)
+        self.perm = list(range(256))
+        rng.shuffle(self.perm)
+        self.perm += self.perm
+        self.values = [rng.uniform(-1.0, 1.0) for _ in range(256)]
+
+    def _at(self, i, j):
+        return self.values[self.perm[(self.perm[i & 255] + j) & 255]]
+
+    def value(self, x, z):
+        i, j = math.floor(x), math.floor(z)
+        fx, fz = x - i, z - j
+        sx, sz = fx * fx * (3 - 2 * fx), fz * fz * (3 - 2 * fz)
+        a = self._at(i, j) + (self._at(i + 1, j) - self._at(i, j)) * sx
+        b = self._at(i, j + 1) + (self._at(i + 1, j + 1) - self._at(i, j + 1)) * sx
+        return a + (b - a) * sz
+
+    def fbm(self, x, z, scale, octaves=4):
+        total, amp, norm = 0.0, 1.0, 0.0
+        for octave in range(octaves):
+            total += amp * self.value(x / scale + octave * 17.3, z / scale - octave * 9.1)
+            norm += amp
+            amp *= 0.5
+            scale /= 2.1
+        return total / norm
+
+
+def rect_sdf(p, rect, round_m=0.0):
+    """Signed distance to a rectangle (x, z, w, d): - inside, + outside."""
+    x, z, w, d = rect
+    r = min(round_m, 0.45 * min(w, d))
+    cx, cz = x + w / 2, z + d / 2
+    qx, qz = abs(p[0] - cx) - (w / 2 - r), abs(p[1] - cz) - (d / 2 - r)
+    return math.hypot(max(qx, 0.0), max(qz, 0.0)) + min(max(qx, qz), 0.0) - r
+
+
+def strait_offsets(p, strait):
+    """Metres across a strait's centre line, and past its ends."""
+    a, b = strait['start'], strait['end']
+    length = math.hypot(b[0] - a[0], b[1] - a[1])
+    along = ((b[0] - a[0]) / length, (b[1] - a[1]) / length)
+    t = (p[0] - a[0]) * along[0] + (p[1] - a[1]) * along[1]
+    lateral = abs((p[0] - a[0]) * -along[1] + (p[1] - a[1]) * along[0])
+    return lateral, max(0.0, -t, t - length)
+
+
+def trim(rect, straits):
+    """A cover block cut back to the straits' banks: no block reaches into a
+    strait's width (straits run along X or Z), so its sample grid never
+    narrows a channel."""
+    x, z, w, d = rect
+    for strait in straits:
+        (ax, az), (bx, bz), half = strait['start'], strait['end'], strait['width'] / 2
+        if ax == bx:
+            low, high = min(az, bz) - half - 8, max(az, bz) + half + 8
+            if z < high and z + d > low and x < ax + half and x + w > ax - half:
+                if x + w / 2 < ax: w = ax - half - x
+                else: w, x = x + w - (ax + half), ax + half
+        elif az == bz:
+            low, high = min(ax, bx) - half - 8, max(ax, bx) + half + 8
+            if x < high and x + w > low and z < az + half and z + d > az - half:
+                if z + d / 2 < az: d = az - half - z
+                else: d, z = z + d - (az + half), az + half
+    return (x, z, w, d)
+
+
+def segment_sdf(p, a, b):
+    ax, az = p[0] - a[0], p[1] - a[1]
+    bx, bz = b[0] - a[0], b[1] - a[1]
+    t = max(0.0, min(1.0, (ax * bx + az * bz) / max(bx * bx + bz * bz, 1e-9)))
+    return math.hypot(ax - bx * t, az - bz * t)
+
+
+def main():
+    layout = tb.load()
+    geo = tb.game_world(layout)
+    skeleton = [r for _, rects in SKELETON for r in rects]
+    old = dict(geo, land=skeleton)
+    warp_x, warp_z, shape, isle_noise = Noise(SEED), Noise(SEED + 1), Noise(SEED + 2), Noise(SEED + 3)
+    wrap = geo['wrap']
+    edge = (geo['centre'][0] - wrap / 2 + 2050, geo['centre'][1] - wrap / 2 + 2050,
+            geo['centre'][0] + wrap / 2 - 2050, geo['centre'][1] + wrap / 2 - 2050)
+
+    # What must stay sea: (kind, data, keep metres). Ports: berths, approach,
+    # drop area. Routes: every leg any port-to-port route took on the old
+    # layout. Icebergs. Straits: their full width.
+    water = []
+    keep_land = []
+    for port in geo['world']:
+        side, (x, _, z) = -port['drop_side'], port['at']
+        water.append(('rect', (min(x + side * 15, x - side * 350), z - 1400, 365, 2200), 60.0))
+        water.append(('rect', (min(x + port['drop_side'] * 450, x + port['drop_side'] * 850) - 150, z - 1350, 700, 700), 60.0))
+        if 'pole' in port['id']: continue
+        # Land behind the quay, where the skeleton had it.
+        quay = (min(x + side * 95, x + side * 330), z - 120, 235, 1140)
+        keep_land.append(('quay', quay))
+        keep_land.append(('strip', (min(x + side * 95, x + side * 215), z - 60, 120, 640)))
+    strait_legs = set()
+    for strait in geo['straits']:
+        strait_legs.add((tuple(strait['start']), tuple(strait['end'])))
+        strait_legs.add((tuple(strait['end']), tuple(strait['start'])))
+    gates = [(p['at'][0], p['at'][2] - geo['gate']) for p in geo['world']]
+    legs = set()
+    for a in gates:
+        for b in gates:
+            if a == b: continue
+            _, path = tb.sea_route(old, a, b)
+            for u, v in zip(path, path[1:]):
+                if (tuple(u), tuple(v)) not in strait_legs: legs.add((tuple(u), tuple(v)))
+    for u, v in legs:
+        step = (tb._short(v[0] - u[0], wrap), tb._short(v[1] - u[1], wrap))
+        water.append(('leg', (u, (u[0] + step[0], u[1] + step[1])), 95.0))
+    for x, r, z in geo['bergs']:
+        water.append(('disc', (x, z, r), 175.0))
+    for strait in geo['straits']:
+        water.append(('leg', (tuple(strait['start']), tuple(strait['end'])), strait['width'] / 2 + 8.0))
+    # Banks: land close on both sides of each strait's middle, and under each
+    # bridge's ends (see toon_bridge.gd: half span + 30 m flat + 120 m ramp).
+    for strait in geo['straits']:
+        a, b, half = strait['start'], strait['end'], strait['width'] / 2
+        length = math.hypot(b[0] - a[0], b[1] - a[1])
+        along = ((b[0] - a[0]) / length, (b[1] - a[1]) / length)
+        across = (-along[1], along[0])
+        spots = [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 200.0, half + 140.0)]
+        for bridge in re.findall(r'"strait": "%s".*?"at": Vector2\(([^)]*)\)' % re.escape(_strait_id(strait['name'])), tb.read('features/game/progression.gd')):
+            bx, bz = tb._floats(bridge)
+            spots.append((bx, bz, 230.0, half + 520.0))
+        for cx, cz, reach_along, reach_across in spots:
+            for k in (1, -1):
+                keep_land.append(('bank', (cx, cz, along, across, k, half + 8.0, reach_across, reach_along)))
+    volcano = re.search(r'"at": Vector2\(([^)]*)\), "base_m": ([\d.]+)', tb.read('features/game/progression.gd'))
+    vx, vz = tb._floats(volcano.group(1))
+    vbase = float(volcano.group(2))
+
+    # New seeded islands: in open sea, well off every route, port and coast.
+    rng = random.Random(SEED + 4)
+    isles = []
+    def far_from_everything(cx, cz, r):
+        if not (edge[0] + r + 300 < cx < edge[2] - r - 300 and edge[1] + r + 300 < cz < edge[3] - r - 300): return False
+        if any(rect_sdf((cx, cz), s) < r + 420 for s in skeleton): return False
+        if any(segment_sdf((cx, cz), u, v) < r + 330 for u, v in legs): return False
+        if any(math.hypot(cx - p['at'][0], cz - p['at'][2]) < r + 1200 for p in geo['world']): return False
+        if any(math.hypot(cx - x, cz - z) < r + br + 400 for x, br, z in geo['bergs']): return False
+        if any(math.hypot(cx - ix, cz - iz) < r + ir + 700 for ix, iz, ir in isles): return False
+        return math.hypot(cx - vx, cz - vz) > r + 1500
+    for _ in range(4000):
+        if len(isles) == len(NEW_ISLES): break
+        r = rng.uniform(150.0, 360.0)
+        cx, cz = rng.uniform(edge[0], edge[2]), rng.uniform(edge[1], edge[3])
+        if far_from_everything(cx, cz, r): isles.append((cx, cz, r))
+    print('seeded isles', len(isles))
+
+    nx, nz = COUNT
+    land = bytearray(nx * nz)
+    for j in range(nz):
+        pz = ORIGIN[1] + j * CELL
+        for i in range(nx):
+            px = ORIGIN[0] + i * CELL
+            p = (px, pz)
+            wp = (px + WARP_M * warp_x.fbm(px, pz, 3000.0, 4), pz + WARP_M * warp_z.fbm(px, pz, 3000.0, 4))
+            base = min(rect_sdf(wp, s, 420.0) for s in skeleton)
+            f = -base + NOISE_M * shape.fbm(px, pz, 1700.0, 5)
+            wobble = WOBBLE_M * abs(isle_noise.fbm(px + 9000, pz, 650.0, 3)) * 1.6
+            for cx, cz, r in isles:
+                f = max(f, r - math.hypot(px - cx, pz - cz) + 0.55 * r * isle_noise.fbm(px, pz, 700.0, 4))
+            # Small skeleton isles keep a core, so the seed reshapes them
+            # without washing them away.
+            for s in skeleton:
+                if min(s[2], s[3]) <= 420: f = max(f, 0.52 * min(s[2], s[3]) - math.hypot(px - s[0] - s[2] / 2, pz - s[1] - s[3] / 2) + 40 * isle_noise.fbm(px, pz, 300.0, 3))
+            dv = math.hypot(px - vx, pz - vz)
+            for kind, data in keep_land:
+                if kind == 'bank' or kind == 'strip': continue
+                if kind == 'quay':
+                    # A rounded hinterland behind the quay, where the skeleton had land.
+                    q = ((px - data[0] - data[2] / 2) / (data[2] / 2 + 60)) ** 2 + ((pz - data[1] - data[3] / 2) / (data[3] / 2)) ** 2
+                    if q < 1.5: f = max(f, min(140.0 * (1.0 - q) - 30.0 * abs(isle_noise.fbm(px, pz - 7000, 300.0, 2)), -min(rect_sdf(p, s) for s in skeleton) + 10))
+            for kind, data, keep in water:
+                if kind == 'rect': d = rect_sdf(p, data, 120.0)
+                elif kind == 'disc': d = math.hypot(px - data[0], pz - data[1]) - data[2]
+                else: d = segment_sdf(p, data[0], data[1])
+                f = min(f, d - keep - (wobble if kind != 'leg' or keep < 100 else wobble * 0.6))
+            # Last word: the strip behind each quay and the strait banks are
+            # land, then each strait is open water its full width.
+            for kind, data in keep_land:
+                if kind == 'quay': continue
+                if kind == 'strip':
+                    if rect_sdf(p, data) < 0: f = max(f, 30.0)
+                else:
+                    # A rounded headland on each bank, not a box.
+                    cx, cz, along, across, k, inner, outer, reach = data
+                    rx, rz = px - cx, pz - cz
+                    t = rx * along[0] + rz * along[1]
+                    sd = (rx * across[0] + rz * across[1]) * k
+                    half_w = (outer - inner) / 2 + 60.0
+                    q = (t / reach) ** 2 + ((sd - (inner + outer) / 2) / half_w) ** 2
+                    if q < 1.5: f = max(f, 140.0 * (1.0 - q) - 30.0 * abs(isle_noise.fbm(px, pz + 7000, 300.0, 2)))
+            for strait in geo['straits']:
+                lateral, overhang = strait_offsets(p, strait)
+                f = min(f, max(lateral - strait['width'] / 2 - 1.0, overhang - strait['width'] / 2 - 8.0))
+            rim = min(px - edge[0], edge[2] - px, pz - edge[1], edge[3] - pz)
+            f = min(f, rim - 30, rim - 170 + 220 * shape.fbm(px - 5000, pz, 420.0, 3) + max(0.0, 900.0 - dv))
+            # Ember Isle: a ragged island round the volcano's foot, open sea
+            # round it (it sits near the south edge, so it comes last).
+            f = max(f, vbase + 95 - dv + 45 * isle_noise.fbm(px, pz, 260.0, 3))
+            f = min(f, max(vbase + 200 - dv, dv - vbase - 900), rim - 30)
+            land[j * nx + i] = 1 if f > 0 else 0
+
+    # No lakes: sea that cannot reach the edge of the grid becomes land.
+    seen = bytearray(nx * nz)
+    stack = [k for k in range(nx * nz) if not land[k] and (k % nx in (0, nx - 1) or k // nx in (0, nz - 1))]
+    for k in stack: seen[k] = 1
+    while stack:
+        k = stack.pop()
+        i, j = k % nx, k // nx
+        for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            a, b = i + di, j + dj
+            if 0 <= a < nx and 0 <= b < nz:
+                q = b * nx + a
+                if not seen[q] and not land[q]:
+                    seen[q] = 1
+                    stack.append(q)
+    for k in range(nx * nz):
+        if not land[k] and not seen[k]: land[k] = 1
+    # Specks: drop land cells with fewer than two land neighbours.
+    for k in range(nx * nz):
+        if land[k]:
+            i, j = k % nx, k // nx
+            around = sum(land[b * nx + a] for a, b in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)) if 0 <= a < nx and 0 <= b < nz)
+            if around < 2: land[k] = 0
+
+    depth = signed_depth(land, nx, nz)
+    masses = components(land, nx, nz)
+    masses.sort(key=len, reverse=True)
+    names = name_masses(masses, nx, (vx, vz), isles)
+    # Components of one name (the canal's two banks, the three Palm Isles) are
+    # one landmass; each keeps its own outline for the maps.
+    groups = {}
+    for m, name in enumerate(names): groups.setdefault(name.rsplit(' ', 1)[0] if name[-1].isdigit() else name, []).append(m)
+    rects, ranges, outlines = [], [], []
+    volcano_index = -1
+    for name in sorted(groups, key=lambda n: (SKELETON_ORDER.get(n, 99), n)):
+        start = len(rects)
+        for m in groups[name]:
+            cover = [trim(r, geo['straits']) for r in cover_rects(masses[m], nx)]
+            cover = [r for r in cover if r[2] > 0 and r[3] > 0]
+            cover.sort(key=lambda r: -r[2] * r[3])
+            if name == 'Ember Isle' and volcano_index < 0: volcano_index = len(rects)
+            rects += cover
+            outlines.append({'name': name, 'outline': outline(masses[m], depth, nx, nz)})
+        ranges.append((name, start, len(rects)))
+    write_json(depth, outlines, len(isles))
+    if '--preview' in sys.argv: preview(land, nx, nz, geo)
+    write_progression(rects, ranges, volcano_index)
+    total = sum(r[2] * r[3] for r in rects)
+    print('natural land: seed %d, %d landmasses, %d new isles, %d cover blocks, %.1f km2' % (SEED, len(masses), len(isles), len(rects), total / 1e6))
+
+
+SKELETON_ORDER = {name: index for index, (name, _) in enumerate(SKELETON)}
+
+
+def _strait_id(name):
+    return name.lower().replace(' ', '_')
+
+
+def signed_depth(land, nx, nz):
+    """Metres from each sample to the coast: + inland, - at sea (chamfer)."""
+    big = 1e9
+    out = [big] * (nx * nz)
+    heap = []
+    for k in range(nx * nz):
+        i, j = k % nx, k // nx
+        for a, b in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+            if 0 <= a < nx and 0 <= b < nz and land[b * nx + a] != land[k]:
+                out[k] = CELL / 2
+                heapq.heappush(heap, (CELL / 2, k))
+                break
+    steps = [(1, 0, CELL), (-1, 0, CELL), (0, 1, CELL), (0, -1, CELL),
+             (1, 1, CELL * 1.4142), (1, -1, CELL * 1.4142), (-1, 1, CELL * 1.4142), (-1, -1, CELL * 1.4142),
+             (2, 1, CELL * 2.2361), (2, -1, CELL * 2.2361), (-2, 1, CELL * 2.2361), (-2, -1, CELL * 2.2361),
+             (1, 2, CELL * 2.2361), (1, -2, CELL * 2.2361), (-1, 2, CELL * 2.2361), (-1, -2, CELL * 2.2361)]
+    while heap:
+        d, k = heapq.heappop(heap)
+        if d > out[k] or d > 300: continue
+        i, j = k % nx, k // nx
+        for di, dj, cost in steps:
+            a, b = i + di, j + dj
+            if 0 <= a < nx and 0 <= b < nz:
+                q = b * nx + a
+                if land[q] == land[k] and d + cost < out[q]:
+                    out[q] = d + cost
+                    heapq.heappush(heap, (d + cost, q))
+    return [min(out[k], 300.0) * (1 if land[k] else -1) for k in range(nx * nz)]
+
+
+def components(land, nx, nz):
+    label = [-1] * (nx * nz)
+    masses = []
+    for start in range(nx * nz):
+        if not land[start] or label[start] >= 0: continue
+        cells, stack = [], [start]
+        label[start] = len(masses)
+        while stack:
+            k = stack.pop()
+            cells.append(k)
+            i, j = k % nx, k // nx
+            for a, b in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+                if 0 <= a < nx and 0 <= b < nz and land[b * nx + a] and label[b * nx + a] < 0:
+                    label[b * nx + a] = len(masses)
+                    stack.append(b * nx + a)
+        masses.append(set(cells))
+    return masses
+
+
+def name_masses(masses, nx, volcano, isles):
+    """Each landmass takes the name of the skeleton it covers most, or of the
+    seeded isle it grew from; a skeleton name used twice gets a number."""
+    names, used = [], {}
+    for cells in sorted(masses, key=len, reverse=True):
+        votes = {}
+        for k in cells:
+            p = (ORIGIN[0] + (k % nx) * CELL, ORIGIN[1] + (k // nx) * CELL)
+            for name, rects in SKELETON:
+                if any(tb._inside(p, r) for r in rects): votes[name] = votes.get(name, 0) + 1
+        if votes: name = max(votes, key=lambda n: (votes[n], n))
+        elif not isles: name = 'Islet'
+        else:
+            best = min(range(len(isles)), key=lambda n: min(math.hypot(ORIGIN[0] + (k % nx) * CELL - isles[n][0], ORIGIN[1] + (k // nx) * CELL - isles[n][1]) for k in list(cells)[:50]))
+            name = NEW_ISLES[best]
+        used[name] = used.get(name, 0) + 1
+        names.append(name if used[name] == 1 else '%s %d' % (name, used[name]))
+    return names
+
+
+def cover_rects(cells, nx):
+    """The landmass's samples as few rectangles: runs along X merged down Z."""
+    rows = {}
+    for k in cells: rows.setdefault(k // nx, []).append(k % nx)
+    open_runs, out = {}, []
+    for j in sorted(rows) + [None]:
+        runs = []
+        if j is not None:
+            xs = sorted(rows[j])
+            start = prev = xs[0]
+            for x in xs[1:] + [None]:
+                if x is not None and x == prev + 1:
+                    prev = x
+                    continue
+                runs.append((start, prev))
+                if x is not None: start = prev = x
+        nxt = {}
+        for run in runs:
+            if run in open_runs and open_runs[run][1] == j - 1: nxt[run] = (open_runs[run][0], j)
+            else: nxt[run] = (j, j)
+        for run, (j0, j1) in open_runs.items():
+            if nxt.get(run, (None,))[0] != j0:
+                out.append((ORIGIN[0] + (run[0] - 0.5) * CELL, ORIGIN[1] + (j0 - 0.5) * CELL, (run[1] - run[0] + 1) * CELL, (j1 - j0 + 1) * CELL))
+        open_runs = nxt
+    return out
+
+
+def outline(cells, depth, nx, nz):
+    """The landmass's coast for the maps: marching squares on the depth grid,
+    joined into rings, the longest kept and thinned to about 60 m."""
+    def value(i, j):
+        if 0 <= i < nx and 0 <= j < nz and (j * nx + i) in cells: return depth[j * nx + i]
+        return -CELL / 2 if not (0 <= i < nx and 0 <= j < nz) else min(depth[j * nx + i], -CELL / 2)
+    xs = [k % nx for k in cells]
+    zs = [k // nx for k in cells]
+    links = {}
+    for j in range(min(zs) - 1, max(zs) + 1):
+        for i in range(min(xs) - 1, max(xs) + 1):
+            c = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
+            v = [value(*q) for q in c]
+            edges = []
+            for e in range(4):
+                a, b = c[e], c[(e + 1) % 4]
+                va, vb = v[e], v[(e + 1) % 4]
+                if (va > 0) != (vb > 0):
+                    t = va / (va - vb)
+                    edges.append((e, (round(ORIGIN[0] + (a[0] + (b[0] - a[0]) * t) * CELL, 1), round(ORIGIN[1] + (a[1] + (b[1] - a[1]) * t) * CELL, 1))))
+            if len(edges) == 2: pairs = [(edges[0][1], edges[1][1])]
+            elif len(edges) == 4:
+                pairs = [(edges[0][1], edges[1][1]), (edges[2][1], edges[3][1])] if v[0] > 0 else [(edges[0][1], edges[3][1]), (edges[1][1], edges[2][1])]
+            else: pairs = []
+            for p, q in pairs:
+                links.setdefault(p, []).append(q)
+                links.setdefault(q, []).append(p)
+    rings, done = [], set()
+    for start in links:
+        if start in done: continue
+        ring, at, last = [start], start, None
+        done.add(start)
+        while True:
+            nxt = [q for q in links[at] if q != last and q not in done]
+            if not nxt: break
+            last, at = at, nxt[0]
+            done.add(at)
+            ring.append(at)
+        rings.append(ring)
+    ring = max(rings, key=len)
+    thin = [ring[0]]
+    for p in ring[1:]:
+        if math.hypot(p[0] - thin[-1][0], p[1] - thin[-1][1]) >= 60.0: thin.append(p)
+    return [[p[0], p[1]] for p in thin]
+
+
+def write_json(depth, outlines, isles):
+    data = bytes(max(0, min(255, int(round(d / DEPTH_STEP)) + 128)) for d in depth)
+    out = {
+        'note': 'Patch 2.9 item 6A: natural world land, baked by tools/world_layout/natural_land.py from seed %d. Do not edit by hand.' % SEED,
+        'seed': SEED, 'cell_m': CELL, 'origin': list(ORIGIN), 'count': list(COUNT), 'depth_step_m': DEPTH_STEP,
+        'depth_zero': 128, 'new_isles': isles, 'depth': base64.b64encode(data).decode('ascii'), 'outlines': outlines,
+    }
+    (ROOT / 'features/world/natural_land.json').write_text(json.dumps(out, separators=(',', ':')) + '\n', encoding='utf-8')
+
+
+def write_progression(rects, ranges, volcano_index):
+    path = ROOT / 'features/game/progression.gd'
+    source = path.read_text(encoding='utf-8')
+    lines = ['const LAND = [']
+    for name, start, end in ranges:
+        lines.append('\t# %s' % name)
+        for r in rects[start:end]: lines.append('\tRect2(%g, %g, %g, %g),' % r)
+    lines.append(']')
+    lines.append('## The named landmasses, as [name, first LAND index, end index).')
+    lines.append('const LANDMASSES = [')
+    for name, start, end in ranges: lines.append('\t["%s", %d, %d],' % (name, start, end))
+    lines.append(']')
+    block = '\n'.join(lines)
+    source = re.sub(r'(## BEGIN NATURAL LAND[^\n]*\n).*?(\n## END NATURAL LAND)', lambda m: m.group(1) + block + m.group(2), source, flags=re.S)
+    source = re.sub(r'("land": )\d+(, "at": Vector2)', lambda m: m.group(1) + str(volcano_index) + m.group(2), source)
+    path.write_text(source, encoding='utf-8')
+
+
+def preview(land, nx, nz, geo):
+    """A PNG of the land (green), ports (red) and lanes (white) for a look."""
+    import zlib, struct
+    px = bytearray()
+    for j in reversed(range(nz)):
+        px.append(0)
+        for i in range(nx):
+            px += bytes((90, 170, 80) if land[j * nx + i] else (30, 140, 210))
+    for p in geo['world']:
+        i, j = int((p['at'][0] - ORIGIN[0]) / CELL), int((p['at'][2] - ORIGIN[1]) / CELL)
+        for di in range(-3, 4):
+            for dj in range(-3, 4):
+                a, b = i + di, nz - 1 - (j + dj)
+                if 0 <= a < nx and 0 <= b < nz: px[b * (nx * 3 + 1) + 1 + a * 3:b * (nx * 3 + 1) + 4 + a * 3] = bytes((230, 40, 40))
+    chunk = lambda t, d: struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+    png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', nx, nz, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(bytes(px))) + chunk(b'IEND', b'')
+    Path('/tmp/natural_land_preview.png').write_bytes(png)
+
+
+if __name__ == '__main__':
+    main()

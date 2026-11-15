@@ -8,6 +8,8 @@ extends SceneTree
 ## ship driven at a coast stops at it, and the minimap course follows the route.
 ## Part B: toon coasts with surf and harbour walls; the globe atlas draws land
 ## as one shape per continent with the straits open.
+## Patch 2.9 item 6A: the land is the natural seeded land (natural_land.json):
+## a body per landmass, coast chunks culled far away, no long straight coast.
 ## Patch 2.5 item 2: bridges over the straits: at least three, one suspension;
 ## the deck clears the tallest ship of every family; towers and piers are solid,
 ## on land and out of the channel; a ship 5 sized box sweeps under each deck.
@@ -124,34 +126,46 @@ func run() -> void:
 			break
 	if not expect(game != null, "Game scene opened"): return finish()
 	for frame: int in 3: await physics_frame
-	# A solid body for every block, the size of the block.
-	var bodies: int = 0
+	# Patch 2.9 item 6A: one solid body per landmass holding a box per block,
+	# and one per polar ice shelf.
+	var shapes: int = 0
+	var masses: int = 0
+	var shelves: int = 0
 	for child: Node in game.get_children():
 		var body: StaticBody3D = child as StaticBody3D
-		if body == null or body.collision_layer != CollisionRules.SHORE or not body.get_child(0) is CollisionShape3D: continue
-		if (body.get_child(0) as CollisionShape3D).shape is BoxShape3D: bodies += 1
-	expect(bodies == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block is solid (%d bodies)" % bodies)
-	# Part B: every block has a toon coast; the blocks share their materials and
-	# the surf shares one shader that stops drawing far away.
+		if body == null or body.collision_layer != CollisionRules.SHORE or body.get_child_count() == 0 or not body.get_child(0) is CollisionShape3D: continue
+		if String(body.name).begins_with("Land"):
+			masses += 1
+			for collider: Node in body.get_children():
+				if collider is CollisionShape3D and (collider as CollisionShape3D).shape is BoxShape3D: shapes += 1
+		elif body.get_node_or_null("Coast") != null: shelves += 1
+	expect(masses == Progression.LANDMASSES.size() and shapes == Progression.LAND.size(), "Every land block is solid (%d landmasses, %d blocks)" % [masses, shapes])
+	expect(shelves == Progression.ICE_SHELVES.size(), "Every ice shelf is solid with a coast (%d)" % shelves)
+	# The toon coast: 1 km chunks, culled far away, sharing their materials;
+	# the surf shares one shader and stops drawing sooner.
 	var paints: Dictionary = {}
 	var surfs: Dictionary = {}
 	var coasts: int = 0
 	var beaches: int = 0
-	for child: Node in game.get_children():
-		if not child is StaticBody3D or child.get_node_or_null("Coast") == null: continue
-		var coast: MeshInstance3D = child.get_node("Coast")
-		coasts += 1
-		for surface: int in coast.mesh.get_surface_count(): paints[coast.get_active_material(surface)] = true
-		var surf: MeshInstance3D = child.get_node_or_null("Surf")
-		if surf == null: continue
-		beaches += 1
-		surfs[surf.material_override] = true
-		expect(surf.visibility_range_end > 0.0 and surf.visibility_range_end <= 2000.0, "%s surf is culled far away" % child.name)
-	expect(coasts == Progression.LAND.size() + Progression.ICE_SHELVES.size(), "Every land block has a toon coast (%d)" % coasts)
-	# Sand, green top, ice, snow, (Patch 2.5 item 4) the desert's sand top and
-	# (item 5) the tropics' lush top and (item 6) the rainy city's wet top.
-	expect(paints.size() <= 7 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
-	expect(beaches >= Progression.LANDMASSES.size() and surfs.size() == 1, "Beaches have surf with one shared shader (%d beaches)" % beaches)
+	var culled: bool = true
+	var land: Node3D = game.get_node_or_null("NaturalLand")
+	if expect(land != null, "The natural land is in the game"):
+		for chunk: Node in land.get_children():
+			var mesh: MeshInstance3D = chunk as MeshInstance3D
+			if mesh == null: continue
+			if String(mesh.name).begins_with("Coast"):
+				coasts += 1
+				culled = culled and mesh.visibility_range_end > 0.0 and mesh.visibility_range_end <= 4000.0
+				for surface: int in mesh.mesh.get_surface_count(): paints[mesh.get_active_material(surface)] = true
+			else:
+				beaches += 1
+				surfs[mesh.material_override] = true
+				culled = culled and mesh.visibility_range_end > 0.0 and mesh.visibility_range_end <= 2000.0
+	expect(coasts >= 20 and culled, "The coast is in %d chunks, culled far away" % coasts)
+	# Sand, green top, (Patch 2.5 item 4) the desert's sand top, (item 5) the
+	# tropics' lush top and (item 6) the rainy city's wet top.
+	expect(paints.size() <= 5 and not paints.has(null), "Land shares its materials (%d)" % paints.size())
+	expect(beaches >= 10 and surfs.size() == 1, "Beaches have surf with one shared shader (%d chunks)" % beaches)
 	# The surf takes the sea's time on the game's next drawn frame.
 	for frame: int in 2: await process_frame
 	expect(game.surf_paint != null and float(game.surf_paint.get_shader_parameter("water_time")) > 0.0 and absf(float(game.surf_paint.get_shader_parameter("water_time")) - game.ocean.elapsed) < 0.5, "Surf rides the sea's swell")
@@ -159,17 +173,38 @@ func run() -> void:
 	var ports: Array[Vector2] = []
 	for place: Dictionary in Progression.WORLD: ports.append(Vector2(place.at.x, place.at.z))
 	for place: Dictionary in Progression.WORLD:
-		var walled: bool = false
-		for rect: Rect2 in Progression.LAND + Progression.ICE_SHELVES:
-			var harbour: Array[bool] = TOON_COAST.harbour_sides(rect, [Vector2(place.at.x, place.at.z)] as Array[Vector2])
-			walled = walled or harbour.has(true)
-		expect(walled, "%s has a harbour wall" % place.id)
+		var back: Vector2 = Vector2(place.at.x - float(place.drop_side) * 100.0, place.at.z + 100.0)
+		expect(TOON_COAST.harbour_weight(back, ports) >= 1.0 and TOON_COAST.sand_height(6.0, 1.0) >= TOON_COAST.SAND_TOP_Y - 0.01, "%s has a harbour wall" % place.id)
+	# Natural: the seed is fixed, the coast follows the grid smoothly and no
+	# coast runs dead straight for long, except the harbour walls by the quays.
+	var grid: Dictionary = Progression.natural_land()
+	expect(grid.get("seed", 0) == 2906 and grid.count.x * grid.count.y == grid.depth.size(), "The land is baked from seed 2906")
+	var straight_run: float = 0.0
+	for entry: Dictionary in grid.outlines:
+		var ring: PackedVector2Array = entry.outline
+		for i: int in ring.size():
+			var j: int = i + 2
+			while j < i + ring.size():
+				var a: Vector2 = ring[i]
+				var b: Vector2 = ring[j % ring.size()]
+				var straight: bool = a.distance_to(b) > 0.0
+				for k: int in range(i + 1, j):
+					straight = straight and Geometry2D.get_closest_point_to_segment(ring[k % ring.size()], a, b).distance_to(ring[k % ring.size()]) < 6.0
+				if not straight: break
+				var middle: Vector2 = (a + b) / 2.0
+				if TOON_COAST.harbour_weight(middle, ports) <= 0.0: straight_run = maxf(straight_run, a.distance_to(b))
+				j += 1
+	expect(straight_run <= 400.0, "No straight coast over 400 m away from the quays (straight_run %.0f m)" % straight_run)
+	expect(grid.outlines.size() >= 10, "Continents, peninsulas and islands: %d coasts" % grid.outlines.size())
 	# The globe atlas draws the land green and leaves the straits open.
 	var page: Image = GLOBE_MAP.atlas().get_image()
 	for mass: Array in Progression.LANDMASSES:
 		var centre: Vector2 = Progression.LAND[mass[1]].get_center()
+		for index: int in range(mass[1], mass[2]):
+			if Progression.land_depth(Progression.LAND[index].get_center()) > Progression.land_depth(centre): centre = Progression.LAND[index].get_center()
 		var pixel: Vector2i = Vector2i(GLOBE_MAP.page_pixel(centre.x, centre.y))
-		expect(page.get_pixelv(pixel).is_equal_approx(Color(PLAYFUL.LEAF, 1.0)), "%s is green on the globe" % mass[0])
+		# Patch 2.9 item 6A: a small isle may be all coast line (ink green).
+		expect(page.get_pixelv(pixel).is_equal_approx(Color(PLAYFUL.LEAF, 1.0)) or page.get_pixelv(pixel).is_equal_approx(Color("2f7a33")), "%s is green on the globe" % mass[0])
 	for strait: Dictionary in Progression.STRAITS:
 		var middle: Vector2 = (strait.from + strait.to) / 2
 		var pixel: Vector2i = Vector2i(GLOBE_MAP.page_pixel(middle.x, middle.y))
@@ -186,7 +221,10 @@ func run() -> void:
 	var route: Array[Vector3] = Progression.course(ship.global_position, game.world_ports[2].berth_anchor.global_position, 2)
 	expect(route.size() >= 2 and route[-1] == game.world_ports[2].berth_anchor.global_position, "The course to Cinder Point turns round the land (%d legs)" % route.size())
 	# Solid land: a ship driven at Kelp Isle from the strait stops at its shore.
-	var shore: float = Progression.LAND[Progression.LANDMASSES[3][1]].position.x
+	# Patch 2.9 item 6A: the shore is wherever the natural land starts east of
+	# the strait's middle on that line.
+	var shore: float = 3925.0
+	while not solid(Vector2(shore, -500.0)) and shore < 4600.0: shore += 1.0
 	ship.global_transform = Transform3D(Basis(Vector3.UP, PI / 2), Vector3(shore - 110, ship.global_position.y, -500))
 	ship.velocity = Vector3.ZERO
 	var start: float = ship.global_position.x
@@ -251,8 +289,10 @@ func check_bridges(game: Node) -> void:
 		var cut: Rect2 = Rect2(strait.from, Vector2.ZERO).expand(strait.to).grow(half)
 		expect(cut.has_point(at), "%s sits on its strait" % entry.name)
 		# Both ends land on land: every point past the shore is solid.
+		# Patch 2.9 item 6A: the natural coast is on a 25 m grid, so the land
+		# may start up to one sample (25 m) back from the channel's edge.
 		var landed: bool = true
-		var along: float = half + 10.0
+		var along: float = half + 35.0
 		while along <= TOON_BRIDGE.reach(index):
 			landed = landed and solid(at + way * along) and solid(at - way * along)
 			along += 10.0
@@ -265,7 +305,9 @@ func check_bridges(game: Node) -> void:
 			var size: Vector3 = (shape.shape as BoxShape3D).size
 			for corner: Vector3 in [Vector3(1, 0, 1), Vector3(1, 0, -1), Vector3(-1, 0, 1), Vector3(-1, 0, -1)]:
 				var point: Vector3 = shape.global_transform * (corner * size / 2.0)
-				on_land = on_land and solid(Vector2(point.x, point.z)) and not cut.has_point(Vector2(point.x, point.z))
+				var landed_here: bool = solid(Vector2(point.x, point.z)) and not cut.has_point(Vector2(point.x, point.z))
+				if not landed_here: print("WORLD LAND pier off land: %s at %s" % [entry.name, Vector2(point.x, point.z)])
+				on_land = on_land and landed_here
 		expect(on_land, "%s stands its %d towers and piers on land, out of the channel" % [entry.name, piers.get_child_count()])
 		# Looks: two merged meshes, the rigging culled sooner than the structure.
 		var body: MeshInstance3D = bridge.get_node("Bridge")

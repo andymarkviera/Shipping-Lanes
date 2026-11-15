@@ -65,9 +65,16 @@ func run() -> void:
 	var isles: Array = []
 	for mass: Array in Progression.LANDMASSES:
 		if mass[0] == "Palm Isles": isles = mass
-	if expect(isles.size() == 3 and isles[2] - isles[1] >= 3, "the Palm Isles are in the land data"):
-		for index: int in range(isles[1], isles[2]):
-			expect(Look.is_island(Progression.LAND[index], Progression.LAND), "Palm Isle %d is a tropical island" % index)
+	# Patch 2.9 item 6A: natural isles are many blocks each; three coasts.
+	var isle_coasts: Array[Rect2] = []
+	for entry: Dictionary in Progression.natural_land().outlines:
+		if entry.name != "Palm Isles": continue
+		var bounds: Rect2 = Rect2(entry.outline[0], Vector2.ZERO)
+		for spot: Vector2 in entry.outline: bounds = bounds.expand(spot)
+		isle_coasts.append(bounds)
+	if expect(isles.size() == 3 and isles[2] - isles[1] >= 3 and isle_coasts.size() >= 3, "the Palm Isles are in the land data (%d isles)" % isle_coasts.size()):
+		for bounds: Rect2 in isle_coasts:
+			expect(Look.islands().has(bounds), "Palm Isle at %s is a tropical island" % bounds.get_center())
 	# The game.
 	set_meta("game_save_path", FOLDER + "/voyage.db")
 	change_scene_to_file("res://features/game/game.tscn")
@@ -109,15 +116,16 @@ func run() -> void:
 			for spot: Transform3D in group:
 				var at: Vector3 = spot.origin
 				# Land all round it, 30 m out (blocks meet at seams inland).
-				var on_land: bool = true
-				for probe: Vector2 in [Vector2.ZERO, Vector2(30, 0), Vector2(-30, 0), Vector2(0, 30), Vector2(0, -30)]:
-					on_land = on_land and solid(Vector2(at.x, at.z) + probe)
+				# Patch 2.9 item 6A: 30 m or more in from the natural coast.
+				var on_land: bool = Progression.land_depth(Vector2(at.x, at.z)) >= 30.0 and solid(Vector2(at.x, at.z))
 				for index: int in range(isles[1], isles[2]):
 					if Progression.LAND[index].has_point(Vector2(at.x, at.z)): on_isles += 1
 				var near_port: bool = false
 				for entry: Dictionary in Progression.WORLD:
 					if Vector2(at.x, at.z).distance_to(Vector2(entry.at.x, entry.at.z)) < 400: near_port = true
-				if not on_land or near_port or Tropical.weight(at) < 0.5: stray += 1
+				if not on_land or near_port or Tropical.weight(at) < 0.5:
+					stray += 1
+					print("TROPICAL stray at %s depth %.0f" % [at, Progression.land_depth(Vector2(at.x, at.z))])
 		expect(stray == 0, "every palm and bush is on tropical land, clear of the sea and ports (%d stray)" % stray)
 		expect(on_isles >= 30, "the Palm Isles have their palms (%d)" % on_isles)
 		expect(land.find_children("*", "CollisionObject3D", true, false).is_empty(), "the dressing is not solid")
@@ -125,23 +133,21 @@ func run() -> void:
 	# Lush green tops on the tropical land; the Palm Isles are solid like any block.
 	var lush: int = 0
 	var isle_bodies: int = 0
-	for body: Node in game.get_children():
-		var shore: StaticBody3D = body as StaticBody3D
-		if shore == null or shore.get_node_or_null("Coast") == null: continue
-		var spot: Vector2 = Vector2(shore.position.x, shore.position.z)
-		for index: int in range(isles[1], isles[2]):
-			if Progression.LAND[index].get_center().is_equal_approx(spot) and shore.collision_layer == CollisionRules.SHORE: isle_bodies += 1
-		var mesh: Mesh = (shore.get_node("Coast") as MeshInstance3D).mesh
+	# Patch 2.9 item 6A: the hill tops of the natural land's coast chunks.
+	for chunk: Node in game.get_node("NaturalLand").get_children():
+		if not String(chunk.name).begins_with("Coast"): continue
+		var mesh: Mesh = (chunk as MeshInstance3D).mesh
 		for surface: int in mesh.get_surface_count():
 			var paint: Material = mesh.surface_get_material(surface)
 			if paint is StandardMaterial3D and (paint as StandardMaterial3D).albedo_color.is_equal_approx(Look.LUSH_TOP): lush += 1
-	expect(isle_bodies == 3, "every Palm Isle is solid shore (%d)" % isle_bodies)
+	var isle_body: StaticBody3D = game.get_node_or_null("LandPalmIsles") as StaticBody3D
+	if isle_body != null and isle_body.collision_layer == CollisionRules.SHORE: isle_bodies = isle_body.get_child_count()
+	expect(isle_bodies == isles[2] - isles[1], "every Palm Isle is solid shore (%d blocks)" % isle_bodies)
 	# Lagoon rings: paint on the water round every tropical island, nothing solid.
 	var lagoons: Node3D = game.get_node_or_null("Lagoons") as Node3D
 	var islands: int = 0
-	for rect: Rect2 in Progression.LAND:
-		if Look.is_island(rect, Progression.LAND): islands += 1
-	if expect(lagoons != null and lagoons.get_child_count() == islands and islands >= 4, "a lagoon ring round each tropical island (%d)" % islands):
+	islands = Look.islands().size()
+	if expect(lagoons != null and lagoons.get_child_count() == islands and islands >= 3, "a lagoon ring round each tropical island (%d)" % islands):
 		var shared: bool = true
 		for ring: Node in lagoons.get_children():
 			shared = shared and (ring as MeshInstance3D).material_override == game.lagoon_paint and (ring as MeshInstance3D).visibility_range_end > 0.0
@@ -174,7 +180,7 @@ func run() -> void:
 	expect(environment.adjustment_enabled and environment.adjustment_saturation > 1.0, "bright, saturated grading")
 	expect(not polar.snow.emitting, "no snow in the tropics")
 	# A ship sails freely over a lagoon: the navigation sees only the island.
-	var isle: Rect2 = Progression.LAND[isles[1]]
+	var isle: Rect2 = isle_coasts[0]
 	var lagoon_spot: Vector3 = Vector3(isle.get_center().x, 0, isle.position.y - Look.LAGOON_M * 0.8)
 	var straight: Array[Vector3] = Progression.course(lagoon_spot - Vector3(0, 0, 300), lagoon_spot)
 	expect(straight == [lagoon_spot], "a course runs straight into a lagoon ring (%d legs)" % straight.size())

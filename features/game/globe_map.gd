@@ -76,18 +76,37 @@ static func atlas() -> ImageTexture:
 		page.fill_rect(Rect2i(line * MAP_SIZE.x / 12, 0, 2, MAP_SIZE.y), Color("3fb4e2"))
 	for line: int in range(1, 6):
 		page.fill_rect(Rect2i(0, line * MAP_SIZE.y / 6, MAP_SIZE.x, 2), Color("3fb4e2"))
-	# Patch 2.5 item 1B: land in two passes, so a continent made of blocks reads
-	# as one shape: an ink coastline, then the fills, which cover the edges
-	# inside the continent. One pixel of ink keeps the canal open.
-	var ice_from: int = Progression.LAND.size()
+	# The polar ice shelves: an ink edge, then the fill.
 	var boxes: Array = []
-	for index: int in ice_from + Progression.ICE_SHELVES.size():
-		var block: Rect2 = Progression.LAND[index] if index < ice_from else Progression.ICE_SHELVES[index - ice_from]
+	for block: Rect2 in Progression.ICE_SHELVES:
 		var a: Vector2 = page_pixel(block.position.x, block.position.y)
 		var b: Vector2 = page_pixel(block.end.x, block.end.y)
-		boxes.append([Rect2i(Vector2i(a.min(b).floor()), Vector2i((a.max(b) - a.min(b)).ceil())), index >= ice_from])
-	for box: Array in boxes: page.fill_rect(box[0].grow(1), Color("8fc3d6") if box[1] else Color("2f7a33"))
-	for box: Array in boxes: page.fill_rect(box[0], Color("f7fbfd") if box[1] else PLAYFUL.LEAF)
+		boxes.append(Rect2i(Vector2i(a.min(b).floor()), Vector2i((a.max(b) - a.min(b)).ceil())))
+	for box: Rect2i in boxes: page.fill_rect(box.grow(1), Color("8fc3d6"))
+	for box: Rect2i in boxes: page.fill_rect(box, Color("f7fbfd"))
+	# Patch 2.9 item 6A: the natural land, pixel by pixel from the coast depth
+	# grid (nearest sample): green inland, an ink line along the coast.
+	var grid: Dictionary = Progression.natural_land()
+	if grid.is_empty(): return ImageTexture.create_from_image(page)
+	var count: Vector2i = grid.count
+	var depth: PackedFloat32Array = grid.depth
+	var cell: float = grid.cell
+	var origin: Vector2 = grid.origin
+	var corner_a: Vector2 = page_pixel(origin.x, origin.y)
+	var corner_b: Vector2 = page_pixel(origin.x + count.x * cell, origin.y + count.y * cell)
+	var from: Vector2i = Vector2i(corner_a.min(corner_b).floor()).clamp(Vector2i.ZERO, MAP_SIZE - Vector2i.ONE)
+	var to: Vector2i = Vector2i(corner_a.max(corner_b).ceil()).clamp(Vector2i.ZERO, MAP_SIZE - Vector2i.ONE)
+	var ink: Color = Color("2f7a33")
+	for py: int in range(from.y, to.y + 1):
+		var z: float = Progression.WRAP_CENTRE.z + (0.5 - (py + 0.5) / MAP_SIZE.y) * Progression.WRAP_M
+		var j: int = roundi((z - origin.y) / cell)
+		if j < 0 or j >= count.y: continue
+		for px: int in range(from.x, to.x + 1):
+			var x: float = Progression.WRAP_CENTRE.x + (0.5 - (px + 0.5) / MAP_SIZE.x) * Progression.WRAP_M
+			var i: int = roundi((x - origin.x) / cell)
+			if i < 0 or i >= count.x: continue
+			var d: float = depth[j * count.x + i]
+			if d > 0.0: page.set_pixel(px, py, ink if d < 20.0 else PLAYFUL.LEAF)
 	return ImageTexture.create_from_image(page)
 
 static func flat(colour: Color) -> StandardMaterial3D:

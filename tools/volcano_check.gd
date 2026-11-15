@@ -42,16 +42,24 @@ func run() -> void:
 	# The layout: one fixed island of its own, away from ports and lanes.
 	var spec: Dictionary = Progression.VOLCANO
 	var at: Vector2 = spec.at
-	var island: Rect2 = Progression.LAND[spec.land]
+	# Patch 2.9 item 6A: Ember Isle is natural land, many blocks; `land` is its
+	# first (biggest) block and the island is all of them.
 	var mass: Array = []
 	for entry: Array in Progression.LANDMASSES:
 		if entry[0] == spec.name: mass = entry
-	expect(mass.size() == 3 and mass[1] == spec.land and mass[2] == spec.land + 1, "Ember Isle is its own landmass in the land data")
-	expect(island.grow(-spec.base_m * 0.62).has_point(at) or island.has_point(at), "the volcano stands on Ember Isle")
-	expect(island.has_point(at + Vector2(spec.base_m * 0.62, 0)) and island.has_point(at - Vector2(spec.base_m * 0.62, 0)) and island.has_point(at + Vector2(0, spec.base_m * 0.62)) and island.has_point(at - Vector2(0, spec.base_m * 0.62)), "the cone's solid foot is on the island")
+	expect(mass.size() == 3 and mass[1] == spec.land and mass[2] > spec.land, "Ember Isle is its own landmass in the land data")
+	if mass.size() != 3: return finish()
+	var island: Rect2 = Progression.LAND[spec.land]
+	for index: int in range(mass[1], mass[2]): island = island.merge(Progression.LAND[index])
+	var on_isle: Callable = func(point: Vector2) -> bool:
+		for index: int in range(mass[1], mass[2]):
+			if Progression.LAND[index].has_point(point): return true
+		return false
+	expect(on_isle.call(at) and Progression.land_depth(at) >= spec.base_m * 0.62, "the volcano stands on Ember Isle")
+	expect(on_isle.call(at + Vector2(spec.base_m * 0.62, 0)) and on_isle.call(at - Vector2(spec.base_m * 0.62, 0)) and on_isle.call(at + Vector2(0, spec.base_m * 0.62)) and on_isle.call(at - Vector2(0, spec.base_m * 0.62)), "the cone's solid foot is on the island")
 	var alone: bool = true
 	for index: int in Progression.LAND.size():
-		if index != spec.land and Progression.LAND[index].intersects(island.grow(400)): alone = false
+		if (index < mass[1] or index >= mass[2]) and Progression.LAND[index].intersects(island.grow(400)): alone = false
 	for block: Rect2 in Progression.ICE_SHELVES:
 		if block.intersects(island.grow(400)): alone = false
 	expect(alone, "open sea all round Ember Isle")
