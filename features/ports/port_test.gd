@@ -241,6 +241,8 @@ func _ready() -> void:
 	for i: int in scenes.size():
 		var place: Node3D = scenes[i].instantiate()
 		place.position = Progression.WORLD[i].at
+		# Patch 2.9 item 6B: the quay faces the side the seed gave the port.
+		place.quay_side = -int(Progression.WORLD[i].drop_side)
 		add_child(place)
 		world_ports.append(place)
 		# Aesthetics 4: chunky port dressing. The game only; test scenes keep the blocks.
