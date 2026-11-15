@@ -7465,7 +7465,7 @@ No port, world generation or port data file is touched.
   (poop, quarterdeck, waist, forecastle) with sheer, tumblehome, wales and
   colour bands; carved stern with two rows of lit cabin windows, a balustraded
   gallery, taffrail crest, three great lanterns and quarter galleries;
-  beakhead, head rails and a gold figurehead; 62 cannons (two gun decks with
+  beakhead, head rails and a gold figurehead; 64 cannons (two gun decks with
   open port lids, deck guns on carriages, two stern chasers); three masts in
   three lengths with tops, a crow's nest on the main, yards, shrouds with
   ratlines, stays, backstays, lifts, braces and sheets; nine set sails

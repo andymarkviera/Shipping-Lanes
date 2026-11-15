@@ -2,7 +2,7 @@ extends RefCounted
 ## Patch 2.9.1 item 1: the pirate galleon, built in code like the other chunky
 ## ships. A 112 x 24 m three-master: carved stern castle with lit cabin windows
 ## and lanterns, quarter galleries, beakhead and gold figurehead, two gun decks
-## and deck guns (62 cannons), full rigging with ratlines, a crow's nest, a
+## and deck guns (64 cannons), full rigging with ratlines, a crow's nest, a
 ## ship's wheel, set sails, a big black Jolly Roger and pennants that flap.
 ## Looks only: the collider, wake and rules come from the ship record.
 ##
