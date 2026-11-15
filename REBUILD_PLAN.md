@@ -622,7 +622,7 @@ on pausing the world.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
 **Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is done; Patch 2.3 (section 8, debug mode) is written and waits for Andy's playtest. Patch 3 is a new main menu
-(Andy's design, later; do not start). Patch 4 is multiplayer (do not start).
+(Andy's design, later; do not start). Multiplayer is now **Patch 3.0** (Andy, November 15, 2026), the next patch after 2.9.1; not planned or started yet.
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
 the automatic checks on Linux: 1 (Always running + Esc menu), 2 (Easy docking),
@@ -1060,7 +1060,7 @@ Added by Andy (November 14, 2026, 8:25 PM), same patch, after item 4:
    model of its own hull, facing its heading, instead of a flat marker.
    Build it so other ships can be drawn the same way later (a list of
    ship entries, each with kind, position and heading); when multiplayer
-   (Patch 4) arrives, other players' boats appear there. Do not start any
+   (Patch 3.0) arrives, other players' boats appear there. Do not start any
    multiplayer work now.
 6. **Real polar landmasses.** Replace the square polar areas with natural
    ice-cap landmasses that cover the top and bottom ends of the world:
