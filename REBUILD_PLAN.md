@@ -1157,6 +1157,9 @@ checked on Linux with before/after screenshots, not yet seen on Windows.
 Item 2 (crane black bar: the spreader is built at its real size so its ink
 outline no longer stretches into a bar across each crane; boom head and
 counterweight are white instead of ink-black) is in a draft PR, checked on
-Linux with before/after screenshots, not yet seen on Windows. Items 3-6 are
-planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
+Linux with before/after screenshots, not yet seen on Windows. Item 3
+(mooring ropes: each line leans out over the rail clear of the hull, sags
+only toward the quay edge, rests over the edge and loops round the bollard
+post) is in a draft PR, checked on Linux with before/after screenshots, not
+yet seen on Windows. Items 4-6 are planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
 2.9.1 (pirate ships).
