@@ -7311,3 +7311,42 @@ Not run: Windows, Mac, an export, a playtest.
 Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
 (226 scripts), `mooring_check` (422 checks): passed.
 Not run: Windows, Mac, an export, a playtest.
+
+## Patch 2.9 item 4 — speeds and knots (November 15, 2026)
+
+- **Speeds:** speedboat top speed 36 -> 50 kn, offshore (cigarette) racer
+  42 -> 200 kn (`small_*_ship.tres`; the racer also grips more sideways,
+  lateral drag 0.8 -> 2.0, so it does not skate wide in turns at 103 m/s).
+  `CollisionRules.SUPPORTED_SPEED_MPS` is 22 -> 103 m/s.
+- **Still controllable at 200 kn:** the camera is carried along above 22 m/s,
+  so its lag is capped near 4.4 m (it was 20 m). The wake samples by distance
+  above 22 m/s and the bow spray grows up to 2.5x. The wave-jumps meet the
+  chop at no more than the old 21.6 m/s pace, so the racer is not thrown
+  skyward. No tunnelling: `move_and_slide` sweeps the hull along each 1.7 m
+  step, and `collision_probe`'s "overspeed clamped" fixture now hits its
+  0.1 m wall at 103 m/s and stops. Land, bridges and the volcano use solid
+  box or cylinder colliders.
+- **Knots finding:** the maths is right. 1 world unit is 1 m and every
+  readout uses 1 kn = 1852/3600 m/s. The HUD showed the raw velocity
+  unsmoothed (still non-zero when pinned against land). It now shows the
+  speed actually covered, smoothed over about 0.2 s. It feels off because
+  hulls are about half real length (ship 1 is 64 m, a real feeder about
+  140 m) and top speeds are arcade (30-42 kn against a real 16-24 kn). So a
+  ship covers its own length 3-4x faster than a real one at the same
+  number. Not rescaled: that would retune every ladder and the traversal
+  budget.
+- **Checks added:** `small_boats_check` checks 50 and 200 kn.
+  `camera_probe` checks the lag behind a 102.9 m/s focus (19.7 m without the
+  fix, under 6 m with it).
+
+Checks (agent's Linux runner, official Godot 4.7.2): import, `check_scripts`
+(226 scripts), boot, `check_catalog`, `check_controls`, `check_flow`,
+`check_starter`, `units_probe`, `diagnostics_probe`, `contracts_probe`,
+`geography_probe`, `session_probe`, `clocks_probe`, `handling_probe`,
+`camera_probe`, `water_probe`, `feedback_probe`, `world_size_probe`,
+`heavy_lifter_probe`, `fuel_probe`, `economy_probe`, `collision_probe`,
+`small_boats_check`, `hangar_check`, `debug_game_check`, the container, bulk
+and heavy ladder checks, `check_m1_voyage`, `mooring_check` and
+`world_land_check`: all passed.
+Not run: Windows, Mac, an export, a playtest. 200 kn has not been seen on
+screen, and frame time at 200 kn has not been measured.

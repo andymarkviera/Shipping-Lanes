@@ -16,6 +16,12 @@ var arm_length: float = 115.0
 var initialized: bool = false
 var probe: SphereShape3D = SphereShape3D.new()
 const SMOOTHING: float = 5.0
+## Patch 2.9 item 4: above this focus speed the view is carried along with the
+## ship, so the lag behind it never grows past what a 42 kn ship gets (about
+## 4.4 m). The 200 kn offshore racer stays in frame. Slower ships are unchanged.
+const FOLLOW_LAG_SPEED_MPS: float = 22.0
+var followed: CameraFocus
+var followed_at: Vector3 = Vector3.ZERO
 const MIN_PITCH: float = 0.12
 const MAX_PITCH: float = 1.25
 
@@ -117,7 +123,16 @@ func _physics_process(delta: float) -> void:
 		release_mouse()
 		return
 	var blend: float = 1.0 - exp(-SMOOTHING * delta)
-	pivot = pivot.lerp(focus.global_position, blend)
+	var focus_at: Vector3 = focus.global_position
+	if followed == focus and delta > 0.0:
+		var step: Vector3 = focus_at - followed_at
+		var speed: float = step.length() / delta
+		# A long jump is a world wrap (shift() moves the view) or a respawn.
+		if speed > FOLLOW_LAG_SPEED_MPS and step.length() < 50.0:
+			pivot += step * (1.0 - FOLLOW_LAG_SPEED_MPS / speed)
+	followed = focus
+	followed_at = focus_at
+	pivot = pivot.lerp(focus_at, blend)
 	yaw = lerp_angle(yaw, behind_heading() + orbit_offset, blend)
 	pitch = lerpf(pitch, pitch_order, blend)
 	distance = lerpf(distance, distance_order, blend)
