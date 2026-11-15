@@ -1,9 +1,11 @@
 extends RefCounted
 ## Data for the game: the world (M4), the ships a captain can own and the bulk
 ## jobs (M3). Prices and pay are in hundredths of a credit. No state lives here.
-## The world: four ports on the two shores of a strait. Brindle Quay and Slatewater
-## Works stay where Port Test and older saves have them. "drop_side" is the open
-## side of the berth (+1 is +X), where heavy loads are picked up and dropped.
+## The world: four ports on the two shores of a strait and two polar ports.
+## Patch 2.9 item 6B: tools/world_layout/natural_land.py puts the four strait
+## ports on seeded coastal spots; "was" and "was_side" are where they stood
+## before, which pay (chart_at) and older saves still use. "drop_side" is the
+## open side of the berth (+1 is +X), where heavy loads are picked up and dropped.
 const WORLD = [
 	{"id": "port_brindle_quay", "at": Vector3(3890, 0, -3960), "drop_side": 1.0, "was": Vector3(0, 0, 0), "was_side": 1.0},
 	{"id": "port_slatewater_works", "at": Vector3(-310, 0, 630), "drop_side": 1.0, "was": Vector3(1500, 0, 0), "was_side": -1.0},
@@ -925,12 +927,18 @@ static func others(origin: int) -> Array[int]:
 		if index != origin: result.append(index)
 	return result
 
+## Where a port stands on the chart that pay and saved jobs are worked out on:
+## its spot before Patch 2.9 item 6B moved it ("was"), or where it is now.
+static func chart_at(index: int) -> Vector3:
+	return WORLD[index].get("was", WORLD[index].at)
+
 ## Length of a leg in units of 100 m, the short way round the world. Pay grows
-## with it. The strait legs are all shorter than half the world, so they are
-## unchanged; the leg between the poles goes over the edge.
+## with it. It is measured on the chart (chart_at), so pay and saved jobs did
+## not change when item 6B moved the ports. The leg between the poles goes over
+## the edge.
 static func leg_units(a: int, b: int) -> int:
-	var from: Vector3 = WORLD[a].at
-	var to: Vector3 = WORLD[b].at
+	var from: Vector3 = chart_at(a)
+	var to: Vector3 = chart_at(b)
 	return roundi(short_way(to - from).length() / 100.0)
 
 ## 1 to 5 for a bulk ship, 0 for any other kind.
@@ -1147,6 +1155,19 @@ static func obstacles() -> Array[Rect2]:
 		for index: int in WORLD.size(): _obstacles.append(harbour(index))
 		for berg: Vector3 in ICEBERGS: _obstacles.append(Rect2(berg.x - berg.y, berg.z - berg.y, berg.y * 2, berg.y * 2))
 	return _obstacles
+
+## Patch 2.9 item 6B: true when a hull of `hull` metres at `pose` floats clear of
+## land, ice shelves and icebergs. A save made before the ports moved can hold a
+## pose where land now stands; such a ship starts at its port instead.
+static func afloat(pose: Transform3D, hull: Vector3) -> bool:
+	var at: Vector3 = wrapped(pose.origin)
+	var reach: Vector3 = (pose.basis.x.abs() * hull.x + pose.basis.z.abs() * hull.z) * 0.5
+	var footprint: Rect2 = Rect2(at.x - reach.x, at.z - reach.z, reach.x * 2, reach.z * 2)
+	for block: Rect2 in LAND + ICE_SHELVES:
+		if block.intersects(footprint): return false
+	for berg: Vector3 in ICEBERGS:
+		if Rect2(berg.x - berg.y, berg.z - berg.y, berg.y * 2, berg.y * 2).intersects(footprint): return false
+	return true
 
 ## True when the straight run from `a` to `b`, the short way round the world,
 ## stays `margin` metres off every obstacle. An obstacle whose margin already
