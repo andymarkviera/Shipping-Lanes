@@ -1126,5 +1126,9 @@ sweep: the ink-outline shell now grows in world metres instead of being
 stretched by each object's scale, which removes the translucent boxes round
 the skyline and the blotchy mesa shadows over the desert) is in a draft PR,
 checked on Linux with before/after screenshots, not yet seen on Windows.
-Items 2-6 are planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
+Item 2 (crane black bar: the spreader is built at its real size so its ink
+outline no longer stretches into a bar across each crane; boom head and
+counterweight are white instead of ink-black) is in a draft PR, checked on
+Linux with before/after screenshots, not yet seen on Windows. Items 3-6 are
+planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
 2.9.1 (pirate ships).
