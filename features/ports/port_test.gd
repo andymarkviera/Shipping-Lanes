@@ -209,7 +209,7 @@ func _ready() -> void:
 	var scenes: Array = PORTS.duplicate()
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
-		for rect: Rect2 in Progression.LAND: add_land(rect)
+		add_natural_land()
 		var port_spots: Array[Vector2] = []
 		for place: Dictionary in Progression.WORLD: port_spots.append(Vector2(place.at.x, place.at.z))
 		var desert_land: Node3D = DESERT_LOOK.build_land(Progression.LAND, port_spots)
@@ -427,6 +427,66 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 	foam.visibility_range_end = TOON_COAST.SURF_RANGE_M
 	foam.position.y = 2
 	body.add_child(foam)
+
+## Patch 2.9 item 6A: the natural land from the seed. One solid body per
+## landmass, its blocks (Progression.LAND) as boxes like the old land, and the
+## toon coast in 1 km chunks (TOON_COAST.natural_chunk), each culled past
+## LAND_RANGE_M and its surf past SURF_RANGE_M, so far land costs nothing.
+var natural_land: Node3D
+func add_natural_land() -> void:
+	for mass: Array in Progression.LANDMASSES:
+		var body: StaticBody3D = StaticBody3D.new()
+		body.name = "Land" + String(mass[0]).to_pascal_case()
+		body.position = Vector3(0, -2, 0)
+		body.collision_layer = CollisionRules.SHORE
+		body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+		add_child(body)
+		for index: int in range(mass[1], mass[2]):
+			var rect: Rect2 = Progression.LAND[index]
+			var shape: BoxShape3D = BoxShape3D.new()
+			shape.size = Vector3(rect.size.x, 12, rect.size.y)
+			var collider: CollisionShape3D = CollisionShape3D.new()
+			collider.shape = shape
+			collider.position = Vector3(rect.get_center().x, 0, rect.get_center().y)
+			body.add_child(collider)
+	for key: String in ["land0", "land1", "desert1", "tropic1", "city1"]:
+		if land_paint.has(key): continue
+		var material: StandardMaterial3D = StandardMaterial3D.new()
+		material.albedo_color = {"land0": Color("e0cc93"), "land1": Color("7fa368"), "desert1": DESERT_LOOK.SAND_TOP, "tropic1": TROPICAL_LOOK.LUSH_TOP, "city1": CITY_LOOK.WET_TOP}[key]
+		material.roughness = 0.9
+		land_paint[key] = material
+	if surf_paint == null: surf_paint = TOON_COAST.surf_material()
+	var ports: Array[Vector2] = []
+	for place: Dictionary in Progression.WORLD: ports.append(Vector2(place.at.x, place.at.z))
+	# Hill tops take their biome's colour, as the old blocks did.
+	var top_paint: Callable = func(at: Vector2) -> Material:
+		var spot: Rect2 = Rect2(at - Vector2(1, 1), Vector2(2, 2))
+		return land_paint["desert1" if DESERT_LOOK.is_desert(spot) else ("tropic1" if TROPICAL_LOOK.is_tropical(spot) else ("city1" if CITY_LOOK.is_city(spot) else "land1"))]
+	# The sea-lane links are worked out now, at load, not on the first course
+	# the minimap asks for mid-voyage (hundreds of blocks to test).
+	Progression.sea_route(Progression.gate(0), Progression.gate(1))
+	natural_land = Node3D.new()
+	natural_land.name = "NaturalLand"
+	add_child(natural_land)
+	var grid: Dictionary = Progression.natural_land()
+	var chunks: Vector2i = Vector2i(ceili((grid.count.x - 1) / float(TOON_COAST.CHUNK_CELLS)), ceili((grid.count.y - 1) / float(TOON_COAST.CHUNK_CELLS)))
+	for cj: int in chunks.y:
+		for ci: int in chunks.x:
+			var part: Dictionary = TOON_COAST.natural_chunk(ci, cj, ports, land_paint.land0, top_paint)
+			if part.coast != null:
+				var coast: MeshInstance3D = MeshInstance3D.new()
+				coast.name = "Coast%d_%d" % [ci, cj]
+				coast.mesh = part.coast
+				coast.visibility_range_end = TOON_COAST.LAND_RANGE_M
+				natural_land.add_child(coast)
+			if part.surf != null:
+				var foam: MeshInstance3D = MeshInstance3D.new()
+				foam.name = "Surf%d_%d" % [ci, cj]
+				foam.mesh = part.surf
+				foam.material_override = surf_paint
+				foam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				foam.visibility_range_end = TOON_COAST.SURF_RANGE_M
+				natural_land.add_child(foam)
 
 ## Patch 2.1 item 3: a chunky toon iceberg, solid like land. A pale ice band at
 ## the waterline, a white body and one or two white peaks, each a few-sided

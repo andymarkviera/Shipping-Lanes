@@ -1169,5 +1169,5 @@ is in a draft PR, checked on Linux, not yet seen on Windows. Item 5
 wraparound windscreen, open cockpit with bucket seats, quad outboards, yellow,
 red and black racing bands; bow-up trim and lift on the plane, level at rest;
 rooster tail from the transom) is in a draft PR, checked on Linux with
-before/after screenshots, not yet seen on Windows. Item 6 is planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
+before/after screenshots, not yet seen on Windows. Item 6A (natural land: irregular continents, peninsulas, bays and islands baked from seed 2906 by `tools/world_layout/natural_land.py` into `features/world/natural_land.json` and the solid land blocks; smooth toon coasts in 1 km chunks culled past 3.6 km; minimap and M globe draw the new coasts; ports, straits, bridges, biomes and Ember Isle kept where they are for item 6B to move) is in a draft PR, checked on Linux with before/after screenshots, not yet seen on Windows. Item 6B is planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
 2.9.1 (pirate ships).

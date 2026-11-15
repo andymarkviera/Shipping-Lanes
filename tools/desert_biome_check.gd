@@ -79,9 +79,8 @@ func run() -> void:
 		for group: Array in [spots.dunes, spots.mesas[0]]:
 			for spot: Transform3D in group:
 				var at: Vector3 = spot.origin
-				var on_land: bool = false
-				for rect: Rect2 in Progression.LAND:
-					if rect.grow(-80).has_point(Vector2(at.x, at.z)): on_land = true
+				# Patch 2.9 item 6A: 80 m or more in from the natural coast.
+				var on_land: bool = Progression.land_depth(Vector2(at.x, at.z)) >= 80.0
 				var near_port: bool = false
 				for entry: Dictionary in Progression.WORLD:
 					if Vector2(at.x, at.z).distance_to(Vector2(entry.at.x, entry.at.z)) < 400: near_port = true

@@ -12,6 +12,7 @@ const Chunky = preload("res://features/toon/chunky_look.gd")
 const Coast = preload("res://features/toon/toon_coast.gd")
 const ToonLook = preload("res://features/toon/toon_look.gd")
 const Rain = preload("res://features/sky/rain_biome.gd")
+const Progression = preload("res://features/game/progression.gd")
 const SEED: int = 2506
 const HILL_Y: float = 18.0
 const BLOCK_M: float = 48.0
@@ -98,13 +99,10 @@ static func _clear_of_ports(at: Vector2, ports: Array[Vector2]) -> bool:
 		if at.distance_to(nearest) < PORT_CLEAR_M: return false
 	return true
 
+## Patch 2.9 item 6A: `margin` metres or more inland on the natural land
+## (`blocks` is kept for callers; the coast depth grid decides).
 static func _on_land(at: Vector2, blocks: Array, margin: float) -> bool:
-	for probe: Vector2 in [Vector2.ZERO, Vector2(margin, 0), Vector2(-margin, 0), Vector2(0, margin), Vector2(0, -margin)]:
-		var solid: bool = false
-		for block: Rect2 in blocks:
-			if block.has_point(at + probe): solid = true
-		if not solid: return false
-	return true
+	return Progression.land_depth(at) >= margin
 
 ## Where the towers and cranes go over the city blocks of `blocks`:
 ## {"towers": [[Transform3D]] (one list per WALLS colour), "roofs": [Transform3D],
@@ -118,33 +116,27 @@ static func placements(blocks: Array, ports: Array[Vector2]) -> Dictionary:
 	var cranes: Array[Transform3D] = []
 	var any: bool = false
 	for rect: Rect2 in blocks:
-		if not is_city(rect): continue
-		any = true
-		var sea: Array[bool] = Coast.sea_sides(rect, blocks)
-		var crest: Array[float] = []
-		for side: int in 4: crest.append(Coast.HILL_TOP_M + 8.0 if sea[side] else 8.0)
-		var top: Rect2 = Coast._inset(rect, crest)
-		if top.size.x <= 0.0 or top.size.y <= 0.0: continue
-		for gx: int in int(top.size.x / BLOCK_M):
-			for gz: int in int(top.size.y / BLOCK_M):
-				var at: Vector2 = top.position + Vector2(gx + 0.5, gz + 0.5) * BLOCK_M + Vector2(rng.randf_range(-6, 6), rng.randf_range(-6, 6))
-				var pick: float = rng.randf()
-				var wide: float = rng.randf_range(20, 32)
-				var deep: float = rng.randf_range(20, 32)
-				var tall: float = 22.0 + pow(rng.randf(), 2.2) * 130.0
-				var colour: int = rng.randi_range(0, WALLS.size() - 1)
-				if not _clear_of_ports(at, ports) or not _on_land(at, blocks, 30.0): continue
-				if Rain.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
-				if pick < 0.06 and cranes.size() < MAX_CRANES:
-					cranes.append(Transform3D(Basis(Vector3.UP, rng.randf_range(0, TAU)), Vector3(at.x, 0, at.y)))
-					continue
-				# A few open squares between the blocks.
-				if pick < 0.12: continue
-				# The box rises from under the hill so its foot never shows.
-				var height: float = HILL_Y + tall
-				towers[colour].append(Transform3D(Basis.from_scale(Vector3(wide, height, deep)), Vector3(at.x, height / 2.0, at.y)))
-				roofs.append(Transform3D(Basis.from_scale(Vector3(wide + 1.5, 1.6, deep + 1.5)), Vector3(at.x, height + 0.4, at.y)))
-				if tall > 95.0: beacons.append(Transform3D(Basis.from_scale(Vector3.ONE * 1.6), Vector3(at.x, height + 2.4, at.y)))
+		if is_city(rect): any = true
+	if not any: return {}
+	# Patch 2.9 item 6A: the city fills the natural land's hill tops.
+	for at: Vector2 in Progression.inland_spots(BLOCK_M, Coast.HILL_TOP_M + 8.0, rng, 6.0):
+		var pick: float = rng.randf()
+		var wide: float = rng.randf_range(20, 32)
+		var deep: float = rng.randf_range(20, 32)
+		var tall: float = 22.0 + pow(rng.randf(), 2.2) * 130.0
+		var colour: int = rng.randi_range(0, WALLS.size() - 1)
+		if not _clear_of_ports(at, ports) or not _on_land(at, blocks, 30.0): continue
+		if Rain.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
+		if pick < 0.06 and cranes.size() < MAX_CRANES:
+			cranes.append(Transform3D(Basis(Vector3.UP, rng.randf_range(0, TAU)), Vector3(at.x, 0, at.y)))
+			continue
+		# A few open squares between the blocks.
+		if pick < 0.12: continue
+		# The box rises from under the hill so its foot never shows.
+		var height: float = HILL_Y + tall
+		towers[colour].append(Transform3D(Basis.from_scale(Vector3(wide, height, deep)), Vector3(at.x, height / 2.0, at.y)))
+		roofs.append(Transform3D(Basis.from_scale(Vector3(wide + 1.5, 1.6, deep + 1.5)), Vector3(at.x, height + 0.4, at.y)))
+		if tall > 95.0: beacons.append(Transform3D(Basis.from_scale(Vector3.ONE * 1.6), Vector3(at.x, height + 2.4, at.y)))
 	if not any: return {}
 	return {"towers": towers, "roofs": roofs, "beacons": beacons, "cranes": cranes}
 

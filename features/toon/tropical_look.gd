@@ -11,6 +11,7 @@ extends RefCounted
 const Chunky = preload("res://features/toon/chunky_look.gd")
 const Coast = preload("res://features/toon/toon_coast.gd")
 const Tropical = preload("res://features/sky/tropical_biome.gd")
+const Progression = preload("res://features/game/progression.gd")
 const SEED: int = 2505
 ## The flat sand between the beach slope and the hill (toon_coast.gd).
 const BEACH_Y: float = 3.9
@@ -73,6 +74,19 @@ static func is_tropical(rect: Rect2) -> bool:
 static func is_island(rect: Rect2, blocks: Array) -> bool:
 	return is_tropical(rect) and not Coast.sea_sides(rect, blocks).has(false)
 
+## Patch 2.9 item 6A: the natural isles are many blocks each, so a lagoon
+## rings each small tropical coast (its bounds, ISLAND_MAX_M across at most).
+const ISLAND_MAX_M: float = 1200.0
+static func islands() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for entry: Dictionary in Progression.natural_land().get("outlines", []):
+		var ring: PackedVector2Array = entry.outline
+		if ring.is_empty(): continue
+		var bounds: Rect2 = Rect2(ring[0], Vector2.ZERO)
+		for spot: Vector2 in ring: bounds = bounds.expand(spot)
+		if maxf(bounds.size.x, bounds.size.y) <= ISLAND_MAX_M and is_tropical(bounds): out.append(bounds)
+	return out
+
 static func _clear_of_ports(at: Vector2, ports: Array[Vector2]) -> bool:
 	for place: Vector2 in ports:
 		# A port's quay runs a kilometre north (+Z) of its berth origin.
@@ -104,38 +118,20 @@ static func placements(blocks: Array, ports: Array[Vector2]) -> Dictionary:
 	var bushes: Array[Transform3D] = []
 	var any: bool = false
 	for rect: Rect2 in blocks:
-		if not is_tropical(rect): continue
-		any = true
-		var sea: Array[bool] = Coast.sea_sides(rect, blocks)
-		var harbour: Array[bool] = Coast.harbour_sides(rect, ports)
-		# A row of palms along each beach (not the harbour walls).
-		for side: int in 4:
-			if not sea[side] or harbour[side]: continue
-			var ends: Array[Vector2] = Coast.side_ends(rect, side)
-			# Into the block from that side (Vector2.DOWN is +Y here, which is +Z).
-			var inward: Vector2 = [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP][side]
-			var length: float = ends[0].distance_to(ends[1])
-			var along: Vector2 = (ends[1] - ends[0]) / length
-			# The sand flat runs right along the side, so palms can stand by the corners.
-			var step: float = BEACH_IN_M + 6.0
-			while step < length - BEACH_IN_M - 6.0:
-				var at: Vector2 = ends[0] + along * (step + rng.randf_range(-6, 6)) + inward * (BEACH_IN_M + rng.randf_range(-2.5, 2.5))
-				if _spot_ok(at, ports): _palm(rng, at, BEACH_Y, trunks, crowns)
-				step += BEACH_PALM_M
-		# A grove of palms and bushes on the hill top.
-		var crest: Array[float] = []
-		for side: int in 4: crest.append(Coast.HILL_TOP_M + 8.0 if sea[side] else 8.0)
-		var top: Rect2 = Coast._inset(rect, crest)
-		if top.size.x <= 0.0 or top.size.y <= 0.0: continue
-		for gx: int in int(top.size.x / GROVE_M) + 1:
-			for gz: int in int(top.size.y / GROVE_M) + 1:
-				var at: Vector2 = top.position + Vector2(gx + 0.5, gz + 0.5) * GROVE_M + Vector2(rng.randf_range(-18, 18), rng.randf_range(-18, 18))
-				at = at.clamp(top.position, top.end)
-				var palm: bool = rng.randf() < 0.65
-				var wide: float = rng.randf_range(7, 13)
-				if not _spot_ok(at, ports): continue
-				if palm: _palm(rng, at, HILL_Y, trunks, crowns)
-				else: bushes.append(Transform3D(Basis(Vector3.UP, rng.randf_range(0, TAU)) * Basis.from_scale(Vector3(wide, wide * 0.6, wide * rng.randf_range(0.8, 1.3))), Vector3(at.x, HILL_Y - 0.5, at.y)))
+		if is_tropical(rect): any = true
+	if not any: return {}
+	# Patch 2.9 item 6A: a row of palms on the sand flat all round the natural
+	# coast (not by the harbour walls), and groves on the hill tops.
+	for at: Vector2 in Progression.coast_ring(BEACH_IN_M, BEACH_PALM_M):
+		var jitter: Vector2 = Vector2(rng.randf_range(-2.5, 2.5), rng.randf_range(-2.5, 2.5))
+		if Coast.harbour_weight(at, ports) > 0.0 or not _spot_ok(at + jitter, ports): continue
+		_palm(rng, at + jitter, BEACH_Y, trunks, crowns)
+	for at: Vector2 in Progression.inland_spots(GROVE_M, Coast.HILL_TOP_M + 8.0, rng, 18.0):
+		var palm: bool = rng.randf() < 0.65
+		var wide: float = rng.randf_range(7, 13)
+		if not _spot_ok(at, ports): continue
+		if palm: _palm(rng, at, HILL_Y, trunks, crowns)
+		else: bushes.append(Transform3D(Basis(Vector3.UP, rng.randf_range(0, TAU)) * Basis.from_scale(Vector3(wide, wide * 0.6, wide * rng.randf_range(0.8, 1.3))), Vector3(at.x, HILL_Y - 0.5, at.y)))
 	if not any: return {}
 	return {"trunks": trunks, "crowns": crowns, "bushes": bushes}
 
@@ -234,9 +230,10 @@ static func lagoon_material() -> ShaderMaterial:
 	material.set_shader_parameter("reach", LAGOON_M)
 	return material
 
-## Metres from `at` out to the edge of `rect` (0 inside).
+## Metres from `at` out to the coast (0 or less on land). Patch 2.9 item 6A:
+## measured from the natural coast, so the ring follows the island's shape.
 static func _out(rect: Rect2, at: Vector2) -> float:
-	return at.distance_to(at.clamp(rect.position, rect.end))
+	return maxf(-Progression.land_depth(at), 0.0) if rect.grow(LAGOON_M).has_point(at) else LAGOON_M + 1.0
 
 ## One island's lagoon ring: a flat grid round it, each vertex carrying its
 ## distance from the shore in UV.x. World coordinates, so place it at the origin.
@@ -265,8 +262,7 @@ static func lagoon_mesh(rect: Rect2) -> ArrayMesh:
 static func build_lagoons(blocks: Array, paint: ShaderMaterial) -> Node3D:
 	var root: Node3D = Node3D.new()
 	root.name = "Lagoons"
-	for rect: Rect2 in blocks:
-		if not is_island(rect, blocks): continue
+	for rect: Rect2 in islands():
 		var ring: MeshInstance3D = MeshInstance3D.new()
 		ring.name = "Lagoon%d" % root.get_child_count()
 		ring.mesh = lagoon_mesh(rect)

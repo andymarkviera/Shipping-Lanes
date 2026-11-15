@@ -116,10 +116,10 @@ func run() -> void:
 		expect(land.find_children("*", "CollisionObject3D", true, false).is_empty(), "the skyline is not solid")
 	# A wet dark top on the city land.
 	var wet: int = 0
-	for body: Node in game.get_children():
-		var shore: StaticBody3D = body as StaticBody3D
-		if shore == null or shore.get_node_or_null("Coast") == null: continue
-		var mesh: Mesh = (shore.get_node("Coast") as MeshInstance3D).mesh
+	# Patch 2.9 item 6A: the hill tops of the natural land's coast chunks.
+	for chunk: Node in game.get_node("NaturalLand").get_children():
+		if not String(chunk.name).begins_with("Coast"): continue
+		var mesh: Mesh = (chunk as MeshInstance3D).mesh
 		for surface: int in mesh.get_surface_count():
 			var paint: Material = mesh.surface_get_material(surface)
 			if paint is StandardMaterial3D and (paint as StandardMaterial3D).albedo_color.is_equal_approx(Look.WET_TOP): wet += 1

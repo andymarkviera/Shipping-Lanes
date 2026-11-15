@@ -32,6 +32,35 @@ static func sphere_point(world: Vector3, ship: Vector3) -> Vector2:
 	var step: Vector3 = Progression.short_way(world - ship)
 	return Vector2(-step.x, step.z) / METRES_PER_RADIAN
 
+## Patch 2.9 item 6A: [outline, ice, centre] for each natural landmass (every
+## other outline point, about 120 m apart) and polar ice shelf. Built once.
+static var _rings: Array = []
+static func land_rings() -> Array:
+	var rings: Array = []
+	for entry: Dictionary in Progression.natural_land().get("outlines", []):
+		var ring: PackedVector2Array = PackedVector2Array()
+		var source: PackedVector2Array = entry.outline
+		for index: int in range(0, source.size(), 2): ring.append(source[index])
+		if ring.size() >= 3: rings.append([ring, false])
+	for block: Rect2 in Progression.ICE_SHELVES:
+		var corners: PackedVector2Array = PackedVector2Array()
+		var ends: Array[Vector2] = [block.position, Vector2(block.end.x, block.position.y), block.end, Vector2(block.position.x, block.end.y)]
+		for index: int in 4:
+			for step: int in 10: corners.append(ends[index].lerp(ends[(index + 1) % 4], step / 10.0))
+		rings.append([corners, true])
+	for entry: Array in rings:
+		var bounds: Rect2 = Rect2(entry[0][0], Vector2.ZERO)
+		for spot: Vector2 in entry[0]: bounds = bounds.expand(spot)
+		entry.append(bounds.get_center())
+	return rings
+
+## The near side's edge as a polygon in globe radians (Patch 2.9 item 6A).
+static var _horizon: PackedVector2Array = PackedVector2Array()
+static func horizon() -> PackedVector2Array:
+	if _horizon.is_empty():
+		for step: int in 64: _horizon.append(Vector2.from_angle(TAU * step / 64.0) * (PI / 2 - 0.03))
+	return _horizon
+
 ## Only the near half of the globe can be seen.
 static func visible_on(point: Vector2) -> bool:
 	return point.length() < PI / 2 - 0.02
@@ -73,29 +102,37 @@ func _draw() -> void:
 	# reads as one shape: an ink coastline, a sandy beach, then the fills, which
 	# cover the strokes inside the continent.
 	var shapes: Array = []
-	var ice_from: int = Progression.LAND.size()
-	for index_land: int in ice_from + Progression.ICE_SHELVES.size():
-		# Land is green; the polar ice shelves are white.
-		var land: Rect2 = Progression.LAND[index_land] if index_land < ice_from else Progression.ICE_SHELVES[index_land - ice_from]
-		# The whole block is drawn as its copy nearest the ship, so it is never torn.
-		var centre: Vector2 = land.get_center()
+	# Patch 2.9 item 6A: the natural landmasses' outlines (every other point,
+	# about 120 m apart), then the polar ice shelves as before.
+	if _rings.is_empty(): _rings = land_rings()
+	for entry: Array in _rings:
+		var ring: PackedVector2Array = entry[0]
+		# The whole shape is drawn as its copy nearest the ship, so it is never torn.
+		var centre: Vector2 = entry[2]
 		var near: Vector3 = Progression.nearest(Vector3(centre.x, 0, centre.y), ship) - Vector3(centre.x, 0, centre.y)
-		var outline: PackedVector2Array = PackedVector2Array()
-		var corners: Array[Vector2] = [land.position, Vector2(land.end.x, land.position.y), land.end, Vector2(land.position.x, land.end.y)]
+		var points: PackedVector2Array = PackedVector2Array()
 		var any_visible: bool = false
-		for index: int in 4:
-			for step: int in 10:
-				var spot: Vector2 = corners[index].lerp(corners[(index + 1) % 4], step / 10.0)
-				var point: Vector2 = (Vector2(-spot.x, spot.y) - Vector2(-ship.x, ship.z) + Vector2(-near.x, near.z)) / METRES_PER_RADIAN
-				any_visible = any_visible or visible_on(point)
-				outline.append(on_disc(point, radius))
-		if any_visible and not Geometry2D.triangulate_polygon(outline).is_empty():
-			var ring: PackedVector2Array = outline.duplicate()
-			ring.append(outline[0])
-			shapes.append([outline, ring, index_land >= ice_from])
+		var all_visible: bool = true
+		for spot: Vector2 in ring:
+			var point: Vector2 = (Vector2(-spot.x, spot.y) - Vector2(-ship.x, ship.z) + Vector2(-near.x, near.z)) / METRES_PER_RADIAN
+			any_visible = any_visible or visible_on(point)
+			all_visible = all_visible and visible_on(point)
+			points.append(point)
+		if not any_visible: continue
+		# Patch 2.9 item 6A: a continent can run over the horizon; only its near
+		# side is drawn, cut at the horizon, so its shape stays one fill.
+		var pieces: Array = [points] if all_visible else Geometry2D.intersect_polygons(points, horizon())
+		for piece: PackedVector2Array in pieces:
+			if Geometry2D.is_polygon_clockwise(piece) != Geometry2D.is_polygon_clockwise(points) and not all_visible: continue
+			var outline: PackedVector2Array = PackedVector2Array()
+			for point: Vector2 in piece: outline.append(on_disc(point, radius))
+			var closed: PackedVector2Array = outline.duplicate()
+			closed.append(outline[0])
+			shapes.append([outline, closed, entry[1], not Geometry2D.triangulate_polygon(outline).is_empty()])
 	for shape: Array in shapes: draw_polyline(shape[1], Color("8fc3d6") if shape[2] else Color("2f7a33"), 5.0, true)
 	for shape: Array in shapes: draw_polyline(shape[1], Color("dff3f8") if shape[2] else SAND, 2.5, true)
-	for shape: Array in shapes: draw_colored_polygon(shape[0], Color("f7fbfd") if shape[2] else PLAYFUL.LEAF)
+	for shape: Array in shapes:
+		if shape[3]: draw_colored_polygon(shape[0], Color("f7fbfd") if shape[2] else PLAYFUL.LEAF)
 	# Toon shading: a soft shadow on the lower right, a shine on the upper left.
 	draw_arc(middle, radius - 5, deg_to_rad(-10), deg_to_rad(100), 24, Color(PLAYFUL.INK, 0.16), 10, true)
 	draw_arc(middle, radius - 9, deg_to_rad(200), deg_to_rad(250), 12, Color(1, 1, 1, 0.45), 4, true)

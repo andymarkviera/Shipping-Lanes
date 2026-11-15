@@ -22,10 +22,11 @@ func _draw() -> void:
 	var bounds: Dictionary = Navigation.frame(view)
 	var area: Rect2 = Rect2(Vector2.ZERO, size).grow(-22)
 	if view.get("game_mode") == true:
-		for land: Rect2 in Progression.LAND:
-			var corner: Vector2 = Navigation.project(Vector3(land.position.x, 0, land.position.y), bounds, area)
-			var opposite: Vector2 = Navigation.project(Vector3(land.end.x, 0, land.end.y), bounds, area)
-			draw_rect(Rect2(corner, opposite - corner).abs(), Color("7ed957") if playful else Color("8fa97a"))
+		# Patch 2.9 item 6A: the natural landmasses' outlines.
+		for entry: Dictionary in Progression.natural_land().get("outlines", []):
+			var shape: PackedVector2Array = PackedVector2Array()
+			for spot: Vector2 in entry.outline: shape.append(Navigation.project(Vector3(spot.x, 0, spot.y), bounds, area))
+			if not Geometry2D.triangulate_polygon(shape).is_empty(): draw_colored_polygon(shape, Color("7ed957") if playful else Color("8fa97a"))
 	var boat: Vector2 = Navigation.project(view.ship.global_position, bounds, area)
 	var destination: Dictionary = Navigation.target(view)
 	if not destination.is_empty():

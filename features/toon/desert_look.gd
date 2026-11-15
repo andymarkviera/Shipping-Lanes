@@ -7,6 +7,7 @@ extends RefCounted
 ## and cacti. Placement is seeded, so it is the same every run.
 const Chunky = preload("res://features/toon/chunky_look.gd")
 const Desert = preload("res://features/sky/desert_biome.gd")
+const Progression = preload("res://features/game/progression.gd")
 const SEED: int = 2504
 ## Hill tops are 18 m above the sea (toon_coast.gd HILL_TOP_Y).
 const GROUND_Y: float = 18.0
@@ -65,36 +66,29 @@ static func placements(blocks: Array, ports: Array[Vector2]) -> Dictionary:
 	for rect: Rect2 in blocks:
 		if is_desert(rect): desert_blocks.append(rect)
 	if desert_blocks.is_empty(): return {}
-	for rect: Rect2 in desert_blocks:
-		var inner: Rect2 = rect.grow(-COAST_CLEAR_M)
-		if inner.size.x <= 0.0 or inner.size.y <= 0.0: continue
-		# Dunes: long, low, wind-combed crests, all leaning the same way.
-		for gx: int in int(inner.size.x / DUNE_SPACING_M) + 1:
-			for gz: int in int(inner.size.y / DUNE_SPACING_M) + 1:
-				var at: Vector2 = inner.position + Vector2(gx, gz) * DUNE_SPACING_M + Vector2(rng.randf_range(-35, 35), rng.randf_range(-35, 35))
-				var wide: float = rng.randf_range(26, 46)
-				var tall: float = rng.randf_range(5, 12)
-				if not inner.has_point(at) or not _clear_of_ports(at, ports) or Desert.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
-				var basis: Basis = Basis(Vector3.UP, 0.6 + rng.randf_range(-0.25, 0.25)).scaled(Vector3(wide, tall, wide * rng.randf_range(1.8, 2.6)))
-				dunes.append(Transform3D(basis, Vector3(at.x, GROUND_Y - 1.0, at.y)))
-		# Mesas: flat-topped buttes in banded red rock, few and far between.
-		for gx: int in int(inner.size.x / MESA_SPACING_M) + 1:
-			for gz: int in int(inner.size.y / MESA_SPACING_M) + 1:
-				var at: Vector2 = inner.position + Vector2(gx + 0.5, gz + 0.5) * MESA_SPACING_M + Vector2(rng.randf_range(-90, 90), rng.randf_range(-90, 90))
-				var radius: float = rng.randf_range(45, 90)
-				var height: float = rng.randf_range(40, 85)
-				if not inner.grow(-radius).has_point(at) or not _clear_of_ports(at, ports) or Desert.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
-				var turn: float = rng.randf_range(0, TAU)
-				var stretch: float = rng.randf_range(1.0, 1.5)
-				var y: float = GROUND_Y - 2.0
-				# Three bands, each a little narrower, then a pale cap.
-				for band: int in 4:
-					var share: float = [0.42, 0.33, 0.25, 0.04][band]
-					var r: float = radius * [1.0, 0.92, 0.85, 0.83][band]
-					var h: float = height * share
-					var shape: Basis = Basis(Vector3.UP, turn).scaled(Vector3(r, h, r * stretch))
-					mesas[band].append(Transform3D(shape, Vector3(at.x, y + h / 2.0, at.y)))
-					y += h
+	# Patch 2.9 item 6A: on the natural land, COAST_CLEAR_M or more inland.
+	for at: Vector2 in Progression.inland_spots(DUNE_SPACING_M, COAST_CLEAR_M, rng, 35.0):
+		var wide: float = rng.randf_range(26, 46)
+		var tall: float = rng.randf_range(5, 12)
+		if not _clear_of_ports(at, ports) or Desert.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
+		var basis: Basis = Basis(Vector3.UP, 0.6 + rng.randf_range(-0.25, 0.25)).scaled(Vector3(wide, tall, wide * rng.randf_range(1.8, 2.6)))
+		dunes.append(Transform3D(basis, Vector3(at.x, GROUND_Y - 1.0, at.y)))
+	# Mesas: flat-topped buttes in banded red rock, few and far between.
+	for at: Vector2 in Progression.inland_spots(MESA_SPACING_M, COAST_CLEAR_M, rng, 90.0):
+		var radius: float = rng.randf_range(45, 90)
+		var height: float = rng.randf_range(40, 85)
+		if Progression.land_depth(at) < COAST_CLEAR_M + radius * 1.6 or not _clear_of_ports(at, ports) or Desert.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
+		var turn: float = rng.randf_range(0, TAU)
+		var stretch: float = rng.randf_range(1.0, 1.5)
+		var y: float = GROUND_Y - 2.0
+		# Three bands, each a little narrower, then a pale cap.
+		for band: int in 4:
+			var share: float = [0.42, 0.33, 0.25, 0.04][band]
+			var r: float = radius * [1.0, 0.92, 0.85, 0.83][band]
+			var h: float = height * share
+			var shape: Basis = Basis(Vector3.UP, turn).scaled(Vector3(r, h, r * stretch))
+			mesas[band].append(Transform3D(shape, Vector3(at.x, y + h / 2.0, at.y)))
+			y += h
 	return {"dunes": dunes, "mesas": mesas}
 
 ## Dunes and mesas over the desert blocks of `blocks`. Returns the node, or
