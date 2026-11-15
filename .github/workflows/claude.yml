@@ -35,6 +35,6 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Opus 5.5 (switched early Nov 13, 2026: Fable weekly limit hit; Andy chose Opus)
-          claude_args: "--model opus"
+          claude_args: "--model fable"
           # Full output in the (private) Actions log so the usage-limit reset time is readable
           show_full_output: "true"
