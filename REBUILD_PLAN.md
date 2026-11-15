@@ -1249,8 +1249,17 @@ Design (Hark's call):
   server, download and swap in the new package, start it again (saves
   migrate on start). It reads releases, no token, from a NEW public repo
   `andymarkviera/Shipping-Lanes-Server-Releases`, assets named
-  `Shipping-Lanes-Server-Windows-x64.zip` and `Shipping-Lanes-Server-Linux-x64.zip`.
+  `Shipping-Lanes-Server-Windows-x64.zip` (Andy's server PC runs Windows;
+  the Server Launcher is a Windows app; it may start with Windows).
   Server tag matches the game tag (`v3.0.0`, ...).
+- **Reachable from outside Andy's house** (Andy, 11:14 AM: friends join over
+  the internet). One UDP game port (default 24565, configurable), forwarded
+  on Andy's Spectrum router to the server PC; Hark sets up the forward with
+  Andy's login when 3.0 is ready, never the agents. The Server Launcher shows
+  the server's public address and whether the port is reachable, and allows
+  the Windows Firewall rule on first start (with a clear prompt). A home IP
+  can change: `server.json` may hold a free dynamic-DNS hostname instead of
+  an IP (Hark sets that up; nothing in the repo holds the real address).
 - **Release pipeline.** Each patch from 3.0 on publishes the game release
   (as today) and the server release to the new repo. Hark creates the repo;
   the workflow change and adding that repo to the release token are Andy's
