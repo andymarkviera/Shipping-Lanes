@@ -12,6 +12,9 @@ var view: Node3D
 var bar: PanelContainer
 var slider: HSlider
 var knots: Label
+## Patch 2.9 item 4: the helm speed, smoothed over about a fifth of a second so
+## the whole-knot number does not flicker between two values.
+var shown_speed_mps: float = 0.0
 var dock_hint: Label
 var dragging: bool = false
 var toast: PanelContainer
@@ -188,7 +191,11 @@ func refresh(delta: float) -> void:
 	var state: String = view.docking.state(1)
 	var docked: bool = state == "docked"
 	# Helm bar.
-	knots.text = "%d kn" % roundi(HandlingFeedback.instruments(ship).speed_knots)
+	# Speed over ground (what the hull really covers), converted at the exact
+	# 1 kn = 1852 m / 3600 s; one world unit is one metre.
+	shown_speed_mps = lerpf(shown_speed_mps, ship.ground_speed_mps, 1.0 - exp(-5.0 * maxf(delta, 0.0)))
+	if ship.ground_speed_mps < 0.05 and shown_speed_mps < 0.3: shown_speed_mps = 0.0
+	knots.text = "%d kn" % roundi(shown_speed_mps * 3600.0 / 1852.0)
 	var commanded: float = ship.commanded_throttle
 	if not dragging:
 		slider.set_value_no_signal(commanded / maxf(0.01, ship.definition.forward_throttle_limit if commanded >= 0.0 else ship.definition.reverse_throttle_limit))

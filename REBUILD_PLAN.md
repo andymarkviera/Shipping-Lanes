@@ -1161,5 +1161,9 @@ Linux with before/after screenshots, not yet seen on Windows. Item 3
 (mooring ropes: each line leans out over the rail clear of the hull, sags
 only toward the quay edge, rests over the edge and loops round the bollard
 post) is in a draft PR, checked on Linux with before/after screenshots, not
-yet seen on Windows. Items 4-6 are planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
+yet seen on Windows. Item 4 (speeds and knots: speedboat 50 kn, offshore
+racer 200 kn with the camera, wake, spray and wave-jumps kept in hand; the
+knots maths was right, and the HUD now shows the smoothed speed over ground)
+is in a draft PR, checked on Linux, not yet seen on Windows. Items 5-6 are
+planned. Patch 2.9 runs after Patch 2.7 item 4, before Patch
 2.9.1 (pirate ships).

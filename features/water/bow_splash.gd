@@ -60,7 +60,7 @@ func heading() -> Vector3:
 
 func update(delta: float) -> void:
 	var ocean: OceanPresentation = wake.ocean
-	spray_scale = clampf(wake.half_width / 6.5, 0.35, 1.0)
+	spray_scale = clampf(wake.half_width / 6.5, 0.35, 1.0) * wake.overspeed
 	power = smoothstep(START_STRENGTH, 1.0, wake.strength)
 	# Patch 2.4 item 8: no bow spray while a jumping hull is in the air.
 	if is_instance_valid(wake.visual) and wake.visual.airborne: power = 0.0

@@ -9,6 +9,10 @@ const FOAM_SHADER = preload("res://features/water/ship_foam.gdshader")
 const FULL_STRENGTH_SPEED_MPS: float = 12.35
 const LIFETIME: float = 14.0
 const MAX_SAMPLES: int = 40
+## Patch 2.9 item 4: above this speed the wake samples closer and the bow spray
+## grows (overspeed goes from 1 up to 2.5 at 55 m/s and more).
+const OVERSPEED_FROM_MPS: float = 22.0
+var overspeed: float = 1.0
 var ship: CharacterBody3D
 var ocean: OceanPresentation
 ## Patch 2.4 item 8: the hull's motion, so a jumping boat's splash knows when it
@@ -72,6 +76,11 @@ func advance(delta: float) -> void:
 	strength = clampf(speed / FULL_STRENGTH_SPEED_MPS, 0.0, 1.0)
 	clock += delta
 	var interval: float = 0.55 if ocean.quality == 0 else 0.35
+	# Patch 2.9 item 4: above 22 m/s drop samples by distance (at most every
+	# 7.7 m, what 22 m/s gave), so the 200 kn racer's wake is not a few long
+	# straight slabs. Slower ships are unchanged.
+	if speed > OVERSPEED_FROM_MPS: interval = maxf(interval * OVERSPEED_FROM_MPS / speed, 0.08)
+	overspeed = clampf(speed / OVERSPEED_FROM_MPS, 1.0, 2.5)
 	if speed > 0.15 and clock >= interval:
 		clock = 0.0
 		serial += 1

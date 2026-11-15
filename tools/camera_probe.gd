@@ -114,5 +114,17 @@ func run() -> void:
 	before = rig.camera.global_position
 	await get_tree().create_timer(0.1).timeout
 	check(rig.camera.global_position == before, "Missing focus holds stable view")
+	# Patch 2.9 item 4: the view keeps up with the 200 kn offshore racer (102.9
+	# m/s): the lag stays near what a 42 kn ship gets instead of 20 m.
+	var racer: CameraFocus = hull(Vector3(2.8, 2, 13), Vector3(0, 0, -2000))
+	rig.set_focus(racer)
+	await get_tree().create_timer(0.5).timeout
+	var body: Node3D = racer.get_parent()
+	var worst: float = 0.0
+	for tick: int in range(120):
+		body.position.z += 102.9 / Engine.physics_ticks_per_second
+		await get_tree().physics_frame
+		if tick > 60: worst = maxf(worst, rig.pivot.distance_to(racer.global_position))
+	check(worst > 0.5 and worst < 6.0, "Camera keeps up with the racer at 200 kn (lag %.1f m)" % worst)
 	print("CAMERA_CHECK_%s (%d checks)" % ["PASS" if failures == 0 else "FAIL", checks])
 	get_tree().quit(0 if failures == 0 else 1)
