@@ -167,10 +167,26 @@ static func heavy_job_valid(job: Variant, possible: Dictionary, ports: Array = P
 	if not job.id.begins_with(job.origin + "_heavy_") or not job.get("drop") is Vector3 or not job.drop.is_finite(): return false
 	# The drop lies in open water off the origin port: 450 to 850 m out on its open
 	# side and 800 to 1200 m south. 0.01 m of slack covers rounding far from zero.
+	# Patch 2.9 item 6B: a job saved before its port moved lies off the old spot.
 	var place: Dictionary = Progression.WORLD[Progression.port_index(job.origin)]
-	var local: Vector3 = job.drop - place.at
-	var out: float = local.x * float(place.drop_side)
-	return absf(job.drop.y) < .01 and local.z >= -1200.01 and local.z <= -799.99 and out >= 449.99 and out <= 850.01
+	if absf(job.drop.y) >= .01: return false
+	return drop_off(job.drop, place.at, place.drop_side) or (place.has("was") and drop_off(job.drop, place.was, place.was_side))
+
+static func drop_off(drop: Vector3, at: Vector3, side: float) -> bool:
+	var local: Vector3 = drop - at
+	var out: float = local.x * side
+	return local.z >= -1200.01 and local.z <= -799.99 and out >= 449.99 and out <= 850.01
+
+## A heavy job saved before Patch 2.9 item 6B moved its port, with its drop moved
+## the same way: as far out and south of the new spot, on the new open side.
+static func moved_job(job: Dictionary) -> Dictionary:
+	var result: Dictionary = job.duplicate(true)
+	if job.is_empty(): return result
+	var place: Dictionary = Progression.WORLD[Progression.port_index(job.origin)]
+	if not place.has("was") or drop_off(job.drop, place.at, place.drop_side): return result
+	var local: Vector3 = job.drop - place.was
+	result.drop = place.at + Vector3(local.x * float(place.was_side) * float(place.drop_side), 0, local.z)
+	return result
 
 static func restore(view: Node3D, data: Dictionary) -> bool:
 	if not valid(data): return false
@@ -186,7 +202,10 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 	await view.get_tree().physics_frame # Deferred floating-body creation must finish.
 	if not is_instance_valid(view.ship): return false
 	var body: HandlingShip = view.ship
-	body.global_transform = data.pose
+	# Patch 2.9 item 6B: a pose saved before the ports moved may now be inside land.
+	# The ship then starts at its port's spawn, where select_port put it.
+	var spawn: Transform3D = body.global_transform
+	if Progression.afloat(data.pose, body.definition.hull_size_m): body.global_transform = data.pose
 	body.zero_throttle()
 	body.actual_throttle = 0
 	body.velocity = Vector3.ZERO
@@ -200,7 +219,8 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 	if not body.state.manifest.replace(lines).ok: return false
 	view.reward_minor = data.credits
 	view.set("spent_minor", int(data.get("spent", 0)))
-	view.heavy_jobs.completed = data.heavy_completed.duplicate(true)
+	view.heavy_jobs.completed = {}
+	for id: String in data.heavy_completed: view.heavy_jobs.completed[id] = moved_job(data.heavy_completed[id])
 	if data.heavy_mode:
 		var h: Dictionary = data.heavy
 		body.deck_height = h.height
@@ -209,9 +229,10 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 		body.deck_shape.position.y = h.height - .45
 		body.cargo_mount.position.y = h.height
 		body.payload_shape.position.y = h.height + 4
-		body.payload_body.global_transform = h.payload_pose
+		# A load left floating moves with a ship moved to its port.
+		body.payload_body.global_transform = body.global_transform * data.pose.affine_inverse() * h.payload_pose
 		body.attached = h.attached
-		view.heavy_jobs.active = h.active.duplicate(true)
+		view.heavy_jobs.active = moved_job(h.active)
 		# Patch 2.2 item 3: the job's own load size; ship 1's is unchanged.
 		if not h.active.is_empty() and not body.use_job_load(HeavyJobs.load_for(h.active.id)): return false
 		body.payload_shape.position.y = h.height + body.payload_size.y * 0.5
@@ -223,7 +244,12 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 		body.payload_body.visible = not h.active.is_empty()
 		if not h.active.is_empty(): body.release_guard = func(): return view.heavy_jobs.can_release(body)
 	if data.docked:
-		if not view.docking.request_dock(1, view.service_id(), view.cargo_id()).ok: return false
+		# A docked save from before the ports moved sits off every berth; it docks
+		# again from its port's spawn.
+		if not view.docking.request_dock(1, view.service_id(), view.cargo_id()).ok:
+			if data.heavy_mode and not data.heavy.attached: body.payload_body.global_transform = spawn * data.pose.affine_inverse() * data.heavy.payload_pose
+			body.global_transform = spawn
+			if not view.docking.request_dock(1, view.service_id(), view.cargo_id()).ok: return false
 		# Long enough for the longest easy-docking slide (older saves may sit off centre).
 		view.docking.advance(view.docking.MAX_SLIDE_SECONDS + .1)
 		if view.docking.state(1) != "docked": return false
