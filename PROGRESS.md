@@ -7525,29 +7525,39 @@ tropical and rain centres, then re-bends the land round them. Port IDs are
 unchanged. Each moved port keeps its old spot as `"was"`/`"was_side"` in
 `Progression.WORLD`.
 
-**Not done (blocks merge):**
-- Nothing reads `"was"` yet. `leg_units` uses the new spots, so container pay
-  changes on 5 of the 6 strait legs (for example, Brindle–Slatewater goes from 15
-  to 62 units). `voyage_snapshot.valid()` compares saved offers with rebuilt ones,
-  so old game saves that hold these offers are rejected. Saved heavy jobs are also
-  rejected, because their drop is checked against the new port spot.
-- Saves made on the old layout are not moved. `restore()` puts the ship back at
-  its saved pose, which can now be inside land or far from any port.
-- The header comment on `Progression.WORLD` still says that Brindle Quay and
-  Slatewater Works do not move.
+**Pay and saves (pushed 930f430):** `Progression.chart_at()` gives a port's
+old spot (`"was"`), and `leg_units` uses it, so container and bulk pay and the
+saved offers that `voyage_snapshot.valid()` rebuilds are as before. A saved
+heavy drop round the old spot is accepted. On load it moves with the port: the
+same distance out and south, on the new open side. `restore()` starts the ship
+at its port's spawn when the saved pose is inside land, ice or an iceberg
+(`Progression.afloat`). When a docked save is off every berth, it docks again
+from that spawn. A floating heavy load moves with its ship.
+**Checks fixed (f575122):** `crane_check` (bays are now grouped by the stack's
+z on the ship; float error far from the origin split container_3's stacks) and
+`check_m1_voyage` (it follows the sea lanes to Slatewater's gate, and the
+iceberg edge test no longer depends on Brindle's spot).
 
-Checks (agent's Linux runner, official Godot 4.7.2, headless): import,
-`check_scripts`, `traversal_budget.py` (17 routes, 0 failures),
+**Not done (blocks merge):** Brindle Quay was placed in the polar band
+(z -3960), which breaks the four biome checks. `volcano_check` (292 m from a
+sea lane) and `world_land_check` (474 m straight coast) still fail.
+`heavy_ladder_check` also fails: the spot where bigger heavy loads are set down
+at Gannet Light and Slatewater Works overlaps the shore. All of these need the
+generator changed and the world re-baked.
+Not tested: a real pre-2.9 save file loaded on the new layout (the code paths
+pass `sailing_save_probe` and `voyage_probe`, but nothing covers a moved port).
+A heavy load still waiting at an old quay (pickup state) is not moved.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless): `check_scripts`,
+`check_m1_voyage`, `crane_check`, the bulk and container ladder checks,
 `globe_map_check`, `debug_game_check`, `check_flow`, `check_starter`,
 `check_catalog`, `check_controls`, `check_helm_keys`, `check_title`,
-`small_boats_check`, `mooring_check`, `hangar_check`, the geography,
-collision, world size, water, camera, units, handling, heavy lifter, fuel,
-economy, sailing save and ports probes all passed.
-**Failed on this branch and passed on `origin/main`:** `world_land_check`
-(474 m straight coast), `volcano_check` (292 m from a sea lane),
-`tropical_biome_check`, `desert_biome_check`, `rain_biome_check`,
-`polar_biome_check` (start-port look and restore expectations),
-`check_m1_voyage` (iceberg across the edge; turn-in point south-west of
-Slatewater) and `crane_check` (container_3 stacking). `persistence_probe`
-fails on both branches. CI's smoke set passes but does not run these checks.
+`small_boats_check`, `mooring_check`, `hangar_check`, and the sailing save,
+voyage, geography, collision, world size, water, camera, units, handling, heavy
+lifter, fuel, economy, ports, contracts, session, clocks, feedback and
+diagnostics probes: passed.
+**Failed (pass on `origin/main`):** `world_land_check`, `volcano_check`, the
+tropical, desert, rain and polar biome checks, `heavy_ladder_check`.
+**Fail on `origin/main` too:** `persistence_probe`, `migration_probe`,
+`slots_probe`, `heavy_transport_probe` (needs the HTTP/SQLite service).
 Not run: Windows, Mac, an export or a playtest.
