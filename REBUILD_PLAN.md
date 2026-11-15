@@ -1079,8 +1079,34 @@ Added by Andy (November 14, 2026, 8:25 PM), same patch, after item 4:
    dry wind in the desert. Smooth crossfades, pooled players, no frame-time
    cost. Every sound must be CC0/public domain or generated in the repo,
    with its source and license listed in a credits file; nothing that
-   costs money or needs an account. Item 8's PR carries the 5-10 line
-   Windows+Mac playtest checklist for all of 2.9.1 (instead of item 4).
+   costs money or needs an account.
+
+Added by Andy (November 15, 2026, 10:26 AM), same patch, after item 8:
+
+9. **Sprite-sheet lettering.** Andy supplied two hand-made letter sheets in
+   `docs/reference/patch_2_9_1/`: `font_sheet_white_navy.png` (white
+   letters, navy outline, blue drop shadow; full A-Z, a-z, 0-9 and
+   `! ? . , : ; + -`) and `font_sheet_red_gold.png` (glossy red serif caps
+   on top, bold gold italic caps below; caps, digits, `! ? :`). Andy's
+   words: "No need to change everything but let's put it everywhere it
+   fits." Turn them into bitmap fonts (key the white background to alpha,
+   slice each glyph with its own advance width, crisp at 1x and 2x UI
+   scale) and use them for display text, not body text:
+   - White/navy: title and main-menu logo text and buttons, screen and
+     panel headings, hangar card ship names, big HUD readouts (knots,
+     money), port-arrival banners, map labels for oceans and ports.
+   - Gold: money, payouts, prices, rewards, and the pirate ships' hangar
+     cards and the "Other boats" heading.
+   - Red: warnings and alerts (low fuel, collision, can't dock), and the
+     cannon-salute flourish.
+   Keep small body text, tables, settings rows, long descriptions and debug
+   text in the current readable font. Glyph gaps: the red sheet has no P,
+   V or 4 and its G and H are fused into one cell; the gold sheet has no G,
+   O, V or 4. Split the fused G/H, and generate each missing glyph in the
+   repo in the same style (or tint the white/navy glyph as a fallback) so
+   no string ever renders a blank. Text must still fit at 1440x900 and
+   2560x1080 with no clipping. Item 9's PR carries the 5-10 line
+   Windows+Mac playtest checklist for all of 2.9.1 (instead of item 8).
 
 **Patch 2.9.1 status (November 14, 2026):** planned, renamed from 2.8 by Andy; starts after Patch 2.9.
 
