@@ -1051,8 +1051,36 @@ ships. Like the small boats: no cargo jobs, just for sailing.
 4. **Cannon salute (cosmetic).** A key fires a broadside: muzzle flashes,
    toon smoke puffs and a boom, splashes out at sea. Purely cosmetic: no
    damage, no combat, nothing hit. Short cooldown. Hangar cards and the
-   debug list include both ships. Item 4's PR carries a short playtest
-   checklist.
+   debug list include both ships.
+
+Added by Andy (November 14, 2026, 8:25 PM), same patch, after item 4:
+
+5. **3D minimap on the M map.** Only on the full map opened with M (the
+   corner minimap stays as it is): each boat is shown as a small toon 3D
+   model of its own hull, facing its heading, instead of a flat marker.
+   Build it so other ships can be drawn the same way later (a list of
+   ship entries, each with kind, position and heading); when multiplayer
+   (Patch 4) arrives, other players' boats appear there. Do not start any
+   multiplayer work now.
+6. **Real polar landmasses.** Replace the square polar areas with natural
+   ice-cap landmasses that cover the top and bottom ends of the world:
+   irregular icy coastlines, cliffs, snow fields, ice shelves breaking into
+   the sea, solid (collision, navigation, minimap and M globe). North Pole
+   and South Pole ports stay exactly where they are, with sea access.
+7. **Main menu ambience.** Gentle beach background audio on the title and
+   main menu: waves on the shore plus occasional seagull calls, looping
+   seamlessly, fading in, and fading out when the game starts. Respects the
+   volume settings (add a Music/Ambience slider if there is none).
+8. **In-game ambient sound.** Open-sea ambience (waves, wash against the
+   hull, wind that rises with speed) plus port soundscapes that fade in as
+   you head toward a port and depend on its kind and biome: container
+   cranes and horns at container ports, gulls and surf at tropical ports,
+   wind and creaking ice at the poles, rain and city hum at the rainy city,
+   dry wind in the desert. Smooth crossfades, pooled players, no frame-time
+   cost. Every sound must be CC0/public domain or generated in the repo,
+   with its source and license listed in a credits file; nothing that
+   costs money or needs an account. Item 8's PR carries the 5-10 line
+   Windows+Mac playtest checklist for all of 2.9.1 (instead of item 4).
 
 **Patch 2.9.1 status (November 14, 2026):** planned, renamed from 2.8 by Andy; starts after Patch 2.9.
 
