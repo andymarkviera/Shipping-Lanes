@@ -23,9 +23,11 @@ func run() -> void:
 	await process_frame
 	var root_node: Node3D = Node3D.new()
 	root.add_child(root_node)
-	expect(Progression.SMALL_KINDS == ["small_fishing", "small_speedboat", "small_racer"], "Three small boats, cheapest first")
+	# Patch 2.9.1: the family also holds the pirate ships (pirate_galleon_check).
+	var boats: Array[String] = Progression.SMALL_KINDS.filter(func(kind: String) -> bool: return not Progression.PIRATE_KINDS.has(kind))
+	expect(boats == ["small_fishing", "small_speedboat", "small_racer"] and Progression.SMALL_KINDS.slice(0, 3) == boats, "Three small boats, cheapest first")
 	var top: Dictionary = {}
-	for kind: String in Progression.SMALL_KINDS:
+	for kind: String in boats:
 		var definition: ShipDefinition = Progression.definition(kind)
 		expect(definition.id.begins_with("ship_small_") and Progression.ladder_kind(definition.id) == kind, "%s has its own record and save ID" % kind)
 		expect(definition.handling_error().is_empty(), "%s record is valid: %s" % [kind, definition.handling_error()])
@@ -50,7 +52,7 @@ func run() -> void:
 	expect(save.ship == "small_racer" and save.fleet.has("small_racer"), "Small boat record IDs migrate to kinds")
 	var air: Dictionary = {}
 	for fps: int in [30, 60]:
-		for kind: String in Progression.SMALL_KINDS:
+		for kind: String in boats:
 			air["%s@%d" % [kind, fps]] = ride(root_node, kind, fps, top[kind])
 	for fps: int in [30, 60]:
 		var racer: float = air["small_racer@%d" % fps]

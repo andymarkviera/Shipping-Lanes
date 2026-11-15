@@ -11,8 +11,8 @@ const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const Progression = preload("res://features/game/progression.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
-const FAMILIES = [["All", ""], ["Container", "container"], ["Bulk", "bulk"], ["Heavy lift", "heavy"], ["Small boats", "small"]]
-const FAMILY_NAMES = {"container": "Container", "bulk": "Bulk", "heavy": "Heavy lift", "small": "Small boats"}
+const FAMILIES = [["All", ""], ["Container", "container"], ["Bulk", "bulk"], ["Heavy lift", "heavy"], ["Other boats", "small"]]
+const FAMILY_NAMES = {"container": "Container", "bulk": "Bulk", "heavy": "Heavy lift", "small": "Other boats"}
 ## Every ship is drawn this long in the shed; the real size is in the stats.
 const SHOWN_LENGTH: float = 64.0
 const TURN_RADIANS_PER_SECOND: float = 0.3
@@ -41,7 +41,8 @@ var sell_button: Button
 var filter_buttons: Array[Button] = []
 
 ## The whole ladder, container then bulk then heavy lift, smallest first,
-## then the small boats (Patch 2.4 item 8), cheapest first.
+## then the "Other boats" (the small boats of Patch 2.4 item 8 and the pirate
+## ships of Patch 2.9.1), cheapest first.
 static func ladder() -> Array[String]:
 	var all: Array[String] = []
 	all.append_array(Progression.CONTAINER_KINDS)

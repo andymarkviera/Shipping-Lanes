@@ -7,6 +7,7 @@ const GLASS: Color = Color("24405e")
 const INK: Color = Color("2b2f3a")
 const CREAM: Color = Color("f2d58a")
 const RUST: Color = Color("b8402f")
+const PIRATE_GALLEON = preload("res://features/toon/pirate_galleon.gd")
 ## Hull and trim colour for each kind of ship in the game.
 const SHIP_COLOURS = {
 	"container": [Color("d8452f"), Color("f2b632")],
@@ -147,6 +148,10 @@ static func model(kind: String, definition: ShipDefinition) -> Node3D:
 	if kind == "heavy" or kind.begins_with("heavy_"):
 		_dress_heavy(root, hull, definition, 1 if kind == "heavy" else int(kind.trim_prefix("heavy_")), main, trim, cache)
 		_mooring_bitts(root, kind, definition, cache)
+		return root
+	if kind == "small_galleon":
+		# Patch 2.9.1 item 1: the pirate galleon builds itself (mooring markers included).
+		PIRATE_GALLEON.dress(root, hull, definition)
 		return root
 	if kind.begins_with("small_"):
 		_dress_small(root, hull, definition, kind, cache)

@@ -27,6 +27,9 @@ extends ContentDefinition
 @export var chop_height_m: float = 0.0
 ## Patch 2.9 item 5: bow-up trim of a planing hull at speed (0 = none). Level at rest.
 @export var plane_trim_degrees: float = 0.0
+## Patch 2.9.1 item 1: how deeply the hull rolls in waves and turns (1 = as its
+## beam gives; the pirate galleon rolls deeper).
+@export var roll_gain: float = 1.0
 @export var neutral_snap_zone: float = 0.04
 @export var neutral_stop_speed_mps: float = 1.028889
 @export var neutral_stop_deceleration_mps2: float = 0.35
@@ -90,7 +93,7 @@ func handling_error() -> String:
 		if not is_finite(value) or value < 0: return "Invalid fuel rule: " + field
 	if not hull_size_m.is_finite() or minf(hull_size_m.x, minf(hull_size_m.y, hull_size_m.z)) <= 0 or not cargo_anchor_m.is_finite():
 		return "Invalid composition dimensions or anchor"
-	for field: String in ["camera_radius_m", "camera_distance_m", "wake_half_length_m", "wake_half_width_m"]:
+	for field: String in ["camera_radius_m", "camera_distance_m", "wake_half_length_m", "wake_half_width_m", "roll_gain"]:
 		var value: float = get(field)
 		if not is_finite(value) or value <= 0: return "Invalid composition value: " + field
 	for field: String in ["forward_acceleration_mps2", "reverse_acceleration_mps2", "linear_drag_per_second", "forward_throttle_limit", "reverse_throttle_limit", "command_rate_per_second", "engine_ramp_up_per_second", "engine_ramp_down_per_second", "max_turn_rate_degrees", "turn_acceleration_degrees", "rudder_full_effect_speed_mps", "thruster_acceleration_mps2", "lateral_drag_per_second", "thruster_cutoff_speed_mps"]:

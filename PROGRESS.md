@@ -7446,3 +7446,70 @@ container, bulk and heavy ladder checks, `geography_probe`,
 `economy_probe`: all passed.
 Not run: Windows, Mac, an export, a playtest; frame time on Andy's PC not
 measured (load-time build and chunk culling only checked headless).
+
+## Patch 2.9.1 item 1 — pirate galleon (November 15, 2026)
+
+Built in parallel with Patch 2.9 item 6B on Andy's instruction (through Hark).
+No port, world generation or port data file is touched.
+
+- **Ship:** new kind `small_galleon` ("Pirate galleon", record
+  `pirate_galleon_ship.tres`, save ID `ship_pirate_galleon_01`): 112 x 24 m,
+  11 kn, about 40 s to full speed, 2.2 deg/s turns (slower than every cargo
+  ship), 200,000 credits, no cargo and no jobs ("Pirate ships take no cargo
+  jobs"). It sits in the same `small` family, so saves are unchanged, debug
+  mode owns it through `Hangar.ladder()` and it docks, refuels and switches
+  like the small boats. `Progression.PIRATE_KINDS` lists the pirate ships.
+- **Hangar:** the "Small boats" filter is now **Other boats** (same family
+  ID); the galleon is boat 4 of 4.
+- **Model** (`features/toon/pirate_galleon.gd`, built in code): stepped hull
+  (poop, quarterdeck, waist, forecastle) with sheer, tumblehome, wales and
+  colour bands; carved stern with two rows of lit cabin windows, a balustraded
+  gallery, taffrail crest, three great lanterns and quarter galleries;
+  beakhead, head rails and a gold figurehead; 64 cannons (two gun decks with
+  open port lids, deck guns on carriages, two stern chasers); three masts in
+  three lengths with tops, a crow's nest on the main, yards, shrouds with
+  ratlines, stays, backstays, lifts, braces and sheets; nine set sails
+  (square sails, lateen, jib); ship's wheel and binnacle, hatch gratings,
+  capstan, barrels, belfry, anchors on catheads, stairs and balustrades at
+  every deck break, 12 lanterns; mooring bitts and the four mooring markers.
+- **Flags:** a big black Jolly Roger at the main truck, a second on the
+  ensign staff and red pennants on the fore and mizzen; they flap in a vertex
+  shader (`pirate_flag.gdshader`).
+- **Deep roll:** new record field `roll_gain` (1 for every other ship, 1.6
+  here): the galleon rolls to about 10 degrees on high water where the Panamax
+  reaches 8; level at rest.
+- **Frame time:** the ship is 7 meshes and about 23,000 triangles (the merged
+  parts carry their own outline push, `toon_outline_custom.gdshader`); built
+  once in about 45 ms and shared by the hangar and the sea; the small detail
+  stops drawing past 700 m and the rigging past 520 m (never at the chase
+  camera's furthest zoom, 480 m).
+- **Judgement calls:** the mastheads stop at 55 m, not higher, because
+  `world_land_check` requires the 70 m bridges to clear the tallest ship by
+  15 m and the bridges are not this item's to change; the rig is broad
+  instead. Guns and yardarms overhang the collision box by under 2 m. It
+  still burns fuel like every ship (nothing in the plan says otherwise).
+- **Left for later items:** the sails are set and still (item 3 furls and
+  billows them); the guns do not fire (item 4); no brigantine (item 2).
+- `export_presets.cfg` lists the record, the model script and the two new
+  shaders in both presets. That edits the same long `export_files` line any
+  other PR that adds a file edits, so merging beside 6B may need that one
+  line resolved by hand.
+- **Screenshots:** `docs/reference/patch_2_9_1/galleon_*.png` (Linux, xvfb,
+  1600x900: three-quarter view, stern, deck, sailing in the debug game and
+  the hangar card).
+
+Checks (agent's Linux runner, official Godot 4.7.2, checksum verified):
+import, `check_scripts` (228 scripts), boot, new `pirate_galleon_check` (84),
+`small_boats_check` (79), `hangar_check` (224: buys, selects and docks all 19
+ships), `debug_game_check` (84), `mooring_check`, `crane_check`,
+`world_land_check` (151), the container, bulk and heavy ladder checks,
+`globe_map_check`, `check_m1_voyage`, `check_catalog`, `check_controls`,
+`check_flow`, `check_starter`, `check_title`, `check_helm_keys`, every CI
+Stage 2 probe (units to economy), `collision_probe`, and
+`tools/world_layout` unit tests with `traversal_budget.py` (17 routes): all
+passed. `world_land_check` failed once on the first, 66 m rig and passes
+with the 55 m rig.
+Not run: the other Stage 3 Python service tests (no Python or service file
+changed), Windows, Mac, an export, a playtest. Frame time was only compared
+on the runner's software renderer (galleon 154 ms a frame, Panamax 144 ms in
+the same spot), which says little about Andy's PC. Nobody has sailed it.
