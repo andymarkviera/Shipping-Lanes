@@ -303,6 +303,15 @@ def place_world(geo, layout, first=0, step=1):
             if all(math.hypot(r[0] + r[2] / 2 - tropic[0], r[1] + r[3] / 2 - tropic[1]) < 1450 for r in palms) and isles_ok(palms, placed): break
         else: continue
         world = [ports.get(p['id'], p) for p in geo['world']]
+        # Each region holds its own port and no other, off the poles and the
+        # other regions (CLEAR_M from each biome script).
+        regions = {name: follow(port_id, point, ports) for name, (port_id, point) in REGIONS.items()}
+        regions['tropical'] = (round(tropic[0] / 10) * 10, round(tropic[1] / 10) * 10)
+        reach = {name: float(re.search(r'const CLEAR_M: float = ([\d.]+)', tb.read('features/sky/%s_biome.gd' % name)).group(1)) for name in REGIONS}
+        if any(gap(regions[n], (p['at'][0], p['at'][2])) < reach[n] + 100 for n in REGIONS for p in world if p['id'] != REGIONS[n][0]): continue
+        # Out of the polar seas (polar_biome.gd: none within 2950 m of the edge).
+        if any(abs(tb._short(q - geo['centre'][1], wrap)) > wrap / 2 - POLAR_CLEAR_M for n in REGIONS for q in (regions[n][1], ports[REGIONS[n][0]]['at'][2])): continue
+        if any(gap(regions[a], regions[b]) < reach[a] + reach[b] for a in REGIONS for b in REGIONS if a < b): continue
         cuts = []
         for p in world:
             x, _, z = p['at']
@@ -310,14 +319,14 @@ def place_world(geo, layout, first=0, step=1):
             cuts += [(min(x + ds * 15, x + ds * 350) - 60, z - 1460, 455, 2320), (min(x + ds * 450, x + ds * 850) - 210, z - 1410, 820, 820)]
         trial = dict(geo, land=carve(base, cuts) + palms, world=world)
         gates = [(p['at'][0], p['at'][2] - geo['gate']) for p in world]
-        lengths = [tb.sea_route(trial, a, b)[0] for i, a in enumerate(gates) for b in gates[i + 1:]]
-        if any(n is None or n > plan['max_route_m'] - 500 for n in lengths): continue
-        # Ember Isle: open sea, off every port, route, isle and strait.
         legs = set()
-        for i, a in enumerate(gates):
-            for b in gates[i + 1:]:
-                path = tb.sea_route(trial, a, b)[1]
-                legs.update(zip(path, path[1:]))
+        for a, b in itertools.combinations(gates, 2):
+            length, path = tb.sea_route(trial, a, b)
+            if length is None or length > plan['max_route_m'] - 500: break
+            legs.update(zip(path, path[1:]))
+        else: length = 0
+        if length is None or length > plan['max_route_m'] - 500: continue
+        # Ember Isle: open sea, off every port, route, isle and strait.
         ember = dict(SKELETON_SRC)['Ember Isle'][0]
         for _ in range(4000):
             vx, vz = round(rng.uniform(edge[0], edge[2]) / 10) * 10, round(rng.uniform(edge[1], edge[3]) / 10) * 10
@@ -330,15 +339,6 @@ def place_world(geo, layout, first=0, step=1):
             if any(segment_sdf((vx, vz), s['start'], s['end']) < 1200 for s in geo['straits']): continue
             break
         else: continue
-        # Each region holds its own port and no other, off the poles and the
-        # other regions (CLEAR_M from each biome script).
-        regions = {name: follow(port_id, point, ports) for name, (port_id, point) in REGIONS.items()}
-        regions['tropical'] = (round(tropic[0] / 10) * 10, round(tropic[1] / 10) * 10)
-        reach = {name: float(re.search(r'const CLEAR_M: float = ([\d.]+)', tb.read('features/sky/%s_biome.gd' % name)).group(1)) for name in REGIONS}
-        if any(gap(regions[n], (p['at'][0], p['at'][2])) < reach[n] + 100 for n in REGIONS for p in world if p['id'] != REGIONS[n][0]): continue
-        # Out of the polar seas (polar_biome.gd: none within 2950 m of the edge).
-        if any(abs(tb._short(q - geo['centre'][1], wrap)) > wrap / 2 - 3300 for n in REGIONS for q in (regions[n][1], ports[REGIONS[n][0]]['at'][2])): continue
-        if any(gap(regions[a], regions[b]) < reach[a] + reach[b] for a in REGIONS for b in REGIONS if a < b): continue
         if any(gap(regions[n], (vx, vz)) < reach[n] + 300 for n in REGIONS): continue
         yield attempt, dict(world=world, palms=palms, volcano=(vx, vz), ember=rect, bridges=bridges, regions=regions)
 

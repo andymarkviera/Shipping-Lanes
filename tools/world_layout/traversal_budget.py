@@ -387,10 +387,15 @@ def clear_line(geo, a, b, margin=None):
     margin = geo['margin'] if margin is None else margin
     wrap = geo['wrap']
     to = (a[0] + _short(b[0] - a[0], wrap), a[1] + _short(b[1] - a[1], wrap))
+    # Blocks wholly off the line's bounding box (grown by the margin) cannot
+    # touch it; skipping them changes no answer.
+    low_x, high_x = min(a[0], to[0]) - margin, max(a[0], to[0]) + margin
+    low_z, high_z = min(a[1], to[1]) - margin, max(a[1], to[1]) + margin
     for x, z, w, d in obstacles(geo):
         for kx in (0, 1, -1):
             for kz in (0, 1, -1):
                 block = (x + kx * wrap, z + kz * wrap, w, d)
+                if block[0] > high_x or block[0] + w < low_x or block[1] > high_z or block[1] + d < low_z: continue
                 grown = (block[0] - margin, block[1] - margin, w + 2 * margin, d + 2 * margin)
                 if _inside(a, grown) or _inside(to, grown):
                     if _inside(a, block) or _inside(to, block): continue
