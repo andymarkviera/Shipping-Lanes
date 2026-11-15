@@ -1252,14 +1252,19 @@ Design (Hark's call):
   `Shipping-Lanes-Server-Windows-x64.zip` (Andy's server PC runs Windows;
   the Server Launcher is a Windows app; it may start with Windows).
   Server tag matches the game tag (`v3.0.0`, ...).
-- **Reachable from outside Andy's house** (Andy, 11:14 AM: friends join over
-  the internet). One UDP game port (default 24565, configurable), forwarded
-  on Andy's Spectrum router to the server PC; Hark sets up the forward with
-  Andy's login when 3.0 is ready, never the agents. The Server Launcher shows
-  the server's public address and whether the port is reachable, and allows
-  the Windows Firewall rule on first start (with a clear prompt). A home IP
-  can change: `server.json` may hold a free dynamic-DNS hostname instead of
-  an IP (Hark sets that up; nothing in the repo holds the real address).
+- **Reachable from outside Andy's house through a tunnel** (Andy, 11:14 and
+  11:15 AM: friends join over the internet; he prefers a tunnel to avoid
+  router problems). No port forwarding and no home IP exposed: the game uses
+  a single UDP port (ENet, default 24565, configurable) and nothing else, so
+  it fits playit.gg's free generic UDP tunnel (free plan, checked November
+  15, 2026). The playit agent runs as a Windows service on the server PC
+  beside the server; the tunnel's public address (random but persistent) goes
+  in `server.json`. Hark sets up the playit account and tunnel with Andy's
+  yes when 3.0 is ready, never the agents, and nothing in the repo holds the
+  real address. The Server Launcher shows whether the server is listening,
+  the public address from its config, and a "Tunnel offline" warning if the
+  agent isn't running. Never require TCP for gameplay (playit free has no
+  generic TCP).
 - **Release pipeline.** Each patch from 3.0 on publishes the game release
   (as today) and the server release to the new repo. Hark creates the repo;
   the workflow change and adding that repo to the release token are Andy's
