@@ -7730,3 +7730,44 @@ file of theirs changed), Windows, Mac, an export, a playtest. Frame time was
 not measured. The salute was only seen as still xvfb frames with the model on
 a flat sea, not in motion in the game, and the boom was not heard (the runner
 has no audio device).
+
+## Patch 2.9.1 item 5 — 3D boats on the M map (November 16, 2026)
+
+REBUILD_PLAN.md section 13 item 5. M map only; the corner minimap is unchanged.
+No multiplayer or networking work.
+
+- **Boats.** On the M globe the flat yellow arrow is replaced by a small toon
+  3D model of the boat's own hull kind, sitting on the globe with its bow along
+  the heading: container ship (navy hull, coloured stacks, bridge aft), bulk
+  carrier (rust hull, hatches), heavy lifter (orange hull, bridge forward,
+  crane), small boats (white hull, cabin), brigantine (black hull, two masts,
+  red sails) and galleon (brown hull, three masts, cream sails). Same two-band
+  toon light as the globe plus an ink outline. Bigger hulls draw bigger (0.6
+  to 2 times the starter's).
+- **Ship-entry list.** `globe_map.gd` draws from `ship_entries()`: a list of
+  `{kind, position, heading}` (Progression ship kind, world position, radians
+  from north). Today it holds the player's boat; `other_ships` is the empty
+  list Patch 3.0 fills, and anything in it is drawn the same way. An unknown
+  kind draws as a container ship.
+- **Frame time.** Models are pooled and rebuilt only when an entry's kind
+  changes; 7 to 12 small meshes each, shared materials, one shared outline
+  pass; boats round the back of the globe are hidden and not built; at most 64
+  drawn. Nothing runs while the map is closed.
+- **Files.** All in `features/game/globe_map.gd`; no new runtime file, so
+  `export_presets.cfg` is unchanged. No port, port ID, job or save changed.
+- **Screenshot:** `docs/reference/patch_2_9_1/m_map_boats.png` (Linux, xvfb,
+  1600x900, a scratch script that was not committed: eight kinds placed side
+  by side on the globe, closer together than real boats would be).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless), all passed:
+import, `check_scripts` (234 scripts), boot, `globe_map_check` (70, was 48:
+the entry list, the model at the ship, bow north and east, each kind its own
+look, pool reuse, other ships drawn, hidden round the back, spares kept),
+`world_land_check` (149), `debug_game_check`, `hangar_check`,
+`small_boats_check`, `cannon_salute_check`, `pirate_galleon_check`,
+`pirate_brigantine_check`, `check_m1_voyage`, `check_flow`, `check_controls`.
+Not run: the other checks and probes, the Python and service tests (no file of
+theirs changed), Windows, Mac, an export, a playtest. Frame time was not
+measured. The models were only seen in one still xvfb frame, not in the
+running game. An earlier agent run on this item stopped before pushing; this
+entry describes the code as rebuilt and checked in this run.

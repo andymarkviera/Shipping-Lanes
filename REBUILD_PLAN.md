@@ -1123,9 +1123,15 @@ and spray reach about 80-90% strength at its own top speed) is merged.
 Item 4 (cosmetic cannon salute: G fires a bow-to-stern broadside on the
 pirate ships, with muzzle flashes, toon smoke, booms and splashes out at sea,
 5 s cooldown, nothing hit or changed; "Other boats" filter, no cargo jobs and
-debug ownership re-checked) is in a draft PR. All four checked on Linux only
-(headless checks and xvfb screenshots), not yet seen on Windows or a Mac, and
-frame time was not measured. Items 5 to 9 are not started.
+debug ownership re-checked) is merged. Item 5 (3D boats on the M map only:
+the flat arrow is replaced by a small toon model of the boat's own hull kind,
+bow along its heading, drawn from a list of ship entries with kind, position
+and heading that Patch 3.0 can add other players to; pooled models, hidden
+round the back of the globe; corner minimap unchanged; no networking) is on
+branch `claude/issue-192-20261116-0739` waiting for its draft PR. All five
+checked on Linux only (headless checks and xvfb screenshots), not yet seen on
+Windows or a Mac, and frame time was not measured. Items 6 to 9 are not
+started.
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 
