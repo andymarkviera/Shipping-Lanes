@@ -622,7 +622,7 @@ on pausing the world.
    The last item's PR carries a 5-10 line Windows playtest checklist.
 
 **Later patches:** Patch 2.1 (section 6) is done; Patch 2.2 (section 7) is done; Patch 2.3 (section 8, debug mode) is written and waits for Andy's playtest. Patch 3 is a new main menu
-(Andy's design, later; do not start). Patch 4 is multiplayer (do not start).
+(Andy's design, later; do not start). Multiplayer is now **Patch 3.0** (section 15), the next patch after 2.9.1.
 
 **Patch 2.0 status (November 13, 2026):** all five items are written and pass
 the automatic checks on Linux: 1 (Always running + Esc menu), 2 (Easy docking),
@@ -1060,7 +1060,7 @@ Added by Andy (November 14, 2026, 8:25 PM), same patch, after item 4:
    model of its own hull, facing its heading, instead of a flat marker.
    Build it so other ships can be drawn the same way later (a list of
    ship entries, each with kind, position and heading); when multiplayer
-   (Patch 4) arrives, other players' boats appear there. Do not start any
+   (Patch 3.0) arrives, other players' boats appear there. Do not start any
    multiplayer work now.
 6. **Real polar landmasses.** Replace the square polar areas with natural
    ice-cap landmasses that cover the top and bottom ends of the world:
@@ -1079,8 +1079,34 @@ Added by Andy (November 14, 2026, 8:25 PM), same patch, after item 4:
    dry wind in the desert. Smooth crossfades, pooled players, no frame-time
    cost. Every sound must be CC0/public domain or generated in the repo,
    with its source and license listed in a credits file; nothing that
-   costs money or needs an account. Item 8's PR carries the 5-10 line
-   Windows+Mac playtest checklist for all of 2.9.1 (instead of item 4).
+   costs money or needs an account.
+
+Added by Andy (November 15, 2026, 10:26 AM), same patch, after item 8:
+
+9. **Sprite-sheet lettering.** Andy supplied two hand-made letter sheets in
+   `docs/reference/patch_2_9_1/`: `font_sheet_white_navy.png` (white
+   letters, navy outline, blue drop shadow; full A-Z, a-z, 0-9 and
+   `! ? . , : ; + -`) and `font_sheet_red_gold.png` (glossy red serif caps
+   on top, bold gold italic caps below; caps, digits, `! ? :`). Andy's
+   words: "No need to change everything but let's put it everywhere it
+   fits." Turn them into bitmap fonts (key the white background to alpha,
+   slice each glyph with its own advance width, crisp at 1x and 2x UI
+   scale) and use them for display text, not body text:
+   - White/navy: title and main-menu logo text and buttons, screen and
+     panel headings, hangar card ship names, big HUD readouts (knots,
+     money), port-arrival banners, map labels for oceans and ports.
+   - Gold: money, payouts, prices, rewards, and the pirate ships' hangar
+     cards and the "Other boats" heading.
+   - Red: warnings and alerts (low fuel, collision, can't dock), and the
+     cannon-salute flourish.
+   Keep small body text, tables, settings rows, long descriptions and debug
+   text in the current readable font. Glyph gaps: the red sheet has no P,
+   V or 4 and its G and H are fused into one cell; the gold sheet has no G,
+   O, V or 4. Split the fused G/H, and generate each missing glyph in the
+   repo in the same style (or tint the white/navy glyph as a fallback) so
+   no string ever renders a blank. Text must still fit at 1440x900 and
+   2560x1080 with no clipping. Item 9's PR carries the 5-10 line
+   Windows+Mac playtest checklist for all of 2.9.1 (instead of item 8).
 
 **Patch 2.9.1 status (November 16, 2026):** item 1 (pirate galleon: a 112 x 24 m
 three-master built in code, 11 kn, wide turns, deeper roll, 200,000 credits, no
@@ -1181,3 +1207,95 @@ red and black racing bands; bow-up trim and lift on the plane, level at rest;
 rooster tail from the transom) is in a draft PR, checked on Linux with
 before/after screenshots, not yet seen on Windows. Item 6A (natural land: irregular continents, peninsulas, bays and islands baked from seed 2906 by `tools/world_layout/natural_land.py` into `features/world/natural_land.json` and the solid land blocks; smooth toon coasts in 1 km chunks culled past 3.6 km; minimap and M globe draw the new coasts; ports, straits, bridges, biomes and Ember Isle kept where they are for item 6B to move) is in a draft PR, checked on Linux with before/after screenshots, not yet seen on Windows. Item 6B (ports and regions: the four strait ports, Palm Isles, Ember Isle, bridges and desert, tropical and rain regions placed from the seed by `natural_land.py`, placement attempt 277; the North and South Pole ports did not move and port IDs are unchanged; pay and saved jobs stay on the old chart spots; ships in old-layout saves start at their port when their pose is inside land) is in a draft PR that replaces draft PR #180, with every Godot check passing on Linux. Three of the four ports moved only 300 to 370 m because the 11 km route budget keeps them on the inner sea; see PROGRESS.md. Not yet seen on Windows or Mac. Patch 2.9 runs after Patch 2.7 item 4, before Patch
 2.9.1 (pirate ships).
+
+## 15. Patch 3.0 (Andy, November 15, 2026): multiplayer
+
+Starts right after Patch 2.9.1. Andy's words (11:11 AM): "I have a server pc,
+I need a server package, and saves need to be consistent, and when I update
+the saves need to go to the next update, work with this launcher... when I
+press play it should take me straight to that server, only multiplayer, the
+debug mode will now be like a single player test everything thing. In the
+server package make it so it's just an update available button like the
+regular game launcher and it can access the server packages off a new repo."
+Launcher site: https://shipping-lanes.andyviera578.chatgpt.site (launcher repo
+`andymarkviera/Shipping-Lanes-Launcher`, game feed
+`andymarkviera/Shipping-Lanes-Releases`). Same rules as before: one PR each,
+Godot 4.7.2, Windows and Mac clients, smooth frame time, Wind Waker look,
+gas/oil/refinery/cargo-fuel code intact.
+
+Design (Hark's call):
+- **Authoritative dedicated server.** A headless Godot 4.7.2 export of the
+  same project (`--server` feature tag) runs the world: ports, jobs, money,
+  fleets, berths, icebergs and every ship. Clients send helm input and
+  actions; the server validates them (ACTION_VALIDATION.md rules) and
+  replicates state with interpolation, so ships glide, never snap. No
+  trading, gifting or combat between players (cannon salute stays cosmetic).
+- **Play = multiplayer only.** The main menu's Play connects straight to
+  Andy's server with no server list. The address comes from `server.json`
+  (`{"host": ..., "port": ...}`) in the public Shipping-Lanes-Releases repo,
+  read at Play, so Andy can move the server without a new build. A clear
+  "Server offline" / "Server is updating" card if it can't connect, with
+  Retry. Client and server must be the same version; a mismatch tells the
+  player to update in the launcher.
+- **Debug mode = single-player test mode.** The old offline world, with
+  everything unlocked as debug mode already does, for testing all features
+  without the server. Its saves are local and separate.
+- **Player identity.** First Play asks for a captain name once; the client
+  keeps a random install key; the server maps the key to the player record.
+  No passwords, no accounts, nothing that costs money.
+- **Saves that carry forward.** The server owns all multiplayer saves in one
+  folder beside it (SQLite or versioned JSON, the server's choice in
+  DECISIONS.md). Every save carries `schema_version`; each patch that changes
+  data ships a migration step, applied in order on server start, so any older
+  save loads in any newer server. Before migrating, the server copies the
+  save folder to `backups/<old_version>-<date>/` and keeps the last 5. An
+  update never deletes or resets a save. A check loads fixture saves from
+  every earlier 3.x version.
+- **Server package with its own updater.** "Shipping Lanes Server": the
+  headless server plus a small Server Launcher window (same style as the game
+  launcher) with Status (running/stopped, players online, version), Start,
+  Stop, Open saves folder, and an **Update available** button that appears
+  when a newer server release exists. Update = back up saves, stop the
+  server, download and swap in the new package, start it again (saves
+  migrate on start). It reads releases, no token, from a NEW public repo
+  `andymarkviera/Shipping-Lanes-Server-Releases`, assets named
+  `Shipping-Lanes-Server-Windows-x64.zip` (Andy's server PC runs Windows;
+  the Server Launcher is a Windows app; it may start with Windows).
+  Server tag matches the game tag (`v3.0.0`, ...).
+- **Reachable from outside Andy's house through a tunnel** (Andy, 11:14 and
+  11:15 AM: friends join over the internet; he prefers a tunnel to avoid
+  router problems). No port forwarding and no home IP exposed: the game uses
+  a single UDP port (ENet, default 24565, configurable) and nothing else, so
+  it fits playit.gg's free generic UDP tunnel (free plan, checked November
+  15, 2026). The playit agent runs as a Windows service on the server PC
+  beside the server; the tunnel's public address (random but persistent) goes
+  in `server.json`. Hark sets up the playit account and tunnel with Andy's
+  yes when 3.0 is ready, never the agents, and nothing in the repo holds the
+  real address. The Server Launcher shows whether the server is listening,
+  the public address from its config, and a "Tunnel offline" warning if the
+  agent isn't running. Never require TCP for gameplay (playit free has no
+  generic TCP).
+- **Release pipeline.** Each patch from 3.0 on publishes the game release
+  (as today) and the server release to the new repo. Hark creates the repo;
+  the workflow change and adding that repo to the release token are Andy's
+  steps (approved in his 11:11 AM message; Hark tells him when).
+
+Items, in order:
+1. **Server split.** Headless server export and `--server` boot path; the
+   world simulation runs server-side; the client renders and sends input.
+   Local loopback test (server + 2 clients on one machine) as a check.
+2. **Replication.** Ships, docking, cranes, cargo jobs and payouts in sync for
+   several players; other players' boats shown in the world, the minimap and
+   the 3D M-map (Patch 2.9.1 item 5's ship list); captain names over boats.
+3. **Play goes straight to the server; debug mode becomes single-player test
+   mode.** `server.json` lookup, connect, offline/updating/mismatch cards.
+4. **Persistent, migrating saves.** schema_version, ordered migrations,
+   automatic backups, autosave every minute and on shutdown, fixture checks.
+5. **Server package and Server Launcher** with Start/Stop/Status and the
+   Update available button against Shipping-Lanes-Server-Releases.
+6. **Release pipeline for the server** (workflow change, needs Andy's token
+   step) and a short SERVER.md: install on the server PC, open the port,
+   update, where saves live. Item 6's PR carries the Windows+Mac playtest
+   checklist (two clients on the server PC's address).
+
+**Patch 3.0 status (November 15, 2026):** planned; starts after Patch 2.9.1.
