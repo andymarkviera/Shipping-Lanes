@@ -281,6 +281,7 @@ static func _cannon(parts: GALLEON.Parts, side: float, z: float) -> void:
 	d.rod(Vector3(side * (inboard - 1.8), y, z), Vector3(side * (inboard + 0.2), y, z), 0.34, 0.28, IRON, 6)
 	d.rod(Vector3(side * (x - 0.3), y, z), Vector3(side * (x + 1.1), y, z), 0.26, 0.2, IRON, 6)
 	d.rod(Vector3(side * (x + 1.1), y, z), Vector3(side * (x + 1.3), y, z), 0.27, 0.27, IRON, 6)
+	parts.muzzles.append(Vector3(side * (x + 1.3), y, z))
 	d.block(Vector3(side * (inboard - 1.0), deck_at(z) + 0.25, z), Vector3(1.7, 0.5, 1.0), DARK_WOOD)
 
 ## Eighteen broadside guns, two stern chasers and four swivel guns on the rail.

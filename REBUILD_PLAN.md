@@ -1119,10 +1119,13 @@ sails, rigging and flags on both ships: sails furled at rest, unfurl one
 after another when the throttle goes up, fill and flutter with speed, back
 when going astern and furl once stopped; flags hang at rest and stream at
 speed; cloth and long ropes swing with the roll; each hull's wake, bow wave
-and spray reach about 80-90% strength at its own top speed) is in a draft
-PR. All three checked on Linux only (headless checks and xvfb screenshots),
-not yet seen on Windows or a Mac, and frame time was not measured. Items 4
-to 9 are not started. The guns do not fire yet (item 4).
+and spray reach about 80-90% strength at its own top speed) is merged.
+Item 4 (cosmetic cannon salute: G fires a bow-to-stern broadside on the
+pirate ships, with muzzle flashes, toon smoke, booms and splashes out at sea,
+5 s cooldown, nothing hit or changed; "Other boats" filter, no cargo jobs and
+debug ownership re-checked) is in a draft PR. All four checked on Linux only
+(headless checks and xvfb screenshots), not yet seen on Windows or a Mac, and
+frame time was not measured. Items 5 to 9 are not started.
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 

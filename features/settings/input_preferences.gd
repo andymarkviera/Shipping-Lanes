@@ -9,6 +9,8 @@ const DEFAULT_BINDINGS: Dictionary = {
 	"ship_brake": KEY_SPACE, "ship_throttle_zero": KEY_X,
 	"camera_recenter": KEY_C, "interact": KEY_F, "map_toggle": KEY_M,
 	"horn": KEY_H, "pause": KEY_ESCAPE,
+	# Patch 2.9.1 item 4: the pirate ships' cosmetic broadside.
+	"cannon_salute": KEY_G,
 }
 const LABELS: Dictionary = {
 	"ship_throttle_up": "Increase throttle", "ship_throttle_down": "Decrease / reverse throttle",
@@ -17,6 +19,7 @@ const LABELS: Dictionary = {
 	"ship_brake": "Brake command", "ship_throttle_zero": "Zero throttle",
 	"camera_recenter": "Recenter camera", "interact": "Interact", "map_toggle": "Map",
 	"horn": "Horn", "pause": "Menu",
+	"cannon_salute": "Cannon salute (pirate ships)",
 }
 
 @export_range(0.0, 1.0) var master_volume: float = 0.8
@@ -61,6 +64,18 @@ func validation_error() -> String:
 		used.append(key)
 	return ""
 
+## Settings saved before an action existed keep every key the player chose: the
+## new action gets its default key, or the first free letter if that is taken.
+func add_missing_bindings() -> void:
+	for action: String in DEFAULT_BINDINGS:
+		if bindings.has(action): continue
+		var key: int = DEFAULT_BINDINGS[action]
+		var code: int = KEY_A
+		while key in bindings.values() and code <= KEY_Z:
+			key = code
+			code += 1
+		bindings[action] = key
+
 func to_data() -> Dictionary:
 	return {"version": 1, "water_quality": water_quality, "master_volume": master_volume, "camera_sensitivity": camera_sensitivity,
 		"invert_camera_y": invert_camera_y, "fullscreen": fullscreen, "bindings": bindings.duplicate()}
@@ -92,4 +107,5 @@ static func from_data(data: Variant) -> InputPreferences:
 			or float(value) != floor(float(value)) or float(value) < 0 or float(value) > 16777216:
 			return null
 		result.bindings[action] = int(value)
+	result.add_missing_bindings()
 	return result if result.validation_error().is_empty() else null
