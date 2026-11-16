@@ -18,6 +18,10 @@ extends ContentDefinition
 @export var camera_distance_m: float = 115.0
 @export var wake_half_length_m: float = 30.0
 @export var wake_half_width_m: float = 6.5
+## Patch 2.9.1 item 3: the speed at which this hull's wake, bow wave and spray
+## reach full strength. 0 = the fleet's ShipWake.FULL_STRENGTH_SPEED_MPS; the
+## slow pirate ships set their own so they still throw a wake at 11-15 kn.
+@export var wake_full_speed_mps: float = 0.0
 @export var cargo_anchor_m: Vector3 = Vector3(0, 2.65, 17)
 @export var visual_bobbing: bool = true
 ## Patch 2.4 item 8: small planing boats. jump_lift > 0 lets the wave face

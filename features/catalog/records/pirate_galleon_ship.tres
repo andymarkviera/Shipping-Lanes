@@ -13,6 +13,7 @@ camera_radius_m = 60.0
 camera_distance_m = 200.0
 wake_half_length_m = 46.0
 wake_half_width_m = 11.5
+wake_full_speed_mps = 7.0
 cargo_anchor_m = Vector3(0, 9, 0)
 jump_lift = 0.0
 chop_height_m = 0.0

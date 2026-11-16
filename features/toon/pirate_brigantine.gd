@@ -186,12 +186,16 @@ static func _gaff_sail(surface: SurfaceTool, tack: Vector3, throat: Vector3, pea
 	var want: Vector3 = belly.normalized()
 	var thick: Vector3 = want * 0.25
 	var grid: Array = []
+	var order: float = GALLEON._next_sail()
 	for row: int in cuts + 1:
 		var v: float = float(row) / cuts
 		var line: PackedVector3Array = PackedVector3Array()
 		for column: int in cuts + 1:
 			var u: float = float(column) / cuts
-			line.append(throat.lerp(peak, u).lerp(tack.lerp(clew, u), v) + belly * pow(16.0 * u * (1.0 - u) * v * (1.0 - v), 0.7))
+			var out: Vector3 = belly * pow(16.0 * u * (1.0 - u) * v * (1.0 - v), 0.7)
+			line.append(throat.lerp(peak, u).lerp(tack.lerp(clew, u), v) + out)
+			# Item 3: furled, it is brailed up in a roll under the gaff.
+			GALLEON._pin(line[column], thick, GALLEON._roll(throat.lerp(peak, u), v, want), out, order)
 		grid.append(line)
 	for row: int in cuts:
 		for column: int in cuts:
@@ -225,8 +229,7 @@ static func _gaff_sail(surface: SurfaceTool, tack: Vector3, throat: Vector3, pea
 ## Eight set sails: fore course, topsail and topgallant, the gaff mainsail and
 ## its topsail, the main staysail and two jibs.
 static func sails_mesh() -> ArrayMesh:
-	var surface: SurfaceTool = SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var surface: SurfaceTool = GALLEON.sail_surface()
 	var fore: Dictionary = MASTS.Fore
 	var yards: Array = fore.yards
 	var z: float = float(fore.z) + float(fore.r) + 0.5
@@ -243,13 +246,7 @@ static func sails_mesh() -> ArrayMesh:
 	# Inner and outer jib, set on either side of the stays so they never touch.
 	GALLEON._triangle_sail(surface, Vector3(-0.5, 26.0, 10.6), Vector3(-0.5, 10.7, 26.6), Vector3(-0.5, 10.4, 15.0), Vector3(0.6, 0, 0), SAIL, SAIL_SEAM)
 	GALLEON._triangle_sail(surface, Vector3(0.45, 33.0, 10.2), Vector3(0.45, 12.6, 31.0), Vector3(0.45, 11.6, 18.5), Vector3(0.8, 0, 0), SAIL, SAIL_SEAM)
-	surface.generate_normals()
-	surface.index()
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.roughness = 0.9
-	surface.set_material(material)
-	return surface.commit()
+	return GALLEON.sail_commit(surface)
 
 ## The skull-and-cutlasses flag at the main truck, a smaller one at the gaff
 ## peak and a long white pennant on the foremast; the galleon's shader waves them.

@@ -7636,3 +7636,48 @@ collision, composition and ports probes. Python: `traversal_budget.py`
 Not run: the service and public-handoff Python tests (no file of theirs
 changed), the probes that need the HTTP/SQLite service, Windows, Mac, an
 export, a playtest, any frame-time measurement.
+
+## Patch 2.9.1 item 3 — living sails, rigging and flags (November 16, 2026)
+
+Both pirate ships. Looks only: no handling, save, port, job or price change.
+
+- **Sails.** Furled on their yards while the ship is stopped. They unfurl one
+  after another (about 4 s) when the throttle goes up, fill with speed, flutter
+  faster at speed, back when going astern, and furl (about 6 s) once the
+  throttle is at zero and the ship is under 10% of her top speed. The hangar
+  and title ships keep their sails set, as before.
+- **Flags and pennants** hang and wave lazily at rest and stream straight out
+  at speed.
+- **Rigging.** Sails and ropes of 8 m or longer swing sideways behind the
+  hull's roll (a damped spring, at most 1.6 m for cloth and 0.6 m for a rope).
+- **Wake.** New record field `wake_full_speed_mps` (0 = the fleet's 12.35 m/s,
+  so every other ship is unchanged). Galleon 7.0, brigantine 8.6: at top speed
+  the galleon's wake, bow wave and spray are at 81% strength (was 46%) and the
+  brigantine's at 90% (was 62%). Trim is untouched: both still float level at
+  rest (the existing Patch 2.4 style checks pass).
+- **How.** `pirate_cloth.gdshader` (toon shading plus the movement) and
+  `pirate_cloth_outline.gdshader` (its ink line) move the vertices on the GPU.
+  Each sail vertex carries its furled spot and its belly; the flag shader
+  gained `stream` and `flow`. `pirate_rig.gd` is one small node per ship that
+  sets four numbers on its own three materials each frame; the meshes are
+  still built once and shared. Still seven meshes per ship. Long ropes are cut
+  in four pieces so they can bow: galleon rigging 4,080 triangles, brigantine
+  2,360.
+- **Export:** the two new shaders and `pirate_rig.gd` are in both presets.
+- **Screenshots:** `docs/reference/patch_2_9_1/galleon_sails_*.png` and
+  `brigantine_sails_*.png` (Linux, xvfb, 1600x900, a scratch script that was
+  not committed, model on a flat sea).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless), all passed:
+import, `check_scripts` (232 scripts), boot, new `pirate_rig_check` (69),
+`pirate_galleon_check` (84), `pirate_brigantine_check` (75),
+`debug_game_check` (91, now also checks the live rig and wake speed in the
+real game), `small_boats_check`, `hangar_check`, `mooring_check`,
+`check_catalog`, `check_starter`, `check_title`, `check_controls`,
+`check_flow`, `check_helm_keys`, the container, bulk and heavy ladder checks,
+`check_m1_voyage`, `globe_map_check`, `crane_check`; the water, composition,
+handling, feedback, camera, collision, units, diagnostics and sailing save
+probes.
+Not run: the biome, land and volcano checks, the Python and service tests (no
+file of theirs changed), Windows, Mac, an export, a playtest. Frame time was
+not measured; the sails were only seen as still xvfb frames, not in motion.

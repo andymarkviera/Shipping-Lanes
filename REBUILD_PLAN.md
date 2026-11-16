@@ -1114,11 +1114,15 @@ cargo jobs; in the hangar's renamed Other boats filter and owned in debug mode)
 is merged. Item 2 (pirate brigantine: a 64 x 14 m two-master built from the
 galleon's pieces, black hull, red sails, its own skull-and-cutlasses flag,
 15 kn, turns twice as fast as the galleon, 60,000 credits, no cargo jobs;
-boat 4 of 5 in Other boats, owned in debug mode) is in a draft PR, built in
-parallel with Patch 2.9 item 6B on Andy's instruction. Both checked on Linux
-only (headless checks and xvfb screenshots), not yet seen on Windows or a Mac.
-Items 3 to 8 are not started. Both ships' sails are set and still (item 3
-makes them live) and their guns do not fire (item 4).
+boat 4 of 5 in Other boats, owned in debug mode) is merged. Item 3 (living
+sails, rigging and flags on both ships: sails furled at rest, unfurl one
+after another when the throttle goes up, fill and flutter with speed, back
+when going astern and furl once stopped; flags hang at rest and stream at
+speed; cloth and long ropes swing with the roll; each hull's wake, bow wave
+and spray reach about 80-90% strength at its own top speed) is in a draft
+PR. All three checked on Linux only (headless checks and xvfb screenshots),
+not yet seen on Windows or a Mac, and frame time was not measured. Items 4
+to 9 are not started. The guns do not fire yet (item 4).
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 
