@@ -116,6 +116,8 @@ func apply_preferences() -> void:
 		InputMap.action_add_event("camera_orbit", drag)
 	AudioServer.set_bus_mute(0, preferences.master_volume == 0.0)
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(0.0001, preferences.master_volume)))
+	var ambience: Node = get_tree().root.get_node_or_null("MenuBeachAmbience")
+	if ambience != null: ambience.set_volume(preferences.ambience_volume)
 	# Only on start and when the setting changes, so a scene change never undoes the
 	# macOS green button / Ctrl+Cmd+F, and the window never flickers between scenes.
 	if DisplayServer.get_name() != "headless" and applied_fullscreen != int(preferences.fullscreen):
