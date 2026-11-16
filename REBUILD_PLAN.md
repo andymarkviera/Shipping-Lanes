@@ -1135,7 +1135,7 @@ snow fields, peaks and calved floes; solid, on the minimap and the M globe;
 the North Pole quay is backed by a tongue of the cap and the South Pole quay
 by an ice island; neither port moved; three leads through the ice keep the
 north-south wrap and both pole routes open; 14 of the 20 icebergs moved to
-open water) is in a draft PR. All six
+open water) is in draft PR #195. All six
 checked on Linux only (headless checks and xvfb screenshots), not yet seen on
 Windows or a Mac, and frame time was not measured on real hardware. Items 7
 to 9 are not started.
