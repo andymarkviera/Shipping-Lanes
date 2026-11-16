@@ -226,6 +226,24 @@ func check_restore() -> void:
 	var ship: HandlingShip = game.ship
 	expect(game.ship_kind == "heavy_5" and ship.definition.id == "ship_heavy_semisub_05" and ship.attached and ship.payload_size.is_equal_approx(HeavyJobs.load_for(saved_carrying.heavy.active.id).size), "Ship 5 restores with its own load aboard")
 	expect(ship.payload_visual.get_parent() == ship.cargo_mount and ship.payload_body.collision_layer == 0 and not ship.payload_shape.disabled, "Restored load has one collision owner")
+	# Patch 2.9 item 6B: the same save as the old layout would have made it. The
+	# ship lies where land now stands and the drop is off the port's old spot.
+	var place: Dictionary = Progression.WORLD[Progression.port_index(saved_carrying.heavy.active.origin)]
+	var block: Rect2 = Progression.LAND[0]
+	var old: Dictionary = saved_carrying.duplicate(true)
+	old.pose.origin = Vector3(block.get_center().x, old.pose.origin.y, block.get_center().y)
+	old.heavy.active.drop = place.was + Vector3(float(place.was_side) * 600, 0, -1000)
+	expect(not Progression.afloat(old.pose, ship.definition.hull_size_m) and Snapshot.valid(old.duplicate(true)), "An old-layout save inside new land is still a valid save")
+	current_scene.queue_free()
+	for frame: int in 3: await process_frame
+	wipe()
+	game = await open_game()
+	if game == null: return
+	expect(await Snapshot.restore(game, old.duplicate(true)), "The old-layout save restores")
+	ship = game.ship
+	var port_at: Vector3 = Progression.WORLD[int(old.port)].at
+	expect(Progression.afloat(ship.global_transform, ship.definition.hull_size_m) and Progression.short_way(ship.global_position - port_at).length() < 1500.0, "Its ship is moved out of the land to its port (%.0f m off)" % Progression.short_way(ship.global_position - port_at).length())
+	expect(ship.attached and game.heavy_jobs.active.drop.is_equal_approx(place.at + Vector3(float(place.drop_side) * 600, 0, -1000)), "Its load is aboard and its drop moved with the port")
 
 func check_old_ids(game: Node) -> void:
 	game.ship_kind = "heavy"
