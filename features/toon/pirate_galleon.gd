@@ -302,7 +302,7 @@ static func hull_mesh() -> ArrayMesh:
 
 ## A square sail between its yard (head) and its foot, bellied forward. A thin
 ## closed shell so the toon outline can wrap it.
-static func _square_sail(surface: SurfaceTool, z: float, head_y: float, foot_y: float, head_w: float, foot_w: float, belly: float) -> void:
+static func _square_sail(surface: SurfaceTool, z: float, head_y: float, foot_y: float, head_w: float, foot_w: float, belly: float, cloth: Color = SAIL, seam: Color = SAIL_SEAM) -> void:
 	var across: int = 8
 	var down: int = 6
 	var grid: Array = []
@@ -321,7 +321,7 @@ static func _square_sail(surface: SurfaceTool, z: float, head_y: float, foot_y: 
 			var b: Vector3 = grid[row][column + 1]
 			var c: Vector3 = grid[row + 1][column + 1]
 			var d: Vector3 = grid[row + 1][column]
-			surface.set_color((SAIL if column % 2 == 0 else SAIL_SEAM).srgb_to_linear())
+			surface.set_color((cloth if column % 2 == 0 else seam).srgb_to_linear())
 			surface.set_smooth_group(0)
 			_face(surface, a, b, c, Vector3.BACK)
 			_face(surface, a, c, d, Vector3.BACK)
@@ -329,7 +329,7 @@ static func _square_sail(surface: SurfaceTool, z: float, head_y: float, foot_y: 
 			_face(surface, a - thick, b - thick, c - thick, Vector3.FORWARD)
 			_face(surface, a - thick, c - thick, d - thick, Vector3.FORWARD)
 	surface.set_smooth_group(2)
-	surface.set_color(SAIL_SEAM.srgb_to_linear())
+	surface.set_color(seam.srgb_to_linear())
 	var middle: Vector3 = Vector3(0, (head_y + foot_y) * 0.5, z)
 	var rim: PackedVector3Array = PackedVector3Array()
 	for column: int in across + 1: rim.append(grid[0][column])
@@ -345,7 +345,7 @@ static func _square_sail(surface: SurfaceTool, z: float, head_y: float, foot_y: 
 		_face(surface, a, b - thick, a - thick, out)
 
 ## A three-cornered sail (the lateen and the jib), bellied to one side.
-static func _triangle_sail(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, belly: Vector3) -> void:
+static func _triangle_sail(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, belly: Vector3, cloth: Color = SAIL, seam: Color = SAIL_SEAM) -> void:
 	var cuts: int = 6
 	var want: Vector3 = belly.normalized()
 	var thick: Vector3 = want * 0.25
@@ -358,14 +358,14 @@ static func _triangle_sail(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vect
 		for j: int in cuts - i:
 			var cells: Array = [[point.call(i, j), point.call(i + 1, j), point.call(i, j + 1)]]
 			if i + j < cuts - 1: cells.append([point.call(i + 1, j), point.call(i + 1, j + 1), point.call(i, j + 1)])
-			surface.set_color((SAIL if j % 2 == 0 else SAIL_SEAM).srgb_to_linear())
+			surface.set_color((cloth if j % 2 == 0 else seam).srgb_to_linear())
 			for cell: Array in cells:
 				surface.set_smooth_group(0)
 				_face(surface, cell[0], cell[1], cell[2], want)
 				surface.set_smooth_group(1)
 				_face(surface, cell[0] - thick, cell[1] - thick, cell[2] - thick, -want)
 	surface.set_smooth_group(2)
-	surface.set_color(SAIL_SEAM.srgb_to_linear())
+	surface.set_color(seam.srgb_to_linear())
 	var middle: Vector3 = (a + b + c) / 3.0
 	for edge: Array in [[a, b], [b, c], [c, a]]:
 		var out: Vector3 = (edge[0] + edge[1]) * 0.5 - middle
@@ -839,22 +839,30 @@ static func meshes() -> Dictionary:
 	var markers: Dictionary = {}
 	for marker: Node in holder.get_children(): markers[String(marker.name)] = (marker as Marker3D).position
 	holder.free()
+	_meshes = finish(parts, hull_mesh(), sails_mesh(), flags_mesh(), markers)
+	return _meshes
+
+## The merged parts as meshes with their materials (shared with the brigantine).
+static func finish(parts: Parts, hull: ArrayMesh, sails: ArrayMesh, flags: ArrayMesh, markers: Dictionary) -> Dictionary:
 	var outlined: ShaderMaterial = _toon(true)
 	var glow: StandardMaterial3D = StandardMaterial3D.new()
 	glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	glow.vertex_color_use_as_albedo = true
-	_meshes = {
-		"Hull": hull_mesh(), "Structure": parts.structure.mesh(outlined), "Detail": parts.detail.mesh(outlined),
-		"Rigging": parts.rigging.mesh(_toon(false)), "Sails": sails_mesh(), "Glow": parts.glow.mesh(glow),
-		"Flags": flags_mesh(), "markers": markers,
+	return {
+		"Hull": hull, "Structure": parts.structure.mesh(outlined), "Detail": parts.detail.mesh(outlined),
+		"Rigging": parts.rigging.mesh(_toon(false)), "Sails": sails, "Glow": parts.glow.mesh(glow),
+		"Flags": flags, "markers": markers,
 	}
-	return _meshes
 
 ## Fills chunky_look's model root: `hull` is its Hull node.
 static func dress(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition) -> void:
-	var built: Dictionary = meshes()
-	# The model is drawn for SIZE_M; a record of another size stretches it to fit.
-	var fit: Vector3 = Vector3(definition.hull_size_m.x / SIZE_M.x, 1.0, definition.hull_size_m.z / SIZE_M.z)
+	place(root, hull, definition, meshes(), SIZE_M, DETAIL_RANGE_M, RIGGING_RANGE_M)
+
+## Hangs a pirate ship's built meshes and mooring markers on the model root
+## (the brigantine shares this). The model is drawn for `drawn_for`; a record
+## of another size stretches it to fit.
+static func place(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition, built: Dictionary, drawn_for: Vector3, detail_range: float, rigging_range: float) -> void:
+	var fit: Vector3 = Vector3(definition.hull_size_m.x / drawn_for.x, 1.0, definition.hull_size_m.z / drawn_for.z)
 	hull.mesh = built.Hull
 	hull.scale = fit
 	for label: String in ["Structure", "Detail", "Rigging", "Sails", "Glow", "Flags"]:
@@ -864,9 +872,9 @@ static func dress(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition
 		node.scale = fit
 		root.add_child(node)
 		match label:
-			"Detail": node.visibility_range_end = DETAIL_RANGE_M
+			"Detail": node.visibility_range_end = detail_range
 			"Rigging":
-				node.visibility_range_end = RIGGING_RANGE_M
+				node.visibility_range_end = rigging_range
 				node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			"Glow": node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			# The shader moves the cloth sideways: keep it from being culled early.

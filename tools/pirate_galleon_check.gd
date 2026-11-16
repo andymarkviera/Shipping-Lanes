@@ -27,12 +27,12 @@ func run() -> void:
 	await process_frame
 	var definition: ShipDefinition = Progression.definition(KIND)
 	# The record and its place in the ladder.
-	expect(Progression.SMALL_KINDS.has(KIND) and Progression.PIRATE_KINDS == [KIND], "The galleon is a pirate ship in the small (Other boats) family")
+	expect(Progression.SMALL_KINDS.has(KIND) and Progression.PIRATE_KINDS.has(KIND), "The galleon is a pirate ship in the small (Other boats) family")
 	expect(definition.id == "ship_pirate_galleon_01" and Progression.ladder_kind(definition.id) == KIND, "It has its own record and save ID")
 	expect(definition.handling_error().is_empty(), "The record is valid: " + definition.handling_error())
 	expect(definition.cargo_type_ids.is_empty() and definition.cargo_capacities.is_empty() and definition.dwt_tonnes == 0, "It carries no cargo")
 	expect(Progression.container_tier(KIND) + Progression.bulk_tier(KIND) + Progression.heavy_tier(KIND) == 0, "It is in no cargo family")
-	expect(Hangar.ladder().has(KIND) and Hangar.family_of(KIND) == "small" and Hangar.tier_of(KIND) == 4, "The hangar lists it fourth in Other boats")
+	expect(Hangar.ladder().has(KIND) and Hangar.family_of(KIND) == "small" and Hangar.tier_of(KIND) == 5, "The hangar lists it last in Other boats, after the brigantine")
 	expect(Hangar.FAMILIES[4] == ["Other boats", "small"] and Hangar.FAMILY_NAMES.small == "Other boats", "The filter is named Other boats on the same family ID")
 	expect(Hangar.capacity_text(KIND) == "none, just for fun", "The card says it carries nothing")
 	var price: int = int(Progression.SHIPS[KIND].price_minor)
