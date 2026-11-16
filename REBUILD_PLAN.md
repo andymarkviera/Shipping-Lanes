@@ -1082,13 +1082,17 @@ Added by Andy (November 14, 2026, 8:25 PM), same patch, after item 4:
    costs money or needs an account. Item 8's PR carries the 5-10 line
    Windows+Mac playtest checklist for all of 2.9.1 (instead of item 4).
 
-**Patch 2.9.1 status (November 15, 2026):** item 1 (pirate galleon: a 112 x 24 m
+**Patch 2.9.1 status (November 16, 2026):** item 1 (pirate galleon: a 112 x 24 m
 three-master built in code, 11 kn, wide turns, deeper roll, 200,000 credits, no
 cargo jobs; in the hangar's renamed Other boats filter and owned in debug mode)
-is in a draft PR, built in parallel with Patch 2.9 item 6B on Andy's
-instruction. Checked on Linux only (headless checks and xvfb screenshots), not
-yet seen on Windows or a Mac. Items 2 to 8 are not started. Its sails are set
-and still (item 3 makes them live) and its guns do not fire (item 4).
+is merged. Item 2 (pirate brigantine: a 64 x 14 m two-master built from the
+galleon's pieces, black hull, red sails, its own skull-and-cutlasses flag,
+15 kn, turns twice as fast as the galleon, 60,000 credits, no cargo jobs;
+boat 4 of 5 in Other boats, owned in debug mode) is in a draft PR, built in
+parallel with Patch 2.9 item 6B on Andy's instruction. Both checked on Linux
+only (headless checks and xvfb screenshots), not yet seen on Windows or a Mac.
+Items 3 to 8 are not started. Both ships' sails are set and still (item 3
+makes them live) and their guns do not fire (item 4).
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 

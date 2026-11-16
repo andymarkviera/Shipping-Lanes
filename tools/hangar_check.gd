@@ -100,7 +100,7 @@ func give(game: Node, minor: int) -> void:
 func check_screen(game: Node) -> void:
 	var hangar: CanvasLayer = game.hangar
 	var ladder: Array[String] = Hangar.ladder()
-	expect(ladder.size() == 19 and ladder.all(func(k: String) -> bool: return Progression.SHIPS.has(k) and Hangar.family_of(k) in ["container", "bulk", "heavy", "small"]), "The hangar ladder is the 15 container, bulk and heavy-lift ships, the 3 small boats and the pirate galleon, no gas or oil")
+	expect(ladder.size() == 20 and ladder.all(func(k: String) -> bool: return Progression.SHIPS.has(k) and Hangar.family_of(k) in ["container", "bulk", "heavy", "small"]), "The hangar ladder is the 15 container, bulk and heavy-lift ships, the 3 small boats and the 2 pirate ships, no gas or oil")
 	expect(not hangar.is_open(), "The hangar starts closed")
 	expect(await dock_anywhere(game), "The starter ship docks")
 	await settle()
@@ -108,7 +108,7 @@ func check_screen(game: Node) -> void:
 		if (node as Button).text == "SHIPS" and (node as Button).is_visible_in_tree(): (node as Button).pressed.emit()
 	await settle()
 	expect(hangar.is_open() and hangar.current() == "container" and not paused, "SHIPS opens the hangar on the active ship; the world is not paused")
-	expect(hangar.models.size() == 19, "All 19 models are built once and cached (%d)" % hangar.models.size())
+	expect(hangar.models.size() == 20, "All 20 models are built once and cached (%d)" % hangar.models.size())
 	expect(hangar.action_button.text == "Active" and hangar.action_button.disabled and hangar.name_label.text.contains("ACTIVE"), "The active ship is marked Active")
 	# Cycle the whole ladder by the arrow key and the on-screen arrow; stats follow.
 	for at: int in ladder.size() + 1:
@@ -128,10 +128,10 @@ func check_screen(game: Node) -> void:
 	await key(KEY_DOWN)
 	expect(hangar.kinds == Progression.HEAVY_KINDS, "Down steps the filter to Heavy lift")
 	await key(KEY_DOWN)
-	expect(hangar.kinds == Progression.SMALL_KINDS and hangar.family_label.text.contains("Other boats · boat 1 of 4"), "Down again steps the filter to Other boats: the three small boats and the pirate galleon")
+	expect(hangar.kinds == Progression.SMALL_KINDS and hangar.family_label.text.contains("Other boats · boat 1 of 5"), "Down again steps the filter to Other boats: the three small boats and the two pirate ships")
 	button_named(game, "All").pressed.emit()
 	await settle()
-	expect(hangar.kinds.size() == 19, "All shows the whole ladder again")
+	expect(hangar.kinds.size() == 20, "All shows the whole ladder again")
 	# Short of money: Buy says how much more is needed and does nothing.
 	hangar.set_family("container")
 	hangar.step(1)
@@ -200,7 +200,7 @@ func run() -> void:
 		game = await open_game()
 		if game != null:
 			await settle()
-			expect(game.ship_kind == last and game.fleet.size() == 19 and game.reward_minor == wallet, "A reload keeps the active ship, all 19 ships and the wallet (ship %s, fleet %d, wallet %d / %d)" % [game.ship_kind, game.fleet.size(), game.reward_minor, wallet])
+			expect(game.ship_kind == last and game.fleet.size() == 20 and game.reward_minor == wallet, "A reload keeps the active ship, all 20 ships and the wallet (ship %s, fleet %d, wallet %d / %d)" % [game.ship_kind, game.fleet.size(), game.reward_minor, wallet])
 	if current_scene != null:
 		current_scene.queue_free()
 		for frame: int in 3: await process_frame

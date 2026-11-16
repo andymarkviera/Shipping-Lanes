@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ship_pirate_brigantine_02"
+display_name = "Pirate brigantine"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
+cargo_type_ids = Array[String]([])
+cargo_capacities = {}
+hull_size_m = Vector3(14, 5, 64)
+camera_radius_m = 36.0
+camera_distance_m = 120.0
+wake_half_length_m = 26.0
+wake_half_width_m = 6.6
+cargo_anchor_m = Vector3(0, 5, 0)
+jump_lift = 0.0
+chop_height_m = 0.0
+roll_gain = 1.2
+neutral_stop_deceleration_mps2 = 0.3
+forward_acceleration_mps2 = 0.926
+reverse_acceleration_mps2 = 0.3
+linear_drag_per_second = 0.12
+forward_throttle_limit = 1.0
+reverse_throttle_limit = 0.6
+command_rate_per_second = 0.6
+engine_ramp_up_per_second = 0.5
+engine_ramp_down_per_second = 0.9
+max_turn_rate_degrees = 4.4
+turn_acceleration_degrees = 2.6
+rudder_full_effect_speed_mps = 3.0
+thruster_acceleration_mps2 = 0.3
+lateral_drag_per_second = 0.5
+thruster_cutoff_speed_mps = 3.0
+fuel_capacity_liters = 1200.0
+fuel_full_output_lps = 0.15
+fuel_idle_lps = 0.01

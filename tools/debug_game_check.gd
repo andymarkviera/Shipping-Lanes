@@ -69,7 +69,7 @@ func run() -> void:
 	expect(game.persistence == null, "debug world has no persistence (no save opened)")
 	expect(game.debug.tag.visible and game.debug.tag.text == "DEBUG", "DEBUG tag shown")
 	for kind: String in Hangar.ladder(): expect(game.fleet.has(kind), "owns " + kind)
-	expect(Hangar.ladder().size() == 19, "19 ladder ships (small boats and the pirate galleon included)")
+	expect(Hangar.ladder().size() == 20, "20 ladder ships (small boats and the two pirate ships included)")
 	game.reward_minor = 0
 	await settle()
 	expect(game.reward_minor >= DebugGame.CREDITS_MINOR / 2, "credits topped up")

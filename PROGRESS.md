@@ -7514,6 +7514,60 @@ changed), Windows, Mac, an export, a playtest. Frame time was only compared
 on the runner's software renderer (galleon 154 ms a frame, Panamax 144 ms in
 the same spot), which says little about Andy's PC. Nobody has sailed it.
 
+## Patch 2.9.1 item 2 — pirate brigantine (November 16, 2026)
+
+Second pirate ship, built from item 1's pieces. Only item 2: no living sails
+(item 3), no cannon salute (item 4), no port, world or port-data change.
+
+- **Ship:** new kind `small_brigantine` ("Pirate brigantine", record
+  `pirate_brigantine_ship.tres`, save ID `ship_pirate_brigantine_02`): 64 x 14 m,
+  15.0 kn, turns twice as fast as the galleon (4.4 deg/s), 60,000 credits, no
+  cargo and no jobs. It is boat 4 of 5 in the hangar's Other boats filter (the
+  galleon moves to 5 of 5, cheapest first as in every family) and is owned in
+  debug mode. Old saves load unchanged.
+- **Model** (`features/toon/pirate_brigantine.gd`, built in code): low black
+  hull with a red wale, white rail and green bottom; raised quarterdeck with
+  stairs, cabin door and lit windows; stern with four lit windows, gold
+  mouldings, crested taffrail and three lanterns; 18 deck guns behind the
+  bulwarks, 2 stern chasers, 4 swivel guns; skull figurehead, bowsprit and
+  jibboom; square-rigged foremast (three yards, fighting top) and gaff-rigged
+  mainmast (crow's nest, gaff and boom); shrouds with ratlines, stays,
+  backstays, braces, lifts and sheets; eight red sails; ship's wheel and
+  binnacle, hatch grating, upturned longboat, capstan, barrels, bell, anchors
+  on catheads, 7 lanterns; mooring bitts and the four mooring markers.
+- **Own colours and flag:** black, crimson and bone against the galleon's
+  wood, ochre and navy; a black flag with a skull over crossed cutlasses at
+  the main truck and the gaff peak, and a white pennant on the foremast.
+- **Reused from the galleon:** merged batches, the custom outline, the flag
+  shader, windows, lanterns, ratlines and sails. `pirate_galleon.gd` changed
+  only to share them: sails take an optional cloth colour, and mesh placement
+  and materials moved into `place()` and `finish()`. The galleon looks and
+  checks the same.
+- **Frame time:** 7 meshes, about 12,600 triangles, built once in about 20 ms
+  and shared; detail stops drawing past 500 m and rigging past 380 m (the
+  chase camera's furthest zoom is 288 m).
+- **Judgement calls:** `roll_gain` 1.2 (about 11 degrees on high water; 1.4
+  gave 12.7, close to the 14 degree limit). Rig tops out at 41.3 m, under
+  the galleon's 55 m. It burns fuel like every ship.
+- `export_presets.cfg` lists the record and the model script in both presets
+  (the same long line Patch 2.9 item 6B may edit).
+- **Screenshots:** `docs/reference/patch_2_9_1/brigantine_*.png` (Linux, xvfb,
+  1600x900, a plain test stage, not the game scene: three-quarter view, stern,
+  deck).
+
+Checks (agent's Linux runner, official Godot 4.7.2, checksum verified):
+import, `check_scripts` (230 scripts), boot, new `pirate_brigantine_check`
+(75), `pirate_galleon_check` (84), `small_boats_check` (79), `hangar_check`
+(235: buys, selects and docks all 20 ships), `debug_game_check` (87),
+`mooring_check`, `crane_check`, `world_land_check`, the container, bulk and
+heavy ladder checks, `globe_map_check`, `check_m1_voyage`, `check_catalog`,
+`check_controls`, `check_flow`, `check_starter`, `check_title`,
+`check_helm_keys` and every CI Stage 2 probe (units to economy): all passed.
+Not run: the Stage 3 Python tests (no Python or service file changed), the
+biome checks, Windows, Mac, an export, a playtest, any frame-time measurement
+in the game scene, and no in-game or hangar-card screenshot. Nobody has
+sailed it.
+
 ## Patch 2.9 item 6B: seeded port placement — November 16, 2026
 
 Draft PR from `claude/issue-179-20261116-0109` (it replaces draft PR #180, whose

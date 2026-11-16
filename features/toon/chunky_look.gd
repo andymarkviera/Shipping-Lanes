@@ -8,6 +8,7 @@ const INK: Color = Color("2b2f3a")
 const CREAM: Color = Color("f2d58a")
 const RUST: Color = Color("b8402f")
 const PIRATE_GALLEON = preload("res://features/toon/pirate_galleon.gd")
+const PIRATE_BRIGANTINE = preload("res://features/toon/pirate_brigantine.gd")
 ## Hull and trim colour for each kind of ship in the game.
 const SHIP_COLOURS = {
 	"container": [Color("d8452f"), Color("f2b632")],
@@ -152,6 +153,10 @@ static func model(kind: String, definition: ShipDefinition) -> Node3D:
 	if kind == "small_galleon":
 		# Patch 2.9.1 item 1: the pirate galleon builds itself (mooring markers included).
 		PIRATE_GALLEON.dress(root, hull, definition)
+		return root
+	if kind == "small_brigantine":
+		# Patch 2.9.1 item 2: the pirate brigantine, built from the galleon's pieces.
+		PIRATE_BRIGANTINE.dress(root, hull, definition)
 		return root
 	if kind.begins_with("small_"):
 		_dress_small(root, hull, definition, kind, cache)
