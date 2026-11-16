@@ -95,6 +95,51 @@ func run() -> void:
 	expect(map.course_dots > route.size(), "The globe draws the course along the route (%d dots, %d legs)" % [map.course_dots, route.size()])
 	map.draw_course({})
 	expect(map.course_dots == 0, "No job, no course on the globe")
+	# Patch 2.9.1 item 5: boats are toon 3D models drawn from a ship-entry list.
+	var entries: Array[Dictionary] = map.ship_entries()
+	expect(entries.size() == 1 and entries[0].kind == game.ship_kind and entries[0].position == game.ship.global_position, "The entry list is the player's own boat")
+	expect(map.boats.size() == 1 and map.boats[0].visible and map.boats[0].get_child_count() >= 3, "The player's boat is a 3D model")
+	var own: Node3D = map.boats[0]
+	expect(own.position.normalized().distance_to(GlobeMap.on_globe(game.ship.global_position)) < 0.001 and own.position.length() > 1.0, "The model sits on the globe at the ship")
+	expect(own.basis.is_conformal() and own.basis.determinant() > 0.0, "The model is not mirrored or skewed")
+	# Heading: north, then east, then the real ship's own bow.
+	var here: Vector3 = game.ship.global_position
+	var up: Vector3 = GlobeMap.on_globe(here)
+	var listed: Array[Dictionary] = [{"kind": "container", "position": here, "heading": 0.0}]
+	map.show_ships(listed)
+	var bow: Vector3 = own.basis.z.normalized()
+	expect(bow.distance_to((GlobeMap.on_globe(here + Vector3(0, 0, 40)) - up).normalized()) < 0.05, "Heading 0 points the bow north")
+	expect(absf(own.basis.y.normalized().dot(up) - 1.0) < 0.001, "The keel is down on the globe")
+	listed[0].heading = -PI / 2
+	map.show_ships(listed)
+	expect(own.basis.z.normalized().distance_to((GlobeMap.on_globe(here + Vector3(-40, 0, 0)) - up).normalized()) < 0.05, "Heading -90 degrees points the bow east (-X)")
+	# Each kind its own hull; the pool builds a model once and reuses it.
+	var shapes: Dictionary = {}
+	var kinds: Array[String] = ["container", "bulk", "heavy", "small_fishing", "small_speedboat", "small_brigantine", "small_galleon"]
+	for kind: String in kinds:
+		listed[0].kind = kind
+		map.show_ships(listed)
+		var parts: String = ""
+		for part: MeshInstance3D in own.get_children(): parts += "%s%s%s;" % [part.mesh.get_class(), part.position, part.mesh.material.get_shader_parameter("colour")]
+		shapes[parts] = true
+		expect(own.get_meta("kind") == kind and map.boats.size() == 1, kind + " rebuilds the pooled model in place")
+	expect(shapes.size() == kinds.size(), "Every kind has its own look (%d of %d)" % [shapes.size(), kinds.size()])
+	expect(GlobeMap.boat_family("small_galleon") == "pirate" and GlobeMap.boat_family("bulk_3") == "bulk" and GlobeMap.boat_family("unknown_kind") == "container", "Kinds map to hull families, unknown ones to a container ship")
+	var kept: Node = own.get_child(0)
+	map.show_ships(listed)
+	expect(own.get_child(0) == kept, "An unchanged kind is not rebuilt")
+	expect(float(own.get_meta("length")) > GlobeMap.BOAT_LENGTH, "A galleon draws bigger than the starter")
+	# Other ships (Patch 3.0 fills these): drawn the same way, culled round the back.
+	var far: Vector3 = game.ship.global_position + Vector3(Progression.WRAP_M / 2, 0, 0)
+	var others: Array[Dictionary] = [{"kind": "small_galleon", "position": game.ship.global_position + Vector3(600, 0, 600), "heading": 1.0}, {"kind": "bulk", "position": far, "heading": 2.0}]
+	map.other_ships = others
+	await settle()
+	expect(map.boats.size() == 3 and map.boats[0].get_meta("kind") == game.ship_kind and map.boats[1].get_meta("kind") == "small_galleon" and map.boats[1].visible, "Other ships in the list are drawn as their own models")
+	expect(not map.boats[2].visible and map.boats[2].get_child_count() == 0, "A boat round the back of the globe is hidden and not built")
+	others.clear()
+	await settle()
+	expect(map.boats.size() == 3 and not map.boats[1].visible and not map.boats[2].visible and map.boats[0].visible, "Spare models are kept and hidden")
+	expect(not ("ship_marker" in map), "The flat arrow marker is gone")
 	# Over the poles: drag down half a turn, then on; the basis stays clean.
 	var start: Basis = map.spin.basis
 	var saw_pole: bool = false

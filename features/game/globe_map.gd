@@ -17,6 +17,19 @@ const MAP_SIZE: Vector2i = Vector2i(1024, 512)
 ## Patch 2.5 item 1B: the dotted course along the sea route, like the minimap.
 const COURSE_DOT_SPACING: float = 0.012
 const COURSE_DOT_SIZE: float = 0.007
+## Patch 2.9.1 item 5: a starter-size hull is this long on the unit globe.
+const BOAT_LENGTH: float = 0.1
+const MAX_BOATS: int = 64
+const BOAT_SHADER: String = """
+shader_type spatial;
+render_mode unshaded, cull_back;
+uniform vec3 colour : source_color;
+void fragment() {
+	// The globe's own toon light: lit, then one shade band.
+	float light = dot(NORMAL, normalize(vec3(-0.5, 0.6, 0.65)));
+	ALBEDO = colour * (light > 0.05 ? 1.0 : 0.72);
+}
+"""
 const SHADER: String = """
 shader_type spatial;
 render_mode unshaded, cull_back;
@@ -39,7 +52,16 @@ var frame: SubViewportContainer
 var touch: Control
 var camera: Camera3D
 var spin: Node3D
-var ship_marker: MeshInstance3D
+## Patch 2.9.1 item 5: the boats on the globe are small toon 3D models drawn
+## from a list of ship entries, each {kind, position, heading}: kind is the
+## Progression ship kind, position a world position, heading radians from north
+## (+Z) towards +X. Today the list is the player's own boat; Patch 3.0 adds the
+## other players' boats to `other_ships` and they are drawn the same way.
+var other_ships: Array[Dictionary] = []
+## Pooled models, one per entry drawn; rebuilt only when an entry's kind changes.
+var boats: Array[Node3D] = []
+var boat_paints: Dictionary = {}
+var boat_ink: StandardMaterial3D
 var goal_marker: MeshInstance3D
 var course_line: MeshInstance3D
 var course_dots: int = 0
@@ -219,11 +241,6 @@ func open() -> void:
 			name_tag.position = dot.position * 1.04 + Vector3(0, 0.05, 0)
 			spin.add_child(name_tag)
 			port_markers.append(dot)
-		var cone: CylinderMesh = CylinderMesh.new()
-		cone.top_radius = 0.0
-		cone.bottom_radius = 0.5
-		cone.height = 1.4
-		ship_marker = marker(cone, PLAYFUL.SUN, 0.05)
 		var ring: TorusMesh = TorusMesh.new()
 		ring.inner_radius = 0.8
 		ring.outer_radius = 1.0
@@ -289,18 +306,7 @@ func _process(delta: float) -> void:
 		return
 	clock += delta
 	place()
-	var ship_at: Vector3 = view.ship.global_position
-	var up: Vector3 = on_globe(ship_at)
-	var at: Vector2 = lon_lat(ship_at)
-	var east: Vector3 = Vector3(cos(at.x), 0, -sin(at.x))
-	var north: Vector3 = up.cross(east).normalized()
-	var bow: Vector3 = view.ship.global_basis.z
-	var heading: Vector3 = (east * -bow.x + north * bow.z)
-	heading = heading.normalized() if heading.length() > 0.0001 else north
-	# The arrow grows with the hull, up to twice the starter's, like the minimap.
-	var grow: float = clampf(sqrt(view.ship.definition.hull_size_m.z / 64.0), 1.0, 2.0)
-	ship_marker.basis = Basis(heading.cross(up), heading, up) * (0.05 * grow)
-	ship_marker.position = up * 1.03
+	show_ships(ship_entries())
 	for index: int in port_markers.size():
 		port_markers[index].material_override.albedo_color = PLAYFUL.SUN if view.world_ports[index] == view.port else Color.WHITE
 	var destination: Dictionary = Navigation.target(view)
@@ -337,3 +343,128 @@ func draw_course(destination: Dictionary) -> void:
 			course_dots += 1
 		from += step
 	line.surface_end()
+
+## Patch 2.9.1 item 5: every boat the map shows, the player's own first.
+func ship_entries() -> Array[Dictionary]:
+	var bow: Vector3 = view.ship.global_basis.z
+	var entries: Array[Dictionary] = [{"kind": str(view.get("ship_kind")), "position": view.ship.global_position, "heading": atan2(bow.x, bow.z)}]
+	entries.append_array(other_ships)
+	return entries
+
+## "pirate", "small", "bulk", "heavy" or "container" (also any unknown kind).
+static func boat_family(kind: String) -> String:
+	if Progression.PIRATE_KINDS.has(kind): return "pirate"
+	var family: String = kind.get_slice("_", 0)
+	return family if family in ["small", "bulk", "heavy"] else "container"
+
+## Hull size in metres of a kind; the starter's for a kind this build lacks.
+static func boat_size(kind: String) -> Vector3:
+	return Progression.definition(kind).hull_size_m
+
+func boat_part(model: Node3D, mesh: PrimitiveMesh, colour: Color, at: Vector3) -> MeshInstance3D:
+	if not boat_paints.has(colour):
+		if boat_ink == null:
+			# One shared ink outline: the same shape, a little fatter, seen from inside.
+			boat_ink = flat(PLAYFUL.INK)
+			boat_ink.cull_mode = BaseMaterial3D.CULL_FRONT
+			boat_ink.grow = true
+			boat_ink.grow_amount = 0.022
+		var shader: Shader = boat_paints.get("shader")
+		if shader == null:
+			shader = Shader.new()
+			shader.code = BOAT_SHADER
+			boat_paints["shader"] = shader
+		var paint: ShaderMaterial = ShaderMaterial.new()
+		paint.shader = shader
+		paint.set_shader_parameter("colour", colour)
+		paint.next_pass = boat_ink
+		boat_paints[colour] = paint
+	var part: MeshInstance3D = MeshInstance3D.new()
+	mesh.material = boat_paints[colour]
+	part.mesh = mesh
+	part.position = at
+	model.add_child(part)
+	return part
+
+static func box(size: Vector3) -> BoxMesh:
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = size
+	return mesh
+
+static func pole(radius: float, height: float) -> CylinderMesh:
+	var mesh: CylinderMesh = CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	mesh.radial_segments = 6
+	mesh.rings = 1
+	return mesh
+
+## A small toon model of a kind's hull, built into `model`: one unit long, bow
+## along +Z, keel at Y 0. A few boxes each, so a full list stays cheap.
+func build_boat(model: Node3D, kind: String) -> void:
+	for old: Node in model.get_children():
+		model.remove_child(old)
+		old.free()
+	var size: Vector3 = boat_size(kind)
+	var family: String = boat_family(kind)
+	var beam: float = clampf(size.x / size.z * 1.5, 0.2, 0.36)
+	var brig: bool = kind == "small_brigantine"
+	var hull: Color = {"pirate": Color("2c2a33") if brig else Color("7a4a25"), "small": Color.WHITE, "bulk": PLAYFUL.RUST, "heavy": PLAYFUL.SUN_DARK, "container": PLAYFUL.NAVY}[family]
+	boat_part(model, box(Vector3(beam, 0.12, 0.72)), hull, Vector3(0, 0.06, -0.14))
+	var prism: PrismMesh = PrismMesh.new()
+	prism.size = Vector3(beam, 0.28, 0.12)
+	boat_part(model, prism, hull, Vector3(0, 0.06, 0.36)).basis = Basis(Vector3.RIGHT, PI / 2)
+	match family:
+		"pirate":
+			boat_part(model, box(Vector3(beam, 0.1, 0.2)), hull, Vector3(0, 0.17, -0.4))
+			var masts: Array = [-0.1, 0.2] if brig else [-0.24, 0.0, 0.24]
+			for index: int in masts.size():
+				var tall: float = 0.42 if brig else [0.4, 0.52, 0.42][index]
+				boat_part(model, pole(0.014, tall), Color("4a2f1a"), Vector3(0, 0.12 + tall / 2, masts[index]))
+				boat_part(model, box(Vector3(beam * 1.5, tall * 0.6, 0.02)), Color("c8372d") if brig else PLAYFUL.CREAM, Vector3(0, 0.14 + tall * 0.55, masts[index] + 0.02))
+			boat_part(model, box(Vector3(0.012, 0.06, 0.1)), PLAYFUL.INK, Vector3(0, 0.71 if not brig else 0.6, masts[masts.size() - 2] - 0.06))
+		"small":
+			boat_part(model, box(Vector3(beam * 0.7, 0.1, 0.26)), PLAYFUL.SUN if kind != "small_fishing" else PLAYFUL.NAVY, Vector3(0, 0.17, -0.12 if kind != "small_fishing" else 0.05))
+		"bulk":
+			for hatch: int in 4: boat_part(model, box(Vector3(beam * 0.7, 0.035, 0.11)), Color("e9d8a6"), Vector3(0, 0.135, -0.2 + hatch * 0.14))
+			boat_part(model, box(Vector3(beam * 0.85, 0.16, 0.1)), Color.WHITE, Vector3(0, 0.2, -0.4))
+		"heavy":
+			boat_part(model, box(Vector3(beam * 0.85, 0.16, 0.1)), Color.WHITE, Vector3(0, 0.2, 0.14))
+			boat_part(model, box(Vector3(beam * 0.8, 0.02, 0.5)), PLAYFUL.DEEP, Vector3(0, 0.13, -0.2))
+			boat_part(model, pole(0.02, 0.26), PLAYFUL.SUN, Vector3(beam * 0.35, 0.25, -0.05))
+			boat_part(model, box(Vector3(0.025, 0.025, 0.3)), PLAYFUL.SUN, Vector3(beam * 0.35, 0.38, -0.18))
+		_:
+			var stacks: Array[Color] = [PLAYFUL.RUST, PLAYFUL.SUN, PLAYFUL.LEAF, PLAYFUL.CREAM]
+			for stack: int in 4: boat_part(model, box(Vector3(beam * 0.85, 0.07 + 0.03 * (stack % 2), 0.12)), stacks[stack], Vector3(0, 0.155 + 0.015 * (stack % 2), -0.24 + stack * 0.135))
+			boat_part(model, box(Vector3(beam * 0.85, 0.2, 0.08)), Color.WHITE, Vector3(0, 0.22, -0.42))
+	model.set_meta("kind", kind)
+	# Bigger hulls draw bigger, between 0.6 and 2 times the starter's.
+	model.set_meta("length", BOAT_LENGTH * clampf(sqrt(size.z / 64.0), 0.6, 2.0))
+
+## Draws the entries: each a model of its own kind, sitting on the globe at its
+## position with the bow along its heading. Models are pooled; spares and boats
+## round the back of the globe are hidden.
+func show_ships(entries: Array[Dictionary]) -> void:
+	var shown: int = mini(entries.size(), MAX_BOATS)
+	for index: int in shown:
+		var entry: Dictionary = entries[index]
+		if index == boats.size():
+			var fresh: Node3D = Node3D.new()
+			spin.add_child(fresh)
+			boats.append(fresh)
+		var model: Node3D = boats[index]
+		var world: Vector3 = entry.position
+		var up: Vector3 = on_globe(world)
+		model.visible = (spin.basis * up).z > -0.15
+		if not model.visible: continue
+		if model.get_meta("kind", "") != entry.kind: build_boat(model, entry.kind)
+		var at: Vector2 = lon_lat(world)
+		var east: Vector3 = Vector3(cos(at.x), 0, -sin(at.x))
+		var north: Vector3 = up.cross(east).normalized()
+		# World east is -X and north is +Z; a boat on the pole itself still gets a bow.
+		var bow: Vector3 = east * -sin(entry.heading) + north * cos(entry.heading)
+		bow = bow.normalized() if bow.length() > 0.0001 else north
+		model.basis = Basis(up.cross(bow), up, bow) * float(model.get_meta("length"))
+		model.position = up * 1.012
+	for index: int in range(shown, boats.size()): boats[index].visible = false
