@@ -7771,3 +7771,57 @@ theirs changed), Windows, Mac, an export, a playtest. Frame time was not
 measured. The models were only seen in one still xvfb frame, not in the
 running game. An earlier agent run on this item stopped before pushing; this
 entry describes the code as rebuilt and checked in this run.
+
+## Patch 2.9.1 item 6 — polar ice cap (November 16, 2026)
+
+REBUILD_PLAN.md section 13 item 6. No port, port ID, job or save changed.
+
+- **Where it is.** The world wraps north-south, so its top and bottom ends are
+  one line. The ice cap lies along that line all the way round the world,
+  up to about 1.3 km deep on each side, and replaces the four square ice
+  shelves. On the M globe it is a white cap on each pole.
+- **Ports.** Neither polar port moved. A tongue of the cap runs out to the
+  North Pole port and backs its whole quay. The South Pole port keeps an ice
+  island behind its quay, where its shelf stood: joining it to the cap would
+  have closed the water the pole-to-pole route uses. Berths, approach and
+  heavy drop area are open sea at both, checked as for every other port.
+- **Leads (a choice to confirm).** A full band of ice would end north-south
+  sailing across the edge. Three leads roughly 300 to 400 m wide are cut
+  through it:
+  two along the routes that already cross the edge (Needle Gut to the southern
+  lane, and pole to pole) and one in the east near X 5500. Port-to-port sea
+  routes are unchanged (longest still 9,166 m).
+- **Look.** Blue ice cliffs 8 to 30 m high straight out of the sea, snow
+  rising to a flat plateau, snow peaks inland, calved floes off the coast,
+  surf at the cliff foot, a quay-height wall by the two ports. Ice and snow
+  share two materials; peaks are MultiMeshes.
+- **Solid.** 694 blocks in `Progression.ICE_SHELVES` (same name, so collision,
+  sea lanes, `afloat` and the checks keep using it), in 20 chunks. Each chunk
+  sits at its copy nearest the ship, as the icebergs do, so the cap is whole
+  across both edges of the world.
+- **Icebergs.** 14 of the 20 were inside or too near the new ice and moved to
+  the nearest open polar water; still 20, still clear of ports and drop areas.
+- **Frame time.** Coast in up to 40 bands culled past 4 km, surf past 1.9 km; the
+  flat plateau is one quad per run. Under xvfb the polar views draw 190k to
+  420k primitives against 530k at the home port. Game load went from about
+  1.0 s to 1.2 s headless. Frame time itself was not measured (software GL).
+- **Files.** New: `tools/world_layout/polar_ice.py` (the bake, standard
+  library only, repeatable), `features/world/polar_ice.json` (added to both
+  export presets), `features/toon/polar_ice.gd`. Changed: `progression.gd`
+  (blocks, loader, `ice_depth`), `port_test.gd`, `globe_map.gd`,
+  `globe_minimap.gd`, and three checks: `world_land_check` and
+  `check_m1_voyage` no longer ask for 2 km of sea between ice and the edge,
+  and `traversal_budget.py` asks that of land only.
+- **Screenshots:** `docs/reference/patch_2_9_1/ice_cap_coast.png`,
+  `ice_cap_lead.png`, `ice_cap_north_pole_port.png` (Linux, xvfb, 1600x900,
+  ship placed by a scratch script that was not committed).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless), all passed:
+import, and all 27 `tools/*_check.gd` and `tools/check_*.gd` scripts,
+including `world_land_check` (166, was 149: the ice chunks, blocks, leads,
+both quays, the maps), `check_m1_voyage`, `polar_biome_check`,
+`volcano_check`, `globe_map_check`, `debug_game_check`, `hangar_check`,
+`small_boats_check` and the pirate checks; `traversal_budget.py` and its 10
+unit tests. Not run: the probes, the other Python and service tests (no file
+of theirs changed), Windows, Mac, an export, a playtest. The ice was only seen
+in still xvfb frames from four spots, not sailed along.

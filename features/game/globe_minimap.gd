@@ -33,7 +33,8 @@ static func sphere_point(world: Vector3, ship: Vector3) -> Vector2:
 	return Vector2(-step.x, step.z) / METRES_PER_RADIAN
 
 ## Patch 2.9 item 6A: [outline, ice, centre] for each natural landmass (every
-## other outline point, about 120 m apart) and polar ice shelf. Built once.
+## other outline point, about 120 m apart) and piece of the polar ice cap,
+## then its reach from that centre in metres. Built once.
 static var _rings: Array = []
 static func land_rings() -> Array:
 	var rings: Array = []
@@ -42,16 +43,14 @@ static func land_rings() -> Array:
 		var source: PackedVector2Array = entry.outline
 		for index: int in range(0, source.size(), 2): ring.append(source[index])
 		if ring.size() >= 3: rings.append([ring, false])
-	for block: Rect2 in Progression.ICE_SHELVES:
-		var corners: PackedVector2Array = PackedVector2Array()
-		var ends: Array[Vector2] = [block.position, Vector2(block.end.x, block.position.y), block.end, Vector2(block.position.x, block.end.y)]
-		for index: int in 4:
-			for step: int in 10: corners.append(ends[index].lerp(ends[(index + 1) % 4], step / 10.0))
-		rings.append([corners, true])
+	# Patch 2.9.1 item 6: the polar ice cap's pieces (none crosses an edge of
+	# the world; neighbours share their edges, so the fills join up).
+	for ring: PackedVector2Array in Progression.polar_ice().get("outlines", []): rings.append([ring, true])
 	for entry: Array in rings:
 		var bounds: Rect2 = Rect2(entry[0][0], Vector2.ZERO)
 		for spot: Vector2 in entry[0]: bounds = bounds.expand(spot)
 		entry.append(bounds.get_center())
+		entry.append(bounds.size.length() / 2)
 	return rings
 
 ## The near side's edge as a polygon in globe radians (Patch 2.9 item 6A).
@@ -103,13 +102,15 @@ func _draw() -> void:
 	# cover the strokes inside the continent.
 	var shapes: Array = []
 	# Patch 2.9 item 6A: the natural landmasses' outlines (every other point,
-	# about 120 m apart), then the polar ice shelves as before.
+	# about 120 m apart), then the polar ice cap's pieces (Patch 2.9.1 item 6).
 	if _rings.is_empty(): _rings = land_rings()
 	for entry: Array in _rings:
 		var ring: PackedVector2Array = entry[0]
 		# The whole shape is drawn as its copy nearest the ship, so it is never torn.
 		var centre: Vector2 = entry[2]
 		var near: Vector3 = Progression.nearest(Vector3(centre.x, 0, centre.y), ship) - Vector3(centre.x, 0, centre.y)
+		# Wholly over the horizon: nothing to work out.
+		if Vector2(centre.x + near.x - ship.x, centre.y + near.z - ship.z).length() > METRES_PER_RADIAN * PI / 2 + entry[3]: continue
 		var points: PackedVector2Array = PackedVector2Array()
 		var any_visible: bool = false
 		var all_visible: bool = true

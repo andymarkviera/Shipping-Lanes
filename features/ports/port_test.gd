@@ -9,6 +9,7 @@ const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const POLAR_BIOME = preload("res://features/sky/polar_biome.gd")
+const POLAR_ICE = preload("res://features/toon/polar_ice.gd")
 const DESERT_BIOME = preload("res://features/sky/desert_biome.gd")
 const DESERT_LOOK = preload("res://features/toon/desert_look.gd")
 const TROPICAL_BIOME = preload("res://features/sky/tropical_biome.gd")
@@ -127,6 +128,8 @@ var sell_deadline: int = 0
 var sfx: Dictionary = {}
 ## Patch 2.1 item 3, the game only: the solid icebergs, in Progression.ICEBERGS order.
 var icebergs: Array[StaticBody3D] = []
+## Patch 2.9.1 item 6, the game only: the polar ice cap (POLAR_ICE), in chunks.
+var polar_ice: Node3D
 ## Patch 2.3 debug: the temporary debug layer (features/debug). Null in a normal game.
 const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
 var debug: CanvasLayer
@@ -223,7 +226,12 @@ func _ready() -> void:
 		if city_land != null: add_child(city_land)
 		volcano = VOLCANO_LOOK.new()
 		add_child(volcano)
-		for rect: Rect2 in Progression.ICE_SHELVES: add_land(rect, true)
+		# Patch 2.9.1 item 6: the polar ice cap, where the square shelves were.
+		var polar_ports: Array[Vector2] = []
+		for place: Dictionary in Progression.WORLD:
+			if String(place.id).ends_with("_pole"): polar_ports.append(Vector2(place.at.x, place.at.z))
+		polar_ice = POLAR_ICE.build(polar_ports, surf_paint)
+		add_child(polar_ice)
 		for index: int in Progression.ICEBERGS.size(): add_iceberg(index)
 		bridges = Node3D.new()
 		bridges.name = "Bridges"
@@ -544,8 +552,10 @@ func add_iceberg(index: int) -> void:
 
 ## Each iceberg sits at its copy nearest the ship, so icebergs near an edge of
 ## the world are there on both sides of it. A move only ever happens half a
-## world away from the ship, far out of sight.
+## world away from the ship, far out of sight. Patch 2.9.1 item 6: the ice
+## cap's chunks follow the ship the same way.
 func place_icebergs() -> void:
+	if polar_ice != null: POLAR_ICE.place(polar_ice, ship.global_position)
 	for index: int in icebergs.size():
 		var entry: Vector3 = Progression.ICEBERGS[index]
 		var at: Vector3 = Progression.nearest(Vector3(entry.x, 0, entry.z), ship.global_position)
