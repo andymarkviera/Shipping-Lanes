@@ -10,6 +10,7 @@ const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
 const TITLE_SEEN: StringName = &"title_attract_seen"
 ## Patch 2.7 item 4: Start is playing its camera dive into the game.
 var departing: bool = false
+var ambience: Node
 const GAME_MENU = preload("res://features/game/game_menu.gd")
 var developer_overlay: DeveloperOverlay
 var state: State = State.BOOT
@@ -171,6 +172,8 @@ func _ready() -> void:
 		add_to_group(DevMode.GROUP)
 	# Patch 2.3 debug: back at the title, any debug world is over.
 	if get_tree().has_meta(DEBUG_GAME.META): get_tree().remove_meta(DEBUG_GAME.META)
+	ambience = preload("res://features/audio/menu_ambience.gd").acquire(get_tree())
+	ambience.set_volume(controls.preferences.ambience_volume)
 	menu.selected.connect(navigate)
 	$UI/Settings.closed.connect(func() -> void:
 		transition(settings_return)
@@ -203,6 +206,7 @@ func show_attract_screen() -> void:
 ## into the game. Without the title backdrop (headless checks) it goes at once.
 func start_game() -> void:
 	if departing: return
+	if is_instance_valid(ambience): ambience.set_active(false)
 	var title: TitleScreen = menu.title_backdrop
 	if is_instance_valid(title) and title.visible and title.arrived:
 		departing = true
@@ -345,6 +349,8 @@ func transition(next: State) -> void:
 	if focused != null:
 		focused.release_focus()
 	state = next
+	if is_instance_valid(ambience):
+		ambience.set_active(state in [State.TITLE, State.SAVES] or (state == State.SETTINGS and settings_return == State.TITLE))
 	controls.set_ship_context(state == State.PLAYING)
 	controls.set_menu_open(state != State.PLAYING)
 	if is_instance_valid(session):
@@ -396,6 +402,7 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(session):
 		menu.show_timer(session.timer_view())
 func _exit_tree() -> void:
+	if is_instance_valid(ambience): ambience.set_active(false)
 	if persistent_world != null: persistent_world.close_world()
 	if continuation.has("authority"):
 		continuation.authority.detach_clock(true)

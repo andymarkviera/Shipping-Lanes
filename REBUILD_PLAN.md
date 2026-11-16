@@ -1137,8 +1137,12 @@ by an ice island; neither port moved; three leads through the ice keep the
 north-south wrap and both pole routes open; 14 of the 20 icebergs moved to
 open water) is in draft PR #195. All six
 checked on Linux only (headless checks and xvfb screenshots), not yet seen on
-Windows or a Mac, and frame time was not measured on real hardware. Items 7
-to 9 are not started.
+Windows or a Mac, and frame time was not measured on real hardware. Item 7
+(menu beach ambience: generated CC0 surf and occasional gulls, seamless loops,
+pooled players, menu fade-in/departure fade-out, saved Music/Ambience slider
+with preview and Cancel) is implemented for draft review; Linux Godot 4.7.2
+checks recorded in PROGRESS.md. Listening, Windows/Mac and hardware frame-time
+acceptance remain pending. Items 8 and 9 are not started.
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 

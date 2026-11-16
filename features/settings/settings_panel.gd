@@ -7,6 +7,7 @@ var draft: InputPreferences
 var waiting_action: String = ""
 var rows: Dictionary = {}
 var status: Label
+var ambience_volume: HSlider
 var volume: HSlider
 var sensitivity: HSlider
 var invert_y: CheckBox
@@ -35,6 +36,8 @@ func _ready() -> void:
 	heading.add_theme_font_size_override("font_size", 24)
 	column.add_child(heading)
 	volume = add_slider(column, "Master volume", 0.0, 1.0, false)
+	ambience_volume = add_slider(column, "Music/Ambience", 0.0, 1.0, false)
+	ambience_volume.value_changed.connect(preview_ambience)
 	sensitivity = add_slider(column, "Camera sensitivity", 0.25, 3.0, true)
 	invert_y = CheckBox.new()
 	invert_y.text = "Invert camera Y: Off"
@@ -130,6 +133,7 @@ func open(service: PlayerControls) -> void:
 
 func refresh() -> void:
 	volume.value = draft.master_volume
+	ambience_volume.value = draft.ambience_volume
 	sensitivity.value = draft.camera_sensitivity
 	invert_y.button_pressed = draft.invert_camera_y
 	fullscreen_option.button_pressed = draft.fullscreen
@@ -147,7 +151,12 @@ func reset_draft() -> void:
 	refresh()
 	status.text = "Defaults selected. Save to apply them."
 
+func preview_ambience(value: float) -> void:
+	var ambience: Node = get_tree().root.get_node_or_null("MenuBeachAmbience")
+	if ambience != null: ambience.set_volume(value)
+
 func close() -> void:
+	if controls != null: preview_ambience(controls.preferences.ambience_volume)
 	waiting_action = ""
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	if focused != null:
@@ -162,6 +171,7 @@ func save() -> void:
 		status.text = "Choose a key or press Escape to cancel the binding first."
 		return
 	draft.master_volume = volume.value
+	draft.ambience_volume = ambience_volume.value
 	draft.camera_sensitivity = sensitivity.value
 	draft.invert_camera_y = invert_y.button_pressed
 	draft.fullscreen = fullscreen_option.button_pressed

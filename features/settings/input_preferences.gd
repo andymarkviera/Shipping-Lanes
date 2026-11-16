@@ -23,6 +23,7 @@ const LABELS: Dictionary = {
 }
 
 @export_range(0.0, 1.0) var master_volume: float = 0.8
+@export_range(0.0, 1.0) var ambience_volume: float = 0.7
 @export_range(0.25, 3.0) var camera_sensitivity: float = 1.0
 @export var invert_camera_y: bool = false
 @export var fullscreen: bool = false
@@ -45,6 +46,8 @@ func validation_error() -> String:
 	if water_quality < 0 or water_quality > 2: return "Invalid water quality."
 	if not is_finite(master_volume) or master_volume < 0.0 or master_volume > 1.0:
 		return "Volume must be between 0 and 100%."
+	if not is_finite(ambience_volume) or ambience_volume < 0.0 or ambience_volume > 1.0:
+		return "Music/Ambience volume must be between 0 and 100%."
 	if not is_finite(camera_sensitivity) or camera_sensitivity < 0.25 or camera_sensitivity > 3.0:
 		return "Camera sensitivity must be between 0.25 and 3.0."
 	if bindings.size() != DEFAULT_BINDINGS.size():
@@ -77,7 +80,7 @@ func add_missing_bindings() -> void:
 		bindings[action] = key
 
 func to_data() -> Dictionary:
-	return {"version": 1, "water_quality": water_quality, "master_volume": master_volume, "camera_sensitivity": camera_sensitivity,
+	return {"version": 1, "ambience_volume": ambience_volume, "water_quality": water_quality, "master_volume": master_volume, "camera_sensitivity": camera_sensitivity,
 		"invert_camera_y": invert_camera_y, "fullscreen": fullscreen, "bindings": bindings.duplicate()}
 
 static func from_data(data: Variant) -> InputPreferences:
@@ -92,6 +95,9 @@ static func from_data(data: Variant) -> InputPreferences:
 	if not data.get("bindings") is Dictionary:
 		return null
 	var result: InputPreferences = InputPreferences.new()
+	var ambience: Variant = data.get("ambience_volume", 0.7)
+	if not (ambience is float or ambience is int): return null
+	result.ambience_volume = float(ambience)
 	result.master_volume = data.master_volume
 	result.camera_sensitivity = data.camera_sensitivity
 	result.invert_camera_y = data.invert_camera_y
