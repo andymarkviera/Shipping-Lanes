@@ -7636,3 +7636,11 @@ collision, composition and ports probes. Python: `traversal_budget.py`
 Not run: the service and public-handoff Python tests (no file of theirs
 changed), the probes that need the HTTP/SQLite service, Windows, Mac, an
 export, a playtest, any frame-time measurement.
+
+## Shipping Lanes app icon — November 15, 2026
+
+- Used the red-and-gold launcher logo for the macOS game bundle, Windows
+  game executable and running window. Included the runtime assets in the
+  relevant export presets.
+- Checked the icon formats and resource paths locally. Godot exports and
+  desktop launch checks remain pending.

@@ -962,6 +962,9 @@ Mac; item 3 (Mac controls and display) in a draft PR, checked on Linux
 headless only, not yet tried on a Mac; item 4 (Apple Silicon performance)
 in a draft PR, checked on Linux headless only, not yet run on a Mac.
 
+**App icon follow-up (November 15, 2026).** Use the Shipping Lanes logo
+for the macOS bundle, Windows executable and running game window.
+
 ## 12. Patch 2.7 (Andy, November 14, 2026): main menu
 
 Andy's design (formerly "Patch 3"). Starts after Patch 2.6. References:
