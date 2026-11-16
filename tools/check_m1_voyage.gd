@@ -124,9 +124,10 @@ func helm_toward(ship: HandlingShip, target: Vector3, speed: float) -> void:
 func why_stuck(game: Node) -> String:
 	return "helm notice: \"%s\"" % game.helm.notice.reason().replace("\n", " ")
 
-func sail_to(game: Node, target: Vector3, radius: float, cruise: float, label: String) -> bool:
+func sail_to(game: Node, goal: Vector3, radius: float, cruise: float, label: String) -> bool:
 	var ship: HandlingShip = game.ship
 	for tick: int in LEG_SECONDS * 60:
+		var target: Vector3 = game.Progression.nearest(goal, ship.global_position) # May lie over the world's edge.
 		if flat_distance(ship.global_position, target) < radius:
 			note(label, ship)
 			return true
@@ -311,9 +312,12 @@ func play() -> void:
 	game.ship.global_position = first + Vector3(0, 0, -game.Progression.WRAP_M + 900)
 	game.place_icebergs()
 	var moved: bool = copies.position.distance_to(first - Vector3(0, 0, game.Progression.WRAP_M)) < 1.0
+	game.ship.global_position = first + Vector3(0, 0, 900)
+	game.place_icebergs()
+	var back: bool = copies.position.distance_to(first) < 1.0
 	game.ship.global_position = home
 	game.place_icebergs()
-	expect(moved and copies.position.distance_to(first) < 1.0, "An iceberg near the edge is there on both sides of it")
+	expect(moved and back, "An iceberg near the edge is there on both sides of it")
 	var straight: float = north.position.distance_to(south.position)
 	expect(game.Progression.leg_units(4, 5) * 100 < straight - 2000, "The leg between the poles goes the short way, over the edge (%d00 m, %.0f m straight)" % [game.Progression.leg_units(4, 5), straight])
 	if not expect(game.controls.input_allowed(), "New game: helm accepts input; " + why_stuck(game)): return
@@ -331,7 +335,13 @@ func play() -> void:
 	# Straight ahead until the stern is past the quay, then turn for Slatewater.
 	if not await sail_to(game, brindle.berth_anchor.global_position + Vector3(0, 0, 160), 40.0, 6.0, "Clear of Brindle Quay"): return
 	await always_running(game)
-	if not await sail_to(game, slatewater.berth_anchor.global_position + Vector3(-200, 0, -755), 80.0, 10.0, "Turn-in point south-west of Slatewater"): return
+	# Patch 2.9 item 6B: the ports sit on seeded coasts, so the voyage follows the
+	# sea lanes to Slatewater's gate, then turns in to its berth.
+	var lanes: Array[Vector3] = game.Progression.course(game.ship.global_position, slatewater.berth_anchor.global_position, game.world_ports.find(slatewater))
+	if not expect(lanes.size() >= 2, "There is a way by sea from Brindle Quay to Slatewater Works"): return
+	for turn: int in lanes.size() - 2:
+		if not await sail_to(game, lanes[turn], 120.0, 10.0, "Sea lane point %d on the way to Slatewater" % turn): return
+	if not await sail_to(game, lanes[lanes.size() - 2], 80.0, 10.0, "Turn-in point off Slatewater"): return
 	await settle()
 	expect(game.dock_button.is_visible_in_tree() and game.dock_button.disabled and game.dock_button.text == "Dock", "No berth in range: Dock is on screen and greyed out")
 	expect(game.game_hud.knots.text.ends_with(" kn") and int(game.game_hud.knots.text) >= 10 and game.game_hud.slider.value > 0.1, "Under way the bar shows the speed and the throttle order (%s, slider %.2f)" % [game.game_hud.knots.text, game.game_hud.slider.value])

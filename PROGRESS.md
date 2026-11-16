@@ -7567,3 +7567,72 @@ Not run: the Stage 3 Python tests (no Python or service file changed), the
 biome checks, Windows, Mac, an export, a playtest, any frame-time measurement
 in the game scene, and no in-game or hangar-card screenshot. Nobody has
 sailed it.
+
+## Patch 2.9 item 6B: seeded port placement — November 16, 2026
+
+Draft PR from `claude/issue-179-20261116-0109` (it replaces draft PR #180, whose
+commits it carries). **Done:** `natural_land.py` now draws the four strait ports from the
+seed (`PLACE_SEED` 2912) and gives each one a coastal spot. The quay backs onto
+land, the berths and drop area are open sea, and every route is within budget.
+The North and South Pole ports have not moved. The generator also places the
+Palm Isles, Ember Isle (volcano), the four bridge crossings and the desert,
+tropical and rain centres, then re-bends the land round them. Port IDs are
+unchanged. Each moved port keeps its old spot as `"was"`/`"was_side"` in
+`Progression.WORLD`.
+
+**Pay and saves:** `Progression.chart_at()` gives a port's
+old spot (`"was"`), and `leg_units` uses it, so container and bulk pay and the
+saved offers that `voyage_snapshot.valid()` rebuilds are as before. A saved
+heavy drop round the old spot is accepted. On load it moves with the port: the
+same distance out and south, on the new open side. `restore()` starts the ship
+at its port's spawn when the saved pose is inside land, ice or an iceberg
+(`Progression.afloat`). When a docked save is off every berth, it docks again
+from that spawn. A floating heavy load moves with its ship.
+**Checks fixed:** `crane_check` (bays are now grouped by the stack's
+z on the ship; float error far from the origin split container_3's stacks) and
+`check_m1_voyage` (it follows the sea lanes to Slatewater's gate, and the
+iceberg edge test no longer depends on Brindle's spot).
+
+**Re-bake (November 16):** the first placement that fits every rule is attempt
+277. New spots: Brindle Quay (-10, -300), Slatewater Works (1660, 1410), Cinder
+Point (-210, 1830), Gannet Light (1810, -1900). Ember Isle is at (4480, -4060).
+The four bridges, the Palm Isles and the desert, tropical and rain centres
+moved with them. What changed in `natural_land.py` to get there:
+- The volcano is drawn from the spots of open sea that meet every fixed rule.
+  Only the south-east corner does, so Ember Isle is 60 m from where it was.
+- Strait ports are drawn on the inner sea's coasts only (`INNER_SEA_X`). From
+  Hearthland's west coast or Kelp Isle's east coast the sea route to an inner
+  port is 12 km or more, over the 11 km budget in `world_layout.json`.
+- The keep-out rectangle round each strait's bank headlands had its sides
+  swapped for north-south straits, so a port's berths could land on a
+  headland. Fixed.
+- A fine seeded ripple (`RIPPLE_M`) stops a coast following the sample grid
+  dead straight (Kelp Isle had 450 m).
+- Each baked candidate must pass `traversal_budget.py`'s world rules.
+
+**For Andy to judge:** three of the four ports moved only 300 to 370 m
+(Slatewater moved 1.4 km). The 11 km route budget and the fixed sea lanes
+leave the inner sea as the only place all four fit. The budget was not
+changed. Every hull's time and fuel budget allows 15.5 km or more, so raising
+`max_route_m` to about 13 km would let ports reach the outer coasts, at the
+cost of longer sails for the same pay.
+
+**Limits:** no real pre-2.9 save file was loaded. `heavy_ladder_check` now
+restores a ship 5 save edited to the old layout (ship inside new land, drop off
+Brindle's old spot) and it passes. A heavy load still waiting for pickup beside
+an old quay moves only when its ship is moved or re-docked.
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless), all passed:
+import, `check_scripts`, boot; `world_land_check`, `volcano_check`, the
+tropical, desert, rain and polar biome checks, `heavy_ladder_check`,
+`globe_map_check`, the bulk and container ladder checks, `crane_check`,
+`check_m1_voyage`, `debug_game_check`, `hangar_check`, `mooring_check`,
+`small_boats_check`, `pirate_galleon_check`, `check_catalog`, `check_controls`,
+`check_flow`, `check_starter`, `check_helm_keys`, `check_title`; the units,
+diagnostics, contracts, geography, session, clocks, handling, camera, water,
+feedback, world size, heavy lifter, fuel, economy, sailing save, voyage,
+collision, composition and ports probes. Python: `traversal_budget.py`
+(WORLD_LAYOUT_PASS, 17 routes) and the 10 world-layout unit tests.
+Not run: the service and public-handoff Python tests (no file of theirs
+changed), the probes that need the HTTP/SQLite service, Windows, Mac, an
+export, a playtest, any frame-time measurement.

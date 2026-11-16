@@ -135,11 +135,17 @@ static func visuals_of(body) -> Node3D:
 func start_work(owner: int, entry: Dictionary, visuals: Node3D) -> void:
 	var row: Array = ports[entry.port][entry.berth_index]
 	# Bays: slots at the same port-local z, in order along the quay. Bays
-	# closer than GAP_M stay with one crane.
+	# closer than GAP_M stay with one crane. Slots are grouped by their stack's
+	# z on the ship: a port far from the world's origin (Patch 2.9 item 6B)
+	# adds enough float error to the port-local z to split a stack in two.
 	var to_port: Transform3D = entry.port.global_transform.affine_inverse() * visuals.instances.global_transform
+	var stacks: Dictionary = {}
+	for slot: int in visuals.capacity:
+		var stack: float = snappedf(visuals.layout.centres[slot].z, 0.5)
+		if not stacks.has(stack): stacks[stack] = snappedf((to_port * visuals.layout.centres[slot]).z, 0.5)
 	var bays: Dictionary = {}
 	for slot: int in visuals.capacity:
-		var z: float = snappedf((to_port * visuals.layout.centres[slot]).z, 0.5)
+		var z: float = stacks[snappedf(visuals.layout.centres[slot].z, 0.5)]
 		if not bays.has(z): bays[z] = []
 		bays[z].append(slot)
 	var keys: Array = bays.keys()
