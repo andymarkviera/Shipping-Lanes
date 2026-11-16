@@ -1127,11 +1127,18 @@ debug ownership re-checked) is merged. Item 5 (3D boats on the M map only:
 the flat arrow is replaced by a small toon model of the boat's own hull kind,
 bow along its heading, drawn from a list of ship entries with kind, position
 and heading that Patch 3.0 can add other players to; pooled models, hidden
-round the back of the globe; corner minimap unchanged; no networking) is in
-draft PR #193. All five
+round the back of the globe; corner minimap unchanged; no networking) is
+merged (PR #193). Item 6 (polar ice cap: the square ice shelves are replaced
+by a natural ice cap baked from seed 2916 by `tools/world_layout/polar_ice.py`,
+lying along the world's north/south edge all the way round, with ice cliffs,
+snow fields, peaks and calved floes; solid, on the minimap and the M globe;
+the North Pole quay is backed by a tongue of the cap and the South Pole quay
+by an ice island; neither port moved; three leads through the ice keep the
+north-south wrap and both pole routes open; 14 of the 20 icebergs moved to
+open water) is in a draft PR. All six
 checked on Linux only (headless checks and xvfb screenshots), not yet seen on
-Windows or a Mac, and frame time was not measured. Items 6 to 9 are not
-started.
+Windows or a Mac, and frame time was not measured on real hardware. Items 7
+to 9 are not started.
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 

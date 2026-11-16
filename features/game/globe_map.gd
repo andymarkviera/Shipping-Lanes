@@ -90,7 +90,7 @@ static func page_pixel(x: float, z: float) -> Vector2:
 	var at: Vector2 = lon_lat(Vector3(x, 0, z))
 	return Vector2((at.x / TAU + 0.5) * MAP_SIZE.x, (0.5 - at.y / PI) * MAP_SIZE.y)
 
-## The atlas page: sea, a soft grid, green land, white ice shelves. Built once.
+## The atlas page: sea, a soft grid, green land, the white ice cap. Built once.
 static func atlas() -> ImageTexture:
 	var page: Image = Image.create(MAP_SIZE.x, MAP_SIZE.y, false, Image.FORMAT_RGB8)
 	page.fill(Color("1aa0d8"))
@@ -98,14 +98,20 @@ static func atlas() -> ImageTexture:
 		page.fill_rect(Rect2i(line * MAP_SIZE.x / 12, 0, 2, MAP_SIZE.y), Color("3fb4e2"))
 	for line: int in range(1, 6):
 		page.fill_rect(Rect2i(0, line * MAP_SIZE.y / 6, MAP_SIZE.x, 2), Color("3fb4e2"))
-	# The polar ice shelves: an ink edge, then the fill.
-	var boxes: Array = []
-	for block: Rect2 in Progression.ICE_SHELVES:
-		var a: Vector2 = page_pixel(block.position.x, block.position.y)
-		var b: Vector2 = page_pixel(block.end.x, block.end.y)
-		boxes.append(Rect2i(Vector2i(a.min(b).floor()), Vector2i((a.max(b) - a.min(b)).ceil())))
-	for box: Rect2i in boxes: page.fill_rect(box.grow(1), Color("8fc3d6"))
-	for box: Rect2i in boxes: page.fill_rect(box, Color("f7fbfd"))
+	# Patch 2.9.1 item 6: the polar ice cap, pixel by pixel from its depth grid:
+	# white ice, an ink line along its coast. Its rows lie at the page's top
+	# and bottom, where the globe's poles are.
+	var ice: Dictionary = Progression.polar_ice()
+	if not ice.is_empty():
+		var ice_count: Vector2i = ice.count
+		var ice_depth: PackedFloat32Array = ice.depth
+		for py: int in MAP_SIZE.y:
+			var north: float = (py + 0.5) / MAP_SIZE.y * Progression.WRAP_M
+			var row: int = floori((-north if north < Progression.WRAP_M / 2 else Progression.WRAP_M - north) / ice.cell) + ice.half
+			if row < 0 or row >= ice_count.y: continue
+			for px: int in MAP_SIZE.x:
+				var d: float = ice_depth[row * ice_count.x + posmod(floori((1.0 - (px + 0.5) / MAP_SIZE.x) * Progression.WRAP_M / ice.cell), ice_count.x)]
+				if d > 0.0: page.set_pixel(px, py, Color("8fc3d6") if d < 20.0 else Color("f7fbfd"))
 	# Patch 2.9 item 6A: the natural land, pixel by pixel from the coast depth
 	# grid (nearest sample): green inland, an ink line along the coast.
 	var grid: Dictionary = Progression.natural_land()

@@ -433,7 +433,9 @@ def game_world_failures(layout, geo=None):
     overlaps = lambda area: any(r[0] < area[0] + area[2] and area[0] < r[0] + r[2] and r[1] < area[1] + area[3] and area[1] < r[1] + r[3]
                                 for r in geo['land'] + geo['ice'])
     half_wrap = geo['wrap'] / 2 - plan['edge_margin_m']
-    for x, z, w, d in geo['land'] + geo['ice']:
+    # Patch 2.9.1 item 6: the land only; the polar ice cap lies along the
+    # north/south edge itself.
+    for x, z, w, d in geo['land']:
         if abs(x + w / 2 - geo['centre'][0]) + w / 2 >= half_wrap or abs(z + d / 2 - geo['centre'][1]) + d / 2 >= half_wrap:
             bad.append('land %s is too near the world edge' % ((x, z, w, d),))
     covered, continents, islands = 0, 0, 0

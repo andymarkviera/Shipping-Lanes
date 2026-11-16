@@ -13,6 +13,9 @@ extends SceneTree
 ## Patch 2.5 item 2: bridges over the straits: at least three, one suspension;
 ## the deck clears the tallest ship of every family; towers and piers are solid,
 ## on land and out of the channel; a ship 5 sized box sweeps under each deck.
+## Patch 2.9.1 item 6: the polar ice cap along the north/south edge: solid in
+## chunks that follow the ship across the edges, leads open where the routes
+## cross, both polar quays backed by ice, drawn on the globe and the minimap.
 ## Isolated save folder.
 ## Run: godot --headless --path . --script res://tools/world_land_check.gd
 
@@ -21,6 +24,8 @@ const Progression = preload("res://features/game/progression.gd")
 const Navigation = preload("res://features/ports/local_navigation.gd")
 const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const GLOBE_MAP = preload("res://features/game/globe_map.gd")
+const GLOBE_MINIMAP = preload("res://features/game/globe_minimap.gd")
+const POLAR_ICE = preload("res://features/toon/polar_ice.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
@@ -126,11 +131,9 @@ func run() -> void:
 			break
 	if not expect(game != null, "Game scene opened"): return finish()
 	for frame: int in 3: await physics_frame
-	# Patch 2.9 item 6A: one solid body per landmass holding a box per block,
-	# and one per polar ice shelf.
+	# Patch 2.9 item 6A: one solid body per landmass holding a box per block.
 	var shapes: int = 0
 	var masses: int = 0
-	var shelves: int = 0
 	for child: Node in game.get_children():
 		var body: StaticBody3D = child as StaticBody3D
 		if body == null or body.collision_layer != CollisionRules.SHORE or body.get_child_count() == 0 or not body.get_child(0) is CollisionShape3D: continue
@@ -138,9 +141,7 @@ func run() -> void:
 			masses += 1
 			for collider: Node in body.get_children():
 				if collider is CollisionShape3D and (collider as CollisionShape3D).shape is BoxShape3D: shapes += 1
-		elif body.get_node_or_null("Coast") != null: shelves += 1
 	expect(masses == Progression.LANDMASSES.size() and shapes == Progression.LAND.size(), "Every land block is solid (%d landmasses, %d blocks)" % [masses, shapes])
-	expect(shelves == Progression.ICE_SHELVES.size(), "Every ice shelf is solid with a coast (%d)" % shelves)
 	# The toon coast: 1 km chunks, culled far away, sharing their materials;
 	# the surf shares one shader and stops drawing sooner.
 	var paints: Dictionary = {}
@@ -209,6 +210,81 @@ func run() -> void:
 		var middle: Vector2 = (strait.from + strait.to) / 2
 		var pixel: Vector2i = Vector2i(GLOBE_MAP.page_pixel(middle.x, middle.y))
 		expect(page.get_pixelv(pixel).b > 0.6, "%s is open water on the globe" % strait.name)
+	# Patch 2.9.1 item 6: the polar ice cap. Every block is solid, in 20 chunks
+	# with a culled toon coast; no block crosses an edge of the world.
+	var wrap: float = Progression.WRAP_M
+	var cap: Node3D = game.get_node_or_null("PolarIce")
+	if expect(cap != null and cap.get_child_count() == Progression.ICE_CHUNKS.size() and cap.get_child_count() == 20, "The polar ice cap is in the game in 20 chunks"):
+		var boxes: int = 0
+		var ice_coasts: int = 0
+		var ice_culled: bool = true
+		var ice_paints: Dictionary = {}
+		var ice_surf: bool = true
+		for chunk: Node in cap.get_children():
+			var body: StaticBody3D = chunk.get_node_or_null("Ice") as StaticBody3D
+			if body == null or body.collision_layer != CollisionRules.SHORE: continue
+			for collider: Node in body.get_children():
+				if collider is CollisionShape3D and (collider as CollisionShape3D).shape is BoxShape3D: boxes += 1
+			for part: Node in chunk.get_children():
+				var mesh: MeshInstance3D = part as MeshInstance3D
+				if mesh == null: continue
+				if String(mesh.name).begins_with("Coast"):
+					ice_coasts += 1
+					ice_culled = ice_culled and mesh.visibility_range_end > 0.0 and mesh.visibility_range_end <= 4000.0
+					for surface: int in mesh.mesh.get_surface_count(): ice_paints[mesh.get_active_material(surface)] = true
+				else:
+					ice_surf = ice_surf and mesh.material_override == game.surf_paint and mesh.visibility_range_end > 0.0 and mesh.visibility_range_end <= 2000.0
+		expect(boxes == Progression.ICE_SHELVES.size() and boxes > 100, "Every block of the ice cap is solid (%d)" % boxes)
+		expect(ice_coasts >= 20 and ice_culled and ice_surf, "The ice coast is in %d bands, culled far away, with the land's surf" % ice_coasts)
+		expect(ice_paints.size() == 2 and not ice_paints.has(null), "The ice shares two materials: ice and snow")
+		# Each chunk sits at its copy nearest the ship, across either edge.
+		POLAR_ICE.place(cap, Progression.WRAP_CENTRE + Vector3(wrap / 2 - 10, 0, wrap / 2 - 10))
+		var west_north: Node3D = cap.get_child(0)
+		var west_south: Node3D = cap.get_child(Progression.ICE_COLUMNS)
+		expect(west_north.position.distance_to(Vector3(wrap, 0, 0)) < 1.0 and west_south.position.distance_to(Vector3(wrap, 0, wrap)) < 1.0, "Ice chunks follow the ship across the edges of the world")
+		POLAR_ICE.place(cap, game.ship.global_position)
+	var world_box: Rect2 = Rect2(Vector2(Progression.WRAP_CENTRE.x, Progression.WRAP_CENTRE.z) - Vector2(wrap, wrap) / 2, Vector2(wrap, wrap)).grow(0.1)
+	var inside: bool = true
+	for block: Rect2 in Progression.ICE_SHELVES: inside = inside and world_box.encloses(block) and block.size.x <= wrap / Progression.ICE_COLUMNS + 0.1
+	expect(inside, "No ice block crosses an edge of the world")
+	# The cap lies along the whole edge on both sides, but for the leads; the
+	# blocks and the depth grid agree.
+	var edge_z: float = Progression.WRAP_CENTRE.z + wrap / 2
+	for side: float in [-1.0, 1.0]:
+		var iced: int = 0
+		for step: int in 200:
+			if solid(Vector2(Progression.WRAP_CENTRE.x + (step / 200.0 - 0.5) * wrap + 7.0, edge_z - wrap * maxf(side, 0.0) + side * 40.0)): iced += 1
+		expect(iced >= 170 and iced < 200, "The ice cap covers the %s end of the world but for its leads (%d of 200)" % ["south" if side > 0.0 else "north", iced])
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 2916
+	var agree: bool = true
+	for sample: int in 600:
+		var at: Vector2 = Vector2(Progression.WRAP_CENTRE.x + rng.randf_range(-0.5, 0.5) * wrap, edge_z - rng.randf_range(0.0, 2700.0))
+		if rng.randf() < 0.5: at.y = edge_z - wrap + rng.randf_range(0.0, 2700.0)
+		var d: float = Progression.ice_depth(at)
+		var in_ice: bool = Progression.ICE_SHELVES.any(func(block: Rect2) -> bool: return block.has_point(at))
+		if (d > 20.0 and not in_ice) or (d < -20.0 and in_ice): agree = false
+	expect(agree and is_equal_approx(Progression.ice_depth(Vector2(0, 0)), -300.0), "The ice depth grid and the solid blocks agree")
+	expect(is_equal_approx(Progression.ice_depth(Vector2(900, edge_z - 30)), Progression.ice_depth(Vector2(900 - wrap, edge_z - 30 + wrap))), "The ice is the same one world along")
+	# The leads: both sea routes that cross the edge run straight through.
+	var south_gate: Vector3 = Progression.gate(Progression.port_index("port_south_pole"))
+	expect(Progression.clear_line(Vector2(680, 3550), Vector2(-2600, -4800)) and Progression.clear_line(Vector2(2400, 3550), Vector2(south_gate.x, south_gate.z)), "The leads through the ice are open on both routes across the edge")
+	# Both polar quays: deep ice behind them at quay height, sea in front.
+	for id: String in ["port_north_pole", "port_south_pole"]:
+		var place: Dictionary = Progression.WORLD[Progression.port_index(id)]
+		var back: Vector2 = Vector2(place.at.x - float(place.drop_side) * 220.0, place.at.z + 150.0)
+		expect(Progression.ice_depth(back) > 60.0 and Progression.ice_depth(Vector2(place.at.x + float(place.drop_side) * 150.0, place.at.z)) < -60.0, "%s has ice behind its quay and sea at its berths" % id)
+		expect(absf(POLAR_ICE.ice_height(30.0, Vector2(place.at.x - float(place.drop_side) * 110.0, place.at.z + 150.0), 1.0) - TOON_COAST.SAND_TOP_Y) < 0.01, "%s ice meets the quay at deck height" % id)
+	expect(POLAR_ICE.ice_height(-2.0, Vector2.ZERO, 0.0) < -3.0 and POLAR_ICE.ice_height(10.0, Vector2.ZERO, 0.0) >= 5.0 and POLAR_ICE.snow_height(260.0, Vector2.ZERO, 0.0) == POLAR_ICE.PLATEAU_Y, "Ice cliffs rise from under the sea to a snow plateau")
+	# The maps: white on the globe atlas, pieces on the minimap.
+	var ice_block: Rect2 = Progression.ICE_SHELVES[0]
+	for block: Rect2 in Progression.ICE_SHELVES:
+		if minf(block.size.x, block.size.y) > minf(ice_block.size.x, ice_block.size.y): ice_block = block
+	expect(page.get_pixelv(Vector2i(GLOBE_MAP.page_pixel(ice_block.get_center().x, ice_block.get_center().y))).is_equal_approx(Color("f7fbfd")), "The ice cap is white on the globe")
+	var ice_rings: int = 0
+	for entry: Array in GLOBE_MINIMAP.land_rings():
+		if entry[1]: ice_rings += 1
+	expect(ice_rings == Progression.polar_ice().outlines.size() and ice_rings >= 20, "The minimap draws the ice cap's pieces (%d)" % ice_rings)
 	# Spawn clearance at every port holds the biggest hull clear of the land.
 	for place: Node3D in game.world_ports:
 		if place == game.port: continue

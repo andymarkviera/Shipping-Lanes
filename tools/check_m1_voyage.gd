@@ -266,7 +266,9 @@ func play() -> void:
 	var edge: Vector3 = game.Progression.WRAP_CENTRE + Vector3(wrap_m / 2 - 5, 0, 0)
 	expect(game.Progression.wrapped(edge + Vector3(10, 0, 0)).distance_to(edge - Vector3(wrap_m - 10, 0, 0)) < 0.01, "World wraps: 5 m past the east edge is 5 m inside the west edge")
 	expect(game.Progression.nearest(edge - Vector3(wrap_m - 10, 0, 0), edge).distance_to(edge + Vector3(10, 0, 0)) < 0.01, "World wraps: the nearest copy of a point is across the edge")
-	for rect: Rect2 in game.Progression.LAND + game.Progression.ICE_SHELVES:
+	# Patch 2.9.1 item 6: the land only. The polar ice cap lies along the
+	# north/south edge itself (world_land_check covers it).
+	for rect: Rect2 in game.Progression.LAND:
 		var middle: Vector3 = Vector3(rect.get_center().x, 0, rect.get_center().y) - game.Progression.WRAP_CENTRE
 		expect(absf(middle.x) + rect.size.x / 2 < wrap_m / 2 - 2000 and absf(middle.z) + rect.size.y / 2 < wrap_m / 2 - 2000, "World wraps: open sea between land %s and every edge" % rect)
 	var minimap_script: Script = game.minimap.get_script()
