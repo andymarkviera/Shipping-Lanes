@@ -93,6 +93,11 @@ func run() -> void:
 		await settle()
 		expect(game.ship_kind == kind and Progression.SHIPS.has(kind), "swapped to " + kind)
 		expect(game.debug.readout.text.begins_with(str(Progression.SHIPS[kind].name)) and game.debug.readout.text.contains("kn"), "readout for " + kind)
+		if Progression.PIRATE_KINDS.has(kind):
+			# Patch 2.9.1 item 3: in the real game the rig is live and the wake is the hull's own.
+			var rig: Node = game.ship.find_child("Rig", true, false)
+			expect(rig != null and rig.is_processing() and rig.motion == game.ship.assembly.visual and rig.sail_set < 0.5, "living rig, sails furled at rest, on " + kind)
+			expect(game.ship.definition.wake_full_speed_mps > 0.0 and is_equal_approx(game.wake.full_speed_mps, game.ship.definition.wake_full_speed_mps), "own wake speed for " + kind)
 	expect(DebugGame.seconds_to_full(Progression.definition("container")) > 15.0 and DebugGame.seconds_to_full(Progression.definition("container")) < 25.0, "starter reaches full speed in 15-25 s")
 	# Quick travel to every port, with the biggest ship.
 	game.ship_action("container_5")

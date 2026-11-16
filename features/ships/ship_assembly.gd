@@ -58,5 +58,6 @@ func create_wake(ocean: OceanPresentation) -> ShipWake:
 	visual.landed.connect(wake.landed)
 	wake.half_length = ship.definition.wake_half_length_m
 	wake.half_width = ship.definition.wake_half_width_m
+	if ship.definition.wake_full_speed_mps > 0.0: wake.full_speed_mps = ship.definition.wake_full_speed_mps
 	ocean.get_parent().add_child(wake)
 	return wake

@@ -9,6 +9,11 @@ extends RefCounted
 ## Frame time: the whole ship is seven meshes (hull, structure, detail, rigging,
 ## sails, glow, flags; about 23,000 triangles), built once and cached. The small
 ## detail and the rigging stop drawing past DETAIL_RANGE_M / RIGGING_RANGE_M.
+##
+## Patch 2.9.1 item 3: the sails, ropes and flags move (pirate_rig.gd drives
+## pirate_cloth.gdshader and pirate_flag.gdshader). Every sail vertex carries
+## its furled spot and its belly; long ropes are cut in four so they can bow.
+const RIG = preload("res://features/toon/pirate_rig.gd")
 const TOON_SHADER: Shader = preload("res://features/toon/toon.gdshader")
 const OUTLINE_SHADER: Shader = preload("res://features/toon/toon_outline_custom.gdshader")
 const FLAG_SHADER: Shader = preload("res://features/toon/pirate_flag.gdshader")
@@ -83,12 +88,21 @@ class Batch extends RefCounted:
 	## Outline width of the parts added next, as a share of the full ink line.
 	var ink: float = 1.0
 	var tint: Color = Color.WHITE
+	## Item 3, ropes only: rods of SWING_FROM_M or longer are cut in SWING_PIECES
+	## and carry how far each vertex may swing sideways (CUSTOM1.w, metres).
+	const SWING_FROM_M: float = 8.0
+	const SWING_PIECES: int = 4
+	var swing: bool = false
+	var swings: PackedFloat32Array = PackedFloat32Array()
 
-	func tri(a: Vector3, b: Vector3, c: Vector3, na: Vector3, nb: Vector3, nc: Vector3, pa: Vector3, pb: Vector3, pc: Vector3) -> void:
+	func tri(a: Vector3, b: Vector3, c: Vector3, na: Vector3, nb: Vector3, nc: Vector3, pa: Vector3, pb: Vector3, pc: Vector3, reach: Vector3 = Vector3.ZERO) -> void:
 		# Godot's front faces wind clockwise: (c - a) x (b - a) faces the viewer.
 		if (c - a).cross(b - a).dot(na + nb + nc) < 0.0:
-			tri(a, c, b, na, nc, nb, pa, pc, pb)
+			tri(a, c, b, na, nc, nb, pa, pc, pb, Vector3(reach.x, reach.z, reach.y))
 			return
+		if swing:
+			for corner: int in 3:
+				swings.append(0.0); swings.append(0.0); swings.append(0.0); swings.append(reach[corner])
 		vertices.append(a); vertices.append(b); vertices.append(c)
 		normals.append(na); normals.append(nb); normals.append(nc)
 		colours.append(tint); colours.append(tint); colours.append(tint)
@@ -125,20 +139,34 @@ class Batch extends RefCounted:
 		var u: Vector3 = axis.cross(Vector3.RIGHT if absf(axis.x) < 0.9 else Vector3.UP).normalized()
 		var v: Vector3 = axis.cross(u)
 		var end: Vector3 = axis if caps else Vector3.ZERO
-		for index: int in sides:
-			var first: float = TAU * index / sides
-			var second: float = TAU * (index + 1) / sides
-			var d0: Vector3 = u * cos(first) + v * sin(first)
-			var d1: Vector3 = u * cos(second) + v * sin(second)
-			var a0: Vector3 = a + d0 * ra
-			var a1: Vector3 = a + d1 * ra
-			var b0: Vector3 = b + d0 * rb
-			var b1: Vector3 = b + d1 * rb
-			tri(a0, b0, b1, d0, d0, d1, d0 - end, d0 + end, d1 + end)
-			tri(a0, b1, a1, d0, d1, d1, d0 - end, d1 + end, d1 - end)
-			if caps:
-				if ra > 0.02: tri(a, a0, a1, -axis, -axis, -axis, -axis, d0 - axis, d1 - axis)
-				if rb > 0.02: tri(b, b0, b1, axis, axis, axis, axis, d0 + axis, d1 + axis)
+		var length: float = a.distance_to(b)
+		var pieces: int = SWING_PIECES if swing and length >= SWING_FROM_M else 1
+		var bow: float = clampf(length * 0.02, 0.0, 0.6) if pieces > 1 else 0.0
+		for piece: int in pieces:
+			var t0: float = float(piece) / pieces
+			var t1: float = float(piece + 1) / pieces
+			var from: Vector3 = a.lerp(b, t0)
+			var to: Vector3 = a.lerp(b, t1)
+			var r0: float = lerpf(ra, rb, t0)
+			var r1: float = lerpf(ra, rb, t1)
+			var w0: float = sin(PI * t0) * bow
+			var w1: float = sin(PI * t1) * bow
+			var back: Vector3 = end if piece == 0 else Vector3.ZERO
+			var fore: Vector3 = end if piece == pieces - 1 else Vector3.ZERO
+			for index: int in sides:
+				var first: float = TAU * index / sides
+				var second: float = TAU * (index + 1) / sides
+				var d0: Vector3 = u * cos(first) + v * sin(first)
+				var d1: Vector3 = u * cos(second) + v * sin(second)
+				var a0: Vector3 = from + d0 * r0
+				var a1: Vector3 = from + d1 * r0
+				var b0: Vector3 = to + d0 * r1
+				var b1: Vector3 = to + d1 * r1
+				tri(a0, b0, b1, d0, d0, d1, d0 - back, d0 + fore, d1 + fore, Vector3(w0, w1, w1))
+				tri(a0, b1, a1, d0, d1, d1, d0 - back, d1 + fore, d1 - back, Vector3(w0, w1, w0))
+				if caps:
+					if ra > 0.02 and piece == 0: tri(a, a0, a1, -axis, -axis, -axis, -axis, d0 - axis, d1 - axis)
+					if rb > 0.02 and piece == pieces - 1: tri(b, b0, b1, axis, axis, axis, axis, d0 + axis, d1 + axis)
 
 	func ball(at: Vector3, radii: Vector3, colour: Color, around: int = 8, rings: int = 5) -> void:
 		tint = colour.srgb_to_linear()
@@ -161,8 +189,12 @@ class Batch extends RefCounted:
 		arrays[Mesh.ARRAY_NORMAL] = normals
 		arrays[Mesh.ARRAY_COLOR] = colours
 		arrays[Mesh.ARRAY_CUSTOM0] = pushes
+		var format: int = Mesh.ARRAY_CUSTOM_RGB_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
+		if swing:
+			arrays[Mesh.ARRAY_CUSTOM1] = swings
+			format |= Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT
 		var out: ArrayMesh = ArrayMesh.new()
-		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, Mesh.ARRAY_CUSTOM_RGB_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, format)
 		out.surface_set_material(0, material)
 		return out
 
@@ -172,10 +204,13 @@ class Parts extends RefCounted:
 	var structure: Batch = Batch.new()
 	## Small parts, thin outline, not drawn far away.
 	var detail: Batch = Batch.new()
-	## Ropes: no outline, not drawn far away.
+	## Ropes: no outline, not drawn far away. The long ones swing (item 3).
 	var rigging: Batch = Batch.new()
 	## Lit windows and lantern glass: unshaded, so they glow at night.
 	var glow: Batch = Batch.new()
+
+	func _init() -> void:
+		rigging.swing = true
 
 # --- Hull shape -------------------------------------------------------------
 
@@ -236,9 +271,11 @@ static func deck_half(z: float) -> float:
 
 static func _face(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, want: Vector3) -> void:
 	var flip: bool = (c - a).cross(b - a).dot(want) < 0.0
-	surface.add_vertex(a)
-	surface.add_vertex(c if flip else b)
-	surface.add_vertex(b if flip else c)
+	for point: Vector3 in [a, c if flip else b, b if flip else c]:
+		if _pins.has(point):
+			surface.set_custom(0, _pins[point][0])
+			surface.set_custom(1, _pins[point][1])
+		surface.add_vertex(point)
 
 ## One smooth surface, like chunky_look's hulls, so the ink outline has no gaps.
 static func hull_mesh() -> ArrayMesh:
@@ -300,21 +337,65 @@ static func hull_mesh() -> ArrayMesh:
 
 # --- Sails ------------------------------------------------------------------
 
+## Patch 2.9.1 item 3: what pirate_cloth.gdshader needs at each sail vertex,
+## by position while a sails mesh is built: [CUSTOM0, CUSTOM1].
+static var _pins: Dictionary = {}
+static var _sails_begun: int = 0
+
+## Starts a sails mesh whose vertices can carry pins.
+static func sail_surface() -> SurfaceTool:
+	_pins.clear()
+	_sails_begun = 0
+	var surface: SurfaceTool = SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	surface.set_custom_format(0, SurfaceTool.CUSTOM_RGBA_FLOAT)
+	surface.set_custom_format(1, SurfaceTool.CUSTOM_RGBA_FLOAT)
+	return surface
+
+static func sail_commit(surface: SurfaceTool) -> ArrayMesh:
+	_pins.clear()
+	surface.generate_normals()
+	surface.index()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 0.9
+	surface.set_material(material)
+	return surface.commit()
+
+## Each sail's place in the unfurling order (0 first, 1 last), spread about.
+static func _next_sail() -> float:
+	_sails_begun += 1
+	return fmod(_sails_begun * 0.37, 1.0)
+
+## Pins both faces of the cloth at `at`: where it sits furled, and its belly.
+static func _pin(at: Vector3, thick: Vector3, furled: Vector3, belly: Vector3, order: float) -> void:
+	var data: Array = [Color(furled.x, furled.y, furled.z, order), Color(belly.x, belly.y, belly.z, belly.length() * 0.5)]
+	_pins[at] = data
+	_pins[at - thick] = data
+
+## A furled sail is a roll hanging under its spar: `turn` is 0 at the spar and
+## 1 at the far edge of the cloth; `out` is the side the roll sits on.
+static func _roll(spar: Vector3, turn: float, out: Vector3) -> Vector3:
+	return spar + Vector3(0, -0.5 + 0.4 * cos(TAU * turn), 0) + out * 0.4 * sin(TAU * turn)
+
 ## A square sail between its yard (head) and its foot, bellied forward. A thin
 ## closed shell so the toon outline can wrap it.
 static func _square_sail(surface: SurfaceTool, z: float, head_y: float, foot_y: float, head_w: float, foot_w: float, belly: float, cloth: Color = SAIL, seam: Color = SAIL_SEAM) -> void:
 	var across: int = 8
 	var down: int = 6
 	var grid: Array = []
+	var thick: Vector3 = Vector3(0, 0, 0.25)
+	var order: float = _next_sail()
 	for row: int in down + 1:
 		var v: float = float(row) / down
 		var line: PackedVector3Array = PackedVector3Array()
 		for column: int in across + 1:
 			var u: float = float(column) / across
 			var y: float = lerpf(head_y, foot_y, v) + 0.07 * (head_y - foot_y) * sin(PI * u) * v * v
-			line.append(Vector3(lerpf(head_w, foot_w, v) * (u - 0.5), y, z + belly * pow(sin(PI * v), 0.8) * (0.35 + 0.65 * sin(PI * u))))
+			var out: float = belly * pow(sin(PI * v), 0.8) * (0.35 + 0.65 * sin(PI * u))
+			line.append(Vector3(lerpf(head_w, foot_w, v) * (u - 0.5), y, z + out))
+			_pin(line[column], thick, _roll(Vector3(head_w * (u - 0.5), head_y, z), v, Vector3.BACK), Vector3(0, 0, out), order)
 		grid.append(line)
-	var thick: Vector3 = Vector3(0, 0, 0.25)
 	for row: int in down:
 		for column: int in across:
 			var a: Vector3 = grid[row][column]
@@ -349,11 +430,16 @@ static func _triangle_sail(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vect
 	var cuts: int = 6
 	var want: Vector3 = belly.normalized()
 	var thick: Vector3 = want * 0.25
+	var order: float = _next_sail()
+	# Furled, the cloth is a thin strip gathered along the edge from a to b.
 	var point: Callable = func(i: int, j: int) -> Vector3:
 		var la: float = float(i) / cuts
 		var lb: float = float(j) / cuts
 		var lc: float = 1.0 - la - lb
-		return a * la + b * lb + c * lc + belly * 27.0 * la * lb * lc
+		var out: Vector3 = belly * 27.0 * la * lb * lc
+		var at: Vector3 = a * la + b * lb + c * lc + out
+		_pin(at, thick, a * (la + lc * 0.5) + b * (lb + lc * 0.5) + Vector3(0, -0.9 * lc, 0), out, order)
+		return at
 	for i: int in cuts:
 		for j: int in cuts - i:
 			var cells: Array = [[point.call(i, j), point.call(i + 1, j), point.call(i, j + 1)]]
@@ -373,8 +459,7 @@ static func _triangle_sail(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vect
 		_face(surface, edge[0], edge[1] - thick, edge[0] - thick, out)
 
 static func sails_mesh() -> ArrayMesh:
-	var surface: SurfaceTool = SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var surface: SurfaceTool = sail_surface()
 	for label: String in MASTS:
 		var mast: Dictionary = MASTS[label]
 		var yards: Array = mast.yards
@@ -390,13 +475,7 @@ static func sails_mesh() -> ArrayMesh:
 	# Lateen on the mizzen, jib from the fore topmast to the bowsprit.
 	_triangle_sail(surface, Vector3(1.1, 18.9, -24.0), Vector3(1.1, 32.7, -46.5), Vector3(1.1, 21.5, -50.0), Vector3(0.9, 0, 0))
 	_triangle_sail(surface, Vector3(0, 34.5, 26.9), Vector3(0, 22.3, 55.0), Vector3(0, 18.5, 33.0), Vector3(0.8, 0, 0))
-	surface.generate_normals()
-	surface.index()
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.roughness = 0.9
-	surface.set_material(material)
-	return surface.commit()
+	return sail_commit(surface)
 
 # --- Flags ------------------------------------------------------------------
 
@@ -409,6 +488,8 @@ static func _flag(arrays: Array, hoist: Vector3, length: float, height: float, c
 	for row: int in rows:
 		for column: int in columns:
 			var colour: Color = (BONE if not cells.is_empty() and cells[row][column] == "#" else cloth).srgb_to_linear()
+			# Item 3: the flag shader reads the flag's length from the alpha.
+			colour.a = length / 16.0
 			var corners: Array[Vector2] = []
 			for step: Vector2 in [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 0), Vector2(1, 1), Vector2(0, 1)]:
 				corners.append(Vector2((column + step.x) / columns, (row + step.y) / rows))
@@ -879,6 +960,11 @@ static func place(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition
 			"Glow": node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			# The shader moves the cloth sideways: keep it from being culled early.
 			"Flags": node.extra_cull_margin = 3.0
+	# Item 3: this ship's own moving sail, rope and flag materials.
+	var rig: Node = RIG.new()
+	rig.name = "Rig"
+	root.add_child(rig)
+	rig.fit(root)
 	for label: String in built.markers:
 		var marker: Marker3D = Marker3D.new()
 		marker.name = label

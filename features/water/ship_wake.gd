@@ -7,6 +7,8 @@ const FOAM_SHADER = preload("res://features/water/ship_foam.gdshader")
 ## Foam, splash and rocking are at full strength from this speed up: 80% of the
 ## starter ship's 30 kn top speed (was 8 m/s when the top speed was 10 m/s).
 const FULL_STRENGTH_SPEED_MPS: float = 12.35
+## Patch 2.9.1 item 3: a hull may set its own (ShipDefinition.wake_full_speed_mps).
+var full_speed_mps: float = FULL_STRENGTH_SPEED_MPS
 const LIFETIME: float = 14.0
 const MAX_SAMPLES: int = 40
 ## Patch 2.9 item 4: above this speed the wake samples closer and the bow spray
@@ -73,7 +75,7 @@ func advance(delta: float) -> void:
 	for sample: Dictionary in samples: sample.age += delta
 	while not samples.is_empty() and samples[0].age >= LIFETIME: samples.pop_front()
 	var speed: float = Vector2(ship.velocity.x, ship.velocity.z).length()
-	strength = clampf(speed / FULL_STRENGTH_SPEED_MPS, 0.0, 1.0)
+	strength = clampf(speed / full_speed_mps, 0.0, 1.0)
 	clock += delta
 	var interval: float = 0.55 if ocean.quality == 0 else 0.35
 	# Patch 2.9 item 4: above 22 m/s drop samples by distance (at most every

@@ -108,9 +108,11 @@ func run() -> void:
 	var structure: ShaderMaterial = (model.get_node("Structure") as MeshInstance3D).mesh.surface_get_material(0) as ShaderMaterial
 	expect(structure != null and structure.shader == GALLEON.TOON_SHADER and structure.next_pass is ShaderMaterial, "Structure is toon shaded with an ink outline")
 	expect(structure == detail.mesh.surface_get_material(0), "Structure and detail share one material")
-	for label: String in ["Hull", "Sails"]:
-		var toon: ShaderMaterial = (model.get_node(label) as MeshInstance3D).get_surface_override_material(0) as ShaderMaterial
-		expect(toon != null and toon.shader == GALLEON.TOON_SHADER and toon.next_pass != null, "%s is toon shaded with an ink outline" % label)
+	var toon: ShaderMaterial = (model.get_node("Hull") as MeshInstance3D).get_surface_override_material(0) as ShaderMaterial
+	expect(toon != null and toon.shader == GALLEON.TOON_SHADER and toon.next_pass != null, "Hull is toon shaded with an ink outline")
+	# Patch 2.9.1 item 3: the sails have their own moving toon shader (pirate_rig_check).
+	var cloth: ShaderMaterial = (model.get_node("Sails") as MeshInstance3D).material_override as ShaderMaterial
+	expect(cloth != null and cloth.shader == GALLEON.RIG.CLOTH_SHADER and cloth.next_pass != null, "Sails are toon shaded with an ink outline")
 	var glow: BaseMaterial3D = (model.get_node("Glow") as MeshInstance3D).mesh.surface_get_material(0) as BaseMaterial3D
 	expect(glow != null and glow.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED, "Cabin windows and lanterns stay lit at night")
 	var flags: ShaderMaterial = (model.get_node("Flags") as MeshInstance3D).mesh.surface_get_material(0) as ShaderMaterial
