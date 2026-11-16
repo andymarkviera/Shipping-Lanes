@@ -312,7 +312,8 @@ func _ready() -> void:
 		globe_map.view = self
 		add_child(globe_map)
 		controls.command_requested.connect(func(action: StringName) -> void:
-			if action == &"map_toggle": globe_map.toggle())
+			if action == &"map_toggle": globe_map.toggle()
+			if action == &"cannon_salute": fire_salute())
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
@@ -377,6 +378,13 @@ func _ready() -> void:
 		persistence = preload("res://features/cargo/voyage_persistence.gd").new()
 		add_child(persistence)
 		get_tree().auto_accept_quit = false
+
+## Patch 2.9.1 item 4: the pirate ships' broadside. Looks and sound only; ships
+## without guns do nothing. False when nothing fired (no guns, or cooling down).
+func fire_salute() -> bool:
+	if not is_instance_valid(ship): return false
+	var cannons: Node = ship.find_child("Cannons", true, false)
+	return cannons != null and cannons.has_method("fire") and cannons.fire()
 
 ## M4 coastline: a solid sand slab level with the quays, with a green block on top.
 ## Land is sand with a green top; an ice shelf (polar ports) is pale ice with snow.

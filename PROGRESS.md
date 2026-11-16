@@ -7681,3 +7681,52 @@ probes.
 Not run: the biome, land and volcano checks, the Python and service tests (no
 file of theirs changed), Windows, Mac, an export, a playtest. Frame time was
 not measured; the sails were only seen as still xvfb frames, not in motion.
+
+## Patch 2.9.1 item 4 — cannon salute and Other boats (November 16, 2026)
+
+REBUILD_PLAN.md section 13 item 4. Looks and sound only: no damage, no combat,
+nothing is launched and nothing is hit.
+
+- **Salute.** G (new action `cannon_salute`, rebindable in Settings and listed
+  on the Controls screen) fires the active pirate ship's broadside: the guns go
+  off bow to stern over about 1.1 s on both sides, each with a muzzle flash and
+  three toon smoke puffs, booms, and a splash 110-190 m abeam about a second
+  later. 5 s cooldown. Galleon 62 guns, brigantine 18 (broadside guns only).
+  Other ships have no guns and the key does nothing.
+- **Nothing hit.** There are no projectiles and no collision bodies. A splash
+  is only drawn over open water (15 m or more off the natural land grid), so
+  none lands on a shore. Ship, fuel, condition, credits and saves are untouched.
+- **Frame time.** `features/toon/pirate_cannons.gd`, one node per pirate ship.
+  All flashes, puffs and splash lumps are instances of one MultiMesh (7 per
+  gun: 434 galleon, 126 brigantine), built on the first salute and reused;
+  five boom players share one generated sound. Nothing is created while
+  firing, and the node does not run between salutes.
+- **Saved settings.** Settings files from before this patch have no salute
+  key. They now load with every chosen key kept and the new action added (G,
+  or the first free letter if G is already in use) instead of being rejected.
+- **Other boats.** Already in place from items 1 and 2 and re-checked here in
+  the real game scene: the hangar filter reads "Other boats" (family ID
+  `small` unchanged), both pirate ships are in it, debug mode owns both, and
+  neither is offered cargo jobs. No port, port ID or job was changed.
+- **Export:** `pirate_cannons.gd` is in both presets.
+- **Screenshots:** `docs/reference/patch_2_9_1/cannon_salute_galleon.png` and
+  `cannon_salute_brigantine.png` (Linux, xvfb, 1600x900, a scratch script that
+  was not committed, model on a flat sea).
+
+Checks (agent's Linux runner, official Godot 4.7.2, headless), all passed:
+import, `check_scripts` (234 scripts), boot, new `cannon_salute_check` (60:
+gun counts and firing order, reuse of the puffs and players, cooldown, no
+splash on land, the G key in the real game in debug mode on both ships with
+ship, fuel, credits and fleet unchanged, old settings files, Controls screen),
+`pirate_rig_check`, `pirate_galleon_check`, `pirate_brigantine_check`,
+`debug_game_check`, `small_boats_check`, `hangar_check`, `mooring_check`,
+`check_catalog`, `check_starter`, `check_title`, `check_controls`,
+`check_flow`, `check_helm_keys`, the container, bulk and heavy ladder checks,
+`check_m1_voyage`, `globe_map_check`, `crane_check`; the feedback, water,
+composition, handling, camera, collision, units, diagnostics and sailing save
+probes.
+Not run: the biome, land and volcano checks, the Python and service tests (no
+file of theirs changed), Windows, Mac, an export, a playtest. Frame time was
+not measured. The salute was only seen as still xvfb frames with the model on
+a flat sea, not in motion in the game, and the boom was not heard (the runner
+has no audio device).

@@ -14,6 +14,7 @@ extends RefCounted
 ## pirate_cloth.gdshader and pirate_flag.gdshader). Every sail vertex carries
 ## its furled spot and its belly; long ropes are cut in four so they can bow.
 const RIG = preload("res://features/toon/pirate_rig.gd")
+const CANNONS = preload("res://features/toon/pirate_cannons.gd")
 const TOON_SHADER: Shader = preload("res://features/toon/toon.gdshader")
 const OUTLINE_SHADER: Shader = preload("res://features/toon/toon_outline_custom.gdshader")
 const FLAG_SHADER: Shader = preload("res://features/toon/pirate_flag.gdshader")
@@ -208,6 +209,8 @@ class Parts extends RefCounted:
 	var rigging: Batch = Batch.new()
 	## Lit windows and lantern glass: unshaded, so they glow at night.
 	var glow: Batch = Batch.new()
+	## Item 4: where each broadside gun's muzzle is, for the cannon salute.
+	var muzzles: PackedVector3Array = PackedVector3Array()
 
 	func _init() -> void:
 		rigging.swing = true
@@ -550,6 +553,7 @@ static func _cannon(parts: Parts, side: float, z: float, y: float, lid: bool) ->
 		parts.detail.box(hinge, Vector3(0.14, 1.1, 1.35), RED)
 	parts.detail.rod(Vector3(side * (x - 0.5), y, z), Vector3(side * (x + 1.5), y, z), 0.32, 0.25, IRON, 6)
 	parts.detail.rod(Vector3(side * (x + 1.5), y, z), Vector3(side * (x + 1.75), y, z), 0.33, 0.33, IRON, 6)
+	parts.muzzles.append(Vector3(side * (x + 1.75), y, z))
 
 static func _guns(parts: Parts) -> void:
 	for side: float in [-1.0, 1.0]:
@@ -932,7 +936,7 @@ static func finish(parts: Parts, hull: ArrayMesh, sails: ArrayMesh, flags: Array
 	return {
 		"Hull": hull, "Structure": parts.structure.mesh(outlined), "Detail": parts.detail.mesh(outlined),
 		"Rigging": parts.rigging.mesh(_toon(false)), "Sails": sails, "Glow": parts.glow.mesh(glow),
-		"Flags": flags, "markers": markers,
+		"Flags": flags, "markers": markers, "muzzles": parts.muzzles,
 	}
 
 ## Fills chunky_look's model root: `hull` is its Hull node.
@@ -965,6 +969,13 @@ static func place(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition
 	rig.name = "Rig"
 	root.add_child(rig)
 	rig.fit(root)
+	# Item 4: this ship's guns for the cannon salute (looks and sound only).
+	var cannons: Node3D = CANNONS.new()
+	cannons.name = "Cannons"
+	root.add_child(cannons)
+	var muzzles: PackedVector3Array = PackedVector3Array()
+	for muzzle: Vector3 in built.muzzles: muzzles.append(muzzle * fit)
+	cannons.fit(muzzles, clampf(drawn_for.z / SIZE_M.z, 0.75, 1.0))
 	for label: String in built.markers:
 		var marker: Marker3D = Marker3D.new()
 		marker.name = label
