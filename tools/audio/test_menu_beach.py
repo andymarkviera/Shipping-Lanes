@@ -12,11 +12,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class BeachAudioTest(unittest.TestCase):
     def test_bake_and_loop_seams(self):
-        paths = sorted((ROOT / 'features/audio').glob('menu_*.wav'))
+        paths = sorted((ROOT / 'features/audio').glob('*.wav'))
         before = [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths]
         subprocess.run([sys.executable, str(ROOT / 'tools/audio/generate_menu_beach.py')], check=True)
         self.assertEqual(before, [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths])
-        self.assertEqual(len(paths), 2)
+        subprocess.run([sys.executable, str(ROOT / 'tools/audio/generate_game_ambience.py')], check=True)
+        self.assertEqual(before, [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths])
+        self.assertEqual(len(paths), 8)
         for path in paths:
             with wave.open(str(path)) as wav:
                 self.assertEqual((wav.getnchannels(), wav.getsampwidth(), wav.getframerate(), wav.getnframes()), (2, 2, 22050, 32 * 22050))

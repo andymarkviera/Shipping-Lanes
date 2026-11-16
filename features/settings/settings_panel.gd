@@ -154,6 +154,7 @@ func reset_draft() -> void:
 func preview_ambience(value: float) -> void:
 	var ambience: Node = get_tree().root.get_node_or_null("MenuBeachAmbience")
 	if ambience != null: ambience.set_volume(value)
+	get_tree().call_group("game_ambience", "set_volume", value)
 
 func close() -> void:
 	if controls != null: preview_ambience(controls.preferences.ambience_volume)
