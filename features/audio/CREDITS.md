@@ -13,3 +13,14 @@ or neighboring rights in these assets. Distributed without warranty.
 Both files are 32-second, 22,050 Hz stereo PCM loops. Surf uses a one-second
 baked overlap crossfade; gulls are silent at the loop boundary. Godot loops the
 samples directly, without a timer or a finished-signal restart.
+
+In-game layers `game_wash.wav`, `game_wind.wav`, `game_harbour.wav`,
+`game_ice.wav`, `game_rain.wav` and `game_desert.wav`: original procedural
+audio from `tools/audio/generate_game_ambience.py` (uses the PCM writer in
+`generate_menu_beach.py`). Source and generated assets are dedicated to CC0
+1.0 Universal under the same waiver above. No external recordings or samples.
+Rebuild: `python tools/audio/generate_game_ambience.py`. All are 32-second,
+22,050 Hz stereo PCM loops with a one-second overlap seam. Harbour combines
+crane motors, metal squeaks and horns; ice combines wind and creaks; rain
+combines rainfall and city hum. In-game sea/tropical surf and tropical gulls
+reuse the credited menu loops above.

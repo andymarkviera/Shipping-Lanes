@@ -1142,7 +1142,12 @@ Windows or a Mac, and frame time was not measured on real hardware. Item 7
 pooled players, menu fade-in/departure fade-out, saved Music/Ambience slider
 with preview and Cancel) is implemented for draft review; Linux Godot 4.7.2
 checks recorded in PROGRESS.md. Listening, Windows/Mac and hardware frame-time
-acceptance remain pending. Items 8 and 9 are not started.
+acceptance remain pending. Item 8 (in-game sea, speed-sensitive wash/wind and
+port soundscapes: generated CC0 loops, nine pooled players, wrap-aware distance
+fades and distant-source culling, existing Music/Ambience controls) is implemented
+for draft review. Linux Godot 4.7.2 checks and limits are recorded in PROGRESS.md;
+listening, Windows/Mac playtests and hardware frame time remain pending.
+Item 9 is not started.
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 

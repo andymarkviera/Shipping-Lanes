@@ -378,6 +378,11 @@ func _ready() -> void:
 		layer.add_child(game_hud)
 		game_hud.setup(self)
 	select_port(0)
+	if game_mode:
+		var ambience: Node = preload("res://features/audio/game_ambience.gd").new()
+		ambience.name = "GameAmbience"
+		ambience.view = self
+		add_child(ambience)
 	if game_mode and DEBUG_GAME.active(get_tree()):
 		debug = DEBUG_GAME.new()
 		debug.view = self
