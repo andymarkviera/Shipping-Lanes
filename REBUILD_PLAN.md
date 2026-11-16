@@ -1127,8 +1127,8 @@ debug ownership re-checked) is merged. Item 5 (3D boats on the M map only:
 the flat arrow is replaced by a small toon model of the boat's own hull kind,
 bow along its heading, drawn from a list of ship entries with kind, position
 and heading that Patch 3.0 can add other players to; pooled models, hidden
-round the back of the globe; corner minimap unchanged; no networking) is on
-branch `claude/issue-192-20261116-0739` waiting for its draft PR. All five
+round the back of the globe; corner minimap unchanged; no networking) is in
+draft PR #193. All five
 checked on Linux only (headless checks and xvfb screenshots), not yet seen on
 Windows or a Mac, and frame time was not measured. Items 6 to 9 are not
 started.
