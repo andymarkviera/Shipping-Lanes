@@ -111,9 +111,9 @@ overlay is available with Ctrl+F3, off by default; no movement data is fabricate
 
 The `macOS` preset in `export_presets.cfg` builds a universal app (Apple
 Silicon arm64 + Intel x86_64) named **Shipping Lanes**, bundle id
-`com.andyviera.shippinglanes`, with the icon `features/app/app_icon.icns`
-(rebuild it with `python3 -I art_sources/app_icon/make_icon.py`). It exports
-the same files and include filter as the Windows preset. Signing is ad-hoc
+`com.andyviera.shippinglanes`, with the Shipping Lanes logo in
+`features/app/shipping_lanes.icns`. The Windows preset uses
+`features/app/shipping_lanes.ico` for the executable and taskbar. Signing is ad-hoc
 (Godot's built-in signer, no Apple Developer account, no certificate) and
 notarization is off, so nothing costs money. The project now also imports
 ETC2/ASTC textures, which Godot requires for arm64; the Windows build still
