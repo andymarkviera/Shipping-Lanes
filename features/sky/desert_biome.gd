@@ -9,7 +9,7 @@ extends Node
 const Progression = preload("res://features/game/progression.gd")
 const Polar = preload("res://features/sky/polar_biome.gd")
 ## The desert's centre (x, z), metres: the dry heart of north Hearthland.
-const CENTRE := Vector2(3160, 1490)
+const CENTRE := Vector2(-1710, 1930)
 ## Fully desert within FULL_M of the centre (Cinder Point inside), none past CLEAR_M.
 const FULL_M: float = 1600.0
 const CLEAR_M: float = 2300.0
