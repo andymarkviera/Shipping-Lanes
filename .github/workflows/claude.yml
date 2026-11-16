@@ -34,7 +34,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Opus 5.5 (switched early Nov 13, 2026: Fable weekly limit hit; Andy chose Opus)
-          claude_args: "--model fable"
+          # Opus (switched back Nov 16, 2026: fable promo ended; Andy said yes)
+          claude_args: "--model opus"
           # Full output in the (private) Actions log so the usage-limit reset time is readable
           show_full_output: "true"
