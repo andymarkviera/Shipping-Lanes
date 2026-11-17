@@ -75,8 +75,13 @@ func _ready() -> void:
 	for i: int in range(1, BERTH_COUNT):
 		berth_anchors.append(marker("Berth%d" % (i + 1), berth.position_m + Basis(Vector3.UP, -deg_to_rad(berth.heading_degrees)) * Vector3(0, 0, BERTH_SPACING_M * i), berth.heading_degrees))
 	# The inner quay face is x=+/-20. The approach and berth centerline are x=0.
-	block("Quay", Vector3(quay_side * 60, 1, quay_length_m / 2), Vector3(80, 6, quay_length_m), Color("76695b"))
-	block("QuayEdge", Vector3(quay_side * 20.5, 4.1, quay_length_m / 2), Vector3(1, .2, quay_length_m - 4), Color("e2d6ad"), false)
+	# Match the far-end allowance at the first berth too: outer cranes
+	# park and work behind its centre, including their full bogie footprint.
+	var quay_start: float = minf(0.0, berth_anchor.position.z - 140.0)
+	var quay_span: float = quay_length_m - quay_start
+	var quay_centre: float = (quay_start + quay_length_m) / 2.0
+	block("Quay", Vector3(quay_side * 60, 1, quay_centre), Vector3(80, 6, quay_span), Color("76695b"))
+	block("QuayEdge", Vector3(quay_side * 20.5, 4.1, quay_centre), Vector3(1, .2, quay_span - 4), Color("e2d6ad"), false)
 	# The quay runs on past the last berth (half a ship 5 and a bit).
 	var quay_end: float = berth_anchors[-1].position.z + 140.0
 	if quay_end > quay_length_m:

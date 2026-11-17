@@ -7908,3 +7908,43 @@ fixed with bounded logo drawing; rerun passed. Existing ObjectDB exit warnings
 remain in some game checks; software GL lacks VSync/audio hardware. Not run:
 Windows/Mac clients, native executable exports, remaining probes/Python/service
 suites, listening or hardware frame-time playtests. PR stays draft for acceptance.
+
+## Patch 3.0 item A — cranes supported by the quay (November 17, 2026)
+
+- Based on main `36716ef`. The first berth's cranes parked behind local Z=0,
+  beyond the pier. Extended the existing solid quay and edge behind that berth
+  using the same 140 m allowance as the far end; no new nodes or per-frame work.
+  Screenshot `docs_refs/floating_crane_ports_nov16.jpeg` was absent; inspected
+  placement code and checked full bogie corners against actual quay colliders.
+- Linux, SHA512-verified official Godot 4.7.2: import, 241-script parse, boot,
+  section 3 smoke set, ports (489), cranes (267), mooring (422), world-land and
+  controls/flow passed. Crane coverage includes all 108 parked cranes across six
+  ports and continuous support while tiers 1/3/5 load and unload. Voyage passed
+  with a 120 s allowance (not the required 30 s budget), with the existing
+  ObjectDB exit warning. Python compile, 76 service tests, 48 public-handoff
+  tests, 10 world-layout tests and traversal budget (17 routes) passed.
+- Initial regression-check indentation error corrected; parse/crane checks
+  rerun clean. Public-handoff initially lacked psycopg; installed the pinned
+  dependency outside the repo and reran successfully. `git diff --check` passed.
+  Existing UIDs, crane behavior, port/job/save data, on-hold code, workflows,
+  engine baseline and toon materials unchanged; no generated artifacts committed.
+  Native Windows/Mac playtests, rendered inspection, exports and hardware frame
+  time remain unverified; draft PR only. No other Patch 3.0 item implemented.
+
+### PR #201 import follow-up (November 17, 2026)
+
+- CI run 44041128402 failed only import: dummy renderer
+  `texture_2d_initialize` reported a null texture RID while importing the
+  unchanged heavy-lifter GLB (which has no textures), after bitmap fonts.
+  The crane scripts are not editor tools, and the patch added no resources.
+  Four clean imports each of main 36716ef and head f37f17a passed locally;
+  the exact intermittent trigger is not reproduced or proven patch-specific.
+- Mitigation: `editor/import/use_multiple_threads=false` in project.godot
+  keeps resource import on the main thread, avoiding worker-queued texture
+  initialization in Godot 4.7.2's dummy renderer. Import can take longer;
+  runtime rendering, crane code/assets, engine version and workflows unchanged.
+- Fresh-cache official 4.7.2 import passed with no ERROR/SCRIPT ERROR lines,
+  followed by parse (241), boot, cranes (267), mooring (422), ports (489) and
+  bitmap-font checks (518), all within 30 s. Isolated font-only imports also
+  passed 10 times each with threaded and serial import. `git diff --check`
+  passed; remote CI must confirm the mitigation. No caches or UIDs changed.
