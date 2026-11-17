@@ -8,7 +8,7 @@ func reason(view: Node3D) -> String:
 	if view.heavy_mode: return "Heavy cargo is delivered at its ocean destination."
 	if view.loading.busy(): return "Wait for loading to finish."
 	if is_instance_valid(view.persistence) and not view.persistence.ready_to_save: return "Voyage saving is unavailable."
-	var entry: Dictionary = view.docking.members.get(1, {})
+	var entry: Dictionary = view.docking.members.get(view.owner_id, {})
 	if entry.get("body") != view.ship or entry.get("port") != view.port or entry.get("state") != "docked" or not view.ship.docked: return "Dock at the destination first."
 	var job: Dictionary = view.offers.active_job("preview_captain")
 	if job.is_empty() or job.state != "loaded" or job.ship_id != view.ship_key(): return "No loaded job to deliver."

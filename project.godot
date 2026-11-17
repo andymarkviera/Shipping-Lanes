@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Shipping Lanes"
 config/name.macos="Shipping Lanes"
-run/main_scene="res://features/main/main.tscn"
+run/main_scene="res://features/main/boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 run/max_fps.macos=60
 
