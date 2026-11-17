@@ -7881,3 +7881,30 @@ in still xvfb frames from four spots, not sailed along.
 - Not run: native Windows/Mac builds or playtests, listening, real-hardware
   frame-time measurements, remaining scene probes and service/Python suites
   outside audio. Item 9 remains untouched; acceptance stays pending.
+
+## Patch 2.9.1 item 9 — sprite-sheet lettering (November 16, 2026)
+
+Andy’s sheets now supply shared bitmap display fonts: white/navy titles, menus,
+headings, knots and map labels; gold money, prices, rewards and pirate names;
+red warnings and a two-second cosmetic cannon flourish. Body copy stays in its
+original font. Offline bake splits red G/H, tints missing glyphs from white/navy,
+adds licensed serif punctuation, aliases coloured lowercase to caps and retains
+Unicode fallback. Three atlases, per-glyph advances, nearest filtering; no runtime
+slicing/uploads. Both export presets include font images. Rebased over items 7/8;
+no workflow, port ID, job, save, physics or on-hold cargo code changed.
+
+Passed on Linux, official Godot 4.7.2: import, scripts (241), title, controls,
+flow, M1 voyage, hangar (235), globe map (70), cannon salute, both pirate ships,
+rigging, world land, menu ambience and game ambience. New lettering check: 518
+assertions (ASCII coverage, 1x/2x metrics, all 20 hangar cards and screen bounds at
+1440x900 and 2560x1080, warning/body transitions). Software-GL visual run: 325
+checks; six screenshots in `docs/reference/patch_2_9_1/lettering_*.png`. Repeat
+font bake is byte-identical. Windows preset PCK export passed with font resources;
+no build/cache committed. `git diff --check` passed.
+
+Initial 4.6.3 import failed the SQLite version gate; downloaded 4.7.2 without
+changing the baseline. Initial title check exposed a Label minimum-size issue,
+fixed with bounded logo drawing; rerun passed. Existing ObjectDB exit warnings
+remain in some game checks; software GL lacks VSync/audio hardware. Not run:
+Windows/Mac clients, native executable exports, remaining probes/Python/service
+suites, listening or hardware frame-time playtests. PR stays draft for acceptance.

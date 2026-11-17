@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://df1oeraqde7gc"
+path="res://.godot/imported/red.fnt-05d949064b5084604874da3bb1d76d09.fontdata"
+
+[deps]
+
+source_file="res://features/ui/fonts/red.fnt"
+dest_files=["res://.godot/imported/red.fnt-05d949064b5084604874da3bb1d76d09.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=2

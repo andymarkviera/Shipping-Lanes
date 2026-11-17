@@ -74,7 +74,7 @@ var sea_camera: Camera3D
 var root: Control
 var sea: SeaStreaks
 var press: TextureRect
-var logo: TextureRect
+var logo: Control
 var wake: ColorRect
 var wake_material: ShaderMaterial
 var ship_view: SubViewport
@@ -127,7 +127,8 @@ func _ready() -> void:
 	root.add_child(sea)
 	build_wake()
 	build_ship()
-	logo = art(LOGO)
+	logo = preload("res://features/ui/display_fonts.gd").Logo.new()
+	root.add_child(logo)
 	press = art(PRESS)
 	place(press, Rect2(352, 700, 960, 98))
 	press.resized.connect(func() -> void: press.pivot_offset = press.size * 0.5)

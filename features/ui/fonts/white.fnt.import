@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://ciqiljbys6upj"
+path="res://.godot/imported/white.fnt-3c7658528477e4a787d31819811e2d78.fontdata"
+
+[deps]
+
+source_file="res://features/ui/fonts/white.fnt"
+dest_files=["res://.godot/imported/white.fnt-3c7658528477e4a787d31819811e2d78.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=2

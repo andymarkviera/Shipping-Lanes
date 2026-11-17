@@ -1,4 +1,5 @@
 extends Control
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## Patch 2.0 item 5: the game's simplified HUD. It lays out what the game scene
 ## (port_test.gd in game_mode) already owns and adds four small things:
 ## - the helm bar: an R / N / D throttle slider, the speed in knots and Dock;
@@ -22,6 +23,9 @@ var toast_text: String = ""
 var toast_left: float = 0.0
 var title: Label
 var cards: VBoxContainer
+var salute: Label
+var salute_left: float = 0.0
+var instrument_warning: bool = false
 var ships_button: Button
 
 func setup(scene: Node3D) -> void:
@@ -31,6 +35,10 @@ func setup(scene: Node3D) -> void:
 	theme = PLAYFUL.make()
 	build_bar()
 	build_toast()
+	salute = text(self, 32)
+	salute.text = "CANNON SALUTE!"
+	DISPLAY.apply(salute, "red")
+	salute.hide()
 	arrange_port_card()
 
 func text(parent: Node, size_px: int, colour: Color = Color.WHITE) -> Label:
@@ -81,6 +89,7 @@ func build_bar() -> void:
 		mark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mark.horizontal_alignment = [HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENT_RIGHT][letters.get_child_count() - 1]
 	knots = text(row, 28, PLAYFUL.SUN)
+	DISPLAY.apply(knots)
 	knots.custom_minimum_size.x = 92
 	knots.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	knots.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -90,6 +99,7 @@ func build_bar() -> void:
 	view.dock_button.custom_minimum_size = Vector2(104, 46)
 	view.dock_button.add_theme_font_size_override("font_size", 19)
 	dock_hint = text(column, 14, PLAYFUL.CREAM)
+	DISPLAY.apply(dock_hint, "red")
 	dock_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func build_toast() -> void:
@@ -106,6 +116,12 @@ func build_toast() -> void:
 func arrange_port_card() -> void:
 	var stack: Node = view.details.get_parent()
 	title = text(stack, 22, PLAYFUL.SUN)
+	DISPLAY.apply(title)
+	DISPLAY.apply(view.voyage_hud.money, "gold")
+	DISPLAY.apply(view.voyage_hud.heading)
+	DISPLAY.apply(view.refuel_button, "gold")
+	DISPLAY.apply(view.repair_button, "gold")
+
 	stack.move_child(title, 0)
 	view.readiness.hide()
 	# The old button row held Dock, Cancel and Main menu. Dock and Cancel moved
@@ -159,6 +175,7 @@ func rebuild_cards() -> void:
 		text(words, 18).text = str(job.what)
 		text(words, 13, PLAYFUL.CREAM).text = "%s → %s" % [from, job.to]
 		var pay: Label = text(row, 20, PLAYFUL.SUN)
+		DISPLAY.apply(pay, "gold")
 		pay.text = "+%.2f" % (int(job.pay) / 100.0)
 		pay.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var accept: Button = view.button(row, "Accept", take.bind(str(job.id)))
@@ -186,8 +203,20 @@ func draw_cargo(art: Control, kind: String, count: int) -> void:
 		art.draw_rect(box, BOX_COLOURS[(index * 3 + floori(index / 5.0)) % BOX_COLOURS.size()])
 		art.draw_rect(box, PLAYFUL.INK, false, 1.5)
 
+func show_salute() -> void:
+	salute_left = 2.0
+
 func refresh(delta: float) -> void:
+	salute_left = maxf(0.0, salute_left - delta)
+	salute.visible = salute_left > 0.0
+	salute.position = Vector2((size.x - salute.size.x) * 0.5, 100)
+	salute.modulate.a = minf(1.0, salute_left)
 	var ship: HandlingShip = view.ship
+	var warn: bool = ship.state.fuel_liters < ship.definition.fuel_capacity_liters * 0.25 or ship.state.condition < 0.5
+	if warn != instrument_warning:
+		instrument_warning = warn
+		if warn: DISPLAY.apply(view.voyage_hud.instruments, "red")
+		else: DISPLAY.clear(view.voyage_hud.instruments)
 	var state: String = view.docking.state(1)
 	var docked: bool = state == "docked"
 	# Helm bar.
@@ -209,6 +238,13 @@ func refresh(delta: float) -> void:
 	# Notice: shows when it changes, then fades. Loading progress stays up.
 	var words: String = view.loading_text.text
 	if words != toast_text:
+		var lower: String = words.to_lower()
+		if "paid" in lower or "credits" in lower:
+			DISPLAY.apply(view.loading_text, "gold")
+		elif "cannot" in lower or "not enough" in lower or "failed" in lower or "collision" in lower or "sank" in lower:
+			DISPLAY.apply(view.loading_text, "red")
+		else:
+			DISPLAY.clear(view.loading_text)
 		toast_text = words
 		toast_left = TOAST_SECONDS
 	toast_left = maxf(0.0, toast_left - delta)

@@ -66,6 +66,7 @@ func _ready() -> void:
 	title.add_theme_constant_override("shadow_offset_x", 0)
 	title.add_theme_constant_override("shadow_offset_y", 6)
 	title.add_theme_constant_override("shadow_outline_size", 14)
+	preload("res://features/ui/display_fonts.gd").apply(title)
 	add_child(title)
 	footer = Label.new()
 	footer.text = "FRIENDS PLAYTEST" if friends_client() else "DEVELOPER MODE   /   F3 TO HIDE"
@@ -134,7 +135,7 @@ func _ready() -> void:
 	save_notice.position = Vector2(64, 470)
 	save_notice.size = Vector2(320, 180)
 	if menu_font == null: menu_font = SWIRL.menu_font()
-	save_notice.add_theme_font_override("font", menu_font)
+	save_notice.add_theme_font_override("font", SWIRL.body_font())
 	save_notice.add_theme_color_override("font_outline_color", SWIRL.NAVY)
 	add_child(save_notice)
 	add_to_group(DevMode.GROUP)
