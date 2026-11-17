@@ -47,7 +47,8 @@ func run() -> void:
 	ambience.sample(home, 0)
 	check(ambience.targets[3] == 0, "Port services control crane/horn layer")
 	ambience.ports[0].container = true
-	var offshore := Vector3(6000, 0, 0)
+	# The eastern port now occupies the old sample's audible radius.
+	var offshore := Vector3(6000, 0, 2000)
 	ambience.sample(offshore, 0)
 	var calm: float = ambience.targets[2]
 	ambience.sample(offshore, 100)

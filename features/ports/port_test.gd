@@ -261,6 +261,13 @@ func _ready() -> void:
 		if game_mode: cranes.add_port(place)
 	# Aesthetics 2: toon shading and ink outlines on the ports and land.
 	TOON_LOOK.apply(self)
+	if game_mode:
+		var horizon_paints: Dictionary = {}
+		for place: Node3D in world_ports: TOON_LOOK.port_horizon(place, horizon_paints)
+		if has_node("CityLand"): TOON_LOOK.port_horizon(get_node("CityLand"), horizon_paints)
+		# Rain keeps driving the same window materials now used by the skyline.
+		for index: int in city_paint.size():
+			city_paint[index] = horizon_paints.get(city_paint[index], city_paint[index])
 	waypoint = Label3D.new()
 	waypoint.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	waypoint.font_size = 48
@@ -1066,6 +1073,7 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(ship): return
 	voyage_hud.refresh(self)
 	# The sea is one 4 km sheet. In the game's larger world it follows the ship.
+	if game_mode: RenderingServer.global_shader_parameter_set("port_viewer_world", ship.global_position)
 	if game_mode: ocean.global_position = Vector3(snappedf(ship.global_position.x, 50), 0, snappedf(ship.global_position.z, 50))
 	if polar != null: polar.update(ship.global_position, _delta)
 	if desert != null: desert.update(ship.global_position, _delta)

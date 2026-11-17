@@ -12,7 +12,10 @@ uniform float lit_threshold: hint_range(0.0, 1.0) = 0.55;
 uniform float mid_level: hint_range(0.0, 1.0) = 0.55;
 uniform float band_softness: hint_range(0.001, 0.2) = 0.015;
 
+#include "res://features/toon/port_horizon.gdshaderinc"
+
 void fragment() {
+	port_horizon_clip((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, FRAGCOORD.xy);
 	vec3 base = albedo.rgb * texture(albedo_texture, UV).rgb;
 	if (use_vertex_color) {
 		base *= COLOR.rgb;

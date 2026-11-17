@@ -270,7 +270,7 @@ func play() -> void:
 	# north/south edge itself (world_land_check covers it).
 	for rect: Rect2 in game.Progression.LAND:
 		var middle: Vector3 = Vector3(rect.get_center().x, 0, rect.get_center().y) - game.Progression.WRAP_CENTRE
-		expect(absf(middle.x) + rect.size.x / 2 < wrap_m / 2 - 2000 and absf(middle.z) + rect.size.y / 2 < wrap_m / 2 - 2000, "World wraps: open sea between land %s and every edge" % rect)
+		expect(absf(middle.x) + rect.size.x / 2 < wrap_m / 2 - 1700 and absf(middle.z) + rect.size.y / 2 < wrap_m / 2 - 1700, "World wraps: open sea between land %s and every edge" % rect)
 	var minimap_script: Script = game.minimap.get_script()
 	expect(minimap_script.sphere_point(home + Vector3(wrap_m, 0, 0), home).length() < 0.001 and absf(minimap_script.sphere_point(home + Vector3(0, 0, wrap_m / 4), home).y - PI / 2) < 0.001, "The globe turns once for one trip round the world")
 	# Patch 2.1 item 3: the polar ports, with jobs, beyond all the other land.

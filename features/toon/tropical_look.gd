@@ -95,7 +95,7 @@ static func _clear_of_ports(at: Vector2, ports: Array[Vector2]) -> bool:
 	return true
 
 static func _spot_ok(at: Vector2, ports: Array[Vector2]) -> bool:
-	return _clear_of_ports(at, ports) and Tropical.weight(Vector3(at.x, 0, at.y)) >= 0.5
+	return Progression.land_depth(at) >= 34.0 and _clear_of_ports(at, ports) and Tropical.weight(Vector3(at.x, 0, at.y)) >= 0.5
 
 ## A palm at `at` (x, z) on ground `y`: a leaning trunk and a crown at its top.
 static func _palm(rng: RandomNumberGenerator, at: Vector2, y: float, trunks: Array[Transform3D], crowns: Array[Transform3D]) -> void:

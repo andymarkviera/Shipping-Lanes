@@ -47,7 +47,9 @@ void vertex() {
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
+#include "res://features/toon/port_horizon.gdshaderinc"
 void fragment() {
+	port_horizon_clip(world, FRAGCOORD.xy);
 	vec3 wall = albedo.rgb;
 	vec3 shine = vec3(0.0);
 	if (abs(world_normal.y) < 0.5) {

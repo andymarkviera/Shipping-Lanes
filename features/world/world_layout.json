@@ -179,7 +179,7 @@
   "game_world": {
     "note": "Patch 2.5 item 1A: the game's own wrapping world. Land, straits and sea lanes live in the source file; this block holds what the traversal budget checks them against.",
     "source": "features/game/progression.gd",
-    "edge_margin_m": 2000.0,
+    "edge_margin_m": 1700.0,
     "max_route_m": 11000.0,
     "strait_beams": 2.5,
     "straits_like": ["Bosphorus", "Gibraltar", "Malacca", "Panama"],

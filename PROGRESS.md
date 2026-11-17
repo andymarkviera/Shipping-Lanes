@@ -7948,3 +7948,28 @@ suites, listening or hardware frame-time playtests. PR stays draft for acceptanc
   bitmap-font checks (518), all within 30 s. Isolated font-only imports also
   passed 10 times each with threaded and serial import. `git diff --check`
   passed; remote CI must confirm the mitigation. No caches or UIDs changed.
+
+## Patch 3.0 item B — map remix (November 17, 2026)
+
+- Seed 3002, placement 3: 27 landmasses, nine seeded islands, three separate
+  Palm Isles and two winding western passages. Reused every port/asset; pole
+  ports, ice, four bridge straits, job IDs/quotes and save recovery stay intact.
+  All routes are 3.99–9.81 km (starter 7.9–15.7 min), inside the unchanged
+  11 km, fuel-reserve and time budgets. Outer coast wrap clearance is 1.7 km.
+- Port scenery, ink and city lights fade at 1.6–2.2 km from the captain, so
+  camera zoom cannot reveal another harbour. Cached materials, one shader
+  uniform per frame, existing meshes/collision/culling; no pause or networking.
+  Both export presets include the new shaders; Godot generated their/test UIDs.
+- Passed: SHA512-verified Godot 4.7.2 import, 242-script parse and all 31 headless
+  script checks; software-GL map isolation (1,276 assertions, nearest foreign
+  scenery 2,268 m) and globe map (70); 11 Python world tests, traversal budget,
+  Python compile, byte-identical rebake of all five outputs; Windows/macOS PCK
+  exports and packed-resource checks; git diff check. Voyage took 110 s with
+  a 180 s allowance: the required 30 s budget remains unverified.
+- Initial checks caught merged/erased Palm Isles, a palm too near the coast and
+  disconnected rain window paints; corrected. Updated old test assumptions for
+  lagoon approach, mirrored fairleads, offshore audio and wrap margin; reruns
+  passed. Existing ObjectDB exit warnings and software-GL VSync warning remain.
+  No native Windows/Mac playtest/export, listening, hardware frame-time or full
+  service/remaining scene-probe suites ran. Draft only; acceptance pending.
+  Existing UIDs, on-hold cargo code, workflows and engine baseline preserved.

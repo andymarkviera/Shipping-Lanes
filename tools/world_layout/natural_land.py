@@ -1,34 +1,15 @@
-"""Patch 2.9 items 6A and 6B: the natural world, baked from one fixed seed.
+"""Patch 3.0 B: deterministic map remix, using the existing ports and art.
 
-Item 6B: the North and South Pole ports stay put; every other port is drawn
-by the seed to a coastal spot on the skeleton (land behind its quay, open sea
-at its berths, approach and drop area, by sea to every other port within the
-route budget). The Palm Isles, desert, tropical and rainy-city regions follow
-their ports, the volcano's Ember Isle is drawn into open sea, and each bridge
-crosses its strait at a seeded point. The land below is then bent round the
-new spots exactly as item 6A bent it round the old ones.
+Seed 3002 reshapes the coasts and adds island groups and two western passages.
+Four coastal search zones keep harbours separated; the pole ports and ice cap
+stay fixed. Harbour/drop clearances, original bridge straits, biome separation,
+all-pairs routes, fuel/time budgets and natural coast checks gate the bake.
+Chart positions remain frozen for existing job quotes and saves.
 
-Seeded fractal noise and a domain warp turn the old Patch 2.5 block layout
-into irregular continents, peninsulas, bays and islands (no straight or boxy
-coasts), and a few new seeded islands fill the open sea. Until item 6B moves
-the ports, the shapes are bent round what must stay: every port keeps open
-water at its berths, approach and heavy drop area and land behind its quay;
-every sea route the ports used stays open; each strait keeps its width with
-land on both banks and under each bridge's ends; icebergs keep sea round
-them; Ember Isle stays alone round its volcano.
-
-Writes:
-  features/world/natural_land.json   the signed coast depth grid (metres
-                                     inland, + land / - sea) and a simplified
-                                     outline per landmass for the maps
-  features/game/progression.gd       the LAND cover rectangles, LANDMASSES, the
-                                     volcano and its land index, the moved ports
-                                     and the bridges' crossing points
-  features/sky/*_biome.gd            the desert, tropical and rain centres
-
-Standard library only. Same seed, same world, on every machine:
-
-    python3 tools/world_layout/natural_land.py
+Writes natural_land.json, progression.gd's land/port/bridge placement, and the
+three biome centres. No generation occurs while playing. Standard library only.
+Run python3 tools/world_layout/natural_land.py; --search retries placement from
+zero, --preview writes a temporary map image to /tmp/natural_land_preview.png.
 """
 import base64
 import heapq
@@ -44,19 +25,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import traversal_budget as tb  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
-SEED = 2906
+SEED = 3002
 CELL = 25.0
-ORIGIN = (-3600.0, -4450.0)
-COUNT = (348, 348)
+ORIGIN = (-3900.0, -4750.0)
+COUNT = (380, 372)
 # Depth is stored in one byte a sample: DEPTH_STEP metres a step, 0 at 128.
 DEPTH_STEP = 2.0
 WARP_M = 760.0
 NOISE_M = 330.0
 # A fine ripple, so a coast that happens to follow the sample grid never runs
 # dead straight for hundreds of metres (item 6B: Kelp Isle's strait side did).
-RIPPLE_M = 70.0
+RIPPLE_M = 120.0
 # Keep-clear sea edges wobble out by up to this much, so they are never straight.
-WOBBLE_M = 190.0
+WOBBLE_M = 240.0
 # The Patch 2.5 blocks, kept only as the rough skeleton the seed bends.
 SKELETON = [
     ("Hearthland", [(-1500, -3700, 1000, 3300), (-1500, -400, 1400, 1100), (-1500, 700, 1100, 1000), (-1500, 1700, 1200, 1300),
@@ -74,7 +55,7 @@ SKELETON = [
 # The skeleton as written; SKELETON itself is rebuilt round each placement.
 SKELETON_SRC = SKELETON
 # Names for the new seeded islands, in the order the seed finds them.
-NEW_ISLES = ["Tern Isle", "Driftwood Isle", "Cormorant Rock", "Saltmarsh Isle", "Puffin Isle", "Breaker Isle"]
+NEW_ISLES = ["Tern Isle", "Driftwood Isle", "Cormorant Rock", "Saltmarsh Isle", "Puffin Isle", "Breaker Isle", "Heron Isle", "Pelican Isle", "Shag Rock", "Osprey Isle", "Gull Rock", "Petrel Isle"]
 
 
 class Noise:
@@ -163,19 +144,17 @@ LEGACY = {
 }
 PLACE_SEED = SEED + 6
 # Each placement attempt draws from its own seeded stream, so attempts can be
-# searched apart. PLACE_ATTEMPT is the first attempt that fits every rule
-# below; `--search` looks again from attempt 0 (slow) and prints it.
-PLACE_ATTEMPT = 277
+# searched apart. PLACE_ATTEMPT pins the reviewed remix; `--search` explores
+# again from attempt 0 (slow) and prints the first accepted candidate.
+PLACE_ATTEMPT = 3
 # Regions round their ports, as offsets from the old port (inland is +X when
 # drop_side is -1); mirrored when a port's open side flips.
 REGIONS = {'desert': ('port_cinder_point', (-1700, 2300)), 'tropical': ('port_gannet_light', (1000, -2300)),
            'rain': ('port_slatewater_works', (1650, 700))}
-MIN_PORT_GAP_M = 1900.0
-# Strait ports stand on the coasts of the inner sea, between Hearthland and
-# Ironreach. From Hearthland's outer west coast or Kelp Isle's east coast the
-# sea route to an inner port is 12 km and more, over the 11 km route budget,
-# so a draw with a port out there can never be kept.
-INNER_SEA_X = (-600.0, 2000.0)
+MIN_PORT_GAP_M = 3800.0
+# Allow both outer shores as well as the inner sea. The western passages
+# keep the longer-looking voyages inside the unchanged 11 km route budget.
+COAST_X = (-3700.0, 5100.0)
 # No strait port in the polar seas (polar_biome.gd: no polar look past 2950 m
 # from the north/south edge), with room to spare.
 POLAR_CLEAR_M = 3300.0
@@ -187,12 +166,12 @@ VOLCANO_PORT_M = 2650.0
 # map also cleared the lanes; item 6A's spot had 470 m, and the bake cuts open
 # sea round the island whatever the skeleton had there.
 VOLCANO_SEA_M = 450.0
-# How near the wrap edge the volcano may stand. The bake keeps land 2050 m off
+# How near the wrap edge the volcano may stand. The bake keeps land 1750 m off
 # the edge; item 6A's Ember Isle stood 213 m inside that, and the only open sea
 # that meets every rule above is in that corner.
 VOLCANO_EDGE_M = 2260.0
 # world_land_check: no straight coast over 400 m away from the quays.
-STRAIGHT_MAX_M = 380.0
+STRAIGHT_MAX_M = 400.0
 # The most of a port's berth or drop area the skeleton may cover at its spot.
 CARVE_SHARE = 0.3
 
@@ -229,10 +208,10 @@ def place_world(geo, layout, first=0, step=1, stats=None):
     base = [r for name, rects in SKELETON_SRC if name not in ('Palm Isles', 'Ember Isle') for r in rects]
     big = [r for name, rects in SKELETON_SRC if name not in ('Palm Isles', 'Ember Isle', 'Strait islets', 'Gull Isle') for r in rects]
     poles = [p for p in geo['world'] if 'pole' in p['id']]
-    edge = (geo['centre'][0] - wrap / 2 + 2300, geo['centre'][1] - wrap / 2 + 2300,
-            geo['centre'][0] + wrap / 2 - 2300, geo['centre'][1] + wrap / 2 - 2300)
-    rim = (geo['centre'][0] - wrap / 2 + 2150, geo['centre'][1] - wrap / 2 + 2150,
-           geo['centre'][0] + wrap / 2 - 2150, geo['centre'][1] + wrap / 2 - 2150)
+    edge = (geo['centre'][0] - wrap / 2 + 2000, geo['centre'][1] - wrap / 2 + 2000,
+            geo['centre'][0] + wrap / 2 - 2000, geo['centre'][1] + wrap / 2 - 2000)
+    rim = (geo['centre'][0] - wrap / 2 + 1850, geo['centre'][1] - wrap / 2 + 1850,
+           geo['centre'][0] + wrap / 2 - 1850, geo['centre'][1] + wrap / 2 - 1850)
     in_land = lambda q, rects: any(tb._inside(q, r) for r in rects)
     clear = lambda area, rects, grow: not any(r[0] < area[0] + area[2] + grow and area[0] - grow < r[0] + r[2] and r[1] < area[1] + area[3] + grow and area[1] - grow < r[1] + r[3] for r in rects)
     gap = lambda a, b: math.hypot(tb._short(a[0] - b[0], wrap), tb._short(a[1] - b[1], wrap))
@@ -253,7 +232,7 @@ def place_world(geo, layout, first=0, step=1, stats=None):
         return hit / (area[2] * area[3])
 
     def spot_ok(x, z, ds, placed, extra):
-        if not INNER_SEA_X[0] < x < INNER_SEA_X[1]: return False
+        if not COAST_X[0] < x < COAST_X[1]: return False
         # The quay's land stays inside the land rim; its sea may run past it.
         if not all(rim[0] < q < rim[2] for q in (x, x - ds * 330)) or not (rim[1] + 150 < z and z + 1050 < rim[3]): return False
         if any(not in_land((x - ds * xx, z + zz), base) for xx in (110, 220, 320) for zz in range(-100, 1001, 110)): return False
@@ -293,7 +272,15 @@ def place_world(geo, layout, first=0, step=1, stats=None):
             if any(segment_sdf((vx, vz), s['start'], s['end']) < 1200 for s in geo['straits']): continue
             vspots.append((vx, vz))
 
+    coast_spots = []
+    for rect in big:
+        for ds in (-1.0, 1.0):
+            x = (rect[0] if ds < 0 else rect[0] + rect[2]) + ds * 90.0
+            for z in range(int(rect[1] - 400), int(rect[1] + rect[3] - 200), 50):
+                if spot_ok(x, z, ds, poles, []): coast_spots.append((x, z, ds))
+    print("coastal candidates", len(coast_spots), flush=True)
     for attempt in itertools.count(first, step):
+        if attempt % 100 == 0: print("search", attempt, stats, flush=True)
         rng = random.Random(PLACE_SEED * 100003 + attempt)
         # Each bridge crosses its own strait well clear of the others' water.
         bridges = {}
@@ -316,17 +303,14 @@ def place_world(geo, layout, first=0, step=1, stats=None):
         placed = list(poles)
         ports = {}
         for port_id in LEGACY:
-            for _ in range(4000):
-                rect = rng.choice(big)
-                ds = rng.choice((-1.0, 1.0))
-                x = (rect[0] if ds < 0 else rect[0] + rect[2]) + ds * 90.0
-                z = rng.uniform(rect[1] - 400, rect[1] + rect[3] - 200)
-                x, z = round(x / 10) * 10, round(z / 10) * 10
-                if spot_ok(x, z, ds, placed, []):
-                    ports[port_id] = dict(id=port_id, at=[float(x), 0.0, float(z)], drop_side=ds)
-                    placed.append(ports[port_id])
-                    break
-            else: break
+            targets = {"port_brindle_quay": (-3590, -500), "port_slatewater_works": (5040, 300), "port_cinder_point": (-210, 2000), "port_gannet_light": (1810, -1900)}
+            candidates = [q for q in coast_spots if math.dist(q[:2], targets[port_id]) <= 150 and spot_ok(*q, placed, [])]
+            if not candidates:
+                miss("no " + port_id)
+                break
+            x, z, ds = rng.choice(candidates)
+            ports[port_id] = dict(id=port_id, at=[float(x), 0.0, float(z)], drop_side=ds)
+            placed.append(ports[port_id])
         if len(ports) != len(LEGACY):
             miss('ports'); continue
         if not any(all(gap(v, (p['at'][0], p['at'][2])) >= VOLCANO_PORT_M for p in placed) for v in vspots):
@@ -339,7 +323,7 @@ def place_world(geo, layout, first=0, step=1, stats=None):
         flip = gannet['drop_side'] / LEGACY['port_gannet_light'][1]
         for _ in range(300):
             centroid = (gannet['at'][0] + gannet['drop_side'] * rng.uniform(900, 2000), gannet['at'][2] + rng.uniform(-1200, 1200))
-            palms = [(round(centroid[0] + (r[0] + r[2] / 2 - mid[0]) * flip - r[2] / 2), round(centroid[1] + r[1] + r[3] / 2 - mid[1] - r[3] / 2), r[2], r[3]) for r in old_isles]
+            palms = [(round(centroid[0] + (r[0] + r[2] / 2 - mid[0]) * flip - r[2] / 2), round(centroid[1] + (r[1] + r[3] / 2 - mid[1]) - r[3] / 2), r[2], r[3]) for r in old_isles]
             tropic = (gannet['at'][0] + 0.45 * (centroid[0] - gannet['at'][0]), gannet['at'][2] + 0.45 * (centroid[1] - gannet['at'][2]))
             if all(math.hypot(r[0] + r[2] / 2 - tropic[0], r[1] + r[3] / 2 - tropic[1]) < 1450 for r in palms) and isles_ok(palms, placed): break
         else:
@@ -362,6 +346,7 @@ def place_world(geo, layout, first=0, step=1, stats=None):
             x, _, z = p['at']
             ds = p['drop_side']
             cuts += [(min(x + ds * 15, x + ds * 350) - 60, z - 1460, 455, 2320), (min(x + ds * 450, x + ds * 850) - 210, z - 1410, 820, 820)]
+        cuts += [(-4200, 850, 4700, 300), (-4200, -2150, 4700, 300)]
         trial = dict(geo, land=carve(base, cuts) + palms, world=world)
         gates = [(p['at'][0], p['at'][2] - geo['gate']) for p in world]
         legs = set()
@@ -430,9 +415,13 @@ def baked_problem(geo, placed, baked):
             while j < i + n:
                 a, b = ring[i], ring[j % n]
                 if not (math.dist(a, b) > 0 and all(segment_sdf(ring[k % n], a, b) < 6.0 for k in range(i + 1, j))): break
-                if harbour_weight(((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) <= 0.0: run = max(run, math.dist(a, b))
+                if harbour_weight(((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) <= 0.0:
+                    if math.dist(a, b) > run:
+                        run = math.dist(a, b)
+                        longest_coast = (a, b)
                 j += 1
-    if run > STRAIGHT_MAX_M: return 'straight coast %.0f m' % run
+    if sum(entry["name"] == "Palm Isles" for entry in outlines) < 3: return "Palm Isles must remain three separate islands"
+    if run > STRAIGHT_MAX_M: return 'straight coast %.0f m %s' % (run, longest_coast)
     trial = dict(geo, land=rects, world=world, masses=ranges)
     # Everything traversal_budget.py asks of the finished world.
     bad = tb.game_world_failures(tb.load(), trial)
@@ -463,13 +452,16 @@ def bake(geo, placed, skeleton0):
     old = dict(geo, land=skeleton)
     warp_x, warp_z, shape, isle_noise = Noise(SEED), Noise(SEED + 1), Noise(SEED + 2), Noise(SEED + 3)
     wrap = geo['wrap']
-    edge = (geo['centre'][0] - wrap / 2 + 2050, geo['centre'][1] - wrap / 2 + 2050,
-            geo['centre'][0] + wrap / 2 - 2050, geo['centre'][1] + wrap / 2 - 2050)
+    edge = (geo['centre'][0] - wrap / 2 + 1750, geo['centre'][1] - wrap / 2 + 1750,
+            geo['centre'][0] + wrap / 2 - 1750, geo['centre'][1] + wrap / 2 - 1750)
 
     # What must stay sea: (kind, data, keep metres). Ports: berths, approach,
     # drop area. Routes: every leg any port-to-port route took on the old
     # layout. Icebergs. Straits: their full width.
-    water = []
+    # Two broad, winding cross-island passages offer interior shortcuts;
+    # the outer oceans and all four original bridge straits remain open.
+    water = [('passage', (1000.0, 0.0), 150.0),
+             ('passage', (-2000.0, 1.7), 150.0)]
     keep_land = []
     for port in geo['world']:
         side, (x, _, z) = -port['drop_side'], port['at']
@@ -520,15 +512,15 @@ def bake(geo, placed, skeleton0):
     isles = []
     def far_from_everything(cx, cz, r):
         if not (edge[0] + r + 300 < cx < edge[2] - r - 300 and edge[1] + r + 300 < cz < edge[3] - r - 300): return False
-        if any(rect_sdf((cx, cz), s) < r + 420 for s in skeleton): return False
+        if any(rect_sdf((cx, cz), s) < r + 200 for s in skeleton): return False
         if any(segment_sdf((cx, cz), u, v) < r + 330 for u, v in legs): return False
         if any(math.hypot(cx - p['at'][0], cz - p['at'][2]) < r + 1200 for p in geo['world']): return False
         if any(math.hypot(cx - x, cz - z) < r + br + 400 for x, br, z in geo['bergs']): return False
-        if any(math.hypot(cx - ix, cz - iz) < r + ir + 700 for ix, iz, ir in isles): return False
+        if any(math.hypot(cx - ix, cz - iz) < r + ir + 250 for ix, iz, ir in isles): return False
         return math.hypot(cx - vx, cz - vz) > r + 1500
     for _ in range(4000):
         if len(isles) == len(NEW_ISLES): break
-        r = rng.uniform(150.0, 360.0)
+        r = rng.uniform(100.0, 240.0)
         cx, cz = rng.uniform(edge[0], edge[2]), rng.uniform(edge[1], edge[3])
         if far_from_everything(cx, cz, r): isles.append((cx, cz, r))
     print('seeded isles', len(isles))
@@ -550,6 +542,13 @@ def bake(geo, placed, skeleton0):
             # without washing them away.
             for s in skeleton:
                 if min(s[2], s[3]) <= 420: f = max(f, 0.52 * min(s[2], s[3]) - math.hypot(px - s[0] - s[2] / 2, pz - s[1] - s[3] / 2) + 40 * isle_noise.fbm(px, pz, 300.0, 3))
+            # Each Palm Isle keeps a living core and its own sea ring. Domain
+            # warp must not weld these existing assets into a continent.
+            for sx, sz, sw, sh in placed['palms']:
+                distance = math.hypot(px - sx - sw / 2, pz - sz - sh / 2)
+                radius = min(sw, sh) * 0.55 + 20 * isle_noise.fbm(px, pz, 200.0, 2)
+                f = max(f, radius - distance)
+                f = min(f, max(radius + 15 - distance, distance - radius - 140))
             dv = math.hypot(px - vx, pz - vz)
             for kind, data in keep_land:
                 if kind == 'bank' or kind == 'strip': continue
@@ -558,10 +557,18 @@ def bake(geo, placed, skeleton0):
                     q = ((px - data[0] - data[2] / 2) / (data[2] / 2 + 60)) ** 2 + ((pz - data[1] - data[3] / 2) / (data[3] / 2)) ** 2
                     if q < 1.5: f = max(f, min(140.0 * (1.0 - q) - 30.0 * abs(isle_noise.fbm(px, pz - 7000, 300.0, 2)), -min(rect_sdf(p, s) for s in skeleton) + 10))
             for kind, data, keep in water:
-                if kind == 'rect': d = rect_sdf(p, data, 120.0)
+                if kind == 'passage':
+                    d = max(abs(pz - data[0] - 90.0 * math.sin(px / 340.0 + data[1])), px - 500.0, -4200.0 - px)
+                elif kind == 'rect': d = rect_sdf(p, data, 120.0)
                 elif kind == 'disc': d = math.hypot(px - data[0], pz - data[1]) - data[2]
                 else: d = segment_sdf(p, data[0], data[1])
                 f = min(f, d - keep - (wobble if kind != 'leg' or keep < 100 else wobble * 0.6))
+            # Existing Palm Isles remain real islands even where a new
+            # passage crosses their area; navigation must go around the core.
+            for sx, sz, sw, sh in placed['palms']:
+                distance = math.hypot(px - sx - sw / 2, pz - sz - sh / 2)
+                radius = min(sw, sh) * 0.55 + 20 * isle_noise.fbm(px, pz, 200.0, 2)
+                f = max(f, radius - distance)
             # Last word: the strip behind each quay and the strait banks are
             # land, then each strait is open water its full width.
             for kind, data in keep_land:
@@ -786,7 +793,7 @@ def outline(cells, depth, nx, nz):
 def write_json(depth, outlines, isles):
     data = bytes(max(0, min(255, int(round(d / DEPTH_STEP)) + 128)) for d in depth)
     out = {
-        'note': 'Patch 2.9 item 6A: natural world land, baked by tools/world_layout/natural_land.py from seed %d. Do not edit by hand.' % SEED,
+        'note': 'Patch 3.0 B: remixed world land, baked by tools/world_layout/natural_land.py from seed %d. Do not edit by hand.' % SEED,
         'seed': SEED, 'cell_m': CELL, 'origin': list(ORIGIN), 'count': list(COUNT), 'depth_step_m': DEPTH_STEP,
         'depth_zero': 128, 'new_isles': isles, 'depth': base64.b64encode(data).decode('ascii'), 'outlines': outlines,
     }
