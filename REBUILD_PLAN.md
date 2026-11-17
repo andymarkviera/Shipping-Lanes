@@ -1333,3 +1333,14 @@ Items, in order:
    checklist (two clients on the server PC's address).
 
 **Patch 3.0 status (November 15, 2026):** planned; starts after Patch 2.9.1.
+
+
+### Patch 3.0 item A — outer quay cranes (November 17, 2026)
+
+Implemented only the requested crane-support fix: the solid quay and its edge
+now extend behind the first berth by the same 140 m allowance used beyond the
+last berth. Every parked crane's full bogie footprint is checked at all six
+ports, with support also checked during container loading/unloading. Crane
+motion, port IDs, jobs and the Wind Waker materials are unchanged. Linux
+Godot 4.7.2 checks are recorded in PROGRESS.md; Windows/Mac acceptance pending.
+The multiplayer items above are outside this patch.

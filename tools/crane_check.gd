@@ -74,7 +74,7 @@ func supported(visuals: Node3D) -> bool:
 ## Steps the cranes (and the loading timer) by hand until they rest.
 func work(game: Node, limit: float, label: String) -> Dictionary:
 	var visuals: Node3D = game.ship.assembly.container_visuals
-	var seen: Dictionary = {"seconds": 0.0, "steps_changed": 0, "max_jump": 0, "carried": false, "held": true, "supported": true, "spaced": true}
+	var seen: Dictionary = {"seconds": 0.0, "steps_changed": 0, "max_jump": 0, "carried": false, "held": true, "supported": true, "spaced": true, "on_quay": true}
 	var last: int = visuals.shown_count
 	while seen.seconds < limit:
 		game.loading.advance(STEP)
@@ -89,10 +89,13 @@ func work(game: Node, limit: float, label: String) -> Dictionary:
 		for crane: Dictionary in game.cranes.works.get(1, {}).get("cranes", []):
 			if crane.carried.visible: seen.carried = true
 		for row: Array in game.cranes.ports[game.port]:
+			for crane: Dictionary in row:
+				if not on_quay(game.port, crane): seen.on_quay = false
 			for index: int in range(1, row.size()):
 				if row[index].z - row[index - 1].z < CRANES.GAP_M - 0.5: seen.spaced = false
 		if visuals.shown_count != visuals.target_count and not game.cranes_busy(): seen.held = false
 		if not game.loading.busy() and not game.cranes.busy(1): break
+	expect(seen.on_quay, "%s: all crane bogies stay on solid quay throughout work" % label)
 	expect(seen.spaced, "%s: cranes never run into each other on the rails" % label)
 	expect(seen.seconds < limit, "%s: cranes finish within %.0f s (took %.1f s)" % [label, limit, seen.seconds])
 	return seen
@@ -161,6 +164,26 @@ func sail(game: Node, kind: String) -> void:
 	game.loading.set_physics_process(true)
 	game.set_physics_process(true)
 
+## Check the full bogie footprint against actual solid quay geometry, including
+## mirrored/rotated polar ports; not just crane centres or a copied rail limit.
+func on_quay(port: Node3D, crane: Dictionary) -> bool:
+	for q: float in [CRANES.SEA_LEG_Q, CRANES.LAND_LEG_Q]:
+		for dx: float in [-1.2, 1.2]:
+			for dz: float in [-5.8, 5.8]:
+				var foot: Vector3 = crane.node.to_global(Vector3(port.quay_side * q + dx, CRANES.QUAY_TOP_Y, dz))
+				var supported_foot: bool = false
+				for label: String in ["Quay", "QuayExtension"]:
+					var body: Node3D = port.get_node_or_null(label)
+					if body == null: continue
+					for child: Node in body.get_children():
+						if child is CollisionShape3D and child.shape is BoxShape3D:
+							var local: Vector3 = child.to_local(foot)
+							var half: Vector3 = child.shape.size / 2.0
+							if absf(local.x) <= half.x + 0.02 and absf(local.z) <= half.z + 0.02 and absf(local.y - half.y) < 0.02:
+								supported_foot = true
+				if not supported_foot: return false
+	return true
+
 func run() -> void:
 	await process_frame
 	wipe()
@@ -173,6 +196,9 @@ func run() -> void:
 		expect(game.cranes != null and game.cranes.ports.size() == game.world_ports.size(), "Every port has quay cranes")
 		for port: Node3D in game.world_ports:
 			expect(game.cranes.ports[port].size() == port.berth_anchors.size(), "%s has cranes on every berth" % port.definition.id)
+			for row: Array in game.cranes.ports[port]:
+				for crane: Dictionary in row:
+					expect(on_quay(port, crane), "%s: parked crane %.1f stands on solid quay" % [port.definition.id, crane.z])
 		for kind: String in SAILED: await sail(game, kind)
 		if await dock(game, "bulk"):
 			game.cranes.advance(STEP)
