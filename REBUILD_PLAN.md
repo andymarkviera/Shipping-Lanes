@@ -1338,7 +1338,13 @@ two western passages, separated coastal ports and captain-relative port scenery
 fades. All six port IDs, jobs, pole positions, ice and existing assets retained;
 all routes remain within 11 km. Linux Godot 4.7.2 checks and limitations are in
 PROGRESS.md. Windows/Mac playtesting and hardware frame time remain pending.
-The multiplayer items above remain planned and are outside items A/B.
+Item 1 (headless authoritative server split) is implemented for draft review:
+explicit server/client boot, one shared collision world, server-owned player
+simulation, validated helm and buffered own-ship presentation; server + two
+clients checked on loopback. Dedicated Windows server export preset added.
+Local/debug play remains unchanged; full gameplay replication, Play routing,
+identity, persistence/migrations and packaging/updater remain items 2–6.
+Checks and limits are in PROGRESS.md; Windows/Mac acceptance remains pending.
 
 
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)

@@ -19,6 +19,12 @@ const CITY_LOOK = preload("res://features/toon/city_look.gd")
 const VOLCANO_LOOK = preload("res://features/toon/volcano_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
+## Patch 3.0 item 1: explicit runtime roles; ordinary/debug play remains local.
+## The server's player contexts share one physical world, never duplicate ports.
+var runtime_role: String = "local"
+var shared_world: Node3D
+var owner_id: int = 1
+
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
 ## True in features/game/game.tscn: the real game (REBUILD_PLAN.md M1). False: Port Test.
@@ -144,6 +150,7 @@ func button(parent: Node, title: String, action: Callable) -> Button:
 	node.focus_mode = Control.FOCUS_NONE
 	parent.add_child(node)
 	node.pressed.connect(func():
+		if runtime_role != "local": return
 		if is_instance_valid(persistence) and not persistence.ready_to_save and title != "Main menu": return
 		node.release_focus()
 		action.call()
@@ -151,10 +158,22 @@ func button(parent: Node, title: String, action: Callable) -> Button:
 	return node
 
 func _ready() -> void:
+	if runtime_role != "local": save_enabled = false
+	if runtime_role == "server":
+		# Simulation-only player: no per-player world, menus, camera or audio.
+		world_ports = shared_world.world_ports
+		add_child(docking)
+		add_child(loading)
+		offers._offers.clear()
+		offers.restock()
+		voyage_hud.free()
+		minimap.free()
+		select_port(0)
+		return
 	# A check may point the game at an isolated save. Players never set this.
 	if game_mode: save_path = str(get_tree().get_meta("game_save_path", save_path))
 	# Patch 2.3 debug: a throwaway world. No persistence, so no save is opened.
-	if game_mode and DEBUG_GAME.active(get_tree()): save_enabled = false
+	if runtime_role == "local" and game_mode and DEBUG_GAME.active(get_tree()): save_enabled = false
 	add_child(docking)
 	add_child(loading)
 	if game_mode:
@@ -258,7 +277,7 @@ func _ready() -> void:
 		if game_mode and DESERT_BIOME.weight(place.position) >= 0.5: DESERT_LOOK.dress_port(place)
 		if game_mode and TROPICAL_BIOME.weight(place.position) >= 0.5: TROPICAL_LOOK.dress_port(place)
 		if game_mode and RAIN_BIOME.weight(place.position) >= 0.5: CITY_LOOK.dress_port(place, city_paint, Progression.LAND)
-		if game_mode: cranes.add_port(place)
+		if cranes != null: cranes.add_port(place)
 	# Aesthetics 2: toon shading and ink outlines on the ports and land.
 	TOON_LOOK.apply(self)
 	if game_mode:
@@ -268,6 +287,7 @@ func _ready() -> void:
 		# Rain keeps driving the same window materials now used by the skyline.
 		for index: int in city_paint.size():
 			city_paint[index] = horizon_paints.get(city_paint[index], city_paint[index])
+	if runtime_role == "world": return
 	waypoint = Label3D.new()
 	waypoint.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	waypoint.font_size = 48
@@ -303,9 +323,9 @@ func _ready() -> void:
 	var buttons: HBoxContainer = HBoxContainer.new()
 	stack.add_child(buttons)
 	dock_button = button(buttons, "Dock", func():
-		if docking.state(1) == "docked": docking.request_undock(1); jobs_panel.hide()
-		else: offer_notice = docking.request_dock(1, service_id(), cargo_id()).message)
-	cancel_button = button(buttons, "Cancel", func(): docking.cancel(1))
+		if docking.state(owner_id) == "docked": docking.request_undock(owner_id); jobs_panel.hide()
+		else: offer_notice = docking.request_dock(owner_id, service_id(), cargo_id()).message)
+	cancel_button = button(buttons, "Cancel", func(): docking.cancel(owner_id))
 	button(buttons, "Main menu", leave)
 	switch_button = button(buttons, "Test heavy loader", func():
 		if not can_switch(): return
@@ -328,7 +348,7 @@ func _ready() -> void:
 		add_child(globe_map)
 		controls.command_requested.connect(func(action: StringName) -> void:
 			if action == &"map_toggle": globe_map.toggle()
-			if action == &"cannon_salute": fire_salute())
+			if action == &"cannon_salute" and runtime_role == "local": fire_salute())
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
@@ -385,12 +405,12 @@ func _ready() -> void:
 		layer.add_child(game_hud)
 		game_hud.setup(self)
 	select_port(0)
-	if game_mode:
+	if game_mode and runtime_role != "server":
 		var ambience: Node = preload("res://features/audio/game_ambience.gd").new()
 		ambience.name = "GameAmbience"
 		ambience.view = self
 		add_child(ambience)
-	if game_mode and DEBUG_GAME.active(get_tree()):
+	if runtime_role == "local" and game_mode and DEBUG_GAME.active(get_tree()):
 		debug = DEBUG_GAME.new()
 		debug.view = self
 		add_child(debug)
@@ -600,9 +620,10 @@ func take_damage(damage_bp: int) -> void:
 ## Tow back to the current port: out of fuel (tow button) or sunk. The fee is
 ## capped by the wallet, so a broke captain is never stuck.
 func recover() -> void:
+	if runtime_role == "client": return
 	var sunk: bool = ship.state.condition <= 0.0
 	var fee: int = mini(RECOVERY_FEE_MINOR, reward_minor)
-	docking.cancel(1)
+	docking.cancel(owner_id)
 	port.spawn_allocator.release(spawn_ticket)
 	spawn_ticket = 0
 	var allocation: Dictionary = port.reserve_spawn(ship.definition.hull_size_m)
@@ -619,7 +640,7 @@ func recover() -> void:
 	ship.state.fuel_liters = maxf(ship.state.fuel_liters, ship.definition.fuel_capacity_liters * 0.25)
 	pay(fee)
 	offer_notice = "%s %s. Recovery fee paid: %.2f credits." % ["Ship raised, patched to 50% hull and towed to" if sunk else "Towed to", port.definition.display_name, fee / 100.0]
-	controls.wait_for_release = true
+	if controls != null: controls.wait_for_release = true
 
 ## Simplify pass: the game has one status HUD (voyage_hud). The older panel line
 ## and the gauge panel repeat it, so in the game they need developer mode (F3).
@@ -651,15 +672,16 @@ func bulk_destination() -> Node3D:
 func deliver_reason() -> String:
 	if not bulk_mode(): return delivery.reason(self)
 	if bulk_active.is_empty(): return "No loaded job to deliver."
-	if docking.state(1) != "docked": return "Dock at the destination first."
+	if docking.state(owner_id) != "docked": return "Dock at the destination first."
 	if port != bulk_destination(): return "This cargo belongs at " + bulk_destination().definition.display_name + "."
 	return ""
 
 ## SHIPS panel, first button: buy a ship, or switch to one already owned.
 func ship_action(kind: String) -> void:
+	if runtime_role == "client": return
 	# Patch 2.3 debug: Select away from a berth swaps on the spot.
 	if is_instance_valid(debug) and debug.swap(kind): return
-	if kind == ship_kind or docking.state(1) != "docked": return
+	if kind == ship_kind or docking.state(owner_id) != "docked": return
 	var entry: Dictionary = Progression.SHIPS[kind]
 	if not fleet.has(kind):
 		if reward_minor < entry.price_minor:
@@ -688,7 +710,8 @@ func ship_action(kind: String) -> void:
 
 ## SHIPS panel, second button: sell a ship you are not sailing. Two clicks.
 func sell_ship(kind: String) -> void:
-	if kind == ship_kind or not fleet.has(kind) or docking.state(1) != "docked": return
+	if runtime_role == "client": return
+	if kind == ship_kind or not fleet.has(kind) or docking.state(owner_id) != "docked": return
 	if sell_kind != kind or Time.get_ticks_msec() > sell_deadline:
 		sell_kind = kind
 		sell_deadline = Time.get_ticks_msec() + 5000
@@ -755,7 +778,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 		offer_notice = "Spawn occupied. Current ship and job preserved."
 		return false
 	loading.disconnect_ship()
-	docking.disconnect_owner(1)
+	docking.disconnect_owner(owner_id)
 	if is_instance_valid(port): port.spawn_allocator.release(spawn_ticket)
 	for node: Node in [helm, wake, ship]:
 		if is_instance_valid(node): remove_child(node); node.queue_free()
@@ -765,6 +788,10 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	spawn_ticket = allocation.ticket
 	ship.transform = allocation.transform
 	add_child(ship)
+	if runtime_role == "server":
+		ship.validated_impact.connect(take_damage)
+		bind_port()
+		return true
 	# Aesthetics 4: chunky ship in place of the imported model. The game only.
 	if game_mode: CHUNKY_LOOK.dress_ship(ship, ship_kind)
 	TOON_LOOK.apply(ship)
@@ -788,7 +815,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 	wake = ship.assembly.create_wake(ocean)
 	camera.distance_order = ship.definition.camera_distance_m
 	camera.set_focus(ship.assembly.focus)
-	controls.wait_for_release = true
+	if controls != null: controls.wait_for_release = true
 	return true
 
 ## Patch 2.4 item 5: how far the loading timer has got, for the quay cranes:
@@ -799,7 +826,7 @@ func crane_preview(_owner: int) -> Vector2i:
 	return Vector2i(clampi(ceili(loading.progress_percent() / 100.0 * quantity), 0, quantity), quantity)
 
 func cranes_busy() -> bool:
-	return cranes != null and cranes.busy(1)
+	return cranes != null and cranes.busy(owner_id)
 
 ## Wording for the helm notice: how to get out of each state in this scene.
 func helm_hints() -> Dictionary:
@@ -819,9 +846,10 @@ func helm_hints() -> Dictionary:
 
 func bind_port() -> void:
 	offer_notice = ""
-	docking.disconnect_owner(1)
-	docking.register(1, ship, port)
-	loading.bind(ship, port, docking, offers, 1, "preview_captain", ship_key())
+	docking.disconnect_owner(owner_id)
+	docking.register(owner_id, ship, port)
+	loading.bind(ship, port, docking, offers, owner_id, "preview_captain", ship_key())
+	if runtime_role == "server": return
 	jobs_panel.hide()
 	ships_panel.hide()
 	refresh_jobs()
@@ -884,7 +912,7 @@ func refresh_jobs() -> void:
 
 func accept_reason() -> String:
 	if is_instance_valid(persistence) and not persistence.ready_to_save: return "Please wait for voyage saving/recovery."
-	if docking.state(1) != "docked": return "Dock before accepting a job."
+	if docking.state(owner_id) != "docked": return "Dock before accepting a job."
 	if loading.busy(): return "Loading in progress — wait or cancel loading."
 	if not bulk_active.is_empty() or not heavy_jobs.active.is_empty() or not offers.active_job("preview_captain").is_empty(): return "Finish or cancel your current job before accepting another."
 	if small_mode(): return "%s take no cargo jobs. Just enjoy the ride!" % ("Pirate ships" if Progression.PIRATE_KINDS.has(ship_kind) else "Small boats")
@@ -892,6 +920,7 @@ func accept_reason() -> String:
 	return ""
 
 func accept_selected() -> void:
+	if runtime_role == "client": return
 	var reason: String = accept_reason()
 	if not reason.is_empty():
 		offer_notice = reason
@@ -924,6 +953,7 @@ func end_current_job(abandon: bool) -> void:
 	refresh_jobs()
 
 func request_abandon() -> void:
+	if runtime_role == "client": return
 	if not bulk_active.is_empty():
 		if abandon_job_id == bulk_active and Time.get_ticks_msec() <= abandon_deadline:
 			bulk_active = ""
@@ -945,7 +975,8 @@ func request_abandon() -> void:
 		offer_notice = "This removes the cargo with no payment. Press Confirm abandon within 5 seconds."
 
 func refuel() -> void:
-	if docking.state(1) != "docked" or loading.busy(): return
+	if runtime_role == "client": return
+	if docking.state(owner_id) != "docked" or loading.busy(): return
 	if game_mode:
 		if ship.definition.fuel_capacity_liters - ship.state.fuel_liters < 1.0: offer_notice = "The tank is full."
 		elif fuel_offered() < 1.0: offer_notice = "Not enough money for fuel. Deliver a job first."
@@ -959,7 +990,8 @@ func refuel() -> void:
 	offer_notice = "Refueled %.0f L — %s." % [amount, free_note()]
 
 func repair() -> void:
-	if docking.state(1) != "docked" or loading.busy(): return
+	if runtime_role == "client": return
+	if docking.state(owner_id) != "docked" or loading.busy(): return
 	if game_mode:
 		var percent: int = repair_offered()
 		if ship.state.condition >= 0.995: offer_notice = "No repairs needed."
@@ -973,6 +1005,7 @@ func repair() -> void:
 	ship.state.condition = 1.0
 
 func deliver() -> void:
+	if runtime_role == "client": return
 	if bulk_mode():
 		if not deliver_reason().is_empty(): return
 		# Pay and job state change together; the autosave writes both on this tick.
@@ -1012,6 +1045,7 @@ func wrap_world() -> void:
 	if shift.length() < 1.0: return
 	ship.global_position += shift
 	if ship.get("attached") == true: ship.payload_body.global_position += shift
+	if runtime_role == "server": return
 	camera.shift(shift)
 	wake.shift(shift)
 	ocean.shift(shift)
@@ -1019,13 +1053,14 @@ func wrap_world() -> void:
 	if rain != null: rain.shift(shift)
 
 func _physics_process(delta: float) -> void:
+	if runtime_role in ["client", "world"]: return
 	if not is_instance_valid(ship): return
 	if game_mode:
 		wrap_world()
-		place_icebergs()
+		if runtime_role != "server": place_icebergs()
 	offer_time += delta
 	offers.advance_to(int(offer_time * 1000))
-	if docking.state(1) in ["underway", "approaching"] and not loading.busy():
+	if docking.state(owner_id) in ["underway", "approaching"] and not loading.busy():
 		for other: Node3D in world_ports:
 			if other != port and ship.global_position.distance_to(other.berth_anchor.global_position) < 250 and ship.global_position.distance_to(other.berth_anchor.global_position) < ship.global_position.distance_to(port.berth_anchor.global_position):
 				port.spawn_allocator.release(spawn_ticket)
@@ -1052,9 +1087,10 @@ func _physics_process(delta: float) -> void:
 			ship.pause_reason = "YOUR SHIP SANK.\nA recovery crew is raising it and towing it to %s. Fee: %.2f credits." % [port.definition.display_name, mini(RECOVERY_FEE_MINOR, reward_minor) / 100.0]
 		sink_seconds -= delta
 		if sink_seconds <= 0.0: recover()
+	if runtime_role == "server": return
 	# Patch 2.1 item 4: the nearest free berth, or "port full".
-	var status: Dictionary = docking.readiness(1, service_id(), cargo_id())
-	var current: String = docking.state(1)
+	var status: Dictionary = docking.readiness(owner_id, service_id(), cargo_id())
+	var current: String = docking.state(owner_id)
 	dock_status = status
 	# The game always shows Dock beside the throttle, greyed out with no berth in range.
 	dock_button.visible = game_mode or ship.global_position.distance_to(port.berth_anchor.global_position) < 150 or current in ["docking", "docked", "undocking"]
@@ -1070,6 +1106,7 @@ func _physics_process(delta: float) -> void:
 	if not services.visible: jobs_panel.hide(); ships_panel.hide()
 
 func _process(_delta: float) -> void:
+	if runtime_role in ["server", "world"]: return
 	if not is_instance_valid(ship): return
 	voyage_hud.refresh(self)
 	# The sea is one 4 km sheet. In the game's larger world it follows the ship.
@@ -1132,7 +1169,7 @@ func _process(_delta: float) -> void:
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
 	if not loading.busy() and offer_notice == "Accepted — loading your cargo.": offer_notice = loading.notice
 	if loading.busy(): loading_text.text = "Loading %.0f%% — please wait." % loading.progress_percent()
-	elif cranes_busy(): loading_text.text = "The cranes are working: %d container%s to go." % [cranes.remaining(1), "" if cranes.remaining(1) == 1 else "s"]
+	elif cranes_busy(): loading_text.text = "The cranes are working: %d container%s to go." % [cranes.remaining(owner_id), "" if cranes.remaining(owner_id) == 1 else "s"]
 	else: loading_text.text = offer_notice
 	waypoint.visible = false
 	if heavy_mode and not heavy_jobs.active.is_empty():
