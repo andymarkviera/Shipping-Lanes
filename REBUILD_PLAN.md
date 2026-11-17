@@ -1147,7 +1147,12 @@ port soundscapes: generated CC0 loops, nine pooled players, wrap-aware distance
 fades and distant-source culling, existing Music/Ambience controls) is implemented
 for draft review. Linux Godot 4.7.2 checks and limits are recorded in PROGRESS.md;
 listening, Windows/Mac playtests and hardware frame time remain pending.
-Item 9 is not started.
+Item 9 (sprite-sheet display lettering: white/navy headings, menus and map labels;
+gold prices/rewards and pirate names; red warnings and cannon flourish; body
+copy retained) is implemented for draft review. Three baked atlases include
+missing-glyph fallbacks and both export presets include the font images.
+Linux Godot 4.7.2 checks and 1440x900 / 2560x1080 screenshots passed; Windows/Mac
+playtesting and hardware frame time remain pending.
 
 ## 14. Patch 2.9 (Andy, November 14, 2026): world remake and fixes
 

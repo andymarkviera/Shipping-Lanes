@@ -1,4 +1,5 @@
 extends CanvasLayer
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## Patch 2.0 item 1: the in-game Esc menu. It is drawn over a world that keeps
 ## running: nothing here pauses the tree, the ship or the clock. While it is open
 ## the helm keys are released and the ship holds its course (see ShipHelm).
@@ -33,6 +34,7 @@ func _ready() -> void:
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
 	var heading: Label = Label.new()
+	DISPLAY.apply(heading)
 	heading.text = "MENU"
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_font_size_override("font_size", 26)
@@ -40,6 +42,7 @@ func _ready() -> void:
 	for entry: Array in [["RESUME", close], ["CONTROLS", open_controls], ["SETTINGS", open_settings],
 			["MAIN MENU", func() -> void: main_menu_requested.emit()], ["QUIT", func() -> void: quit_requested.emit()]]:
 		var item: Button = Button.new()
+		DISPLAY.apply(item)
 		item.text = entry[0]
 		item.custom_minimum_size = Vector2(280, 50)
 		item.add_theme_font_size_override("font_size", 21)
@@ -67,6 +70,7 @@ func build_controls() -> void:
 	column.add_theme_constant_override("separation", 12)
 	controls_panel.add_child(column)
 	var heading: Label = Label.new()
+	DISPLAY.apply(heading)
 	heading.text = "CONTROLS"
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_font_size_override("font_size", 26)

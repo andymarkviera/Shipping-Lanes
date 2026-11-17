@@ -1,4 +1,5 @@
 extends CanvasLayer
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## Patch 2.2 item 4: the boat hangar. Opened from SHIPS on the port card, it
 ## fills the screen with a toon boat shed (doors open to the water, warm lamps)
 ## and one ship turning slowly on the water. Left/right (on screen, arrow keys,
@@ -196,6 +197,8 @@ func refresh() -> void:
 	var definition: ShipDefinition = Progression.definition(kind)
 	var size: Vector3 = definition.hull_size_m
 	var owned: bool = view.fleet.has(kind)
+	var face: String = "gold" if kind in ["small_galleon", "small_brigantine"] else "white"
+	if name_label.get_theme_font("font") != DISPLAY.font(face): DISPLAY.apply(name_label, face)
 	name_label.text = str(entry.name).to_upper() + ("  · ACTIVE" if kind == view.ship_kind else ("  · OWNED" if owned else ""))
 	var small: bool = family_of(kind) == "small"
 	family_label.text = "%s · %s %d of %d · %d of %d shown" % [FAMILY_NAMES[family_of(kind)], "boat" if small else "ship", tier_of(kind), Progression.SMALL_KINDS.size() if small else 5, index + 1, kinds.size()]
@@ -259,6 +262,7 @@ func build_overlay() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", PLAYFUL.SUN)
+	DISPLAY.apply(title)
 	top.add_child(title)
 	var filters: HBoxContainer = HBoxContainer.new()
 	filters.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -289,13 +293,16 @@ func build_overlay() -> void:
 	name_label = label(column, 28, PLAYFUL.SUN)
 	family_label = label(column, 16, PLAYFUL.CREAM)
 	stats_label = label(column, 18, PLAYFUL.CREAM)
-	wallet_label = label(column, 16, PLAYFUL.LEAF)
+	wallet_label = label(column, 18, PLAYFUL.LEAF)
+	DISPLAY.apply(wallet_label, "gold")
 	var actions: HBoxContainer = HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 12)
 	column.add_child(actions)
 	action_button = make_button(actions, "Buy", press_action, Vector2(300, 52))
 	sell_button = make_button(actions, "Sell", press_sell, Vector2(220, 52))
+	DISPLAY.apply(action_button, "gold")
+	DISPLAY.apply(sell_button, "gold")
 	status_label = label(column, 15, PLAYFUL.SUN_LIGHT)
 	status_label.custom_minimum_size = Vector2(720, 0)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -311,6 +318,7 @@ func label(parent: Node, font_size: int, colour: Color) -> Label:
 func make_button(parent: Node, title: String, action: Callable, at_least: Vector2) -> Button:
 	var item: Button = Button.new()
 	item.text = title
+	DISPLAY.apply(item, "gold" if title == "Other boats" else "white")
 	item.custom_minimum_size = at_least
 	item.add_theme_font_size_override("font_size", 20)
 	# No keyboard focus: the keys above always reach the hangar.

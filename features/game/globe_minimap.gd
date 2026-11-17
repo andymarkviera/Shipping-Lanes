@@ -1,4 +1,5 @@
 extends Control
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## Patch 2.0 item 5: the game's minimap is a small globe. It shows land, the
 ## ports, the ship and a line to the job's destination. Read-only: it draws, it
 ## owns nothing.
@@ -168,10 +169,10 @@ func _draw() -> void:
 		# A destination over the horizon sits on the rim, in the direction to sail.
 		var goal: Vector2 = on_disc(goal_at, radius)
 		draw_arc(goal, 8.0 + 2.0 * sin(clock * 4.0), 0, TAU, 20, PLAYFUL.SUN, 2.5, true)
-		var font: Font = ThemeDB.fallback_font
+		var font: Font = DISPLAY.font()
 		var title: String = str(destination.label).get_slice(" ", 0)
-		var at: Vector2 = Vector2(clampf(goal.x - 24, 6, size.x - 70), clampf(goal.y - 12, 14, size.y - 6))
-		draw_string_outline(font, at, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 4, PLAYFUL.INK)
+		var width: float = font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		var at: Vector2 = Vector2(clampf(goal.x - width * 0.5, 6, size.x - width - 6), clampf(goal.y - 12, 14, size.y - 6))
 		draw_string(font, at, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 	# The ship: an arrow in the middle, pointing the way the bow points. North is up.
 	var bow: Vector3 = view.ship.global_basis.z

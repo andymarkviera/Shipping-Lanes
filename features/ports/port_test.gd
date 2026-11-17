@@ -397,7 +397,9 @@ func _ready() -> void:
 func fire_salute() -> bool:
 	if not is_instance_valid(ship): return false
 	var cannons: Node = ship.find_child("Cannons", true, false)
-	return cannons != null and cannons.has_method("fire") and cannons.fire()
+	var fired: bool = cannons != null and cannons.has_method("fire") and cannons.fire()
+	if fired and game_mode and is_instance_valid(game_hud): game_hud.show_salute()
+	return fired
 
 ## M4 coastline: a solid sand slab level with the quays, with a green block on top.
 ## Land is sand with a green top; an ice shelf (polar ports) is pale ice with snow.
@@ -772,6 +774,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 		# Patch 2.0 item 5: the game's helm bar (game_hud) replaces the throttle panel.
 		helm.throttle_display.hide()
 		PLAYFUL.dress(helm.notice.panel, true)
+		preload("res://features/ui/display_fonts.gd").apply(helm.notice.label, "red")
 		PLAYFUL.dress(helm.gauge_display.panel)
 	helm.keep_sailing = game_mode
 	helm.menu_requested.connect(game_menu.open if game_mode else leave)

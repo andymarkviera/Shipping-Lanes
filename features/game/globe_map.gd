@@ -1,4 +1,5 @@
 extends CanvasLayer
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## Patch 2.4 item 7: M opens a big 3D globe of the whole world in the middle of
 ## the screen. Drag turns it freely (round and over the poles), the wheel zooms,
 ## M or Esc closes. The world keeps running; the helm keeps the keyboard and the
@@ -201,6 +202,7 @@ func _ready() -> void:
 	touch.gui_input.connect(on_touch)
 	screen.add_child(touch)
 	var hint: Label = Label.new()
+	DISPLAY.apply(hint)
 	hint.text = "WORLD MAP"
 	hint.add_theme_font_size_override("font_size", 20)
 	hint.add_theme_color_override("font_color", PLAYFUL.CREAM)
@@ -241,7 +243,10 @@ func open() -> void:
 			name_tag.text = port.definition.display_name
 			name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			name_tag.font_size = 48
-			name_tag.outline_size = 14
+			name_tag.font = DISPLAY.font()
+			name_tag.modulate = Color.WHITE
+			name_tag.outline_size = 0
+			name_tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 			name_tag.outline_modulate = PLAYFUL.INK
 			name_tag.pixel_size = 0.0012
 			name_tag.position = dot.position * 1.04 + Vector3(0, 0.05, 0)

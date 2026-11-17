@@ -1,4 +1,5 @@
 extends Control
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## Patch 2.7 item 3: the main menu list from docs/reference/main_menu/
 ## menu_ship_arrives.png. White bold rounded-serif words with a dark navy outline,
 ## a yellow wind-swirl cursor left of the selected one that bobs, and a small
@@ -65,8 +66,11 @@ class SwirlCursor extends Control:
 			glint.append(centre + Vector2(cos(angle), sin(angle)) * 10.0 * s)
 		draw_polyline(glint, GOLD_LIGHT, 2.0 * s, true)
 
-## Bold rounded serif from the system (Georgia on Windows and Mac).
-static func menu_font() -> SystemFont:
+## Sheet lettering for menu actions; the original system serif for body copy.
+static func menu_font() -> Font:
+	return DISPLAY.font()
+
+static func body_font() -> SystemFont:
 	var system: SystemFont = SystemFont.new()
 	system.font_names = PackedStringArray(["Georgia", "Palatino Linotype", "Book Antiqua", "Palatino", "DejaVu Serif", "Liberation Serif", "serif"])
 	system.font_weight = 700
@@ -136,7 +140,7 @@ func add_line(text: String, scale: float, colour: Color = Color.WHITE) -> Label:
 	line.set_meta("scale", scale)
 	line.add_theme_color_override("font_color", colour)
 	line.add_theme_color_override("font_outline_color", NAVY)
-	line.add_theme_font_override("font", font)
+	line.add_theme_font_override("font", body_font())
 	list.add_child(line)
 	style(line, scale)
 	return line
@@ -154,6 +158,7 @@ func style(item: Control, scale: float) -> void:
 	item.add_theme_constant_override("shadow_offset_x", 0)
 	item.add_theme_constant_override("shadow_offset_y", maxi(1, roundi(3.0 * scale * unit)))
 	item.add_theme_constant_override("shadow_outline_size", maxi(4, roundi(11.0 * scale * unit)))
+	if item is Button: DISPLAY.apply(item)
 	item.custom_minimum_size = Vector2(0, ROW * scale * unit)
 
 ## Re-sizes everything for a screen `new_unit` times the mockup's height.

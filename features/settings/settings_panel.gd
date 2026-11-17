@@ -34,6 +34,7 @@ func _ready() -> void:
 	var heading: Label = Label.new()
 	heading.text = "Settings"
 	heading.add_theme_font_size_override("font_size", 24)
+	preload("res://features/ui/display_fonts.gd").apply(heading)
 	column.add_child(heading)
 	volume = add_slider(column, "Master volume", 0.0, 1.0, false)
 	ambience_volume = add_slider(column, "Music/Ambience", 0.0, 1.0, false)
