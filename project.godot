@@ -42,3 +42,10 @@ scaling_3d/fsr_sharpness.macos=0.3
 environment/defaults/default_clear_color=Color(0.025, 0.065, 0.1, 1)
 textures/vram_compression/import_s3tc_bptc=true
 textures/vram_compression/import_etc2_astc=true
+
+[shader_globals]
+
+port_viewer_world={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}

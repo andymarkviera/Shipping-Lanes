@@ -179,7 +179,7 @@ func run() -> void:
 	# Natural: the seed is fixed, the coast follows the grid smoothly and no
 	# coast runs dead straight for long, except the harbour walls by the quays.
 	var grid: Dictionary = Progression.natural_land()
-	expect(grid.get("seed", 0) == 2906 and grid.count.x * grid.count.y == grid.depth.size(), "The land is baked from seed 2906")
+	expect(grid.get("seed", 0) == 3002 and grid.count.x * grid.count.y == grid.depth.size(), "The land is baked from seed 3002")
 	var straight_run: float = 0.0
 	for entry: Dictionary in grid.outlines:
 		var ring: PackedVector2Array = entry.outline

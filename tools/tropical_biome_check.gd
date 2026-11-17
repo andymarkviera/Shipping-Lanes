@@ -180,10 +180,20 @@ func run() -> void:
 	expect(environment.adjustment_enabled and environment.adjustment_saturation > 1.0, "bright, saturated grading")
 	expect(not polar.snow.emitting, "no snow in the tropics")
 	# A ship sails freely over a lagoon: the navigation sees only the island.
-	var isle: Rect2 = isle_coasts[0]
-	var lagoon_spot: Vector3 = Vector3(isle.get_center().x, 0, isle.position.y - Look.LAGOON_M * 0.8)
-	var straight: Array[Vector3] = Progression.course(lagoon_spot - Vector3(0, 0, 300), lagoon_spot)
-	expect(straight == [lagoon_spot], "a course runs straight into a lagoon ring (%d legs)" % straight.size())
+	# A remix can put another real island south of the first lagoon. Probe
+	# unobstructed sides instead of assuming one hard-coded southern approach.
+	var lagoon_routes: int = 0
+	for isle: Rect2 in isle_coasts:
+		for direction: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+			var edge: Vector2 = isle.get_center() + direction * isle.size / 2.0
+			var target: Vector2 = edge + direction * Look.LAGOON_M * 0.8
+			var from: Vector2 = target + direction * 300.0
+			if not Progression.clear_line(from, target): continue
+			var lagoon_spot: Vector3 = Vector3(target.x, 0, target.y)
+			var straight: Array[Vector3] = Progression.course(Vector3(from.x, 0, from.y), lagoon_spot)
+			expect(straight == [lagoon_spot], "clear lagoon approach remains navigable")
+			lagoon_routes += 1
+	expect(lagoon_routes >= 3, "at least three open lagoon approaches (%d)" % lagoon_routes)
 	# On to the desert: the tropics out, the desert in, no fight between them.
 	var cinder: Vector3 = Progression.WORLD[Progression.port_index("port_cinder_point")].at
 	steps(game, cinder, 16)

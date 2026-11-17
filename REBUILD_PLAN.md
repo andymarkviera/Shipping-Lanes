@@ -1332,7 +1332,13 @@ Items, in order:
    update, where saves live. Item 6's PR carries the Windows+Mac playtest
    checklist (two clients on the server PC's address).
 
-**Patch 3.0 status (November 15, 2026):** planned; starts after Patch 2.9.1.
+**Patch 3.0 status (November 17, 2026):** item A merged (#201); item B
+(map remix) implemented for draft review: 27 landmasses, nine seeded islands,
+two western passages, separated coastal ports and captain-relative port scenery
+fades. All six port IDs, jobs, pole positions, ice and existing assets retained;
+all routes remain within 11 km. Linux Godot 4.7.2 checks and limitations are in
+PROGRESS.md. Windows/Mac playtesting and hardware frame time remain pending.
+The multiplayer items above remain planned and are outside items A/B.
 
 
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)

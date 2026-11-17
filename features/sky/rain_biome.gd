@@ -11,7 +11,7 @@ extends Node
 const Progression = preload("res://features/game/progression.gd")
 const Polar = preload("res://features/sky/polar_biome.gd")
 ## The region's centre (x, z), metres: Ironreach's west coast, behind Slatewater Works.
-const CENTRE := Vector2(1810, 2110)
+const CENTRE := Vector2(4890, 950)
 ## Fully rainy within FULL_M of the centre (Slatewater Works inside), none past
 ## CLEAR_M. Brindle Quay, the start, stays dry; the tropics begin past CLEAR_M.
 const FULL_M: float = 740.0

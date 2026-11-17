@@ -22,6 +22,9 @@ void vertex() {
 	VERTEX += direction / max(scale, vec3(1e-4)) * thickness * distance_m;
 }
 
+#include "res://features/toon/port_horizon.gdshaderinc"
+
 void fragment() {
+	port_horizon_clip((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, FRAGCOORD.xy);
 	ALBEDO = ink_color.rgb;
 }

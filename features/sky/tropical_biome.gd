@@ -11,7 +11,7 @@ extends Node
 const Progression = preload("res://features/game/progression.gd")
 const Polar = preload("res://features/sky/polar_biome.gd")
 ## The region's centre (x, z), metres: the southern strait, west of Gannet Light.
-const CENTRE := Vector2(1090, -2260)
+const CENTRE := Vector2(1030, -2230)
 ## Fully tropical within FULL_M of the centre (Gannet Light inside), none past CLEAR_M.
 const FULL_M: float = 1250.0
 const CLEAR_M: float = 1900.0

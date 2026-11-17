@@ -1,5 +1,8 @@
 """Step 88: the planned lanes, hull speeds and time scale agree, and stay agreeing."""
 import copy
+import itertools
+import json
+import math
 import unittest
 import traversal_budget as budget
 
@@ -78,6 +81,24 @@ class GameWorldTest(unittest.TestCase):
         self.assertEqual(len(self.geo['straits']), 4)
         self.assertEqual(self.geo['masses'][-1][2], len(self.geo['land']))
         self.assertGreaterEqual(len(self.geo['bergs']), 16)
+
+    def test_remix_keeps_ports_islands_and_route_budget(self):
+        self.assertEqual({p['id'] for p in self.geo['world']}, {
+            'port_brindle_quay', 'port_slatewater_works', 'port_cinder_point',
+            'port_gannet_light', 'port_north_pole', 'port_south_pole'})
+        for a, b in itertools.combinations(self.geo['world'], 2):
+            apart = math.hypot(budget._short(a['at'][0] - b['at'][0], self.geo['wrap']),
+                               budget._short(a['at'][2] - b['at'][2], self.geo['wrap']))
+            self.assertGreaterEqual(apart, 3800, (a['id'], b['id']))
+        grid = json.loads(budget.read('features/world/natural_land.json'))
+        self.assertEqual(grid['seed'], 3002)
+        self.assertGreaterEqual(grid['new_isles'], 8)
+        self.assertGreaterEqual(len(grid['outlines']), 24)
+        self.assertEqual(sum(o['name'] == 'Palm Isles' for o in grid['outlines']), 3)
+        self.assertLessEqual(len(self.geo['land']), 1100)  # bounded static collision/mesh work
+        self.assertEqual(self.layout['game_world']['max_route_m'], 11000)
+        self.assertEqual(self.geo['world'][4]['at'], [3700, 0, 4000])
+        self.assertEqual(self.geo['world'][5]['at'], [-2300, 0, -4100])
 
     def test_lanes_wrap_the_short_way(self):
         north, south = self.geo['world'][4]['at'], self.geo['world'][5]['at']

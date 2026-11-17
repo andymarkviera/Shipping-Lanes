@@ -90,7 +90,10 @@ func moor(game: Node, kind: String) -> void:
 			expect(rope.mesh.visible and (rope.mesh.mesh as ImmediateMesh).get_surface_count() == 1, "%s line is drawn" % kind)
 			expect(is_bollard(port, rope.to), "%s line is made fast to a quay bollard" % kind)
 			var from: Vector3 = to_port * (rope.from as Node3D).global_position
-			expect(absf(from.x - port.quay_side * port.BOLLARD_X_M) < ship.definition.hull_size_m.x / 2.0, "%s line leaves from its quay-side rail" % kind)
+			# The remixed west-facing quay mirrors the fairlead. Check its side
+			# relative to the hull, not a bollard-distance/half-beam coincidence.
+			var ship_x: float = (to_port * ship.global_position).x
+			expect(port.quay_side * (from.x - ship_x) > ship.definition.hull_size_m.x * 0.25, "%s at %s line leaves from its quay-side rail" % [kind, port.definition.id])
 			expect(from.distance_to(to_port * rope.to) < ship.definition.hull_size_m.z, "%s line is a sensible length" % kind)
 			# Patch 2.9 item 3: the rest line never clips the quay edge or the
 			# hull and ends looped round the bollard post.
