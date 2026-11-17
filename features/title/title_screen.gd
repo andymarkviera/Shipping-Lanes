@@ -127,8 +127,8 @@ func _ready() -> void:
 	root.add_child(sea)
 	build_wake()
 	build_ship()
-	logo = preload("res://features/ui/display_fonts.gd").Logo.new()
-	root.add_child(logo)
+	# Andy (Nov 16, 2026): keep the original painted Shipping Lanes logo, not sheet lettering.
+	logo = art(LOGO)
 	press = art(PRESS)
 	place(press, Rect2(352, 700, 960, 98))
 	press.resized.connect(func() -> void: press.pivot_offset = press.size * 0.5)
