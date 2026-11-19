@@ -1332,7 +1332,7 @@ Items, in order:
    update, where saves live. Item 6's PR carries the Windows+Mac playtest
    checklist (two clients on the server PC's address).
 
-**Patch 3.0 status (November 17, 2026):** item A merged (#201); item B
+**Patch 3.0 status (November 18, 2026):** item A merged (#201); item B
 (map remix) implemented for draft review: 27 landmasses, nine seeded islands,
 two western passages, separated coastal ports and captain-relative port scenery
 fades. All six port IDs, jobs, pole positions, ice and existing assets retained;
@@ -1349,9 +1349,13 @@ container slots, container/bulk/heavy jobs, fleets, services and payouts;
 clients submit validated, deduplicated actions over the same single UDP port.
 Windows Godot 4.7.2 server + two-client checks cover container deliveries,
 bulk/heavy transport, ownership/retries and remote presentation. Local/debug
-play remains available. Play routing/identity, persistent migrating saves and
-packaging/updater remain items 3–6; visual playtests and hardware frame time
-remain pending.
+play remains available. Item 3 (Play routing) is implemented: fresh public
+`server.json` lookup, asynchronous HTTP/DNS, direct ENet join, Retry/Back cards
+for offline/updating/version mismatch, and the existing unlocked, disposable
+offline world labelled Single-player Test Mode. Local Restart Progress is
+developer-only. Release checks precede server admission; local saves are never
+opened by Play. Identity, persistent migrating saves and packaging/updater
+remain deferred; visual playtests and hardware frame time remain pending.
 Checks and limits are in PROGRESS.md; Windows/Mac acceptance remains pending.
 
 

@@ -8044,3 +8044,29 @@ suites, listening or hardware frame-time playtests. PR stays draft for acceptanc
   import also could not save settings beside the Steam executable. Runtime
   checks pass; no TLS/internet validation is claimed. Early parse/fixture,
   compression and teardown failures were corrected before the passing reruns.
+
+## Patch 3.0 item 3 — direct Play connection (November 18, 2026)
+
+- Main now routes Play (keeping the title dive) through a fresh public Releases
+  `server.json` lookup, threaded HTTP and queued DNS, then the existing ENet
+  runtime. Bounded lookup/join/stale-state timeouts; themed offline/updating/
+  mismatch cards with Retry and Back. Feed accepts host/port, optional version
+  and status; `--updating` rejects new joins. Release 3.0.0 is checked before
+  admission. Retry never reuses an address; no address is stored on disk.
+- Debug is labelled Single-player Test Mode: existing unlocked, disposable
+  offline world, no persistence. Local Restart Progress is developer-only;
+  old saves stay intact. All export presets include the new runtime resources;
+  existing UIDs, Wind Waker assets, on-hold cargo code and workflows unchanged.
+- Passed on checksum-verified Godot 4.7.2 Linux: import, 249-script parse,
+  HTTP/DNS/UDP loopback (135 assertions, eight cases, no databases), existing
+  server/two-client split (56) and container replication (45), debug/save
+  isolation (91), flow, title and voyage/save/fleet regression (180 s allowance;
+  30 s budget unverified). Windows/macOS PCK exports include the new resources;
+  Python compile and git diff checks passed. Voyage now opens the local scene
+  directly because Play is online; its save and sailing assertions remain.
+- Initial HTTP fixture lacked Content-Length; corrected. Tests caught a later
+  disconnect overwriting the mismatch card; fixed, reruns passed. Existing
+  voyage ObjectDB exit warning remains. Not run: native Windows/Mac builds or
+  playtests, visual/hardware frame-time checks, full service/biome suites or
+  live feed/server deployment. No live server or player saves touched. Identity,
+  persistent/migrating saves and updater are outside this item; acceptance pending.

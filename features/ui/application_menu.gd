@@ -26,7 +26,7 @@ var slot_status: Label
 var slot_result: Label
 var recovery_confirmation: ConfirmationDialog
 var play_button: Button
-## The real game: Start begins a new game, or continues once a save exists.
+## Play resolves the dedicated server; local gameplay is a test tool.
 var game_button: Button
 var restart_button: Button
 var restart_confirmation: ConfirmationDialog
@@ -82,18 +82,18 @@ func _ready() -> void:
 		button(home, "SETTINGS", "settings")
 		button(home, "QUIT", "exit")
 	else:
-		# Patch 2.7 item 3: Start (new game or continue), Options, Credits, Quit Game.
+		# Patch 3.0 item 3: Play goes straight to the dedicated server.
 		var list: Control = swirl_page("title")
-		game_button = list.add_item("Start", "game")
+		game_button = list.add_item("Play", "game")
 		list.add_item("Options", "options")
 		list.add_item("Credits", "credits")
 		list.add_item("Quit Game", "exit")
 		var options: Control = swirl_page("options", "title")
 		options.add_item("Settings", "settings")
 		options.add_item("Controls", "controls")
-		# Patch 2.3 debug (temporary): a throwaway world with every ship. See features/debug.
-		options.add_item("Debug Mode", "debug")
-		# Shown only when there is a save to erase (see main.gd refresh_save_status).
+		# Offline single-player testing: unlocked, throwaway and isolated from online saves.
+		options.add_item("Single-player Test Mode", "debug")
+		# Local save restart is developer-only (see main.gd refresh_save_status).
 		restart_button = options.add_item("Restart Progress", "restart")
 		options.add_item("Back", "title")
 		var credits: Control = swirl_page("credits", "title")

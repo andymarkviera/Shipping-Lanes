@@ -84,6 +84,12 @@ func open_scene(script_path: String, label: String) -> Node:
 	expect(false, label + " did not open")
 	return null
 
+## Patch 3.0: this regression checks local save/gameplay directly; Play is online.
+func open_local_voyage() -> void:
+	release_all()
+	change_scene_to_file("res://features/game/game.tscn")
+	await settle()
+
 ## Clicks a button the way a player can: it must be on screen and enabled.
 func click(scene: Node, title: String) -> bool:
 	release_all()
@@ -238,9 +244,9 @@ func play() -> void:
 	change_scene_to_file("res://features/main/main.tscn")
 	var menu: Node = await open_scene(MAIN_SCRIPT, "Home menu")
 	if menu == null: return
-	# Patch 2.7 item 3: Start begins a new game or continues; Options holds Restart Progress.
-	expect(menu.menu.game_button.text == "Start" and not menu.menu.restart_button.visible, "No save yet: Start and no Restart Progress")
-	if not await click(menu, "Start"): return
+	# Play is online; the legacy local-save regression opens the scene directly.
+	expect(menu.menu.game_button.text == "Play" and not menu.menu.restart_button.visible, "Play is online; no local restart without a save")
+	await open_local_voyage()
 	var game: Node = await open_game("New game")
 	if game == null: return
 	var brindle: Node3D = game.world_ports[0]
@@ -376,8 +382,11 @@ func play() -> void:
 	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the voyage")
 	if menu == null: return
-	expect(menu.menu.restart_button.visible, "With a save, Options offers Restart Progress")
-	if not await click(menu, "Start"): return
+	DevMode.enabled = true
+	menu.refresh_save_status()
+	expect(menu.menu.restart_button.visible, "Developer mode offers local Restart Progress")
+	DevMode.enabled = false
+	await open_local_voyage()
 	game = await open_game("Continue")
 	if game == null: return
 	expect(game.reward_minor == wallet, "Continue restores the wallet after the fuel bill (wallet %d)" % game.reward_minor)
@@ -443,7 +452,7 @@ func play() -> void:
 	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu after the shipyard")
 	if menu == null: return
-	if not await click(menu, "Start"): return
+	await open_local_voyage()
 	game = await open_game("Continue on the bulk carrier")
 	if game == null: return
 	expect(game.ship_kind == "bulk" and game.bulk_active == "bulk_1_grain" and game.fleet.size() == 1 and game.reward_minor == wallet, "Continue restores the ship, the fleet, the bulk job and the wallet (ship %s, wallet %d)" % [game.ship_kind, game.reward_minor])
@@ -452,7 +461,9 @@ func play() -> void:
 	if not await click(game, "MAIN MENU"): return
 	menu = await open_scene(MAIN_SCRIPT, "Home menu at the end")
 	if menu == null: return
-	# M2: Restart Progress erases the save after a confirmation.
+	# M2: local Restart Progress stays behind developer mode.
+	DevMode.enabled = true
+	menu.refresh_save_status()
 	if not await click(menu, "Options"): return
 	if not await click(menu, "Restart Progress"): return
 	expect(menu.menu.restart_confirmation.visible, "Restart Progress asks for confirmation")

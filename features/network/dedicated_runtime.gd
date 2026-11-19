@@ -1,5 +1,6 @@
 extends Node3D
 ## Patch 3.0 item 2. Ephemeral authoritative multiplayer. Persistence is item 4.
+const Connection = preload("res://features/network/play_connection.gd")
 const GAME = preload("res://features/game/game.tscn")
 const Progression = preload("res://features/game/progression.gd")
 const PROTOCOL: int = 30002
@@ -8,6 +9,10 @@ const INTERVAL: float = 0.05
 const BUFFER_SECONDS: float = 0.15
 const TIMEOUT_MS: int = 500
 var hosting: bool = false
+var connection_card: Control
+var updating: bool = false
+var last_snapshot_ms: int = 0
+var connection_failed: bool = false
 var peer: ENetMultiplayerPeer
 var wrap: Node3D
 var world: Node3D
@@ -391,6 +396,7 @@ func _ready() -> void:
 	process_physics_priority = -20
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	hosting = OS.has_feature("dedicated_server") or OS.has_feature("server") or args.has("--server")
+	updating = args.has("--updating")
 	var host: String = "127.0.0.1"
 	var bind_address: String = "127.0.0.1"
 	for arg: String in args:
@@ -403,6 +409,11 @@ func _ready() -> void:
 		elif arg.begins_with("--host="): host = arg.trim_prefix("--host=")
 		elif arg.begins_with("--bind="): bind_address = arg.trim_prefix("--bind=")
 		elif arg.begins_with("--captain="): captain_name = arg.trim_prefix("--captain=")
+	if not hosting and get_tree().has_meta(Connection.TARGET):
+		var target: Dictionary = get_tree().get_meta(Connection.TARGET)
+		get_tree().remove_meta(Connection.TARGET)
+		host = target.host
+		port_number = target.port
 	if hosting and DisplayServer.get_name() != "headless":
 		fail("Server requires --headless", 2)
 		return
@@ -450,6 +461,17 @@ func _ready() -> void:
 		notice = Label.new()
 		notice.position = Vector2(24, 24)
 		layer.add_child(notice)
+		var card_layer: CanvasLayer = CanvasLayer.new()
+		card_layer.layer = 120
+		add_child(card_layer)
+		connection_card = Connection.new()
+		connection_card.lookup_on_ready = false
+		card_layer.add_child(connection_card)
+		connection_card.heading.text = "Connecting…"
+		connection_card.details.text = "Joining the Shipping Lanes server."
+		connection_card.retry.hide()
+		view.controls.set_menu_open(true)
+		view.hide()
 		join_deadline = Time.get_ticks_msec() + 10000
 	actions.name = "Actions"
 	add_child(actions)
@@ -465,13 +487,13 @@ func _ready() -> void:
 	else:
 		error = peer.create_client(host, port_number, 3)
 	if error != OK:
-		fail("Cannot open UDP transport (%s)" % error_string(error), 2)
+		fail("Cannot open UDP transport (%s)" % error_string(error), 2 if hosting else 0)
 		return
 	multiplayer.multiplayer_peer = peer
 	multiplayer.peer_connected.connect(func(id: int):
 		if hosting: pending_peers[id] = Time.get_ticks_msec() + 10000)
 	multiplayer.peer_disconnected.connect(depart)
-	multiplayer.connected_to_server.connect(func(): hello.rpc_id(1, PROTOCOL, captain_name))
+	multiplayer.connected_to_server.connect(func(): hello.rpc_id(1, PROTOCOL, captain_name, Connection.VERSION))
 	multiplayer.connection_failed.connect(func(): fail("Connection failed"))
 	multiplayer.server_disconnected.connect(func(): fail("Server disconnected"))
 	if hosting: print("DEDICATED_SERVER_READY port=%d" % port_number)
@@ -491,15 +513,23 @@ static func disable_tree(node: Node) -> void:
 	if node is AudioStreamPlayer or node is AudioStreamPlayer3D: node.stop()
 	for child: Node in node.get_children(): disable_tree(child)
 
-func fail(message: String, exit_code: int = 0) -> void:
+func fail(message: String, exit_code: int = 0, reason: String = "offline") -> void:
+	if connection_failed: return
+	connection_failed = true
 	status = message
 	entity = ""
 	samples.clear()
 	world_samples.clear()
 	throttle = 0.0
 	join_deadline = 0
+	last_snapshot_ms = 0
 	if peer != null: peer.close()
 	if is_instance_valid(view):
+		view.controls.set_menu_open(true)
+		view.set_process_unhandled_input(false)
+		view.controls.set_process_unhandled_input(false)
+		view.game_menu.set_process_unhandled_input(false)
+		view.game_menu.hide()
 		view.other_ships.clear()
 		view.docking.members.clear()
 		view.port_panel.hide()
@@ -508,17 +538,24 @@ func fail(message: String, exit_code: int = 0) -> void:
 			replica.body.hide()
 		view.ship.velocity = Vector3.ZERO
 		view.ship.ground_speed_mps = 0.0
+	if is_instance_valid(connection_card): connection_card.show_error(reason)
 	if hosting or exit_code != 0:
 		push_error(message)
 		get_tree().quit(maxi(1, exit_code))
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func hello(version: int, captain: String) -> void:
+func hello(version: int, captain: String, release: String = "") -> void:
 	if not hosting: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending_peers.has(sender): return
+	if version != PROTOCOL or release != Connection.VERSION:
+		join_rejected.rpc_id(sender, "mismatch")
+		return
+	if updating:
+		join_rejected.rpc_id(sender, "updating")
+		return
 	pending_peers.erase(sender)
-	if version != PROTOCOL or contexts.size() >= MAX_PLAYERS or captain.strip_edges().is_empty() or captain.length() > 24 or captain != captain.validate_node_name() or "\n" in captain or "\r" in captain:
+	if contexts.size() >= MAX_PLAYERS or captain.strip_edges().is_empty() or captain.length() > 24 or captain != captain.validate_node_name() or "\n" in captain or "\r" in captain:
 		peer.disconnect_peer(sender)
 		return
 	var context: Node3D = GAME.instantiate()
@@ -548,6 +585,11 @@ func hello(version: int, captain: String) -> void:
 	session.roster[id] = {"peer_id": sender}
 	welcome.rpc_id(sender, PROTOCOL, session.epoch, id)
 	print("DEDICATED_JOIN players=%d" % contexts.size())
+
+@rpc("authority", "call_remote", "reliable", 0)
+func join_rejected(reason: String) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1: return
+	fail("Join refused", 0, reason if reason in ["mismatch", "updating"] else "offline")
 
 func depart(sender: int) -> void:
 	if not hosting: return
@@ -579,7 +621,6 @@ func welcome(version: int, epoch: String, id: String) -> void:
 	entity = id
 	view.owner_id = multiplayer.get_unique_id()
 	view.docking.members.clear()
-	join_deadline = 0
 	status = "Connected · " + captain_name
 
 @rpc("any_peer", "call_remote", "unreliable_ordered", 1)
@@ -693,6 +734,12 @@ func snapshot(epoch: String, frame: int, stamp: float, state: Dictionary, fleet_
 	for key: String in ["yaw", "ground_speed", "throttle", "engine", "rudder", "lateral", "fuel", "condition"]:
 		if not state.get(key) is float or not is_finite(state[key]): return
 	last_tick = frame
+	last_snapshot_ms = Time.get_ticks_msec()
+	join_deadline = 0
+	if received_states == 0 and is_instance_valid(connection_card):
+		connection_card.hide()
+		view.show()
+		view.controls.set_menu_open(false)
 	received_states += 1
 	last_state = state
 	clock_offset = minf(clock_offset, Time.get_ticks_msec() / 1000.0 - stamp)
@@ -708,6 +755,7 @@ func snapshot(epoch: String, frame: int, stamp: float, state: Dictionary, fleet_
 func _process(_delta: float) -> void:
 	if hosting: return
 	if join_deadline > 0 and Time.get_ticks_msec() > join_deadline: fail("Connection timed out")
+	if last_snapshot_ms > 0 and Time.get_ticks_msec() - last_snapshot_ms > 10000: fail("Server stopped responding")
 	if notice != null: notice.text = status
 	if samples.is_empty(): return
 	var target: float = Time.get_ticks_msec() / 1000.0 - clock_offset - BUFFER_SECONDS
