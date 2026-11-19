@@ -213,7 +213,7 @@ func start_game() -> void:
 		menu.clear_for_departure()
 		title.depart()
 		await title.departed
-	get_tree().change_scene_to_file(GAME_SCENE)
+	get_tree().change_scene_to_file("res://features/network/play_connection.tscn")
 
 func navigate(action: String) -> void:
 	if ApplicationMenu.friends_client() and action not in ["servers", "settings", "title", "exit"]: return
@@ -411,7 +411,7 @@ func refresh_save_status() -> void:
 	if ApplicationMenu.friends_client(): return
 	menu.slot_status.text = slots.status(menu.slot_picker.selected)
 	var game_saved: bool = FileAccess.file_exists(str(get_tree().get_meta("game_save_path", GAME_SAVE)))
-	menu.restart_button.visible = game_saved
+	menu.restart_button.visible = game_saved and DevMode.enabled
 	menu.play_button.text = "LOCAL SAVE TEST" if FileAccess.file_exists("user://public_services.json") or slots.occupied(active_slot) else "CREATE LOCAL SAVE TEST"
 	# Patch 2.7 item 3: the mockup's menu has no notice; it only shows messages.
 	menu.save_notice.text = "Test saves — local slot %d: %s" % [active_slot + 1, slots.status(active_slot)] if DevMode.enabled else ""
