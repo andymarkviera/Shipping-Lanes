@@ -18,6 +18,7 @@ var joining_keys: Dictionary = {}
 var teardown_players: Dictionary = {}
 var save_elapsed: float = 0.0
 var save_failed: bool = false
+var launcher = preload("res://features/network/server_launcher_control.gd").new()
 var hosting: bool = false
 var connection_card: Control
 var updating: bool = false
@@ -420,6 +421,7 @@ func _ready() -> void:
 		elif arg.begins_with("--bind="): bind_address = arg.trim_prefix("--bind=")
 		elif arg.begins_with("--captain="): captain_name = arg.trim_prefix("--captain=")
 		elif arg.begins_with("--saves-dir="): saves_path = arg.trim_prefix("--saves-dir=")
+		elif arg.begins_with("--control-dir="): launcher.folder = arg.trim_prefix("--control-dir=")
 	if not hosting and get_tree().has_meta(Connection.TARGET):
 		var target: Dictionary = get_tree().get_meta(Connection.TARGET)
 		get_tree().remove_meta(Connection.TARGET)
@@ -818,7 +820,9 @@ func snapshot(epoch: String, frame: int, stamp: float, state: Dictionary, fleet_
 		view.camera.set_focus(view.ship.assembly.focus)
 
 func _process(_delta: float) -> void:
-	if hosting: return
+	if hosting:
+		launcher.poll(self, _delta)
+		return
 	if join_deadline > 0 and Time.get_ticks_msec() > join_deadline: fail("Connection timed out")
 	if last_snapshot_ms > 0 and Time.get_ticks_msec() - last_snapshot_ms > 10000: fail("Server stopped responding")
 	if notice != null: notice.text = status

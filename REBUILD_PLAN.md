@@ -1359,8 +1359,14 @@ versioned server JSON, append-only ordered migrations, five automatic backups,
 minute/disconnect/shutdown checkpoints and a local random install key for stable
 server-owned player records. Frozen synthetic 3.0 fixtures, migration/write
 failure preservation, reconnect and connected shutdown/loading checks pass on
-Linux Godot 4.7.2. Debug/test progress stays local. Packaging/updater and captain
-name entry remain deferred; visual playtests and hardware frame time remain pending.
+Linux Godot 4.7.2. Debug/test progress stays local. Item 5 (server package and
+launcher) is implemented for draft review: Windows Start/Stop/Status, saves
+folder, token-free server release checks and verified updates with graceful
+checkpoints, five saves backups and versioned package swaps. Linux core/runtime
+checks and dedicated PCK export pass; the full Windows ZIP build is blocked by
+missing 4.7.2 export templates. Native Windows launcher/update testing remains
+pending. Item 6 release setup and captain name entry remain deferred; visual
+playtests and hardware frame time remain pending.
 Checks and limits are in PROGRESS.md; Windows/Mac acceptance remains pending.
 
 
