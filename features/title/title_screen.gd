@@ -131,6 +131,7 @@ func _ready() -> void:
 	logo = art(LOGO)
 	press = art(PRESS)
 	place(press, Rect2(352, 700, 960, 98))
+	press.pivot_offset = press.size * 0.5
 	press.resized.connect(func() -> void: press.pivot_offset = press.size * 0.5)
 	root.resized.connect(func() -> void: refresh_layout())
 	refresh_layout.call_deferred()
@@ -293,6 +294,8 @@ func _process(delta: float) -> void:
 		# Gentle pulse on "Press Any Button".
 		var pulse: float = 0.5 + 0.5 * sin(clock * TAU / 1.6)
 		press.modulate.a = lerpf(0.6, 1.0, pulse)
+		# Pulse from the centre: keep the pivot on the middle of the line.
+		press.pivot_offset = press.size * 0.5
 		press.scale = Vector2.ONE * lerpf(1.0, 1.04, pulse)
 	if ship.visible:
 		wake_material.set_shader_parameter("water_shift", water_shift)
