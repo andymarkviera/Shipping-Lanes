@@ -26,3 +26,16 @@ func relevant(owner: int) -> Array[int]:
 				if center.distance_squared_to(positions[id]) <= CELL_M * CELL_M: result.append(id)
 	result.sort()
 	return result
+
+# Patch 3.0.1 item 3: ships outside a captain's relevant set still appear on the
+# maps, but their motion is sent at a quarter of the near rate (5 Hz at 20 Hz).
+const FAR_EVERY: int = 4
+
+## Whether `peer`'s motion belongs in this tick's frame. Far ships are staggered
+## by peer so a full server never sends every far ship on the same tick.
+static func due(near: bool, tick: int, peer: int) -> bool:
+	return near or (tick + peer) % FAR_EVERY == 0
+
+## Seam-aware: the world wraps, so measure the short way round.
+static func near(a: Vector3, b: Vector3) -> bool:
+	return preload("res://features/game/progression.gd").short_way(a - b).length_squared() <= CELL_M * CELL_M

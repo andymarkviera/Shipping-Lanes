@@ -12,6 +12,7 @@ var panel: PanelContainer
 var settings: SettingsPanel
 var controls_panel: PanelContainer
 var controls_grid: GridContainer
+var menu_column: VBoxContainer
 ## The keys the game uses, in the order the Controls screen lists them.
 const KEY_ROWS: Array = [["Throttle up / down", "ship_throttle_up", "ship_throttle_down"],
 	["Steer left / right", "ship_steer_left", "ship_steer_right"],
@@ -33,6 +34,7 @@ func _ready() -> void:
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
+	menu_column = column
 	var heading: Label = Label.new()
 	DISPLAY.apply(heading)
 	heading.text = "MENU"
@@ -41,15 +43,7 @@ func _ready() -> void:
 	column.add_child(heading)
 	for entry: Array in [["RESUME", close], ["CONTROLS", open_controls], ["SETTINGS", open_settings],
 			["MAIN MENU", func() -> void: main_menu_requested.emit()], ["QUIT", func() -> void: quit_requested.emit()]]:
-		var item: Button = Button.new()
-		DISPLAY.apply(item)
-		item.text = entry[0]
-		item.custom_minimum_size = Vector2(280, 50)
-		item.add_theme_font_size_override("font_size", 21)
-		# No keyboard focus: Esc must always reach this menu, never a focused button.
-		item.focus_mode = Control.FOCUS_NONE
-		item.pressed.connect(entry[1])
-		column.add_child(item)
+		add_entry(entry[0], entry[1])
 	settings = SettingsPanel.new()
 	add_child(settings)
 	settings.closed.connect(func() -> void:
@@ -57,6 +51,21 @@ func _ready() -> void:
 		controls.set_menu_open(true))
 	panel.hide()
 	build_controls()
+
+## One menu button in the shared style. Patch 3.0.1: online play inserts
+## "CAPTAIN NAME" before MAIN MENU; `at` < 0 appends.
+func add_entry(label: String, action: Callable, at: int = -1) -> Button:
+	var item: Button = Button.new()
+	DISPLAY.apply(item)
+	item.text = label
+	item.custom_minimum_size = Vector2(280, 50)
+	item.add_theme_font_size_override("font_size", 21)
+	# No keyboard focus: Esc must always reach this menu, never a focused button.
+	item.focus_mode = Control.FOCUS_NONE
+	item.pressed.connect(action)
+	menu_column.add_child(item)
+	if at >= 0: menu_column.move_child(item, at)
+	return item
 
 ## A plain two-column list of the keys, with Back.
 func build_controls() -> void:

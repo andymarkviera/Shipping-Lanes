@@ -16,6 +16,7 @@ def main():
     parser.add_argument("--godot", default="godot")
     parser.add_argument("--replication", action="store_true", help="check docking, cranes, cargo and payouts")
     parser.add_argument("--families", action="store_true", help="check bulk and physical heavy jobs")
+    parser.add_argument("--prediction", action="store_true", help="check own-hull prediction, ping and live rename (Patch 3.0.1)")
     args = parser.parse_args()
     version = subprocess.check_output([args.godot, "--version"], text=True).strip()
     if not version.startswith("4.7.2."):
@@ -23,6 +24,8 @@ def main():
     root = Path(__file__).resolve().parents[1]
     probe = "dedicated_replication_check.gd" if args.replication or args.families else "dedicated_split_check.gd"
     marker = "DEDICATED_REPLICATION_PASS" if args.replication or args.families else "DEDICATED_SPLIT_PASS"
+    if args.prediction:
+        probe, marker = "dedicated_prediction_check.gd", "DEDICATED_PREDICTION_PASS"
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]

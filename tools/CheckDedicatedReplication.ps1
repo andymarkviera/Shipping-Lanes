@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Godot = 'C:/Program Files (x86)/Steam/steamapps/common/Godot Engine/godot.windows.opt.tools.64.exe',
-    [ValidateSet('Replication','Split')][string]$Probe = 'Replication',
+    [ValidateSet('Replication','Split','Prediction')][string]$Probe = 'Replication',
     [switch]$Families
 )
 $ErrorActionPreference = 'Stop'
@@ -14,8 +14,8 @@ $port = $socket.Client.LocalEndPoint.Port
 $socket.Close()
 $children = @()
 $oldAppData = $env:APPDATA
-$script = if ($Probe -eq 'Split') { 'dedicated_split_check.gd' } else { 'dedicated_replication_check.gd' }
-$marker = if ($Probe -eq 'Split') { 'DEDICATED_SPLIT_PASS' } else { 'DEDICATED_REPLICATION_PASS' }
+$script = if ($Probe -eq 'Split') { 'dedicated_split_check.gd' } elseif ($Probe -eq 'Prediction') { 'dedicated_prediction_check.gd' } else { 'dedicated_replication_check.gd' }
+$marker = if ($Probe -eq 'Split') { 'DEDICATED_SPLIT_PASS' } elseif ($Probe -eq 'Prediction') { 'DEDICATED_PREDICTION_PASS' } else { 'DEDICATED_REPLICATION_PASS' }
 function Read-ProbeLog([string]$Path) {
     $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
     $reader = New-Object IO.StreamReader($stream)
