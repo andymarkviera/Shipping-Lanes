@@ -50,11 +50,15 @@ func execute(sender: int, data: Variant) -> Dictionary:
 	if data.version == 2 and (data.size() != 9 or not data.get("generation") is int): return result(action_id, "BAD_REQUEST")
 	if data.version == 1 and data.size() != 8: return result(action_id, "BAD_REQUEST")
 	if not session.permitted(sender, data.entity, int(data.get("generation", 0))): return result(action_id, "NOT_OWNER")
-	if data.kind not in KINDS: return result(action_id, "UNKNOWN_ACTION")
+	var gameplay: bool = world.has_method("gameplay_payload_error") and data.kind == "gameplay"
+	if data.kind not in KINDS and not gameplay: return result(action_id, "UNKNOWN_ACTION")
 	if data.sequence < 1 or data.sequence > 2147483647 or action_id != data.kind + ":" + str(data.sequence): return result(action_id, "BAD_ACTION_ID")
 	var ship: HandlingShip = world.ships[data.entity]
 	var payload: Dictionary = data.payload
-	if data.kind == "test_pulse":
+	if gameplay:
+		var error: String = world.gameplay_payload_error(payload)
+		if not error.is_empty(): return result(action_id, error)
+	elif data.kind == "test_pulse":
 		if not payload.is_empty(): return result(action_id, "BAD_PAYLOAD")
 	else:
 		if payload.size() != 4 or not payload.get("sent_ms") is int or payload.sent_ms < 0: return result(action_id, "BAD_PAYLOAD")
@@ -77,7 +81,10 @@ func execute(sender: int, data: Variant) -> Dictionary:
 	if data.sequence <= high_water[id].get(data.kind, 0): return result(action_id, "STALE_ACTION")
 	high_water[id][data.kind] = data.sequence
 	var response: Dictionary
-	if data.kind == "test_pulse":
+	if gameplay:
+		response = result(action_id, world.execute_gameplay(sender, payload), 0, true)
+		response.applied = response.ok
+	elif data.kind == "test_pulse":
 		pulses[id] = pulses.get(id, 0) + 1
 		response = result(action_id, "OK", pulses[id], true)
 	else:

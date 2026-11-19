@@ -10,6 +10,8 @@ var controls: PlayerControls
 ## the free test-fuel button in scenes with no other refuel while adrift. The game
 ## sets "rescue_text" and "rescue_action" to turn that button into its paid tow.
 var hints: Dictionary = {}
+## A dedicated client renders a server-simulated hull with local physics off.
+var presentation_only: bool = false
 var panel: PanelContainer
 var label: Label
 var rescue: Button
@@ -61,7 +63,7 @@ func reason() -> String:
 	if not is_instance_valid(ship) or not is_instance_valid(controls) or ship.state == null: return ""
 	if not controls.ship_context_active: return ""
 	var leave: String = hint("leave", "Press Esc for the main menu")
-	if not ship.is_physics_processing():
+	if not ship.is_physics_processing() and not presentation_only:
 		if hints.has("switched_off"): return str(hints.switched_off)
 		return "SHIP SWITCHED OFF — this voyage could not be loaded.\n%s, then open this scene again." % leave
 	if ship.simulation_paused:

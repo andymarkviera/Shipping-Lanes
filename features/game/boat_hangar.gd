@@ -155,10 +155,10 @@ func action_reason(kind: String) -> String:
 	if not view.fleet.has(kind):
 		if view.reward_minor < int(entry.price_minor):
 			return "You need %s more credits." % credits(int(entry.price_minor) - view.reward_minor)
-		if view.docking.state(1) != "docked": return "Dock at a port to buy ships."
+		if view.docking.state(view.owner_id) != "docked": return "Dock at a port to buy ships."
 		return ""
 	# Patch 2.3 debug: switching works anywhere in a debug world.
-	if view.docking.state(1) != "docked" and not is_instance_valid(view.get("debug")): return "Dock at a port to switch ships."
+	if view.docking.state(view.owner_id) != "docked" and not is_instance_valid(view.get("debug")): return "Dock at a port to switch ships."
 	if not view.can_switch(): return "Finish or cancel your current job before changing ships."
 	return ""
 
@@ -213,7 +213,7 @@ func refresh() -> void:
 	action_button.disabled = not reason.is_empty()
 	action_button.tooltip_text = reason
 	sell_button.visible = owned and kind != view.ship_kind
-	sell_button.disabled = view.docking.state(1) != "docked"
+	sell_button.disabled = view.docking.state(view.owner_id) != "docked"
 	var armed: bool = view.sell_kind == kind and Time.get_ticks_msec() <= view.sell_deadline
 	sell_button.text = "Confirm sale" if armed else "Sell · +%s" % credits(Progression.resale_minor(kind))
 	status_label.text = notice if not notice.is_empty() else ("" if kind == view.ship_kind else reason)

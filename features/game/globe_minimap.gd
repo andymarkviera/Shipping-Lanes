@@ -175,6 +175,14 @@ func _draw() -> void:
 		var at: Vector2 = Vector2(clampf(goal.x - width * 0.5, 6, size.x - width - 6), clampf(goal.y - 12, 14, size.y - 6))
 		draw_string(font, at, title, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
 	# The ship: an arrow in the middle, pointing the way the bow points. North is up.
+	for entry: Dictionary in view.other_ships:
+		var point: Vector2 = sphere_point(entry.position, ship)
+		if not visible_on(point): continue
+		var dot: Vector2 = on_disc(point, radius)
+		var direction: Vector2 = Vector2(-sin(entry.heading), -cos(entry.heading))
+		draw_circle(dot, 4.0, PLAYFUL.INK)
+		draw_circle(dot, 2.5, Color.WHITE)
+		draw_line(dot, dot + direction * 7, Color.WHITE, 2, true)
 	var bow: Vector3 = view.ship.global_basis.z
 	var forward: Vector2 = Vector2(-bow.x, -bow.z).normalized() if Vector2(bow.x, bow.z).length() > 0.0001 else Vector2.UP
 	var side: Vector2 = Vector2(-forward.y, forward.x)

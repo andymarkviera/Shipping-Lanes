@@ -148,6 +148,9 @@ func slider_order(value: float) -> float:
 ## The slider is a real control: drag or click it to set the engine order.
 func order(value: float) -> void:
 	if not is_instance_valid(view.ship) or not view.ship.helm_available(): return
+	if view.runtime_role == "client":
+		view.network_runtime.throttle = 0.0 if absf(value) < 0.06 else slider_order(value)
+		return
 	view.ship.command_throttle(0.0 if absf(value) < 0.06 else slider_order(value))
 
 ## One card per offer. Called by the scene whenever its job list changes.
@@ -217,7 +220,7 @@ func refresh(delta: float) -> void:
 		instrument_warning = warn
 		if warn: DISPLAY.apply(view.voyage_hud.instruments, "red")
 		else: DISPLAY.clear(view.voyage_hud.instruments)
-	var state: String = view.docking.state(1)
+	var state: String = view.docking.state(view.owner_id)
 	var docked: bool = state == "docked"
 	# Helm bar.
 	# Speed over ground (what the hull really covers), converted at the exact

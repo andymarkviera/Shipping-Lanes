@@ -19,7 +19,7 @@ static func capture(view: Node3D) -> Dictionary:
 		"port": view.world_ports.find(view.port), "pose": body.global_transform, "fuel": body.state.fuel_liters, "condition": body.state.condition,
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
-		"docked": view.docking.state(1) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
+		"docked": view.docking.state(view.owner_id) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
 	# The game writes version 5 (M4): money spent (M2, version 3), the ship being
 	# sailed, the ships owned with their stored fuel and hull, the bulk job (M3,
 	# version 4) and the pay banked from bulk and heavy jobs, which repeat.
@@ -252,7 +252,7 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 			if not view.docking.request_dock(1, view.service_id(), view.cargo_id()).ok: return false
 		# Long enough for the longest easy-docking slide (older saves may sit off centre).
 		view.docking.advance(view.docking.MAX_SLIDE_SECONDS + .1)
-		if view.docking.state(1) != "docked": return false
+		if view.docking.state(view.owner_id) != "docked": return false
 	var operations: Dictionary = data.operations.duplicate(true)
 	for record: Dictionary in operations.records.values(): record.ship_id = body.state.instance_id
 	if not body.state.operations.restore(operations): return false

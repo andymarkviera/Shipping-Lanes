@@ -17,6 +17,8 @@ const PORT_FULL: String = "Port full — every berth is taken."
 ## game (Patch 2.4 item 4) raises it so the mooring lines are reeled in first.
 var undock_seconds: float = 0.5
 var members: Dictionary = {}
+## Dedicated clients keep read-only presentation entries, never berth holds.
+var presentation_only: bool = false
 var claims = preload("res://features/ports/berth_claims.gd").new()
 ## Who holds which berth ("port_id/berth_id" -> owner). Read-only view of claims.
 var reservations: Dictionary:
@@ -144,6 +146,9 @@ func request_undock(owner: int) -> bool:
 
 func disconnect_owner(owner: int) -> void:
 	if not members.has(owner): return
+	if presentation_only:
+		members.erase(owner)
+		return
 	release(members[owner], owner)
 	ghost(members[owner], false)
 	members.erase(owner)

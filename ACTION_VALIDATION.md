@@ -102,3 +102,24 @@ it is not a claim of a network disconnect during a durable transaction.
 11 results returned over the reliable wire). The full 26-stage / 77-script suite
 passes, including normal/impaired motion and cargo, world transitions and the
 capacity smoke check. Exported impaired movement and standard startup also pass.
+
+## Patch 3.0 dedicated gameplay extension (item 2)
+
+Only dedicated_runtime opts into kind `gameplay`. Payload is exactly two bounded
+strings: `action` and `value`. Actions are dock/cancel_dock, accept/cancel_load,
+abandon/deliver, refuel/repair/recover, ship/sell, lower/raise and cosmetic salute.
+Only accept/ship/sell take a nonempty value (a server-known job/hull ID). There is
+no position, quantity, price, recipient, payout or combat target ingress.
+
+The existing ownership, epoch, independent kind sequence, exact-intent 128-receipt
+cache, conflict and eviction rules still apply. Valid new gameplay attempts have
+a 100 ms guard, with cached RATE_LIMITED failures. BUSY and OUT_OF_RANGE represent
+server-side state refusals; jobs, capacity, funds, docking and heavy alignment are
+rechecked by existing game authorities. Salute also needs a pirate hull and its
+five-second cooldown. These are session receipts, not crash-durable transactions.
+Legacy local/private action transports do not opt into the extension.
+
+Windows checks: `tools/CheckDedicatedReplication.ps1` (container/replay/tamper),
+`-Families` (bulk/heavy), `-Probe Split` (helm/ownership/timeout/interpolation).
+Cross-platform launcher: `tools/check_dedicated_split.py --replication` or
+`--families`, with `--godot` pointing to 4.7.2. No live saves or services are used.

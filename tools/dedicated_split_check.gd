@@ -12,6 +12,11 @@ var moved: bool = false
 var timed_out: bool = false
 var last_send: int = 0
 var label: String = ""
+var remote_start: Vector3 = Vector3.INF
+var remote_moved: bool = false
+var remote_frames: int = 0
+var remote_last: Vector3
+var remote_smooth: bool = true
 
 func _initialize() -> void:
 	started = Time.get_ticks_msec()
@@ -105,6 +110,14 @@ func client_step() -> void:
 		runtime.view.game_menu.close()
 		check(runtime.view.cranes != null, "crane presentation retained")
 	var age: int = Time.get_ticks_msec() - ready_at
+	if runtime.replicas.size() == 1 and age < 3500:
+		var body: HandlingShip = runtime.replicas.values()[0].body
+		if remote_start == Vector3.INF: remote_start = body.position
+		else:
+			remote_moved = remote_moved or body.position.distance_to(remote_start) > 0.2
+			if remote_frames > 0 and body.position.distance_to(remote_last) > 1.0: remote_smooth = false
+		remote_last = body.position
+		remote_frames += 1
 	if age < 3000 and Time.get_ticks_msec() - last_send >= 50:
 		last_send = Time.get_ticks_msec()
 		runtime.send_helm(0.7, 0.1, 0.0)
@@ -114,6 +127,7 @@ func client_step() -> void:
 		runtime.view.ship.state.fuel_liters = 0.0
 		runtime.view.reward_minor = 99999999
 	if age > 8000:
+		check(remote_moved and remote_frames > 30 and remote_smooth, "other captain's helm drives a smoothly presented remote hull")
 		check(runtime.received_states > 40, "20 Hz server snapshots received")
 		check(runtime.samples.size() <= 16, "bounded interpolation buffer")
 		check(runtime.last_state.get("throttle", -1.0) == 0.0, "server stopped stale helm")
