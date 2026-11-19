@@ -8128,3 +8128,23 @@ suites, listening or hardware frame-time playtests. PR stays draft for acceptanc
   native Mac/client builds, visual playtests, hardware frame time, power loss,
   public feed/tunnel deployment and full service/biome suites remain unverified.
   No live server/player data, addresses, exports or workflows changed/committed.
+
+## Patch 3.0 item 6 — server release pipeline (November 19, 2026)
+
+- Andy-approved separate release workflow: published full releases only, matching
+  game/server tag, SHA512-pinned Godot 4.7.2 and Windows templates, item 5 builder,
+  exact server ZIP and SERVER.md notes to the public server releases repo via
+  RELEASES_TOKEN. New releases stay draft until the uploaded SHA256 matches.
+  Token needs Contents read/write on that repo; no source/private assets mirrored.
+- SERVER.md: Windows install, UDP firewall/playit setup by Hark/Andy, launcher
+  updates, saves, both five-backup locations and graceful shutdown. Windows/Mac
+  two-client/no-jank checklist in PR; patch status updated.
+- Passed: actionlint, shell syntax/release gates, six tag cases, mocked new/existing
+  publication, missing token/bad digest and import/export failures; two package
+  tests, Python compile, 76 service tests; verified 4.7.2 import/253-script parse/
+  boot and full Windows server ZIP export on Linux. ZIP/manifest hashes and blank
+  operator config checked; whitespace check passed. Exports remain outside source.
+- Not run: native Windows launcher/Mac clients, real publication/token access,
+  tunnel/internet play or hardware frame time. Public repo/main exists. Draft
+  pending acceptance; no real addresses, secrets, saves or exports committed.
+  claude.yml/checks.yml, gameplay and on-hold cargo code unchanged.
