@@ -1354,8 +1354,13 @@ play remains available. Item 3 (Play routing) is implemented: fresh public
 for offline/updating/version mismatch, and the existing unlocked, disposable
 offline world labelled Single-player Test Mode. Local Restart Progress is
 developer-only. Release checks precede server admission; local saves are never
-opened by Play. Identity, persistent migrating saves and packaging/updater
-remain deferred; visual playtests and hardware frame time remain pending.
+opened by Play. Item 4 (persistent saves) is implemented for draft review:
+versioned server JSON, append-only ordered migrations, five automatic backups,
+minute/disconnect/shutdown checkpoints and a local random install key for stable
+server-owned player records. Frozen synthetic 3.0 fixtures, migration/write
+failure preservation, reconnect and connected shutdown/loading checks pass on
+Linux Godot 4.7.2. Debug/test progress stays local. Packaging/updater and captain
+name entry remain deferred; visual playtests and hardware frame time remain pending.
 Checks and limits are in PROGRESS.md; Windows/Mac acceptance remains pending.
 
 

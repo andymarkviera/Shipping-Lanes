@@ -8070,3 +8070,31 @@ suites, listening or hardware frame-time playtests. PR stays draft for acceptanc
   playtests, visual/hardware frame-time checks, full service/biome suites or
   live feed/server deployment. No live server or player saves touched. Identity,
   persistent/migrating saves and updater are outside this item; acceptance pending.
+
+## Patch 3.0 item 4 — persistent saves (November 18, 2026)
+
+- Dedicated versioned JSON store (D147): ordered migrations, byte-exact backups
+  before migration/checkpoints (last five), validated temporary-file commits,
+  one IO worker, minute/disconnect/shutdown saves. Corrupt/future/locked saves
+  and failed writes stop safely without resetting. Random local install key
+  resumes the same server record; protocol 30003. Capture precedes loading/
+  docking teardown; restore uses the real owner ID. Debug/test saves stay local.
+- SHA512-verified Godot 4.7.2 Linux: import and 252-script parse; frozen synthetic
+  pre-3.0/3.0 loaded-cargo/paid-receipt fixtures and 47 migration/backup/lock/
+  corruption/write-failure checks; four UDP reconnect/shutdown rounds, including
+  an unsaved payout and unfinished loading. Container replication (45), bulk/
+  heavy replication (14), Play cards/lookup (135), starter/controls/flow,
+  sailing/save (330 checkpoints), local persistence init/UI and migration
+  init/verify/compatibility passed. All three PCK exports include the new store.
+  Python compile, 76 service tests and diff whitespace check passed.
+- Initial host 4.6.3 import/parse failed (SQLite requires 4.7); replaced the test
+  binary with pinned 4.7.2. Initial fixture StringName/tolerance issues, hidden
+  backup-marker pruning and shutdown teardown order were fixed; reruns passed.
+  Local phase probes first exited without required arguments; correct isolated
+  phases passed. Play runner first hit its killed server's lock; it now supplies
+  separate temporary save paths. These were isolated test folders only.
+- Not run: native Windows/Mac executables/playtests, hardware frame-time/power-
+  loss testing, full crash-injection/local/service/biome suites or live server.
+  Forced termination retains the writer guard for operator inspection; graceful
+  shutdown is required for a final checkpoint. No live/player data, on-hold
+  cargo code, existing UIDs, engine baseline or workflows changed. Draft only.

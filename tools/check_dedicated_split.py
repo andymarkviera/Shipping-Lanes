@@ -1,4 +1,4 @@
-"""Isolated Godot 4.7.2 server + two clients; UDP loopback only, no saves.
+"""Isolated Godot 4.7.2 server + two clients; UDP loopback only, isolated saves.
 
 Usage: python3 tools/check_dedicated_split.py --godot /path/to/godot
 """
@@ -39,7 +39,7 @@ def main():
                 files.append(log)
                 command = [args.godot, "--headless", "--path", str(root), "--script",
                            "res://tools/" + probe, "--",
-                           "--server" if role == "server" else "--connect", f"--port={port}", f"--captain=Probe-{role}"]
+                           "--server" if role == "server" else "--connect", f"--port={port}", f"--captain=Probe-{role}", f"--saves-dir={folder / 'saves'}"]
                 if args.families:
                     command.append("--families")
                 processes.append(subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT))
