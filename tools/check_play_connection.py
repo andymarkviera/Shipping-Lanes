@@ -1,4 +1,4 @@
-"""Patch 3.0 item 3: isolated HTTP/ENet loopback; no live feed or saves."""
+"""Patch 3.0 item 3: isolated HTTP/ENet loopback; no live feed or player saves."""
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -47,7 +47,7 @@ def main():
     try:
         with tempfile.TemporaryDirectory(prefix='shipping-play-') as temporary:
             folder = Path(temporary)
-            env = dict(os.environ, XDG_DATA_HOME=str(folder / 'data'),
+            env = dict(os.environ, APPDATA=str(folder / 'data'), XDG_DATA_HOME=str(folder / 'data'),
                        XDG_CONFIG_HOME=str(folder / 'config'), XDG_CACHE_HOME=str(folder / 'cache'))
             command = [args.godot, '--headless', '--path', str(root)]
             def check(mode):
@@ -62,7 +62,7 @@ def main():
                     raise RuntimeError(f'{mode} failed')
             for updating in (False, True):
                 with (folder / 'server.log').open('w+') as log:
-                    server = subprocess.Popen(command + ['--', '--server', f'--port={port}'] + (['--updating'] if updating else []), env=env, stdout=log, stderr=subprocess.STDOUT)
+                    server = subprocess.Popen(command + ['--', '--server', f'--port={port}', f'--saves-dir={folder / ("updating-saves" if updating else "online-saves")}'] + (['--updating'] if updating else []), env=env, stdout=log, stderr=subprocess.STDOUT)
                     try:
                         deadline = time.monotonic() + 30
                         while time.monotonic() < deadline:

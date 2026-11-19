@@ -16,7 +16,7 @@ static func capture(view: Node3D) -> Dictionary:
 	if view.heavy_mode:
 		heavy = {"active": view.heavy_jobs.active.duplicate(true), "completed": view.heavy_jobs.completed.duplicate(true), "attached": body.attached, "height": body.deck_height, "target": body.deck_target, "payload_pose": floating_pose(body)}
 	var data: Dictionary = {"version": 2, "realm": "private_port_voyage_v1", "owner": "preview_captain", "heavy_mode": view.heavy_mode,
-		"port": view.world_ports.find(view.port), "pose": body.global_transform, "fuel": body.state.fuel_liters, "condition": body.state.condition,
+		"port": view.world_ports.find(view.port), "pose": body.global_transform if body.is_inside_tree() else body.transform, "fuel": body.state.fuel_liters, "condition": body.state.condition,
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
 		"docked": view.docking.state(view.owner_id) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
@@ -199,6 +199,7 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 		# A version 4 save lists delivered bulk jobs. Their pay moves to the bank.
 		view.set("banked_minor", Progression.earned(data))
 	if not view.select_port(data.port, true): return false
+	if view.get("runtime_role") == "server": view.ship.set_physics_process(false)
 	await view.get_tree().physics_frame # Deferred floating-body creation must finish.
 	if not is_instance_valid(view.ship): return false
 	var body: HandlingShip = view.ship
@@ -246,10 +247,10 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 	if data.docked:
 		# A docked save from before the ports moved sits off every berth; it docks
 		# again from its port's spawn.
-		if not view.docking.request_dock(1, view.service_id(), view.cargo_id()).ok:
+		if not view.docking.request_dock(view.owner_id, view.service_id(), view.cargo_id()).ok:
 			if data.heavy_mode and not data.heavy.attached: body.payload_body.global_transform = spawn * data.pose.affine_inverse() * data.heavy.payload_pose
 			body.global_transform = spawn
-			if not view.docking.request_dock(1, view.service_id(), view.cargo_id()).ok: return false
+			if not view.docking.request_dock(view.owner_id, view.service_id(), view.cargo_id()).ok: return false
 		# Long enough for the longest easy-docking slide (older saves may sit off centre).
 		view.docking.advance(view.docking.MAX_SLIDE_SECONDS + .1)
 		if view.docking.state(view.owner_id) != "docked": return false
@@ -261,5 +262,5 @@ static func restore(view: Node3D, data: Dictionary) -> bool:
 	view.loading.operation = data.loading
 	view.loading.offer_id = data.loading_offer
 	view.refresh_jobs()
-	view.controls.wait_for_release = true
+	if view.controls != null: view.controls.wait_for_release = true
 	return true

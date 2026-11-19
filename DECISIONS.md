@@ -1081,3 +1081,30 @@ identity/name entry and normal Play routing belong to item 3. Sessions/receipts
 remain ephemeral until item 4's migrating authoritative saves. Local/debug mode
 keeps its existing paths. No on-hold cargo, online legacy service, workflow,
 engine baseline or world/save schema is changed.
+
+
+## D147 — Dedicated saves from Patch 3.0 (November 18, 2026)
+
+Use versioned JSON in `saves/world.json` beside the exported server; editor runs
+use `user://dedicated/saves`, checks pass an isolated `--saves-dir`. The JSON
+envelope carries schema_version, SHA256 and object-free Variant bytes for the
+existing voyage codec (poses, fleet, cargo, operations and receipts). Schema 1
+is the frozen 3.0 baseline; schema 0 is a synthetic pre-release migration fixture.
+Future data changes append migration cases and frozen 3.x fixtures; never remove
+old cases/fixtures or reuse a schema number. No client or debug save is imported.
+
+Copy the entire save folder (excluding backups) before migration and each
+checkpoint into `backups/<old_schema>-<date>/`; retain five complete copies.
+Flush a temporary checkpoint then rename over the canonical file. A single
+worker handles checkpoint IO; minute, disconnect and graceful shutdown capture
+server authority without pausing. Capture before child teardown releases loading
+or docking. Corruption, a newer/missing schema, or any failed backup/write stops
+the server with the last save preserved. No automatic reset or guessed recovery.
+An atomic sibling `saves.lock` directory excludes competing servers; after a
+hard kill an operator must verify the server is stopped before removing that
+guard. Hard kills/power loss can lose work since the last completed checkpoint.
+
+The client stores a random 256-bit install key locally; only its SHA256 indexes
+server records. Names and peer IDs do not select saves; simultaneous sessions
+with the same key are refused. Protocol 30003 includes the key; this is the save
+identity hook, not a new account/name UI. Keep the key across client updates.

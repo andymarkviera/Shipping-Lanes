@@ -1,13 +1,23 @@
 extends Node3D
-## Patch 3.0 item 2. Ephemeral authoritative multiplayer. Persistence is item 4.
+## Patch 3.0 authoritative multiplayer with dedicated, migrating saves.
 const Connection = preload("res://features/network/play_connection.gd")
 const GAME = preload("res://features/game/game.tscn")
 const Progression = preload("res://features/game/progression.gd")
-const PROTOCOL: int = 30002
+const PROTOCOL: int = 30003
 const MAX_PLAYERS: int = 8
 const INTERVAL: float = 0.05
 const BUFFER_SECONDS: float = 0.15
 const TIMEOUT_MS: int = 500
+const SaveStore = preload("res://features/network/server_save_store.gd")
+const SaveSnapshot = preload("res://features/cargo/voyage_snapshot.gd")
+var saves = SaveStore.new()
+var saves_path: String = ""
+var install_key: String = ""
+var player_keys: Dictionary = {}
+var joining_keys: Dictionary = {}
+var teardown_players: Dictionary = {}
+var save_elapsed: float = 0.0
+var save_failed: bool = false
 var hosting: bool = false
 var connection_card: Control
 var updating: bool = false
@@ -409,6 +419,7 @@ func _ready() -> void:
 		elif arg.begins_with("--host="): host = arg.trim_prefix("--host=")
 		elif arg.begins_with("--bind="): bind_address = arg.trim_prefix("--bind=")
 		elif arg.begins_with("--captain="): captain_name = arg.trim_prefix("--captain=")
+		elif arg.begins_with("--saves-dir="): saves_path = arg.trim_prefix("--saves-dir=")
 	if not hosting and get_tree().has_meta(Connection.TARGET):
 		var target: Dictionary = get_tree().get_meta(Connection.TARGET)
 		get_tree().remove_meta(Connection.TARGET)
@@ -418,6 +429,12 @@ func _ready() -> void:
 		fail("Server requires --headless", 2)
 		return
 	if hosting:
+		if saves_path.is_empty():
+			saves_path = "user://dedicated/saves" if OS.has_feature("editor") else OS.get_executable_path().get_base_dir().path_join("saves")
+		if not saves.open_store(saves_path):
+			fail(saves.error, 2)
+			return
+		get_tree().auto_accept_quit = false
 		world = GAME.instantiate()
 		world.runtime_role = "world"
 		world.name = "World"
@@ -433,6 +450,9 @@ func _ready() -> void:
 		session.hosting = true
 		session.epoch = Crypto.new().generate_random_bytes(16).hex_encode()
 	else:
+		if not load_install_key():
+			fail("Cannot read or preserve this installation's captain identity", 2)
+			return
 		view = GAME.instantiate()
 		view.runtime_role = "client"
 		view.network_runtime = self
@@ -493,7 +513,7 @@ func _ready() -> void:
 	multiplayer.peer_connected.connect(func(id: int):
 		if hosting: pending_peers[id] = Time.get_ticks_msec() + 10000)
 	multiplayer.peer_disconnected.connect(depart)
-	multiplayer.connected_to_server.connect(func(): hello.rpc_id(1, PROTOCOL, captain_name, Connection.VERSION))
+	multiplayer.connected_to_server.connect(func(): hello.rpc_id(1, PROTOCOL, captain_name, Connection.VERSION, install_key))
 	multiplayer.connection_failed.connect(func(): fail("Connection failed"))
 	multiplayer.server_disconnected.connect(func(): fail("Server disconnected"))
 	if hosting: print("DEDICATED_SERVER_READY port=%d" % port_number)
@@ -544,7 +564,7 @@ func fail(message: String, exit_code: int = 0, reason: String = "offline") -> vo
 		get_tree().quit(maxi(1, exit_code))
 
 @rpc("any_peer", "call_remote", "reliable", 0)
-func hello(version: int, captain: String, release: String = "") -> void:
+func hello(version: int, captain: String, release: String = "", key: String = "") -> void:
 	if not hosting: return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not pending_peers.has(sender): return
@@ -555,9 +575,14 @@ func hello(version: int, captain: String, release: String = "") -> void:
 		join_rejected.rpc_id(sender, "updating")
 		return
 	pending_peers.erase(sender)
-	if contexts.size() >= MAX_PLAYERS or captain.strip_edges().is_empty() or captain.length() > 24 or captain != captain.validate_node_name() or "\n" in captain or "\r" in captain:
+	if not SaveStore.key_valid(key) or contexts.size() + joining_keys.size() >= MAX_PLAYERS or captain.strip_edges().is_empty() or captain.length() > 24 or captain != captain.validate_node_name() or "\n" in captain or "\r" in captain:
 		peer.disconnect_peer(sender)
 		return
+	var player_key: String = key.sha256_text()
+	if player_keys.values().has(player_key) or joining_keys.has(player_key):
+		peer.disconnect_peer(sender)
+		return
+	joining_keys[player_key] = sender
 	var context: Node3D = GAME.instantiate()
 	context.runtime_role = "server"
 	context.owner_id = sender
@@ -567,9 +592,30 @@ func hello(version: int, captain: String, release: String = "") -> void:
 	add_child(context)
 	if not is_instance_valid(context.ship):
 		context.queue_free()
+		joining_keys.erase(player_key)
 		peer.disconnect_peer(sender)
 		return
 	disable_tree(context)
+	context.cranes = world.cranes
+	if saves.players.has(player_key):
+		context.port.spawn_allocator.release(context.spawn_ticket)
+		context.ship.collision_layer = 0
+		if not await SaveSnapshot.restore(context, saves.players[player_key].voyage.duplicate(true)):
+			context.docking.disconnect_owner(sender)
+			context.port.spawn_allocator.release(context.spawn_ticket)
+			context.queue_free()
+			joining_keys.erase(player_key)
+			peer.disconnect_peer(sender)
+			return
+		# select_port creates a replacement hull; never run it during recovery.
+		disable_tree(context)
+	joining_keys.erase(player_key)
+	if not multiplayer.get_peers().has(sender):
+		context.docking.disconnect_owner(sender)
+		context.port.spawn_allocator.release(context.spawn_ticket)
+		context.queue_free()
+		return
+	player_keys[sender] = player_key
 	context.set_physics_process(true)
 	context.ship.set_physics_process(true)
 	context.docking.set_physics_process(true)
@@ -577,6 +623,15 @@ func hello(version: int, captain: String, release: String = "") -> void:
 	context.loading.set_physics_process(true)
 	var id: String = "ship_%d" % sender
 	contexts[sender] = context
+	# Children exit in reverse order. Capture before loading/docking teardown
+	# releases unfinished operations and berths during SceneTree.quit().
+	var guard: Node = Node.new()
+	guard.name = "SaveBeforeTeardown"
+	context.add_child(guard)
+	guard.tree_exiting.connect(func() -> void:
+		if contexts.has(sender):
+			capture_player(sender)
+			teardown_players[sender] = true)
 	captains[sender] = captain.strip_edges()
 	context.cranes = world.cranes
 	context.docking.undock_seconds = 1.0
@@ -596,6 +651,9 @@ func depart(sender: int) -> void:
 	pending_peers.erase(sender)
 	if not contexts.has(sender): return
 	var context: Node3D = contexts[sender]
+	capture_player(sender)
+	if not saves.checkpoint(): save_error()
+	player_keys.erase(sender)
 	context.docking.disconnect_owner(sender)
 	context.port.spawn_allocator.release(context.spawn_ticket)
 	var id: String = "ship_%d" % sender
@@ -636,6 +694,13 @@ func helm_input(request: Dictionary) -> void:
 func _physics_process(delta: float) -> void:
 	elapsed += delta
 	if hosting:
+		if not saves.finish(false):
+			save_error()
+			return
+		save_elapsed += delta
+		if save_elapsed >= 60.0:
+			save_elapsed = fmod(save_elapsed, 60.0)
+			checkpoint_players()
 		world.docking.members.clear()
 		for sender: int in contexts:
 			var context: Node3D = contexts[sender]
@@ -788,7 +853,57 @@ func _process(_delta: float) -> void:
 	view.place_icebergs()
 	present_world(target, _delta)
 
+func load_install_key() -> bool:
+	var path: String = "user://dedicated_install.key"
+	if FileAccess.file_exists(path):
+		install_key = FileAccess.get_file_as_string(path).strip_edges()
+		return SaveStore.key_valid(install_key)
+	install_key = Crypto.new().generate_random_bytes(32).hex_encode()
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if file == null: return false
+	file.store_string(install_key)
+	file.flush()
+	var ok: bool = file.get_error() == OK
+	file.close()
+	return ok
+
+func capture_player(sender: int) -> void:
+	if teardown_players.has(sender): return
+	var context: Node3D = contexts[sender]
+	# The existing heavy-job authority reconciles its final reward in the same
+	# tick as cargo completion. Checkpoint money and receipt together.
+	if context.heavy_mode:
+		context.heavy_jobs.update(context.ship)
+		context.reward_minor += context.heavy_jobs.reward_pending
+		context.heavy_jobs.reward_pending = 0
+	saves.players[player_keys[sender]] = {"captain": captains[sender], "voyage": SaveSnapshot.capture(context)}
+
+func checkpoint_players() -> void:
+	for sender: int in contexts: capture_player(sender)
+	if not saves.checkpoint(): save_error()
+
+func save_error() -> void:
+	if save_failed: return
+	save_failed = true
+	# Stop this server on durability failure. Never pause a world or let players
+	# continue earning against an unwriteable checkpoint.
+	fail("Server saving failed: " + saves.error, 2)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and hosting:
+		shutdown_saves()
+		get_tree().quit(1 if save_failed else 0)
+
+func shutdown_saves() -> void:
+	if not hosting or not saves.locked: return
+	if not saves.finish(): save_error()
+	if not save_failed:
+		checkpoint_players()
+		if not saves.finish(): save_error()
+	saves.close()
+
 func _exit_tree() -> void:
+	shutdown_saves()
 	if peer != null: peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	session.free()
