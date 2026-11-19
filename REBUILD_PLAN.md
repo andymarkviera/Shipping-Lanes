@@ -1338,12 +1338,20 @@ two western passages, separated coastal ports and captain-relative port scenery
 fades. All six port IDs, jobs, pole positions, ice and existing assets retained;
 all routes remain within 11 km. Linux Godot 4.7.2 checks and limitations are in
 PROGRESS.md. Windows/Mac playtesting and hardware frame time remain pending.
-Item 1 (headless authoritative server split) is implemented for draft review:
+Item 1 (headless authoritative server split) is merged (PR #203):
 explicit server/client boot, one shared collision world, server-owned player
 simulation, validated helm and buffered own-ship presentation; server + two
 clients checked on loopback. Dedicated Windows server export preset added.
-Local/debug play remains unchanged; full gameplay replication, Play routing,
-identity, persistence/migrations and packaging/updater remain items 2–6.
+Item 2 (replication, November 18) is implemented for review: connected hulls
+use buffered, wrap-aware presentation, captain labels, minimap entries and the
+M-map's existing 3D ship list. The server owns docking/berth claims, cranes,
+container slots, container/bulk/heavy jobs, fleets, services and payouts;
+clients submit validated, deduplicated actions over the same single UDP port.
+Windows Godot 4.7.2 server + two-client checks cover container deliveries,
+bulk/heavy transport, ownership/retries and remote presentation. Local/debug
+play remains available. Play routing/identity, persistent migrating saves and
+packaging/updater remain items 3–6; visual playtests and hardware frame time
+remain pending.
 Checks and limits are in PROGRESS.md; Windows/Mac acceptance remains pending.
 
 

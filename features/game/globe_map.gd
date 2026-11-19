@@ -360,6 +360,7 @@ func ship_entries() -> Array[Dictionary]:
 	var bow: Vector3 = view.ship.global_basis.z
 	var entries: Array[Dictionary] = [{"kind": str(view.get("ship_kind")), "position": view.ship.global_position, "heading": atan2(bow.x, bow.z)}]
 	entries.append_array(other_ships)
+	entries.append_array(view.other_ships)
 	return entries
 
 ## "pirate", "small", "bulk", "heavy" or "container" (also any unknown kind).

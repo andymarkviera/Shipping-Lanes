@@ -1054,3 +1054,30 @@ are on hold until Andy has playtested them: their code stays intact and is not
 removed. Online code is frozen, not deleted. Godot 4.7.2 and Python checks in
 GitHub Actions are approved; the workflow edit is made by Hark, not by agents.
 AGENTS.md now points every agent at REBUILD_PLAN.md.
+
+## D146 - Dedicated gameplay replication (Patch 3.0 item 2, November 18, 2026)
+
+Keep item 1's eight-player, single UDP ENet transport; protocol 30002 rejects
+older peers. The server owns each captain's existing personal job board, cargo,
+wallet and fleet, with one shared physical world, exclusive berth registry and
+crane controller. Personal contracts retain the existing game economy; they are
+not transferable cargo or a new finite shared commodity stock.
+
+Use the ShipActions epoch/transport-owner/schema/sequence/receipt contract for
+reliable gameplay intents. Clients cannot submit poses, prices, cargo or credits.
+Repeat delivery returns its cached result; changed intent conflicts, and evicted
+sequences never reapply. State gates remain in the existing docking/job/services.
+Salutes are validated, rate-limited cosmetic events with no damage or target.
+
+All hulls and working cranes use the same 150 ms, wrap-aware 20 Hz interpolation.
+Compressed snapshots are split into bounded sub-MTU UDP chunks; incomplete frames
+are discarded and the last pose is held. Pools/buffers are bounded. Reliable owner
+projections run at up to 5 Hz with a one-second canonical refresh, live offers,
+active operation and last receipt; cards rebuild only when their board changes.
+Clients never simulate physics, loading, payouts or berth ownership.
+
+Captain labels currently use the connection's bounded --captain value; install
+identity/name entry and normal Play routing belong to item 3. Sessions/receipts
+remain ephemeral until item 4's migrating authoritative saves. Local/debug mode
+keeps its existing paths. No on-hold cargo, online legacy service, workflow,
+engine baseline or world/save schema is changed.

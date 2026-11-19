@@ -24,6 +24,14 @@ const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 var runtime_role: String = "local"
 var shared_world: Node3D
 var owner_id: int = 1
+var network_runtime: Node
+var other_ships: Array[Dictionary] = []
+var network_crane_remaining: int = 0
+
+func network_action(kind: String, value: String = "") -> bool:
+	if runtime_role != "client": return false
+	if is_instance_valid(network_runtime): network_runtime.send_gameplay(kind, value)
+	return true
 
 @export var save_enabled: bool = true
 @export var save_path: String = "user://worlds/private_port_voyage/voyage.db"
@@ -150,7 +158,7 @@ func button(parent: Node, title: String, action: Callable) -> Button:
 	node.focus_mode = Control.FOCUS_NONE
 	parent.add_child(node)
 	node.pressed.connect(func():
-		if runtime_role != "local": return
+		if runtime_role in ["server", "world"]: return
 		if is_instance_valid(persistence) and not persistence.ready_to_save and title != "Main menu": return
 		node.release_focus()
 		action.call()
@@ -323,9 +331,11 @@ func _ready() -> void:
 	var buttons: HBoxContainer = HBoxContainer.new()
 	stack.add_child(buttons)
 	dock_button = button(buttons, "Dock", func():
+		if network_action("dock"): return
 		if docking.state(owner_id) == "docked": docking.request_undock(owner_id); jobs_panel.hide()
 		else: offer_notice = docking.request_dock(owner_id, service_id(), cargo_id()).message)
-	cancel_button = button(buttons, "Cancel", func(): docking.cancel(owner_id))
+	cancel_button = button(buttons, "Cancel", func():
+		if not network_action("cancel_dock"): docking.cancel(owner_id))
 	button(buttons, "Main menu", leave)
 	switch_button = button(buttons, "Test heavy loader", func():
 		if not can_switch(): return
@@ -397,8 +407,10 @@ func _ready() -> void:
 	stack.add_child(receipt_label)
 	heavy_controls = HBoxContainer.new()
 	stack.add_child(heavy_controls)
-	button(heavy_controls, "Lower", func(): ship.request_height(Heavy.LOWERED))
-	button(heavy_controls, "Raise", func(): ship.request_height(Heavy.RAISED))
+	button(heavy_controls, "Lower", func():
+		if not network_action("lower"): ship.request_height(Heavy.LOWERED))
+	button(heavy_controls, "Raise", func():
+		if not network_action("raise"): ship.request_height(Heavy.RAISED))
 	button(heavy_controls, "Cancel pickup", func(): end_current_job(false))
 	if game_mode:
 		game_hud = preload("res://features/game/game_hud.gd").new()
@@ -620,7 +632,7 @@ func take_damage(damage_bp: int) -> void:
 ## Tow back to the current port: out of fuel (tow button) or sunk. The fee is
 ## capped by the wallet, so a broke captain is never stuck.
 func recover() -> void:
-	if runtime_role == "client": return
+	if network_action("recover"): return
 	var sunk: bool = ship.state.condition <= 0.0
 	var fee: int = mini(RECOVERY_FEE_MINOR, reward_minor)
 	docking.cancel(owner_id)
@@ -678,7 +690,8 @@ func deliver_reason() -> String:
 
 ## SHIPS panel, first button: buy a ship, or switch to one already owned.
 func ship_action(kind: String) -> void:
-	if runtime_role == "client": return
+	if network_action("ship", kind): return
+	if not Progression.SHIPS.has(kind): return
 	# Patch 2.3 debug: Select away from a berth swaps on the spot.
 	if is_instance_valid(debug) and debug.swap(kind): return
 	if kind == ship_kind or docking.state(owner_id) != "docked": return
@@ -710,7 +723,7 @@ func ship_action(kind: String) -> void:
 
 ## SHIPS panel, second button: sell a ship you are not sailing. Two clicks.
 func sell_ship(kind: String) -> void:
-	if runtime_role == "client": return
+	if network_action("sell", kind): return
 	if kind == ship_kind or not fleet.has(kind) or docking.state(owner_id) != "docked": return
 	if sell_kind != kind or Time.get_ticks_msec() > sell_deadline:
 		sell_kind = kind
@@ -826,6 +839,7 @@ func crane_preview(_owner: int) -> Vector2i:
 	return Vector2i(clampi(ceili(loading.progress_percent() / 100.0 * quantity), 0, quantity), quantity)
 
 func cranes_busy() -> bool:
+	if runtime_role == "client": return network_crane_remaining > 0
 	return cranes != null and cranes.busy(owner_id)
 
 ## Wording for the helm notice: how to get out of each state in this scene.
@@ -860,7 +874,7 @@ func refresh_jobs() -> void:
 	jobs_list.clear()
 	job_cards.clear()
 	selected_offer = ""
-	if game_mode: offers.restock()
+	if game_mode and runtime_role != "client": offers.restock()
 	if bulk_mode():
 		# Patch 2.2 item 2: this ship's own tier first, then smaller loads, never
 		# more than it carries, at most JOB_BOARD_SIZE cards.
@@ -920,7 +934,7 @@ func accept_reason() -> String:
 	return ""
 
 func accept_selected() -> void:
-	if runtime_role == "client": return
+	if network_action("accept", selected_offer): return
 	var reason: String = accept_reason()
 	if not reason.is_empty():
 		offer_notice = reason
@@ -947,13 +961,14 @@ func accept_selected() -> void:
 	refresh_jobs()
 
 func end_current_job(abandon: bool) -> void:
+	if network_action("abandon" if abandon else "cancel_load"): return
 	var result: Dictionary = preload("res://features/cargo/voyage_lifecycle.gd").end_job(self, abandon)
 	offer_notice = result.message
 	abandon_job_id = ""
 	refresh_jobs()
 
 func request_abandon() -> void:
-	if runtime_role == "client": return
+	if network_action("abandon"): return
 	if not bulk_active.is_empty():
 		if abandon_job_id == bulk_active and Time.get_ticks_msec() <= abandon_deadline:
 			bulk_active = ""
@@ -975,7 +990,7 @@ func request_abandon() -> void:
 		offer_notice = "This removes the cargo with no payment. Press Confirm abandon within 5 seconds."
 
 func refuel() -> void:
-	if runtime_role == "client": return
+	if network_action("refuel"): return
 	if docking.state(owner_id) != "docked" or loading.busy(): return
 	if game_mode:
 		if ship.definition.fuel_capacity_liters - ship.state.fuel_liters < 1.0: offer_notice = "The tank is full."
@@ -990,7 +1005,7 @@ func refuel() -> void:
 	offer_notice = "Refueled %.0f L — %s." % [amount, free_note()]
 
 func repair() -> void:
-	if runtime_role == "client": return
+	if network_action("repair"): return
 	if docking.state(owner_id) != "docked" or loading.busy(): return
 	if game_mode:
 		var percent: int = repair_offered()
@@ -1005,7 +1020,7 @@ func repair() -> void:
 	ship.state.condition = 1.0
 
 func deliver() -> void:
-	if runtime_role == "client": return
+	if network_action("deliver"): return
 	if bulk_mode():
 		if not deliver_reason().is_empty(): return
 		# Pay and job state change together; the autosave writes both on this tick.
@@ -1169,7 +1184,9 @@ func _process(_delta: float) -> void:
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
 	if not loading.busy() and offer_notice == "Accepted — loading your cargo.": offer_notice = loading.notice
 	if loading.busy(): loading_text.text = "Loading %.0f%% — please wait." % loading.progress_percent()
-	elif cranes_busy(): loading_text.text = "The cranes are working: %d container%s to go." % [cranes.remaining(owner_id), "" if cranes.remaining(owner_id) == 1 else "s"]
+	elif cranes_busy():
+		var remaining: int = network_crane_remaining if runtime_role == "client" else cranes.remaining(owner_id)
+		loading_text.text = "The cranes are working: %d container%s to go." % [remaining, "" if remaining == 1 else "s"]
 	else: loading_text.text = offer_notice
 	waypoint.visible = false
 	if heavy_mode and not heavy_jobs.active.is_empty():

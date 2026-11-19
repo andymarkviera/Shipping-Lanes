@@ -8007,3 +8007,40 @@ suites, listening or hardware frame-time playtests. PR stays draft for acceptanc
   hardware frame-time measurements, remaining service/scene probes or internet
   deployment. Item 2 gameplay/action replication and items 3–6 remain deferred;
   this explicit connection path is an ephemeral helm preview. Draft only.
+
+## Patch 3.0 item 2 - replication (November 18, 2026)
+
+- Extended PR #203's dedicated runtime: all connected hulls, captain labels,
+  corner minimap and pooled 3D M-map entries; shared authoritative berths/cranes,
+  container slots, container/bulk/heavy jobs, deck/payload, fleets, services and
+  payouts. Reused existing game authorities and ShipActions replay/ownership
+  rules; one UDP ENet port, no client simulation or player transfers/combat.
+- 20 Hz wrap-aware interpolation (150 ms), compressed sub-MTU chunks, bounded
+  reassembly/history and changed owner projections with a canonical heartbeat.
+  Local/debug paths retained; corrected peer-1 HUD assumptions and render-only
+  helm notices. No new runtime resource paths, workflow or on-hold cargo edits.
+- Windows recorded Godot 4.7.2: container server + two-client loopback passed
+  45 assertions; bulk/heavy variant 14; split/helm/timeout/remote motion 56;
+  legacy two-process ActionCheck 49. Both new loops verify real RPC actions,
+  presentation/maps and payouts; container covers forgery, replay/conflict and
+  wallet correction. Server-only probes stage approaches/travel, not real sailing.
+- Passed full 247-script parse, starter, controls, flow, helm keys, globe map
+  (70), cranes (267), mooring (422), debug game (91), container ladder (493),
+  bulk ladder (512), heavy ladder (711) and cannon salute (60); diff whitespace
+  check. PowerShell runner isolates APPDATA and cleans up only its own children;
+  Python launcher extended but not executed (Python unavailable on PATH).
+- Initial checks exposed duplicate declarations/indentation, unsupported dynamic
+  FastLZ decoding, client berth teardown and test staging/early-departure errors;
+  corrected and rerun. Windows sandbox reports an unreadable OS certificate
+  store: logs retain it, runner exempts only that diagnostic (UDP has no TLS),
+  and every other engine/script error fails. Initial editor import also could
+  not save Steam's editor settings; runtime imports/parse subsequently worked.
+- Not verified: native executable exports, Mac, visual/audio playtests, hardware
+  frame time, impaired/internet/tunnel deployment, full service suite or M1's
+  30-second voyage budget. Item 2 awaits Andy's review/playtest; items 3-6 still
+  own Play/identity, durable migrating saves, server launcher and release setup.
+- Restricted-host diagnostics: Windows CA-store access is denied; the UDP runner
+  prints that message and excludes only it from error matching. Initial editor
+  import also could not save settings beside the Steam executable. Runtime
+  checks pass; no TLS/internet validation is claimed. Early parse/fixture,
+  compression and teardown failures were corrected before the passing reruns.

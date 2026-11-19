@@ -68,7 +68,7 @@ static func describe(view: Node3D) -> Dictionary:
 		result.cargo = "Cargo aboard: " + bulk_job.title
 		result.route = "%s · %s\nJob payment: %.2f credits" % [bulk_port.definition.display_name, distance_text(view.ship.global_position.distance_to(bulk_port.berth_anchor.global_position)), bulk_job.reward_minor / 100.0]
 		result.next = "Sail to the destination, slow down near the quay, then Dock."
-		if view.docking.state(1) == "docked":
+		if view.docking.state(view.owner_id) == "docked":
 			result.next = "Open CARGO and select Deliver cargo at this port." if view.port == bulk_port else "Undock and sail to " + bulk_port.definition.display_name + "."
 	elif not job.is_empty():
 		var destination: Node3D
@@ -85,7 +85,7 @@ static func describe(view: Node3D) -> Dictionary:
 		else:
 			result.stage = "DELIVER CONTAINERS"
 			result.next = "Sail to the destination, slow down near the quay, then Dock."
-			if view.docking.state(1) == "docked":
+			if view.docking.state(view.owner_id) == "docked":
 				result.next = "Open CARGO and select Deliver cargo at this port." if view.port == destination else "Undock and sail to " + destination.definition.display_name + "."
 	if view.get("game_mode") == true: game_hints(view, result)
 	if is_instance_valid(view.persistence) and not view.persistence.ready_to_save:
@@ -96,7 +96,7 @@ static func describe(view: Node3D) -> Dictionary:
 ## M5, the game only: say the next step with no job in hand, and warn early
 ## about fuel and hull so a new captain is not surprised by a tow or a sinking.
 static func game_hints(view: Node3D, result: Dictionary) -> void:
-	var docked: bool = view.docking.state(1) == "docked"
+	var docked: bool = view.docking.state(view.owner_id) == "docked"
 	if result.stage == "NO ACTIVE JOB":
 		result.next = "Pick a job card and click Accept." if docked else "Sail up to a quay (see the globe), slow down and click Dock."
 		var ships: Dictionary = preload("res://features/game/progression.gd").SHIPS
