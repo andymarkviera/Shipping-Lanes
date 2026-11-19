@@ -1,0 +1,108 @@
+name: Publish server release
+
+# RELEASES_TOKEN needs Contents read/write on Shipping-Lanes-Server-Releases
+# as well as the existing game releases repo. No source is published.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-server-release
+  cancel-in-progress: false
+
+env:
+  PUBLIC_REPO: andymarkviera/Shipping-Lanes-Server-Releases
+  GODOT_VERSION: 4.7.2
+  GODOT_EXPECTED_VERSION: 4.7.2.stable.official.ed1daf0bf
+  GODOT_ZIP: Godot_v4.7.2-stable_linux.x86_64.zip
+  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+  TEMPLATES_ZIP: Godot_v4.7.2-stable_export_templates.tpz
+  TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
+  ASSET: Shipping-Lanes-Server-Windows-x64.zip
+
+jobs:
+  publish:
+    if: github.event.release.draft == false && github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Require release tag to match the packaged game version
+        run: |
+          python - <<'PY'
+          import os, re
+          from pathlib import Path
+          tag = os.environ['TAG']
+          version = re.search(r'const VERSION: String = "([0-9.]+)"', Path('features/network/play_connection.gd').read_text())
+          if not re.fullmatch(r'v\d+\.\d+\.\d+', tag) or not version or tag != 'v' + version[1]:
+              raise SystemExit('Full release tag must match play_connection.gd VERSION (vMAJOR.MINOR.PATCH)')
+          PY
+
+      - name: Install verified Godot 4.7.2 and Windows export templates
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -fsSL --retry 3 -o "$GODOT_ZIP" "$base/$GODOT_ZIP"
+          curl -fsSL --retry 3 -o "$TEMPLATES_ZIP" "$base/$TEMPLATES_ZIP"
+          echo "$GODOT_SHA512  $GODOT_ZIP" | sha512sum -c -
+          echo "$TEMPLATES_SHA512  $TEMPLATES_ZIP" | sha512sum -c -
+          mkdir -p bin xdg/data/godot/export_templates/4.7.2.stable xdg/config xdg/cache
+          unzip -q "$GODOT_ZIP" -d bin
+          mv bin/Godot_v4.7.2-stable_linux.x86_64 bin/godot
+          chmod +x bin/godot
+          unzip -j -q "$TEMPLATES_ZIP" templates/windows_release_x86_64.exe -d xdg/data/godot/export_templates/4.7.2.stable
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          {
+            echo "XDG_DATA_HOME=$RUNNER_TEMP/xdg/data"
+            echo "XDG_CONFIG_HOME=$RUNNER_TEMP/xdg/config"
+            echo "XDG_CACHE_HOME=$RUNNER_TEMP/xdg/cache"
+          } >> "$GITHUB_ENV"
+          test "$(bin/godot --headless --version | tail -n1 | tr -d '\r')" = "$GODOT_EXPECTED_VERSION"
+
+      - name: Import project and build item 5 server package
+        run: |
+          set -euo pipefail
+          code=0
+          godot --headless --path . --editor --import > "$RUNNER_TEMP/import.log" 2>&1 || code=$?
+          cat "$RUNNER_TEMP/import.log"
+          test "$code" -eq 0
+          if grep -qE '^(ERROR:|SCRIPT ERROR:)' "$RUNNER_TEMP/import.log"; then exit 1; fi
+          python -m unittest discover -v -s tools/server_package
+          python tools/server_package/build.py --godot "$(command -v godot)" --output "$RUNNER_TEMP/$ASSET" > "$RUNNER_TEMP/build.log" 2>&1 || code=$?
+          cat "$RUNNER_TEMP/build.log"
+          test "$code" -eq 0
+          if grep -qE '^(ERROR:|SCRIPT ERROR:)' "$RUNNER_TEMP/build.log"; then exit 1; fi
+
+      - name: Publish only the server ZIP and install guide
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then echo "RELEASES_TOKEN secret is missing"; exit 1; fi
+          if gh release view "$TAG" -R "$PUBLIC_REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$RUNNER_TEMP/$ASSET" -R "$PUBLIC_REPO" --clobber
+          else
+            # The public repo has its own main; never send private commits/source.
+            gh release create "$TAG" "$RUNNER_TEMP/$ASSET" -R "$PUBLIC_REPO" --target main --draft --title "Shipping Lanes Server $TAG" --notes-file SERVER.md
+          fi
+          # The updater requires GitHub's SHA256 asset digest. Publish only once
+          # the uploaded ZIP is complete and its digest matches the local build.
+          expected="sha256:$(sha256sum "$RUNNER_TEMP/$ASSET" | cut -d ' ' -f1)"
+          actual="$(gh api "repos/$PUBLIC_REPO/releases/tags/$TAG" --jq '.assets[] | select(.name == "Shipping-Lanes-Server-Windows-x64.zip") | .digest')"
+          test "$actual" = "$expected"
+          gh release edit "$TAG" -R "$PUBLIC_REPO" --draft=false --prerelease=false --latest --title "Shipping Lanes Server $TAG" --notes-file SERVER.md
+          echo "Published $TAG to https://github.com/$PUBLIC_REPO/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"

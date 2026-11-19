@@ -1332,7 +1332,7 @@ Items, in order:
    update, where saves live. Item 6's PR carries the Windows+Mac playtest
    checklist (two clients on the server PC's address).
 
-**Patch 3.0 status (November 18, 2026):** item A merged (#201); item B
+**Patch 3.0 status (November 19, 2026):** item A merged (#201); item B
 (map remix) implemented for draft review: 27 landmasses, nine seeded islands,
 two western passages, separated coastal ports and captain-relative port scenery
 fades. All six port IDs, jobs, pole positions, ice and existing assets retained;
@@ -1363,10 +1363,15 @@ Linux Godot 4.7.2. Debug/test progress stays local. Item 5 (server package and
 launcher) is implemented for draft review: Windows Start/Stop/Status, saves
 folder, token-free server release checks and verified updates with graceful
 checkpoints, five saves backups and versioned package swaps. Linux core/runtime
-checks and dedicated PCK export pass; the full Windows ZIP build is blocked by
-missing 4.7.2 export templates. Native Windows launcher/update testing remains
-pending. Item 6 release setup and captain name entry remain deferred; visual
-playtests and hardware frame time remain pending.
+checks and dedicated PCK export pass; item 6 also verifies the full Windows ZIP
+build on Linux with the 4.7.2 export templates. Native Windows launcher/update
+testing remains pending. Item 6 (server release pipeline) is implemented for draft review:
+published full releases build item 5's Windows ZIP from the matching tag with
+verified Godot 4.7.2/templates and publish to the public server repo using
+RELEASES_TOKEN. SERVER.md covers installation, UDP/playit, updates and backups;
+the PR carries the Windows/Mac two-client checklist. Token access and real
+publication/tunnel testing remain pending. Captain name entry remains deferred;
+visual playtests and hardware frame time remain pending.
 Checks and limits are in PROGRESS.md; Windows/Mac acceptance remains pending.
 
 
