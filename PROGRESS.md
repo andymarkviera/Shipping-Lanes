@@ -8148,3 +8148,39 @@ suites, listening or hardware frame-time playtests. PR stays draft for acceptanc
   tunnel/internet play or hardware frame time. Public repo/main exists. Draft
   pending acceptance; no real addresses, secrets, saves or exports committed.
   claude.yml/checks.yml, gameplay and on-hold cargo code unchanged.
+
+## Patch 3.0.1 — captain name, smoother online play, optimization (November 19, 2026)
+
+- Captain name: first Play shows a small modal (LineEdit, Set sail, Enter submits;
+  3-16 letters/digits/space/_/-, trimmed) saved to `user://captain_name.txt` beside
+  the install key and sent in `hello`; `--captain=` still overrides for tests.
+  Pause menu CAPTAIN NAME renames live (rate-limited). The server re-cleans every
+  name (`features/network/captain_name.gd`) instead of disconnecting on it.
+- Own hull: a bare, shapeless HandlingShip runs the same `advance_motion` from local
+  helm every physics tick; snapshots carry the last applied helm sequence, the
+  client resets to the server hull, replays unacknowledged input and fades the
+  difference over 0.15 s (snap past 20 m / 0.6 rad). Berthing, docked and paused
+  hulls still follow the server. Other hulls: per-ship tracks, buffer
+  2 × measured interval + jitter clamped 80-250 ms, up to 0.25 s extrapolation.
+  Unreliable 1 s ping; `NN ms` in the HUD's top-right corner.
+- Wire: binary quantized motion frames (`public_snapshot_codec.gd`, 1/256 m, u16
+  yaw, half rates; f64 heavy deck height because RAISED/LOWERED are compared
+  exactly) with an 8-hex epoch tag instead of the 32-char epoch; ship status
+  reliable and only on change at 10 Hz; gameplay state only on change or after an
+  action (no forced 1 Hz resend); cranes only near the recipient; ships outside
+  `ship_relevance` range at 5 Hz (seam-aware). Fewer per-frame allocations in the
+  client present path and server physics loop. Protocol 30003 → 30101, VERSION
+  3.0.1 (`play_connection.gd`, server package runtime check). Saves unchanged.
+- Measured (Linux loopback, Godot 4.7.2): ~867 B/ship/s server motion with two
+  captains (3.0.0-format equivalent ~2715); budget tool 985 close / 516 spread
+  B/ship/s for 8 captains (budget 1024 incl. 64 B/packet overhead); server send
+  path ~0.1 ms/tick; client snapshot decode ~66 µs; prediction max gap 0.51 m,
+  max frame step 0.11 m, 0 snaps. Server prints `DEDICATED_TICK` once a minute.
+- Passed: import + 254-script parse, new `tools/check_snapshot_budget.gd` (26),
+  `check_dedicated_split.py` split, `--replication`, `--families` and new
+  `--prediction` (server + 2 clients, physics on, held keys, live rename, ping),
+  `check_play_connection.py`, `check_server_saves.py` (frozen 3.x fixtures).
+  The families probe first failed on half-float deck height; fixed and rerun.
+- Not verified: Windows/Mac play, the playit.gg relay or real latency/loss, feel
+  of the correction tuning, the modal's look. Gas/oil/refinery/cargo-fuel code
+  and workflows unchanged.

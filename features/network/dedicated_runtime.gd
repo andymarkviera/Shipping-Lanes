@@ -1,13 +1,33 @@
 extends Node3D
 ## Patch 3.0 authoritative multiplayer with dedicated, migrating saves.
+## Patch 3.0.1: own-hull prediction, adaptive interpolation, ping, compact frames.
 const Connection = preload("res://features/network/play_connection.gd")
 const GAME = preload("res://features/game/game.tscn")
 const Progression = preload("res://features/game/progression.gd")
-const PROTOCOL: int = 30003
+const CaptainName = preload("res://features/network/captain_name.gd")
+const Codec = preload("res://features/network/public_snapshot_codec.gd")
+const Relevance = preload("res://features/network/ship_relevance.gd")
+const PLAYFUL = preload("res://features/ui/playful_theme.gd")
+# 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
+const PROTOCOL: int = 30101
 const MAX_PLAYERS: int = 8
 const INTERVAL: float = 0.05
 const BUFFER_SECONDS: float = 0.15
+const BUFFER_MIN: float = 0.08
+const BUFFER_MAX: float = 0.25
+const EXTRAPOLATE_SECONDS: float = 0.25
 const TIMEOUT_MS: int = 500
+## Own-hull reconciliation: errors fade over CORRECTION_SECONDS, but anything
+## past SNAP_* (a collision, a teleport, a berth) is applied at once.
+const SNAP_ERROR_M: float = 20.0
+const SNAP_YAW: float = 0.6
+const CORRECTION_SECONDS: float = 0.15
+const HISTORY: int = 128
+const TRACK_SAMPLES: int = 8
+const STATUS_EVERY: int = 2
+const CRANE_RANGE_M: float = 2500.0
+const PING_SECONDS: float = 1.0
+const EMPTY: Dictionary = {}
 const SaveStore = preload("res://features/network/server_save_store.gd")
 const SaveSnapshot = preload("res://features/cargo/voyage_snapshot.gd")
 var saves = SaveStore.new()
@@ -64,6 +84,41 @@ var incoming_frame: int = -1
 var incoming_chunks: Dictionary = {}
 var incoming_total: int = 0
 var last_salute: Dictionary = {}
+# Patch 3.0.1 server state.
+var status_sent: Dictionary = {}
+var last_ping: Dictionary = {}
+var last_rename: Dictionary = {}
+var server_send_us: float = 0.0
+var sent_bytes: int = 0
+var report_elapsed: float = 0.0
+# Patch 3.0.1 client state: reliable ship status, per-ship motion tracks.
+var statuses: Dictionary = {}
+var tracks: Dictionary = {}
+var peer_names: Dictionary = {}
+var members: Dictionary = {}
+var epoch_tag: int = 0
+var buffer_seconds: float = BUFFER_SECONDS
+var snapshot_interval: float = INTERVAL
+var snapshot_jitter: float = 0.0
+var last_arrival: float = -1.0
+var client_snapshot_us: float = 0.0
+var ghost: HandlingShip
+var hist_seq: PackedInt32Array = PackedInt32Array()
+var hist_values: PackedFloat32Array = PackedFloat32Array()
+var history_head: int = 0
+var history_count: int = 0
+var ghost_previous: Transform3D = Transform3D.IDENTITY
+var offset_position: Vector3 = Vector3.ZERO
+var offset_yaw: float = 0.0
+var predicted_frames: int = 0
+var corrections: int = 0
+var snaps: int = 0
+var steering: float = 0.0
+var thruster: float = 0.0
+var ping_elapsed: float = 0.0
+var rtt_ms: float = -1.0
+var ping_label: Label
+var name_layer: CanvasLayer
 
 func gameplay_payload_error(payload: Dictionary) -> String:
 	if payload.size() != 2 or not payload.get("action") is String or not payload.get("value") is String: return "BAD_PAYLOAD"
@@ -146,6 +201,8 @@ func gameplay_action(request: Dictionary) -> void:
 	var sender: int = multiplayer.get_remote_sender_id()
 	if not contexts.has(sender): return
 	var response: Dictionary = actions.execute(sender, request) if request.get("kind") == "gameplay" else actions.result("", "UNKNOWN_ACTION")
+	# Gameplay state is sent on change only; any action forces a fresh copy.
+	last_gameplay.erase(sender)
 	gameplay_result.rpc_id(sender, response)
 
 
@@ -159,24 +216,40 @@ func gameplay_result(response: Dictionary) -> void:
 func server_preview(owner: int) -> Vector2i:
 	return contexts[owner].crane_preview(owner) if contexts.has(owner) else Vector2i.ZERO
 
-func ship_frame(sender: int) -> Dictionary:
+## Slow-changing ship facts, sent reliably and only when they change.
+func status_row(sender: int) -> Dictionary:
 	var context: Node3D = contexts[sender]
 	var body: HandlingShip = context.ship
 	var entry: Dictionary = context.docking.members[sender]
-	var visuals: Node3D = body.assembly.container_visuals
 	var heavy: Dictionary = {}
-	if context.heavy_mode:
-		heavy = {"height": body.deck_height, "target": body.deck_target, "attached": body.attached,
-			"active": context.heavy_jobs.active, "pose": body.payload_body.global_transform if body.payload_body.is_inside_tree() else Transform3D.IDENTITY}
+	if context.heavy_mode: heavy = {"target": body.deck_target, "attached": body.attached, "active": context.heavy_jobs.active}
 	return {"owner": sender, "captain": captains[sender], "kind": context.ship_kind,
-		"position": body.position, "yaw": body.rotation.y, "velocity": body.velocity, "speed": body.ground_speed_mps,
-		"yaw_rate": body.yaw_rate,
-		"engine": body.actual_throttle, "throttle": body.commanded_throttle, "rudder": body.rudder, "lateral": body.lateral_order,
 		"port": context.world_ports.find(context.port), "dock": entry.state, "berth": entry.berth_index,
-		"remaining": entry.remaining, "docked": body.docked, "filled": visuals.filled,
-		"paused": body.simulation_paused, "pause_reason": body.pause_reason,
-		"heavy": heavy, "job": context.bulk_active if context.bulk_mode() else context.offers.active_job("preview_captain").get("id", ""),
-		"credits": context.reward_minor, "readiness": context.docking.readiness(sender, context.service_id(), context.cargo_id()), "crane_remaining": world.cranes.remaining(sender)}
+		"docked": body.docked, "filled": body.assembly.container_visuals.filled,
+		"paused": body.simulation_paused, "pause_reason": body.pause_reason, "heavy": heavy,
+		"job": context.bulk_active if context.bulk_mode() else context.offers.active_job("preview_captain").get("id", ""),
+		"credits": context.reward_minor}
+
+## Per-tick motion for one hull; quantized by the codec, shared by recipients.
+func motion_row(sender: int) -> Dictionary:
+	var context: Node3D = contexts[sender]
+	var body: HandlingShip = context.ship
+	var row: Dictionary = {"peer": sender, "position": body.position, "yaw": body.rotation.y, "velocity": body.velocity,
+		"speed": body.ground_speed_mps, "yaw_rate": body.yaw_rate, "engine": body.actual_throttle,
+		"throttle": body.commanded_throttle, "rudder": body.rudder, "lateral": body.lateral_order,
+		"remaining": float(context.docking.members[sender].remaining)}
+	if context.heavy_mode:
+		row.heavy = {"height": body.deck_height, "pose": body.payload_body.global_transform if body.payload_body.is_inside_tree() else Transform3D.IDENTITY}
+	return row
+
+func own_motion(sender: int) -> Dictionary:
+	var ship: HandlingShip = contexts[sender].ship
+	return {"ack": int(replication.orders.get("ship_%d" % sender, EMPTY).get("seq", 0)),
+		"position": ship.global_position, "yaw": ship.rotation.y, "velocity": ship.velocity,
+		"ground_speed": ship.ground_speed_mps, "yaw_rate": ship.yaw_rate,
+		"throttle": ship.commanded_throttle, "engine": ship.actual_throttle,
+		"rudder": ship.rudder, "lateral": ship.lateral_order,
+		"fuel": ship.state.fuel_liters, "condition": ship.state.condition}
 
 func gameplay_state(context: Node3D) -> Dictionary:
 	# Presentation needs the live board, active cargo and last receipt, not the
@@ -272,88 +345,114 @@ func replace_own_ship(kind: String) -> void:
 	view.camera.distance_order = view.ship.definition.camera_distance_m
 	previous.queue_free()
 	throttle = 0.0
+	make_ghost()
 
+func make_replica(id: String, state: Dictionary) -> void:
+	var fresh: HandlingShip = render_ship(state.kind)
+	var nameplate: Label3D = Label3D.new()
+	nameplate.text = state.captain
+	nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	nameplate.position.y = fresh.definition.hull_size_m.y + 14
+	nameplate.font_size = 48
+	nameplate.pixel_size = 0.08
+	nameplate.visibility_range_end = 1800
+	fresh.add_child(nameplate)
+	replicas[id] = {"body": fresh, "kind": state.kind, "wake": fresh.assembly.create_wake(view.ocean), "label": nameplate,
+		"entry": {"kind": state.kind, "position": Vector3.ZERO, "heading": 0.0, "captain": state.captain}}
+
+func drop_replica(id: String) -> void:
+	replicas[id].body.queue_free()
+	replicas[id].wake.queue_free()
+	replicas.erase(id)
+
+## Patch 3.0.1 item 2b: each hull interpolates inside its own track at the
+## adaptive buffer delay, and extrapolates briefly when its next sample is late
+## (far ships arrive at a quarter rate). Reuses cached dictionaries per frame.
 func present_world(target: float, _delta: float) -> void:
-	if world_samples.is_empty(): return
-	while world_samples.size() > 2 and world_samples[1].stamp <= target: world_samples.pop_front()
-	var a: Dictionary = world_samples[0]
-	var b: Dictionary = world_samples[mini(1, world_samples.size() - 1)]
-	var weight: float = clampf((target - a.stamp) / maxf(0.000001, b.stamp - a.stamp), 0, 1)
 	view.other_ships.clear()
 	view.docking.members.clear()
-	for id: String in b.ships:
-		var state: Dictionary = b.ships[id]
-		var before: Dictionary = a.ships.get(id, state)
+	for id: String in statuses:
+		var track: Array = tracks.get(id, [])
+		if track.is_empty(): continue
+		var state: Dictionary = statuses[id]
+		while track.size() > 2 and track[1].stamp <= target: track.pop_front()
+		var a: Dictionary = track[0]
+		var b: Dictionary = track[mini(1, track.size() - 1)]
+		var weight: float = clampf((target - a.stamp) / maxf(0.000001, b.stamp - a.stamp), 0, 1)
+		var ahead: float = clampf(target - b.stamp, 0.0, EXTRAPOLATE_SECONDS)
 		var body: HandlingShip = view.ship
-		if id != entity:
-			if replicas.has(id) and replicas[id].kind != state.kind:
-				replicas[id].body.queue_free()
-				replicas[id].wake.queue_free()
-				replicas.erase(id)
-			if not replicas.has(id):
-				var fresh: HandlingShip = render_ship(state.kind)
-				var nameplate: Label3D = Label3D.new()
-				nameplate.text = state.captain
-				nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-				nameplate.position.y = fresh.definition.hull_size_m.y + 14
-				nameplate.font_size = 48
-				nameplate.pixel_size = 0.08
-				nameplate.visibility_range_end = 1800
-				fresh.add_child(nameplate)
-				replicas[id] = {"body": fresh, "kind": state.kind, "wake": fresh.assembly.create_wake(view.ocean), "label": nameplate}
-			body = replicas[id].body
-			var next: Vector3 = before.position.lerp(Progression.nearest(state.position, before.position), weight)
+		var own: bool = id == entity
+		if not own:
+			if replicas.has(id) and replicas[id].kind != state.kind: drop_replica(id)
+			if not replicas.has(id): make_replica(id, state)
+			var replica: Dictionary = replicas[id]
+			body = replica.body
+			var next: Vector3 = a.position.lerp(Progression.nearest(b.position, a.position), weight) + b.velocity * ahead
 			var near: Vector3 = Progression.nearest(next, view.ship.position)
 			var shift: Vector3 = Progression.nearest(body.position, near) - body.position
-			if shift.length() > 1: replicas[id].wake.shift(shift)
+			if shift.length() > 1: replica.wake.shift(shift)
 			body.position = near
-			body.rotation.y = lerp_angle(before.yaw, state.yaw, weight)
-			body.velocity = before.velocity.lerp(state.velocity, weight)
-			body.ground_speed_mps = lerpf(before.speed, state.speed, weight)
-			body.actual_throttle = state.engine
-			body.commanded_throttle = state.throttle
-			body.rudder = state.rudder
-			body.lateral_order = state.lateral
-			view.other_ships.append({"kind": state.kind, "position": body.position, "heading": body.rotation.y, "captain": state.captain})
+			body.rotation.y = lerp_angle(a.yaw, b.yaw, weight) + b.yaw_rate * ahead
+			body.velocity = a.velocity.lerp(b.velocity, weight)
+			body.ground_speed_mps = lerpf(a.speed, b.speed, weight)
+			body.actual_throttle = b.engine
+			body.commanded_throttle = b.throttle
+			body.rudder = b.rudder
+			body.lateral_order = b.lateral
+			body.yaw_rate = lerpf(a.yaw_rate, b.yaw_rate, weight)
+			var entry: Dictionary = replica.entry
+			entry.position = body.position
+			entry.heading = body.rotation.y
+			entry.captain = state.captain
+			view.other_ships.append(entry)
+		elif not predicting(): body.yaw_rate = lerpf(a.yaw_rate, b.yaw_rate, weight)
 		body.docked = state.docked
-		body.yaw_rate = lerpf(before.yaw_rate, state.yaw_rate, weight)
 		body.simulation_paused = state.paused
 		body.pause_reason = state.pause_reason
 		var visuals: Node3D = body.assembly.container_visuals
 		if visuals.capacity > 0:
 			visuals.hand_to_cranes()
 			for slot: int in mini(visuals.capacity, state.filled.size()): visuals.set_slot(slot, state.filled[slot] != 0)
-		if not state.heavy.is_empty() and body.get("payload_body") != null and body.payload_body.is_inside_tree():
-			body.deck_height = lerpf(before.heavy.get("height", state.heavy.height), state.heavy.height, weight)
+		if not state.heavy.is_empty() and b.has("heavy") and body.get("payload_body") != null and body.payload_body.is_inside_tree():
+			body.deck_height = lerpf(a.get("heavy", b.heavy).height, b.heavy.height, weight)
 			body.deck_target = state.heavy.target
 			var load_id: String = state.heavy.active.get("id", "")
 			var key: String = load_id + str(state.heavy.attached)
 			if body.get_meta("heavy_state", "") != key:
 				if not load_id.is_empty(): body.use_job_load(preload("res://features/cargo/heavy_ocean_job.gd").load_for(load_id))
-				body.restore_heavy_payload(state.heavy.attached, not load_id.is_empty(), state.heavy.pose.origin)
+				body.restore_heavy_payload(state.heavy.attached, not load_id.is_empty(), b.heavy.pose.origin)
 				body.set_meta("heavy_state", key)
 			body.deck_visual.position.y = body.deck_height - body.RAISED
 			body.cargo_mount.position.y = body.deck_height
 			if not state.heavy.attached:
-				var pose: Transform3D = before.heavy.get("pose", state.heavy.pose).interpolate_with(state.heavy.pose, weight)
+				var pose: Transform3D = a.get("heavy", b.heavy).pose.interpolate_with(b.heavy.pose, weight)
 				pose.origin = Progression.nearest(pose.origin, view.ship.position)
 				body.payload_body.global_transform = pose
 			body.payload_body.collision_layer = 0
 			body.payload_collider.disabled = true
 			body.payload_shape.disabled = true
-		view.docking.members[state.owner] = {"body": body, "port": view.world_ports[state.port], "state": state.dock,
-			"remaining": state.remaining, "berth_index": state.berth, "berth_id": view.world_ports[state.port].berth_id(maxi(0, state.berth))}
-		if id == entity:
-			view.dock_status = state.readiness
-			view.network_crane_remaining = state.crane_remaining
+		var place: Node3D = view.world_ports[state.port]
+		if not members.has(id): members[id] = {"berth_index": -2}
+		var member: Dictionary = members[id]
+		if member.berth_index != state.berth or member.get("port") != place:
+			member.berth_id = place.berth_id(maxi(0, state.berth))
+		member.body = body
+		member.port = place
+		member.state = state.dock
+		member.remaining = lerpf(a.remaining, b.remaining, weight)
+		member.berth_index = state.berth
+		view.docking.members[state.owner] = member
+		if own:
+			view.dock_status = state.get("readiness", view.dock_status)
+			view.network_crane_remaining = state.get("crane_remaining", 0.0)
 			view.dock_button.text = "Undock" if state.dock == "docked" else "Dock"
-			view.dock_button.disabled = state.dock in ["docking", "undocking"] or view.loading.busy() or state.crane_remaining > 0 or (state.dock != "docked" and not state.readiness.eligible)
-	for id: String in replicas.keys():
-		if not b.ships.has(id):
-			replicas[id].body.queue_free()
-			replicas[id].wake.queue_free()
-			replicas.erase(id)
-	apply_cranes(a.cranes, b.cranes, weight)
+			view.dock_button.disabled = state.dock in ["docking", "undocking"] or view.loading.busy() or view.network_crane_remaining > 0 or (state.dock != "docked" and not view.dock_status.get("eligible", false))
+	if world_samples.is_empty(): return
+	while world_samples.size() > 2 and world_samples[1].stamp <= target: world_samples.pop_front()
+	var first: Dictionary = world_samples[0]
+	var second: Dictionary = world_samples[mini(1, world_samples.size() - 1)]
+	if first.cranes.is_empty() and second.cranes.is_empty() and presented_cranes.is_empty(): return
+	apply_cranes(first.cranes, second.cranes, clampf((target - first.stamp) / maxf(0.000001, second.stamp - first.stamp), 0, 1))
 
 func pack_cranes() -> Array:
 	var frames: Array = []
@@ -410,6 +509,7 @@ func _ready() -> void:
 	updating = args.has("--updating")
 	var host: String = "127.0.0.1"
 	var bind_address: String = "127.0.0.1"
+	var cli_captain: String = ""
 	for arg: String in args:
 		if arg.begins_with("--port="):
 			var number: String = arg.trim_prefix("--port=")
@@ -419,7 +519,7 @@ func _ready() -> void:
 			port_number = int(number)
 		elif arg.begins_with("--host="): host = arg.trim_prefix("--host=")
 		elif arg.begins_with("--bind="): bind_address = arg.trim_prefix("--bind=")
-		elif arg.begins_with("--captain="): captain_name = arg.trim_prefix("--captain=")
+		elif arg.begins_with("--captain="): cli_captain = arg.trim_prefix("--captain=")
 		elif arg.begins_with("--saves-dir="): saves_path = arg.trim_prefix("--saves-dir=")
 		elif arg.begins_with("--control-dir="): launcher.folder = arg.trim_prefix("--control-dir=")
 	if not hosting and get_tree().has_meta(Connection.TARGET):
@@ -455,6 +555,9 @@ func _ready() -> void:
 		if not load_install_key():
 			fail("Cannot read or preserve this installation's captain identity", 2)
 			return
+		# Patch 3.0.1 item 1: --captain= (tests) wins over the saved name.
+		captain_name = CaptainName.sanitize(cli_captain) if not cli_captain.is_empty() else CaptainName.load_saved()
+		if captain_name.is_empty(): captain_name = CaptainName.FALLBACK
 		view = GAME.instantiate()
 		view.runtime_role = "client"
 		view.network_runtime = self
@@ -495,6 +598,22 @@ func _ready() -> void:
 		view.controls.set_menu_open(true)
 		view.hide()
 		join_deadline = Time.get_ticks_msec() + 10000
+		view.game_menu.add_entry("CAPTAIN NAME", open_name_dialog, view.game_menu.menu_column.get_child_count() - 2)
+		name_layer = CanvasLayer.new()
+		name_layer.layer = 121
+		add_child(name_layer)
+		if is_instance_valid(view.game_hud):
+			ping_label = view.game_hud.text(view.game_hud, 16, PLAYFUL.CREAM)
+			ping_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+			ping_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+			ping_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			ping_label.offset_left = -120
+			ping_label.offset_right = -16
+			ping_label.offset_top = 12
+			ping_label.text = "— ms"
+		make_ghost()
+		hist_seq.resize(HISTORY)
+		hist_values.resize(HISTORY * 4)
 	actions.name = "Actions"
 	add_child(actions)
 	actions.configure(self, session)
@@ -542,6 +661,8 @@ func fail(message: String, exit_code: int = 0, reason: String = "offline") -> vo
 	entity = ""
 	samples.clear()
 	world_samples.clear()
+	tracks.clear()
+	history_count = 0
 	throttle = 0.0
 	join_deadline = 0
 	last_snapshot_ms = 0
@@ -577,9 +698,12 @@ func hello(version: int, captain: String, release: String = "", key: String = ""
 		join_rejected.rpc_id(sender, "updating")
 		return
 	pending_peers.erase(sender)
-	if not SaveStore.key_valid(key) or contexts.size() + joining_keys.size() >= MAX_PLAYERS or captain.strip_edges().is_empty() or captain.length() > 24 or captain != captain.validate_node_name() or "\n" in captain or "\r" in captain:
+	if not SaveStore.key_valid(key) or contexts.size() + joining_keys.size() >= MAX_PLAYERS:
 		peer.disconnect_peer(sender)
 		return
+	# Patch 3.0.1 item 1: never trust the client's filter; clean it again.
+	var clean: String = CaptainName.sanitize(captain)
+	if clean.is_empty(): clean = CaptainName.FALLBACK
 	var player_key: String = key.sha256_text()
 	if player_keys.values().has(player_key) or joining_keys.has(player_key):
 		peer.disconnect_peer(sender)
@@ -634,7 +758,7 @@ func hello(version: int, captain: String, release: String = "", key: String = ""
 		if contexts.has(sender):
 			capture_player(sender)
 			teardown_players[sender] = true)
-	captains[sender] = captain.strip_edges()
+	captains[sender] = clean
 	context.cranes = world.cranes
 	context.docking.undock_seconds = 1.0
 	ships[id] = context.ship
@@ -664,6 +788,9 @@ func depart(sender: int) -> void:
 	last_gameplay_at.erase(sender)
 	last_salute.erase(sender)
 	last_gameplay.erase(sender)
+	status_sent.erase(sender)
+	last_ping.erase(sender)
+	last_rename.erase(sender)
 	world.docking.members.erase(sender)
 	ships.erase(id)
 	wrap.remove_hull(id)
@@ -678,6 +805,7 @@ func welcome(version: int, epoch: String, id: String) -> void:
 	if hosting or multiplayer.get_remote_sender_id() != 1 or version != PROTOCOL: return
 	if not entity.is_empty() or epoch.length() != 32 or id != "ship_%d" % multiplayer.get_unique_id(): return
 	session.epoch = epoch
+	epoch_tag = epoch.left(8).hex_to_int()
 	entity = id
 	view.owner_id = multiplayer.get_unique_id()
 	view.docking.members.clear()
@@ -703,6 +831,12 @@ func _physics_process(delta: float) -> void:
 		if save_elapsed >= 60.0:
 			save_elapsed = fmod(save_elapsed, 60.0)
 			checkpoint_players()
+		report_elapsed += delta
+		if report_elapsed >= 60.0:
+			# Patch 3.0.1 item 3: a cheap, always-on profile of the send path.
+			print("DEDICATED_TICK players=%d send_us=%d bytes_per_s=%d" % [contexts.size(), roundi(server_send_us), roundi(sent_bytes / report_elapsed)])
+			report_elapsed = 0.0
+			sent_bytes = 0
 		world.docking.members.clear()
 		for sender: int in contexts:
 			var context: Node3D = contexts[sender]
@@ -714,13 +848,14 @@ func _physics_process(delta: float) -> void:
 				wrap.add_hull(id, context.ship)
 		world.cranes.advance(delta)
 		wrap.sync(ships)
-		for sender: int in pending_peers.keys():
-			if Time.get_ticks_msec() > pending_peers[sender]:
-				pending_peers.erase(sender)
-				peer.disconnect_peer(sender)
+		if not pending_peers.is_empty():
+			for sender: int in pending_peers.keys():
+				if Time.get_ticks_msec() > pending_peers[sender]:
+					pending_peers.erase(sender)
+					peer.disconnect_peer(sender)
 		for id: String in ships:
 			var ship: HandlingShip = ships[id]
-			var order: Dictionary = replication.orders.get(id, {})
+			var order: Dictionary = replication.orders.get(id, EMPTY)
 			if order.is_empty() or Time.get_ticks_msec() - order.at > TIMEOUT_MS:
 				ship.zero_throttle()
 				ship.maneuver(0, 0)
@@ -733,39 +868,106 @@ func _physics_process(delta: float) -> void:
 		var axis: float = view.controls.action_strength("ship_throttle_up") - view.controls.action_strength("ship_throttle_down") if allowed else 0.0
 		throttle = HandlingShip.adjusted_order(throttle, axis, delta, view.ship.definition)
 		if allowed and view.controls.action_strength("ship_throttle_zero") > 0: throttle = 0.0
+		var steer_allowed: bool = view.controls.input_allowed()
+		steering = view.controls.steering_axis() if steer_allowed else 0.0
+		thruster = view.controls.action_strength("ship_thruster_right") - view.controls.action_strength("ship_thruster_left") if steer_allowed else 0.0
+		# Patch 3.0.1 item 2a: the own hull answers the helm this tick.
+		if predicting(): step_prediction(delta)
+		else: history_count = 0
 	send_elapsed += delta
 	if send_elapsed < INTERVAL: return
 	send_elapsed = fmod(send_elapsed, INTERVAL)
 	if hosting:
+		var started_us: int = Time.get_ticks_usec()
 		tick += 1
-		var fleet_frame: Dictionary = {}
-		for sender: int in contexts: fleet_frame["ship_%d" % sender] = ship_frame(sender)
-		var crane_frame: Array = pack_cranes()
-		for sender: int in contexts:
-			var ship: HandlingShip = contexts[sender].ship
-			var own: Dictionary = {
-				"position": ship.global_position, "yaw": ship.rotation.y,
-				"velocity": ship.velocity, "ground_speed": ship.ground_speed_mps,
-				"throttle": ship.commanded_throttle, "engine": ship.actual_throttle,
-				"rudder": ship.rudder, "lateral": ship.lateral_order,
-				"fuel": ship.state.fuel_liters, "condition": ship.state.condition}
-			var raw: PackedByteArray = var_to_bytes({"own": own, "ships": fleet_frame, "cranes": crane_frame})
-			var packed: PackedByteArray = PackedByteArray()
-			packed.resize(4)
-			packed.encode_u32(0, raw.size())
-			packed.append_array(raw.compress(FileAccess.COMPRESSION_FASTLZ))
-			var count: int = ceili(packed.size() / 900.0)
-			for index: int in count:
-				snapshot_chunk.rpc_id(sender, session.epoch, tick, elapsed, index, count, packed.slice(index * 900, mini(packed.size(), (index + 1) * 900)))
-			if tick % 4 == 0:
-				var data: Dictionary = gameplay_state(contexts[sender])
-				if tick % 20 == 0 or last_gameplay.get(sender, {}) != data:
-					last_gameplay[sender] = data.duplicate(true)
-					gameplay_snapshot.rpc_id(sender, session.epoch, data)
+		send_frames()
+		server_send_us = lerpf(server_send_us, float(Time.get_ticks_usec() - started_us), 0.05)
 	elif not entity.is_empty():
-		var allowed: bool = view.controls.input_allowed()
-		send_helm(throttle, view.controls.steering_axis() if allowed else 0.0,
-			view.controls.action_strength("ship_thruster_right") - view.controls.action_strength("ship_thruster_left") if allowed else 0.0)
+		send_helm(throttle, steering, thruster)
+
+## Patch 3.0.1 item 3: one compact unreliable motion frame per recipient,
+## reliable status only on change, gameplay state only on change or action.
+func send_frames() -> void:
+	var rows: Dictionary = {}
+	for sender: int in contexts: rows[sender] = motion_row(sender)
+	var crane_frame: Array = pack_cranes()
+	var fresh: Dictionary = {}
+	if tick % STATUS_EVERY == 0:
+		for sender: int in contexts: fresh["ship_%d" % sender] = status_row(sender)
+	var tag: int = session.epoch.left(8).hex_to_int()
+	for sender: int in contexts:
+		var own_position: Vector3 = contexts[sender].ship.position
+		var picked: Array = []
+		for other: int in contexts:
+			if other == sender or Relevance.due(Relevance.near(own_position, contexts[other].ship.position), tick, other): picked.append(rows[other])
+		var packed: PackedByteArray = Codec.encode_motion(own_motion(sender), picked, crane_blob(own_position, crane_frame))
+		sent_bytes += packed.size()
+		var count: int = ceili(packed.size() / 900.0)
+		if count == 1: snapshot_chunk.rpc_id(sender, tag, tick, elapsed, 0, 1, packed)
+		else:
+			for index: int in count:
+				snapshot_chunk.rpc_id(sender, tag, tick, elapsed, index, count, packed.slice(index * 900, mini(packed.size(), (index + 1) * 900)))
+		if not fresh.is_empty(): send_status(sender, fresh)
+		if tick % 4 == 0:
+			var data: Dictionary = gameplay_state(contexts[sender])
+			if last_gameplay.get(sender, EMPTY) != data:
+				last_gameplay[sender] = data.duplicate(true)
+				gameplay_snapshot.rpc_id(sender, session.epoch, data)
+
+## Cranes near the recipient only, FastLZ-packed. Four zero bytes mean none.
+func crane_blob(at: Vector3, frames: Array) -> PackedByteArray:
+	var near: Array = []
+	for frame: Dictionary in frames:
+		if Progression.short_way(world.world_ports[frame.port].global_position - at).length() <= CRANE_RANGE_M: near.append(frame)
+	var blob: PackedByteArray = PackedByteArray()
+	blob.resize(4)
+	if near.is_empty():
+		blob.encode_u32(0, 0)
+		return blob
+	var raw: PackedByteArray = var_to_bytes(near)
+	blob.encode_u32(0, raw.size())
+	blob.append_array(raw.compress(FileAccess.COMPRESSION_FASTLZ))
+	return blob
+
+func send_status(sender: int, fresh: Dictionary) -> void:
+	if not status_sent.has(sender): status_sent[sender] = {}
+	var sent: Dictionary = status_sent[sender]
+	var changes: Dictionary = {}
+	var own_id: String = "ship_%d" % sender
+	for id: String in fresh:
+		var row: Dictionary = fresh[id]
+		if id == own_id:
+			row = row.duplicate()
+			var context: Node3D = contexts[sender]
+			row.readiness = context.docking.readiness(sender, context.service_id(), context.cargo_id())
+			row.crane_remaining = snappedf(world.cranes.remaining(sender), 0.1)
+		if sent.get(id, EMPTY) != row:
+			changes[id] = row
+			sent[id] = row.duplicate(true)
+	var removed: Array = []
+	for id: String in sent.keys():
+		if not fresh.has(id):
+			removed.append(id)
+			sent.erase(id)
+	if not changes.is_empty() or not removed.is_empty(): fleet_status.rpc_id(sender, session.epoch, changes, removed)
+
+@rpc("authority", "call_remote", "reliable", 0)
+func fleet_status(epoch: String, changes: Dictionary, removed: Array) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1 or entity.is_empty() or epoch != session.epoch: return
+	for id: Variant in removed:
+		if not id is String: continue
+		statuses.erase(id)
+		tracks.erase(id)
+		members.erase(id)
+		if replicas.has(id): drop_replica(id)
+	for id: Variant in changes:
+		var row: Variant = changes[id]
+		if not id is String or not row is Dictionary or not row.get("kind") is String or not Progression.SHIPS.has(row.kind): continue
+		if not row.get("captain") is String or not row.get("port") is int or row.port < 0 or row.port >= view.world_ports.size(): continue
+		if not row.get("owner") is int or row.get("filled") == null or not row.get("heavy") is Dictionary: continue
+		row.captain = CaptainName.sanitize(row.captain)
+		statuses[id] = row
+		if replicas.has(id) and replicas[id].label.text != row.captain: replicas[id].label.text = row.captain
 
 func send_helm(command: float, rudder: float, lateral: float) -> void:
 	sequence += 1
@@ -773,9 +975,12 @@ func send_helm(command: float, rudder: float, lateral: float) -> void:
 		{"throttle": command, "rudder": rudder, "lateral": lateral, "sent_ms": Time.get_ticks_msec()}))
 
 @rpc("authority", "call_remote", "unreliable_ordered", 2)
-func snapshot_chunk(epoch: String, frame: int, stamp: float, index: int, count: int, chunk: PackedByteArray) -> void:
-	if hosting or multiplayer.get_remote_sender_id() != 1 or entity.is_empty() or epoch != session.epoch or frame <= last_tick or frame < incoming_frame: return
+func snapshot_chunk(tag: int, frame: int, stamp: float, index: int, count: int, chunk: PackedByteArray) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1 or entity.is_empty() or tag != epoch_tag or frame <= last_tick or frame < incoming_frame: return
 	if count < 1 or count > 64 or index < 0 or index >= count or chunk.size() > 900: return
+	if count == 1:
+		snapshot(frame, stamp, chunk)
+		return
 	if frame > incoming_frame:
 		incoming_frame = frame
 		incoming_chunks.clear()
@@ -786,20 +991,23 @@ func snapshot_chunk(epoch: String, frame: int, stamp: float, index: int, count: 
 	var packed: PackedByteArray = PackedByteArray()
 	for part: int in count: packed.append_array(incoming_chunks[part])
 	incoming_chunks.clear()
-	if packed.size() < 5: return
-	var length: int = packed.decode_u32(0)
-	if length < 1 or length > 65536: return
-	var decoded: Variant = bytes_to_var(packed.slice(4).decompress(length, FileAccess.COMPRESSION_FASTLZ))
-	if not decoded is Dictionary or decoded.size() != 3: return
-	snapshot(epoch, frame, stamp, decoded.own, decoded.ships, decoded.cranes)
+	snapshot(frame, stamp, packed)
 
-func snapshot(epoch: String, frame: int, stamp: float, state: Dictionary, fleet_frame: Dictionary, crane_frame: Array) -> void:
-	if hosting or multiplayer.get_remote_sender_id() != 1 or entity.is_empty() or epoch != session.epoch or frame <= last_tick: return
-	if not is_finite(stamp) or stamp < 0 or state.size() != 10: return
-	for key: String in ["position", "velocity"]:
-		if not state.get(key) is Vector3 or not state[key].is_finite(): return
-	for key: String in ["yaw", "ground_speed", "throttle", "engine", "rudder", "lateral", "fuel", "condition"]:
-		if not state.get(key) is float or not is_finite(state[key]): return
+func snapshot(frame: int, stamp: float, packed: PackedByteArray) -> void:
+	if frame <= last_tick or not is_finite(stamp) or stamp < 0: return
+	var started_us: int = Time.get_ticks_usec()
+	var decoded: Dictionary = Codec.decode_motion(packed)
+	if decoded.is_empty(): return
+	var cranes: Array = []
+	var blob: PackedByteArray = decoded.cranes
+	if blob.size() < 4: return
+	var length: int = blob.decode_u32(0)
+	if length > 0:
+		if length > 65536 or blob.size() < 5: return
+		var unpacked: Variant = bytes_to_var(blob.slice(4).decompress(length, FileAccess.COMPRESSION_FASTLZ))
+		if not unpacked is Array: return
+		cranes = unpacked
+	var state: Dictionary = decoded.own
 	last_tick = frame
 	last_snapshot_ms = Time.get_ticks_msec()
 	join_deadline = 0
@@ -809,15 +1017,117 @@ func snapshot(epoch: String, frame: int, stamp: float, state: Dictionary, fleet_
 		view.controls.set_menu_open(false)
 	received_states += 1
 	last_state = state
-	clock_offset = minf(clock_offset, Time.get_ticks_msec() / 1000.0 - stamp)
+	var now: float = Time.get_ticks_msec() / 1000.0
+	# Patch 3.0.1 item 2b: buffer ≈ 2 × measured interval + jitter, 80–250 ms.
+	if last_arrival >= 0:
+		var gap: float = now - last_arrival
+		snapshot_jitter = lerpf(snapshot_jitter, absf(gap - snapshot_interval), 0.1)
+		snapshot_interval = lerpf(snapshot_interval, gap, 0.1)
+		buffer_seconds = clampf(2.0 * snapshot_interval + snapshot_jitter, BUFFER_MIN, BUFFER_MAX)
+	last_arrival = now
+	clock_offset = minf(clock_offset, now - stamp)
 	samples.append({"stamp": stamp, "state": state})
 	while samples.size() > 16: samples.pop_front()
-	world_samples.append({"stamp": stamp, "ships": fleet_frame, "cranes": crane_frame})
+	for row: Dictionary in decoded.rows:
+		if not peer_names.has(row.peer): peer_names[row.peer] = "ship_%d" % row.peer
+		var id: String = peer_names[row.peer]
+		if not statuses.has(id): continue
+		if not tracks.has(id): tracks[id] = []
+		var track: Array = tracks[id]
+		row.stamp = stamp
+		track.append(row)
+		while track.size() > TRACK_SAMPLES: track.pop_front()
+	world_samples.append({"stamp": stamp, "ships": statuses, "cranes": cranes})
 	while world_samples.size() > 16: world_samples.pop_front()
 	if received_states == 1:
 		view.ship.position = state.position
 		view.ship.rotation.y = state.yaw
 		view.camera.set_focus(view.ship.assembly.focus)
+	reconcile(state)
+	client_snapshot_us = lerpf(client_snapshot_us, float(Time.get_ticks_usec() - started_us), 0.05)
+
+# --- Patch 3.0.1 item 2a: own-hull prediction ----------------------------------
+
+## A bare, shapeless HandlingShip runs the same advance_motion as the server.
+func make_ghost() -> void:
+	if is_instance_valid(ghost): ghost.queue_free()
+	ghost = HandlingShip.new()
+	ghost.name = "PredictedHelm"
+	ghost.definition = view.ship.definition
+	add_child(ghost)
+	ghost.set_physics_process(false)
+	ghost.collision_layer = 0
+	ghost.collision_mask = 0
+	history_count = 0
+
+## Free sailing only: berthing, pauses and docked hulls follow the server.
+func predicting() -> bool:
+	if not is_physics_processing() or not is_instance_valid(ghost) or received_states == 0: return false
+	var own: Dictionary = statuses.get(entity, EMPTY)
+	return not own.is_empty() and own.dock in ["underway", "approaching"] and not own.docked and not own.paused
+
+func ghost_step(command: float, rudder: float, lateral: float, delta: float) -> void:
+	ghost.command_throttle(command)
+	ghost.maneuver(rudder, lateral)
+	ghost.advance_motion(delta)
+	ghost.position = Progression.wrapped(ghost.position + ghost.velocity * delta)
+
+func step_prediction(delta: float) -> void:
+	if history_count == HISTORY:
+		history_head = (history_head + 1) % HISTORY
+		history_count -= 1
+	var slot: int = (history_head + history_count) % HISTORY
+	hist_seq[slot] = sequence + 1
+	hist_values[slot * 4] = throttle
+	hist_values[slot * 4 + 1] = steering
+	hist_values[slot * 4 + 2] = thruster
+	hist_values[slot * 4 + 3] = delta
+	history_count += 1
+	ghost_previous = ghost.transform
+	ghost_step(throttle, steering, thruster, delta)
+	predicted_frames += 1
+
+## Reset to the server's hull, replay unacknowledged helm, then fade the gap.
+func reconcile(state: Dictionary) -> void:
+	if not is_instance_valid(ghost): return
+	while history_count > 0 and hist_seq[history_head] <= state.ack:
+		history_head = (history_head + 1) % HISTORY
+		history_count -= 1
+	ghost.transform = Transform3D(Basis(Vector3.UP, state.yaw), state.position)
+	ghost.velocity = state.velocity
+	ghost.yaw_rate = state.yaw_rate
+	ghost.actual_throttle = state.engine
+	ghost.commanded_throttle = state.throttle
+	ghost.rudder = state.rudder
+	ghost.lateral_order = state.lateral
+	ghost.state.fuel_liters = state.fuel
+	ghost.state.condition = state.condition
+	ghost.docked = false
+	ghost.simulation_paused = false
+	for index: int in history_count:
+		var slot: int = (history_head + index) % HISTORY
+		ghost_step(hist_values[slot * 4], hist_values[slot * 4 + 1], hist_values[slot * 4 + 2], hist_values[slot * 4 + 3])
+	ghost_previous = ghost.transform
+	var shown: Vector3 = Progression.nearest(view.ship.position, ghost.position)
+	offset_position = shown - ghost.position
+	offset_yaw = angle_difference(ghost.rotation.y, view.ship.rotation.y)
+	if offset_position.length() > SNAP_ERROR_M or absf(offset_yaw) > SNAP_YAW:
+		offset_position = Vector3.ZERO
+		offset_yaw = 0.0
+		snaps += 1
+	elif offset_position.length() > 0.05: corrections += 1
+
+## Place the presented own hull; camera, wake and sea follow a seam crossing.
+func place_own(at: Vector3, yaw: float) -> void:
+	var ship: HandlingShip = view.ship
+	var wrapped: Vector3 = Progression.wrapped(at)
+	var seam: Vector3 = Progression.nearest(ship.position, wrapped) - ship.position
+	if seam.length() > 1.0:
+		view.camera.shift(seam)
+		view.wake.shift(seam)
+		view.ocean.shift(seam)
+	ship.position = wrapped
+	ship.rotation.y = yaw
 
 func _process(_delta: float) -> void:
 	if hosting:
@@ -826,36 +1136,91 @@ func _process(_delta: float) -> void:
 	if join_deadline > 0 and Time.get_ticks_msec() > join_deadline: fail("Connection timed out")
 	if last_snapshot_ms > 0 and Time.get_ticks_msec() - last_snapshot_ms > 10000: fail("Server stopped responding")
 	if notice != null: notice.text = status
+	if not entity.is_empty():
+		ping_elapsed += _delta
+		if ping_elapsed >= PING_SECONDS:
+			ping_elapsed = 0.0
+			ping.rpc_id(1, Time.get_ticks_msec())
 	if samples.is_empty(): return
-	var target: float = Time.get_ticks_msec() / 1000.0 - clock_offset - BUFFER_SECONDS
-	while samples.size() > 2 and samples[1].stamp <= target: samples.pop_front()
-	var a: Dictionary = samples[0]
-	var b: Dictionary = samples[mini(1, samples.size() - 1)]
-	var weight: float = clampf((target - a.stamp) / maxf(0.000001, b.stamp - a.stamp), 0.0, 1.0)
+	var target: float = Time.get_ticks_msec() / 1000.0 - clock_offset - buffer_seconds
 	var ship: HandlingShip = view.ship
-	# Interpolate across the short side of the torus, never through its middle.
-	var next: Vector3 = a.state.position.lerp(Progression.nearest(b.state.position, a.state.position), weight)
-	var wrapped: Vector3 = Progression.wrapped(next)
-	var shift: Vector3 = wrapped - next
-	# Camera/wake follow the same seam crossing as the presented hull.
-	var old_near: Vector3 = Progression.nearest(ship.position, wrapped)
-	var seam: Vector3 = old_near - ship.position
-	if seam.length() > 1.0:
-		view.camera.shift(seam)
-		view.wake.shift(seam)
-		view.ocean.shift(seam)
-	ship.position = next + shift
-	ship.rotation.y = lerp_angle(a.state.yaw, b.state.yaw, weight)
-	ship.velocity = a.state.velocity.lerp(b.state.velocity, weight)
-	ship.ground_speed_mps = lerpf(a.state.ground_speed, b.state.ground_speed, weight)
-	ship.commanded_throttle = b.state.throttle
-	ship.actual_throttle = b.state.engine
-	ship.rudder = b.state.rudder
-	ship.lateral_order = b.state.lateral
-	ship.state.fuel_liters = b.state.fuel
-	ship.state.condition = b.state.condition
+	if predicting():
+		var fade: float = exp(-_delta / CORRECTION_SECONDS)
+		offset_position *= fade
+		offset_yaw *= fade
+		var blend: float = Engine.get_physics_interpolation_fraction()
+		var from: Vector3 = Progression.nearest(ghost_previous.origin, ghost.position)
+		place_own(from.lerp(ghost.position, blend) + offset_position,
+			lerp_angle(ghost_previous.basis.get_euler().y, ghost.rotation.y, blend) + offset_yaw)
+		ship.velocity = ghost.velocity
+		ship.ground_speed_mps = Vector2(ghost.velocity.x, ghost.velocity.z).length()
+		ship.yaw_rate = ghost.yaw_rate
+		ship.commanded_throttle = throttle
+		ship.actual_throttle = ghost.actual_throttle
+		ship.rudder = ghost.rudder
+		ship.lateral_order = ghost.lateral_order
+	else:
+		while samples.size() > 2 and samples[1].stamp <= target: samples.pop_front()
+		var a: Dictionary = samples[0].state
+		var b: Dictionary = samples[mini(1, samples.size() - 1)].state
+		var weight: float = clampf((target - samples[0].stamp) / maxf(0.000001, samples[mini(1, samples.size() - 1)].stamp - samples[0].stamp), 0.0, 1.0)
+		# Interpolate across the short side of the torus, never through its middle.
+		place_own(a.position.lerp(Progression.nearest(b.position, a.position), weight), lerp_angle(a.yaw, b.yaw, weight))
+		ship.velocity = a.velocity.lerp(b.velocity, weight)
+		ship.ground_speed_mps = lerpf(a.ground_speed, b.ground_speed, weight)
+		ship.commanded_throttle = b.throttle
+		ship.actual_throttle = b.engine
+		ship.rudder = b.rudder
+		ship.lateral_order = b.lateral
+	ship.state.fuel_liters = last_state.fuel
+	ship.state.condition = last_state.condition
 	view.place_icebergs()
 	present_world(target, _delta)
+
+# --- Patch 3.0.1 item 2c: round-trip time -------------------------------------
+
+@rpc("any_peer", "call_remote", "unreliable", 1)
+func ping(stamp: int) -> void:
+	if not hosting: return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if not contexts.has(sender): return
+	var now: int = Time.get_ticks_msec()
+	if now - int(last_ping.get(sender, -1000)) < 500: return
+	last_ping[sender] = now
+	pong.rpc_id(sender, stamp)
+
+@rpc("authority", "call_remote", "unreliable", 1)
+func pong(stamp: int) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1: return
+	var rtt: int = Time.get_ticks_msec() - stamp
+	if rtt < 0 or rtt > 10000: return
+	rtt_ms = float(rtt) if rtt_ms < 0 else lerpf(rtt_ms, float(rtt), 0.3)
+	if ping_label != null: ping_label.text = "%d ms" % roundi(rtt_ms)
+
+# --- Patch 3.0.1 item 1: change captain name ----------------------------------
+
+func open_name_dialog() -> void:
+	if not is_instance_valid(name_layer) or name_layer.get_child_count() > 0: return
+	view.game_menu.close()
+	view.controls.set_menu_open(true)
+	name_layer.add_child(CaptainName.make_dialog(captain_name, func(chosen: String) -> void:
+		captain_name = chosen
+		if not entity.is_empty():
+			status = "Connected · " + captain_name
+			rename_captain.rpc_id(1, captain_name)
+		view.controls.set_menu_open(false), "Change captain name"))
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func rename_captain(captain: String) -> void:
+	if not hosting: return
+	var sender: int = multiplayer.get_remote_sender_id()
+	if not contexts.has(sender): return
+	var now: int = Time.get_ticks_msec()
+	if now - int(last_rename.get(sender, -5000)) < 2000: return
+	var clean: String = CaptainName.sanitize(captain)
+	if clean.is_empty(): return
+	last_rename[sender] = now
+	captains[sender] = clean
 
 func load_install_key() -> bool:
 	var path: String = "user://dedicated_install.key"

@@ -1374,6 +1374,14 @@ publication/tunnel testing remain pending. Captain name entry remains deferred;
 visual playtests and hardware frame time remain pending.
 Checks and limits are in PROGRESS.md; Windows/Mac acceptance remains pending.
 
+**Patch 3.0.1 (Andy, issue #211, November 19, 2026):** implemented for draft
+review. Captain name modal on first Play (`user://captain_name.txt`, 3-16 chars,
+re-cleaned by the server; pause menu CAPTAIN NAME renames live), own-hull
+prediction with sequence reconciliation, adaptive 80-250 ms interpolation with
+short extrapolation, 1 s ping readout, and compact quantized motion frames
+(reliable status/gameplay only on change, far ships at 5 Hz). Protocol 30101;
+version 3.0.1. Saves unchanged. Windows/Mac playtest over the relay pending.
+
 
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 

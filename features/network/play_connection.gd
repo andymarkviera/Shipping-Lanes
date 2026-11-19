@@ -3,7 +3,8 @@ extends Control
 const FEED: String = "https://raw.githubusercontent.com/andymarkviera/Shipping-Lanes-Releases/main/server.json"
 const SCENE: String = "res://features/network/play_connection.tscn"
 const TARGET: StringName = &"play_server"
-const VERSION: String = "3.0.0"
+const VERSION: String = "3.0.1"
+const CaptainName = preload("res://features/network/captain_name.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 var lookup_on_ready: bool = true
 var request: HTTPRequest
@@ -48,7 +49,14 @@ func _ready() -> void:
 	back.pressed.connect(back_to_menu)
 	stack.add_child(back)
 	back.grab_focus()
-	if lookup_on_ready: lookup()
+	if not lookup_on_ready: return
+	# Patch 3.0.1 item 1: the first Play asks for a captain name, then sails.
+	if CaptainName.load_saved().is_empty():
+		heading.text = "Welcome aboard"
+		details.text = "Choose the name other captains will see over your boat."
+		retry.hide()
+		add_child(CaptainName.make_dialog("", func(_name: String) -> void: lookup()))
+	else: lookup()
 
 func lookup(endpoint: String = FEED) -> void:
 	get_tree().remove_meta(TARGET)
