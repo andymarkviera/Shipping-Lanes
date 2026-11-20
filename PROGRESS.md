@@ -8266,3 +8266,54 @@ Andy's PR #217 comment. VERSION stays 3.1.1; no workflow edits; gas/oil untouche
   `check_dedicated_split.py` (plain, `--prediction`, `--replication`).
 - Not verified: Windows play, a real online session with an admin key, the
   re-seated punctuation on screen. The new checks are not in the Checks workflow.
+
+## Patch 3.2 — one typography system, Debug Menu, polar ice redesign (November 20, 2026)
+
+Issue #218. Status: implemented for draft review. VERSION 3.1.1 → 3.2.0
+(`play_connection.gd`, `server_package/check_runtime.py`). Gas/oil code untouched;
+no port moved; no workflow edits.
+- Typography (`display_fonts.gd` `plain_font()` / `style_button()` / `plain()` /
+  `fit()`): sprite lettering only on the port name heading (shrinks to fit its
+  card), the money figure, the objective card title and the hangar headings.
+  Every game button (port card, helm Dock, job Accept, hangar, debug) uses one
+  plain bold face at `BUTTON_SIZE` 18, in Title Case; Refuel/Repair show their
+  price as "Refuel  4.10". Job amounts, knots, the salute, warnings and toasts
+  are plain bold in colour. The debug DEBUG tag is now a small corner badge.
+- Debug Menu: debug mode's panel is collapsed into a "Debug Menu" button at the
+  bottom left (clear of the throttle bar and minimap); the button toggles it,
+  Esc closes it (`debug_game_check` covers both).
+- New `tools/ui_text_check.gd` (627 checks at 1280×720, 1440×900, 2560×1080,
+  under way, docked, debug open, map and hangar): every visible Button uses the
+  shared font and size, sprite fonts only where allowed, no Label/Button text
+  wider or taller than its rect or off screen, the badge and Debug Menu overlap
+  no heading, throttle bar or minimap.
+- North Pole (`tools/world_layout/polar_ice.py`, re-baked): an ice field from
+  the cap down to Ironreach; the port sits in a bay reached only by three
+  winding straits (west past the Ironreach headland, south to Kelp Strait,
+  east to the open sea), each also a run of new SEA_LANES points. The straight
+  eastern lead (a streak from the pole) is gone. The globe samples mipmaps
+  (seam-free gradients) so the pole reads as a cap, not a fan. Grid now 185 rows
+  per side. Polar look reaches 3.7 km from the edge.
+- South Pole: 17 seeded glaciers of varied size and shape and 25 more icebergs
+  (45 in all), clear of every port-to-port sea route, the ports and the land. A
+  natural glacier off Hearthland backs the quay instead of the rectangular patch.
+  Two-stage bake; a second run is byte-identical. All ice is baked data
+  (`polar_ice.json`, `ICE_SHELVES`, `ICEBERGS`), so client and server match.
+  Glaciers and the new icebergs keep open sea round Ember Isle's volcano.
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, every
+  Stage 2 command, Stage 4 report probes (`ports_probe` 598), `ui_text_check`,
+  `debug_game_check`, `world_land_check`, `polar_biome_check`, `volcano_check`,
+  `port_menu_check`, `hangar_check`, `display_fonts_check` (warnings now plain
+  red), `check_m1_voyage`, `day_night_check`, `menu_glyph_check`,
+  `debug_captain_check`, `mooring_check`, `crane_check`, `cannon_salute_check`,
+  pirate ship checks, `check_snapshot_budget`, `check_dedicated_split.py`
+  (plain, `--prediction`, `--replication`), `check_play_connection.py`.
+  Python: Stage 3 in full (`traversal_budget.py` PASS; North Pole routes now
+  5–8 turns), and a second `polar_ice.py` bake is byte-identical.
+- Same on `main` (not this patch): `dedicated_split_check.gd` alone times out
+  (it needs its Python runner), `play_connection_check.gd` prints one
+  "Error parsing URL" line but passes.
+- Not done: adding `ui_text_check` to `.github/workflows/checks.yml` (workflow
+  edits are Andy's/Hark's call).
+- Not verified: Windows play, the globe's look on screen (headless has no
+  renderer), sailing the straits by hand with the biggest hulls.

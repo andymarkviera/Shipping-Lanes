@@ -33,6 +33,8 @@ var screen: Control
 var viewport: SubViewport
 var turntable: Node3D
 var name_label: Label
+## Patch 3.2: the "BOAT HANGAR" heading (sprite lettering, like the port name).
+var title_label: Label
 var family_label: Label
 var stats_label: Label
 var status_label: Label
@@ -264,6 +266,7 @@ func build_overlay() -> void:
 	title.add_theme_color_override("font_color", PLAYFUL.SUN)
 	DISPLAY.apply(title)
 	top.add_child(title)
+	title_label = title
 	var filters: HBoxContainer = HBoxContainer.new()
 	filters.alignment = BoxContainer.ALIGNMENT_CENTER
 	filters.add_theme_constant_override("separation", 8)
@@ -301,8 +304,6 @@ func build_overlay() -> void:
 	column.add_child(actions)
 	action_button = make_button(actions, "Buy", press_action, Vector2(300, 52))
 	sell_button = make_button(actions, "Sell", press_sell, Vector2(220, 52))
-	DISPLAY.apply(action_button, "gold")
-	DISPLAY.apply(sell_button, "gold")
 	status_label = label(column, 15, PLAYFUL.SUN_LIGHT)
 	status_label.custom_minimum_size = Vector2(720, 0)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -318,9 +319,9 @@ func label(parent: Node, font_size: int, colour: Color) -> Label:
 func make_button(parent: Node, title: String, action: Callable, at_least: Vector2) -> Button:
 	var item: Button = Button.new()
 	item.text = title
-	DISPLAY.apply(item, "gold" if title == "Other boats" else "white")
+	# Patch 3.2: the shared plain UI button font, size and casing.
+	DISPLAY.style_button(item)
 	item.custom_minimum_size = at_least
-	item.add_theme_font_size_override("font_size", 20)
 	# No keyboard focus: the keys above always reach the hangar.
 	item.focus_mode = Control.FOCUS_NONE
 	item.pressed.connect(action)

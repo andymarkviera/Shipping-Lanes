@@ -4,6 +4,11 @@ const WHITE: FontFile = preload("res://features/ui/fonts/white.fnt")
 const GOLD: FontFile = preload("res://features/ui/fonts/gold.fnt")
 const RED: FontFile = preload("res://features/ui/fonts/red.fnt")
 static var prepared: bool = false
+## Patch 3.2 typography: sprite lettering is only for the port name heading, the
+## money figure and the objective card title. Every in-game button uses this one
+## plain bold UI font at BUTTON_SIZE, in Title Case; body text uses the same face.
+const BUTTON_SIZE: int = 18
+static var plain_face: FontVariation
 
 static func font(kind: String = "white") -> Font:
 	if not prepared:
@@ -24,6 +29,36 @@ static func apply(control: Control, kind: String = "white") -> void:
 	control.add_theme_constant_override("outline_size", 0)
 	control.add_theme_constant_override("shadow_outline_size", 0)
 	control.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
+
+## The plain bold UI face (the playful theme's default font), shared by every
+## in-game button and body label.
+static func plain_font() -> Font:
+	if plain_face == null:
+		plain_face = FontVariation.new()
+		plain_face.base_font = ThemeDB.fallback_font
+		plain_face.variation_embolden = 0.5
+	return plain_face
+
+## The one in-game button style: plain bold face, BUTTON_SIZE, theme colours.
+static func style_button(control: Button) -> void:
+	clear(control)
+	control.add_theme_font_override("font", plain_font())
+	control.add_theme_font_size_override("font_size", BUTTON_SIZE)
+	control.texture_filter = CanvasItem.TEXTURE_FILTER_PARENT_NODE
+
+## Plain bold text in a colour (gold amounts, red warnings) instead of a sprite sheet.
+static func plain(control: Control, colour: Color = Color.WHITE, size_px: int = 0) -> void:
+	clear(control)
+	control.add_theme_font_override("font", plain_font())
+	control.add_theme_color_override("font_color", colour)
+	if size_px > 0: control.add_theme_font_size_override("font_size", size_px)
+
+## Shrink a one-line heading's font until its text fits `width` pixels.
+static func fit(label: Label, width: float, largest: int, smallest: int = 12) -> void:
+	var font: Font = label.get_theme_font("font")
+	var px: int = largest
+	while px > smallest and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > width: px -= 1
+	label.add_theme_font_size_override("font_size", px)
 
 ## Return transient message/status labels to their inherited body styling.
 static func clear(control: Control) -> void:

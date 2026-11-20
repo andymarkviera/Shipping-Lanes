@@ -34,13 +34,23 @@ void fragment() {
 const SHADER: String = """
 shader_type spatial;
 render_mode unshaded, cull_back;
-uniform sampler2D map : filter_linear, repeat_enable;
+uniform sampler2D map : filter_linear_mipmap, repeat_enable;
 varying vec3 spot;
 void vertex() { spot = VERTEX; }
 void fragment() {
 	vec3 p = normalize(spot);
 	vec2 uv = vec2(atan(p.x, p.z + (abs(p.x) + abs(p.z) < 1e-6 ? 1e-6 : 0.0)) / 6.2831853 + 0.5, 0.5 - asin(clamp(p.y, -1.0, 1.0)) / 3.1415927);
-	vec3 colour = texture(map, uv).rgb;
+	// Patch 3.2: sample the mipmaps, so the rows that crowd into each pole
+	// average out instead of fanning into streaks. The slopes come from a
+	// copy of u without the date-line jump, so that line shows no seam.
+	vec2 turned = vec2(fract(uv.x + 0.5), uv.y);
+	vec2 across = dFdx(uv);
+	vec2 down = dFdy(uv);
+	vec2 across_turned = dFdx(turned);
+	vec2 down_turned = dFdy(turned);
+	if (abs(across_turned.x) < abs(across.x)) across.x = across_turned.x;
+	if (abs(down_turned.x) < abs(down.x)) down.x = down_turned.x;
+	vec3 colour = textureGrad(map, uv, across, down).rgb;
 	// Toon light from the upper left, like the minimap: lit, then one shade band.
 	float light = dot(NORMAL, normalize(vec3(-0.5, 0.6, 0.65)));
 	colour *= light > 0.05 ? 1.0 : 0.72;
@@ -116,7 +126,9 @@ static func atlas() -> ImageTexture:
 	# Patch 2.9 item 6A: the natural land, pixel by pixel from the coast depth
 	# grid (nearest sample): green inland, an ink line along the coast.
 	var grid: Dictionary = Progression.natural_land()
-	if grid.is_empty(): return ImageTexture.create_from_image(page)
+	if grid.is_empty():
+		page.generate_mipmaps()
+		return ImageTexture.create_from_image(page)
 	var count: Vector2i = grid.count
 	var depth: PackedFloat32Array = grid.depth
 	var cell: float = grid.cell
@@ -136,6 +148,8 @@ static func atlas() -> ImageTexture:
 			if i < 0 or i >= count.x: continue
 			var d: float = depth[j * count.x + i]
 			if d > 0.0: page.set_pixel(px, py, ink if d < 20.0 else PLAYFUL.LEAF)
+	# Patch 3.2: mipmapped (see SHADER), so the poles read as a cap, not a fan.
+	page.generate_mipmaps()
 	return ImageTexture.create_from_image(page)
 
 static func flat(colour: Color) -> StandardMaterial3D:

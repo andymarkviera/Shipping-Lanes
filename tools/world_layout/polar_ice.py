@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SEED = 2916
 WRAP = 4000.0 * math.pi
 NX = 500
-HALF = 110
+HALF = 185
 NZ = HALF * 2
 CELL = WRAP / NX
 COLUMNS = 10
@@ -53,6 +53,26 @@ CAP_NOISE_M = 560.0
 CAP_MAX_M = 1300.0
 LEAD_HALF_M = 165.0
 BERG_GAP_M = 190.0
+# Patch 3.2: the North Pole port sits in an ice field reached only through
+# narrow winding straits (each also a run of sea-lane points in progression.gd).
+STRAIT_HALF_M = 115.0
+NORTH_STRAITS = [
+    # West: from the basin along the Ironreach headland to Needle Gut's water.
+    [(3640, 3450), (3420, 3560), (3100, 3640), (2800, 3720), (2400, 3550), (2000, 3680), (1650, 3570), (1250, 3650), (950, 3620)],
+    # South: down between Ironreach and the round island to Kelp Strait.
+    [(4250, 2480), (4080, 2300), (4230, 2100), (4100, 1900), (4230, 1700)],
+    # East: out to the open eastern sea.
+    [(4750, 3300), (5150, 3050), (5500, 3000), (5850, 3250), (6150, 3150), (6400, 2850)],
+]
+# The basin round the port: three overlapping bays (X, Z, radius), together
+# well round its berths, approach and heavy drop area.
+BASIN = [(3900.0, 4250.0, 690.0), (4300.0, 3550.0, 770.0), (4300.0, 3000.0, 660.0), (3860.0, 2760.0, 340.0)]
+FIELD_WEST_M = 1250.0
+FIELD_EAST_M = 6600.0
+# Patch 3.2 item 3: seeded glaciers and extra icebergs in the southern sea.
+GLACIER_TRIES = 1500
+EXTRA_BERGS = 25
+ORIGINAL_BERGS = 20
 
 
 def periodic(noise, x, z, scale, octaves, x0):
@@ -61,7 +81,7 @@ def periodic(noise, x, z, scale, octaves, x0):
     return ((WRAP - u) * noise.fbm(u, z, scale, octaves) + u * noise.fbm(u - WRAP, z, scale, octaves)) / WRAP
 
 
-def bake(geo):
+def bake(geo, glaciers=()):
     cx, cz = geo['centre']
     x0, edge_n, edge_s = cx - WRAP / 2, cz + WRAP / 2, cz - WRAP / 2
     coast, fine, floe = nl.Noise(SEED), nl.Noise(SEED + 1), nl.Noise(SEED + 2)
@@ -74,7 +94,12 @@ def bake(geo):
     land = [(r[0], up(r[1]), r[2], r[3]) for r in geo['land']]
     land = [r for r in land if r[1] + r[3] > edge_n - HALF * CELL - 500.0 and r[1] < edge_n + HALF * CELL + 500.0]
     leads = [((680.0, 3550.0), (-2600.0, up(-4800.0))), ((2400.0, 3550.0), (south[0], up(south[2] - geo['gate'])))]
-    south_isle = (south[0] + 100.0, up(south[2] - 260.0), 600.0, 520.0)
+    # Patch 3.2: a natural glacier tongue from the cap backs the South Pole
+    # quay (it replaces the old rectangular island).
+    # It spills off Hearthland's south coast, clear of the lead and the route.
+    tongue = [(south[0] + 230.0, up(south[2] + 140.0)), (south[0] + 480.0, up(south[2] + 60.0)), (south[0] + 760.0, up(south[2] + 120.0)),
+              (south[0] + 1050.0, up(south[2] + 40.0))]
+    strait_points = {p for path in NORTH_STRAITS for p in path}
 
     def short(dx):
         return tb._short(dx, WRAP)
@@ -84,6 +109,21 @@ def bake(geo):
         (ax, az), (bx, bz) = lead
         shift = round((p[0] - (ax + bx) / 2) / WRAP) * WRAP
         return nl.segment_sdf(p, (ax + shift, az), (bx + shift, bz))
+
+    def strait_gap(p):
+        return min(nl.segment_sdf(p, path[n], path[n + 1]) for path in NORTH_STRAITS for n in range(len(path) - 1))
+
+    def in_field(x, z, wobble):
+        """Patch 3.2: the North Pole ice field, from the cap down to Ironreach."""
+        noise = periodic(coast, x, z, 900.0, 3, x0)
+        ragged = periodic(floe, x, z, 480.0, 3, x0)
+        west, east = FIELD_WEST_M + 140.0 * noise + 260.0 * ragged, FIELD_EAST_M + 160.0 * noise - 260.0 * ragged
+        if not west < x < east: return False
+        # Lower round the port's south strait and the island beside it, higher
+        # towards both ends.
+        base = 2300.0 - 600.0 * max(0.0, 1.0 - abs(x - 4150.0) / 1000.0) + 130.0 * noise + 60.0 * wobble
+        base += 2.4 * max(0.0, west + 700.0 - x) + 2.4 * max(0.0, x - (east - 700.0))
+        return z > base
 
     def is_ice(x, z):
         p = (x, z)
@@ -100,28 +140,42 @@ def bake(geo):
         # Floes calved off the coast.
         if not ice and s < reach + 300.0 and periodic(floe, x, z, 170.0, 2, x0) > 0.36: ice = True
         cap = ice
+        field = northern and in_field(x, z, wobble)
+        if field: ice = True
+        if not northern:
+            for gx, gz, gr, ga, gs in glaciers:
+                dx, dz = short(x - gx), z - gz
+                if abs(dx) > gr * 2.6 or abs(dz) > gr * 2.6: continue
+                # An elongated, lumpy floe of glacier ice at its own heading.
+                along, across = dx * math.cos(ga) + dz * math.sin(ga), -dx * math.sin(ga) + dz * math.cos(ga)
+                gap = math.hypot(along / gs, across * gs)
+                if gap < gr * (1.0 + 0.38 * periodic(floe, x, z, 150.0, 2, x0) + 0.15 * wobble): ice = True
         if northern:
             # The tongue out to the North Pole port, behind its quay.
             spine = [(north[0] - 400.0, north[2] + 30.0), (north[0] - 560.0, north[2] + 520.0), (north[0] - 430.0, north[2] + 980.0), (north[0] - 520.0, edge_n - 850.0)]
             girth = 300.0 + 150.0 * periodic(coast, x, z, 520.0, 3, x0) + 60.0 * wobble
             if x < north[0] - 85.0 and min(nl.segment_sdf(p, spine[n], spine[n + 1]) for n in range(3)) < girth: ice = True
-            if north[0] - 250.0 <= x < north[0] - 85.0 and north[2] - 290.0 <= z <= north[2] + 1000.0: ice = True
+            if north[0] - 250.0 <= x < north[0] - 85.0 and north[2] - 290.0 <= z <= north[2] + 600.0: ice = True
         else:
-            if x > south[0] + 85.0 and nl.rect_sdf(p, south_isle, 160.0) + 70.0 * wobble < 0.0: ice = True
-            if south[0] + 85.0 < x <= south[0] + 250.0 and up(south[2] - 250.0) <= z <= up(south[2] + 230.0): ice = True
+            girth = 165.0 + 45.0 * periodic(coast, x, z, 520.0, 3, x0) + 30.0 * wobble
+            if x > south[0] + 85.0 and min(nl.segment_sdf(p, tongue[n], tongue[n + 1]) for n in range(len(tongue) - 1)) < girth: ice = True
         if not ice: return False
         # Open water that must stay.
-        if northern and z < north[2] - 310.0: return False
-        if north[0] - 85.0 <= x < north[0] + 640.0 + 60.0 * wobble and z < north[2] + 1010.0 + 40.0 * wobble: return False
+        if northern and not field and z < north[2] - 310.0: return False
+        # The port's basin in the field: berths, approach and heavy drop area.
+        if northern and (x >= north[0] - 85.0 or not north[2] - 350.0 < z < north[2] + 700.0) and any(
+                math.hypot(x - bx, z - bz) < br + 70.0 * periodic(floe, x, z, 260.0, 2, x0) + 30.0 * wobble for bx, bz, br in BASIN): return False
+        if northern and strait_gap(p) < STRAIT_HALF_M + 30.0 * periodic(floe, x, z, 300.0, 2, x0) + 15.0 * wobble: return False
         if not northern and x <= south[0] + 85.0 and x > south[0] - 1050.0 and z > up(south[2] - 1480.0): return False
         if not northern and z > up(south[2] + 300.0): return False
         for lead in leads:
             if lead_gap(p, lead) < LEAD_HALF_M + 70.0 * periodic(floe, x, z, 380.0, 2, x0) + 30.0 * wobble: return False
-        if abs(short(x - (5500.0 + 160.0 * math.sin((z - edge_n) / 520.0)))) < LEAD_HALF_M + 70.0 * periodic(floe, x, z, 380.0, 2, x0) + 30.0 * wobble: return False
-        if any(math.hypot(short(x - lx), z - lz) < 230.0 for lx, lz in lanes): return False
+        # Patch 3.2: the straight eastern lead is gone (it drew a streak from the pole).
+        if any(math.hypot(short(x - lx), z - lz) < 230.0 for lx, lz in lanes if (lx, lz) not in strait_points): return False
         # The cap keeps well off the land; the ports' own ice stands where the
         # old shelves stood, nearer to it.
-        room = 480.0 if cap else 140.0
+        quay_glacier = not northern and x > south[0] + 85.0 and min(nl.segment_sdf(p, tongue[n], tongue[n + 1]) for n in range(len(tongue) - 1)) < 260.0
+        room = 0.0 if field or quay_glacier else (480.0 if cap else 140.0)
         if any(nl.rect_sdf((r[0] + r[2] / 2 + short(x - r[0] - r[2] / 2), z), r) < room for r in land): return False
         return True
 
@@ -147,7 +201,74 @@ def bake(geo):
             rects += cover_rects(own, x0, edge_n, edge_s)
             chunks.append((first, len(rects)))
             outlines += chunk_outlines(set(own), x0, edge_n, edge_s)
-    return dict(ice=ice, depth=depth, rects=rects, chunks=chunks, outlines=outlines, x0=x0, edge_n=edge_n, edge_s=edge_s, leads=leads)
+    return dict(ice=ice, depth=depth, rects=rects, chunks=chunks, outlines=outlines, x0=x0, edge_n=edge_n, edge_s=edge_s, leads=leads, glaciers=glaciers)
+
+
+def route_segments(geo):
+    """Every leg of every port-to-port sea route, as segments in world X/Z."""
+    gates = [(p['at'][0], p['at'][2] - geo['gate']) for p in geo['world']]
+    out = []
+    for a in range(len(gates)):
+        for b in range(a + 1, len(gates)):
+            _, path = tb.sea_route(geo, gates[a], gates[b])
+            for n in range(len(path) - 1):
+                p, q = path[n], path[n + 1]
+                out.append((p, (p[0] + tb._short(q[0] - p[0], WRAP), p[1] + tb._short(q[1] - p[1], WRAP))))
+    return out
+
+
+def route_gap(segments, x, z):
+    """Metres from (x, z) to the nearest route leg, round the world both ways."""
+    best = 1e9
+    for a, b in segments:
+        for sx in (-WRAP, 0.0, WRAP):
+            for sz in (-WRAP, 0.0, WRAP):
+                best = min(best, nl.segment_sdf((x + sx, z + sz), a, b))
+    return best
+
+
+def ember(geo):
+    """Ember Isle's land blocks: the volcano wants open sea all round them."""
+    return [geo['land'][n] for name, first, end in geo['masses'] if name == 'Ember Isle' for n in range(first, end)]
+
+
+def plan(geo):
+    """Patch 3.2: bake in two stages so a re-bake gives the same ice. The sea
+    routes are found round the land and the glacier-free ice only (no
+    icebergs): nothing this script writes changes them. The glaciers and the
+    extra icebergs then keep clear of those routes."""
+    first = bake(geo)
+    segments = route_segments(dict(geo, ice=first['rects'], bergs=[]))
+    baked = bake(geo, scatter_glaciers(geo, first['edge_n'], segments))
+    baked['segments'] = segments
+    return baked
+
+
+def scatter_glaciers(geo, edge_n, segments):
+    """Patch 3.2 item 3: seeded glaciers of varied size in the southern polar
+    sea (north copy: z past the edge), clear of every sea route, the ports'
+    approaches and the land. Same seed, same glaciers, on every machine."""
+    import random
+    rng = random.Random(SEED + 32)
+    cx, cz = geo['centre']
+    south = next(p for p in geo['world'] if p['id'] == 'port_south_pole')['at']
+    out = []
+    for _ in range(GLACIER_TRIES):
+        x = cx + rng.uniform(-WRAP / 2, WRAP / 2)
+        r = rng.uniform(90.0, 300.0)
+        stretch = rng.uniform(1.0, 1.9)
+        angle = rng.uniform(0.0, math.pi)
+        z = edge_n + rng.uniform(1100.0 + r, 2500.0)
+        real = z - WRAP
+        reach = r * 1.4 * stretch
+        if route_gap(segments, x, real) < reach + 170.0: continue
+        if any(math.hypot(tb._short(x - p['at'][0], WRAP), real - p['at'][2]) < reach + 800.0 for p in geo['world']): continue
+        if math.hypot(tb._short(x - south[0], WRAP), real - south[2]) < reach + 1300.0: continue
+        if any(nl.rect_sdf((x, real), q) < reach + 220.0 for q in geo['land']): continue
+        if any(nl.rect_sdf((x, real), q) < reach + 600.0 for q in ember(geo)): continue
+        if any(math.hypot(tb._short(x - g[0], WRAP), z - g[1]) < reach + g[2] * 1.4 * g[4] + 160.0 for g in out): continue
+        out.append((x, z, r, angle, stretch))
+    return out
 
 
 def components(mask, value):
@@ -310,12 +431,15 @@ def move_bergs(geo, baked):
         # `pad` 0 is what the checks ask of a berg that stays; a moved one
         # keeps more room.
         if ice_gap(x, z) < min(r + BERG_GAP_M, 290.0): return False
-        if any(ice_gap(x + dx, z + dz) < 200.0 for dx in (-150, 0, 150) for dz in (-150, 0, 150)): return False
+        if any(ice_gap(x + dx, z + dz) < (130.0 if pad == 20.0 else 200.0) for dx in (-150, 0, 150) for dz in (-150, 0, 150)): return False
         if abs(z - edge_n) > 2500.0: return False
         if any(lead_clear(x, z, lead) < r + 220.0 + pad for lead in baked['leads']): return False
-        if abs(tb._short(x - (5500.0 + 160.0 * math.sin((z - edge_n) / 520.0)), WRAP)) < r + 270.0 + pad: return False
+        # Only new icebergs need this: the routes were found round the old ones.
+        if pad == 20.0 and route_gap(segments, x, z - WRAP if z > edge_n else z) < r + 140.0: return False
         if any(math.hypot(tb._short(x - lx, WRAP), z - up(lz)) < r + 120.0 + pad * 2 for lx, lz in geo['lanes']): return False
         if any(nl.rect_sdf((x, z), (q[0], up(q[1]), q[2], q[3])) < r + 160.0 + pad * 5 for q in geo['land']): return False
+        # Ember Isle's volcano keeps open sea round it (tools/volcano_check.gd).
+        if any(nl.rect_sdf((x, z), (q[0], up(q[1]), q[2], q[3])) < r + 900.0 for q in ember(geo)): return False
         for p in geo['world']:
             lx, lz = tb._short(x - p['at'][0], WRAP), z - up(p['at'][2])
             if math.hypot(lx, lz) < r + 710.0 + pad * 2: return False
@@ -326,6 +450,9 @@ def move_bergs(geo, baked):
         (ax, az), (bx, bz) = lead
         return min(nl.segment_sdf((x + shift, z), (ax, az), (bx, bz)) for shift in (-WRAP, 0.0, WRAP))
 
+    segments = baked['segments']
+    # Only the original icebergs move; a re-bake re-adds the extra ones.
+    geo = dict(geo, bergs=geo['bergs'][:ORIGINAL_BERGS])
     kept = [b for b in geo['bergs'] if fits(b[0], up(b[2]), b[1], [o for o in geo['bergs'] if o != b], 0.0)]
     out, moved = [], 0
     for berg in geo['bergs']:
@@ -335,9 +462,11 @@ def move_bergs(geo, baked):
         others = kept + [o for o in out if o not in kept]
         x, r, z = berg[0], berg[1], up(berg[2])
         found = None
-        for ring in range(1, 60):
-            spots = [(x + ring * 100.0 * math.cos(a * math.pi / 12), z + ring * 100.0 * math.sin(a * math.pi / 12)) for a in range(24)]
-            spots = [q for q in spots if fits(q[0], q[1], r, others, 100.0)]
+        # Patch 3.2: the North Pole ice field swallows more of them, so the
+        # search reaches further, round the world if it must.
+        for ring in range(1, 125):
+            spots = [(x + ring * 100.0 * math.cos(a * math.pi / 24), z + ring * 100.0 * math.sin(a * math.pi / 24)) for a in range(48)]
+            spots = [q for q in spots if fits(q[0], q[1], r, others, 100.0 if ring < 60 else 60.0)]
             if spots:
                 found = min(spots, key=lambda q: (abs(q[1] - z), q[0]))
                 break
@@ -346,6 +475,20 @@ def move_bergs(geo, baked):
         fz = found[1] - WRAP if found[1] > edge_n else found[1]
         out.append((float(round(fx / 10) * 10), r, float(round(fz / 10) * 10)))
         moved += 1
+    # Patch 3.2 item 3: EXTRA_BERGS more, seeded, of varied size, scattered
+    # through the southern polar sea. Written after the old ones, so the old
+    # icebergs keep their index.
+    import random
+    rng = random.Random(SEED + 77)
+    added = 0
+    for _ in range(20000):
+        if added == EXTRA_BERGS: break
+        r = float(rng.choice((30, 35, 40, 45, 50, 55, 60, 70, 80, 90)))
+        x, z = cx + rng.uniform(-WRAP / 2, WRAP / 2), edge_n + rng.uniform(300.0, 2500.0)
+        if not fits(x, z, r, out, 20.0): continue
+        out.append((float(round(x / 10) * 10), r, float(round((z - WRAP) / 10) * 10)))
+        added += 1
+    if added < EXTRA_BERGS: raise SystemExit('only %d of %d extra icebergs found open water' % (added, EXTRA_BERGS))
     return out, moved
 
 
@@ -416,7 +559,7 @@ def preview(geo, baked, bergs):
 
 def main():
     geo = tb.game_world(tb.load())
-    baked = bake(geo)
+    baked = plan(geo)
     found = problems(geo, baked)
     if found: raise SystemExit('polar ice rejected: ' + '; '.join(found))
     bergs, moved = move_bergs(geo, baked)

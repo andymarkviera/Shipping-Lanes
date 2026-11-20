@@ -20,8 +20,12 @@ const CREDITS_MINOR: int = 100_000_000_000
 ## HUD rounds to the top speed).
 const FULL_SPEED_MARGIN_KNOTS: float = 0.5
 
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 var view: Node
 var tag: Label
+var badge: PanelContainer
+var toggle_button: Button
+var panel: PanelContainer
 var readout: Label
 var notice: Label
 var travel_list: VBoxContainer
@@ -41,44 +45,63 @@ func _ready() -> void:
 	layer = 8
 	for kind: String in Hangar.ladder(): view.fleet[kind] = {"fuel": 1.0, "condition": 1.0}
 	view.reward_minor = CREDITS_MINOR
-	tag = Label.new()
-	tag.text = "DEBUG"
-	tag.add_theme_font_size_override("font_size", 34)
-	tag.add_theme_color_override("font_color", Color("ff5a4a"))
-	tag.add_theme_color_override("font_outline_color", Color.WHITE)
-	tag.add_theme_constant_override("outline_size", 10)
-	tag.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tag.offset_left = -80
-	tag.offset_right = 80
-	tag.offset_top = 8
-	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Its own top layer, so the tag stays visible over the hangar and the Esc menu.
+	# Patch 3.2: the DEBUG tag is a small badge in the bottom-left corner, on its
+	# own top layer (visible over the hangar, the map and the Esc menu) and clear
+	# of every heading.
 	var top: CanvasLayer = CanvasLayer.new()
 	top.layer = 100
 	add_child(top)
-	top.add_child(tag)
-	var panel: PanelContainer = PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
+	badge = PanelContainer.new()
+	var red: StyleBoxFlat = PLAYFUL.box(Color("c8372a"), Color.WHITE, 6, 2, 0)
+	red.content_margin_left = 6
+	red.content_margin_right = 6
+	badge.add_theme_stylebox_override("panel", red)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	badge.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	badge.offset_left = 6
+	badge.offset_bottom = -4
+	top.add_child(badge)
+	tag = Label.new()
+	tag.text = "DEBUG"
+	DISPLAY.plain(tag, Color.WHITE, 12)
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.add_child(tag)
+	# Patch 3.2 follow-up: collapsed by default into a small "Debug Menu" button
+	# at the bottom left, above the badge; it toggles the full controls (Esc closes).
+	toggle_button = add_button(self, "Debug Menu", toggle)
+	PLAYFUL.dress(toggle_button)
+	DISPLAY.style_button(toggle_button)
+	toggle_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	toggle_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	toggle_button.offset_left = 20
+	toggle_button.offset_bottom = -30
+	panel = PanelContainer.new()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	panel.offset_left = 20
-	panel.offset_top = -170
+	panel.offset_bottom = -84
 	PLAYFUL.dress(panel)
+	panel.hide()
 	add_child(panel)
 	var stack: VBoxContainer = VBoxContainer.new()
 	panel.add_child(stack)
 	readout = Label.new()
+	DISPLAY.plain(readout, Color.WHITE, 16)
 	stack.add_child(readout)
-	add_button(stack, "HANGAR", func() -> void: view.hangar.open())
+	add_button(stack, "Hangar", func() -> void: view.hangar.open())
 	# Patch 3.1: jump to the next time of day (local test world only).
-	add_button(stack, "NEXT TIME OF DAY", func() -> void: preload("res://features/sky/day_night.gd").skip_phase())
+	add_button(stack, "Next Time of Day", func() -> void: preload("res://features/sky/day_night.gd").skip_phase())
 	var heading: Label = Label.new()
-	heading.text = "Quick travel"
+	heading.text = "Quick Travel"
+	DISPLAY.plain(heading, PLAYFUL.SUN, 16)
 	stack.add_child(heading)
 	travel_list = VBoxContainer.new()
 	stack.add_child(travel_list)
 	for index: int in view.world_ports.size():
 		add_button(travel_list, view.world_ports[index].definition.display_name, travel.bind(index))
 	notice = Label.new()
+	DISPLAY.plain(notice, PLAYFUL.CREAM, 15)
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	notice.custom_minimum_size.x = 220
 	stack.add_child(notice)
@@ -87,9 +110,25 @@ func add_button(parent: Node, title: String, action: Callable) -> Button:
 	var node: Button = Button.new()
 	node.text = title
 	node.focus_mode = Control.FOCUS_NONE
+	DISPLAY.style_button(node)
 	node.pressed.connect(action)
 	parent.add_child(node)
 	return node
+
+## Open or close the full debug controls.
+func toggle() -> void:
+	panel.visible = not panel.visible
+
+func is_open() -> bool:
+	return panel.visible
+
+## Esc closes the open debug controls first (unless another overlay owns Esc).
+func _input(event: InputEvent) -> void:
+	if not panel.visible or not (event is InputEventKey and event.pressed and not event.echo): return
+	if event.keycode != KEY_ESCAPE and event.physical_keycode != KEY_ESCAPE: return
+	if view.hangar.is_open() or view.game_menu.is_open() or view.globe_map.is_open(): return
+	panel.hide()
+	get_viewport().set_input_as_handled()
 
 func _process(_delta: float) -> void:
 	if view.reward_minor < CREDITS_MINOR / 2: view.reward_minor = CREDITS_MINOR
