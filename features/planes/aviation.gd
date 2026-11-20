@@ -35,6 +35,8 @@ const LOW_FINE_MINOR: int = 100000
 ## Slower than this on a runway counts as stopped at the airport.
 const STOPPED_MPS: float = 2.0
 const LEVER_RATE: float = 0.6
+## Patch 4.0.1 item 2: a touchdown sinking faster than this costs condition.
+const FIRM_SINK_MPS: float = 3.5
 ## Arcade mouse aim: the cursor's reach (share of the screen's short side
 ## from the centre to full deflection), its dead zone, and how much of the
 ## sideways aim goes to roll and to the coordinating yaw.
@@ -42,6 +44,18 @@ const AIM_REACH: float = 0.4
 const AIM_DEAD_ZONE: float = 0.06
 const AIM_ROLL: float = 1.6
 const AIM_YAW: float = 0.4
+## Patch 4.0.1 item 2: the mouse aim is smoothed (a low-pass over AIM_SMOOTH_S
+## seconds) and eased near the centre (AIM_CURVE), so small cursor moves give
+## gentle corrections and the plane does not twitch or overshoot.
+const AIM_SMOOTH_S: float = 0.14
+const AIM_CURVE: float = 1.6
+## Patch 4.0.1 item 3: after a crash the camera stays on the wreck (the
+## explosion, the fireball, smoke and debris, the camera slowly orbiting and
+## pulling back) for CRASH_VIEW_S seconds before the respawned plane is shown.
+## The server still respawns at once (bill, lost cargo, the plane parked at
+## the nearest airport); only the view waits, and the captain's controls are
+## held at idle meanwhile so the parked plane stays where the server put it.
+const CRASH_VIEW_S: float = 4.0
 
 var view: Node3D
 var planes: Dictionary = {}
@@ -56,6 +70,12 @@ var order: Dictionary = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0}
 var lever: float = 0.0
 ## The mouse aim this frame (mouse_aim), for the reticle.
 var aim: Vector2 = Vector2.ZERO
+## The smoothed mouse aim (read_local_input).
+var aim_smooth: Vector2 = Vector2.ZERO
+## Seconds of the crash view left (client and local), and the wreck.
+var crash_view_left: float = 0.0
+var crash_view_at: Vector3 = Vector3.ZERO
+var crash_view_from: Vector3 = Vector3.ZERO
 var low_seconds: float = 0.0
 var warning: bool = false
 var crashes: int = 0
@@ -108,7 +128,7 @@ func flying() -> bool:
 	return mode == "plane" and model != null
 
 func unlocked() -> bool:
-	return debug_unlocked or level() >= Levels.PLANE_LEVEL
+	return debug_unlocked or level() >= Levels.PLANE_UNLOCK_LEVEL
 
 func plane_entry() -> Dictionary:
 	return Planes.PLANES.get(plane_kind, {})
@@ -119,7 +139,8 @@ func condition() -> float:
 ## The airport the plane stands stopped on, or -1.
 func stopped_at() -> int:
 	if not flying() or not model.on_ground or model.airspeed() > STOPPED_MPS: return -1
-	return Airports.runway_at(model.position)
+	# Patch 4.0.1: anywhere on the airfield (the runway or the grass beside it).
+	return Airports.airfield_at(model.position)
 
 # --- Rules (the same reasons on client and server) -----------------------------
 
@@ -128,7 +149,7 @@ func switch_reason() -> String:
 	if flying(): return "You are already flying."
 	if not view.can_switch() or view.cranes_busy(): return "Finish or cancel your current job before switching to a plane."
 	if view.docking.state(view.owner_id) != "docked": return "Dock at a port to switch to your plane."
-	if not unlocked(): return "Planes unlock at level %d. You are level %d." % [Levels.PLANE_LEVEL, level()]
+	if not unlocked(): return "Planes unlock at level %d. You are level %d." % [Levels.PLANE_UNLOCK_LEVEL, level()]
 	if planes.is_empty(): return "You have no plane yet. Open Planes to buy one."
 	return ""
 
@@ -142,7 +163,7 @@ func boat_reason() -> String:
 func buy_reason(kind: String) -> String:
 	if not Planes.PLANES.has(kind): return "Unknown plane."
 	if planes.has(kind): return ""
-	if not unlocked(): return "Planes unlock at level %d." % Levels.PLANE_LEVEL
+	if not unlocked(): return "Planes unlock at level %d." % Levels.PLANE_UNLOCK_LEVEL
 	if not (stopped_at() >= 0 or (not flying() and view.docking.state(view.owner_id) == "docked")): return "Buy planes at a port or an airport."
 	if int(view.reward_minor) < int(Planes.PLANES[kind].price_minor): return "You need %s more credits." % credits(int(Planes.PLANES[kind].price_minor) - int(view.reward_minor))
 	return ""
@@ -164,6 +185,7 @@ func accept_reason(id: String) -> String:
 	if not job_id.is_empty(): return "Deliver your current plane job first."
 	var picked: Dictionary = Jobs.job(id)
 	if picked.is_empty() or int(picked.origin) != here: return "That job is not offered here."
+	if int(plane_entry().get("capacity", 0)) <= 0: return "Your %s carries no cargo." % plane_entry().name
 	if not plane_entry().jobs.has(picked.kind) or int(picked.capacity) > int(plane_entry().capacity): return "Your plane cannot carry that."
 	return ""
 
@@ -228,6 +250,7 @@ func start_plane(index: int) -> void:
 	low_seconds = 0.0
 	warning = false
 	lever = 0.0
+	aim_smooth = Vector2.ZERO
 	order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0}
 	follow_boat()
 
@@ -236,11 +259,21 @@ func start_plane(index: int) -> void:
 func follow_boat() -> void:
 	var ship: HandlingShip = view.ship
 	if not is_instance_valid(ship) or model == null: return
-	var at: Vector3 = Vector3(model.position.x, 0.0, model.position.z)
+	var anchor: Vector3 = view_anchor()
+	var at: Vector3 = Vector3(anchor.x, 0.0, anchor.z)
 	var jump: Vector3 = at - ship.global_position if ship.is_inside_tree() else Vector3.ZERO
 	if ship.is_inside_tree(): ship.global_transform = Transform3D(Basis(Vector3.UP, model.heading()), at)
 	else: ship.transform = Transform3D(Basis(Vector3.UP, model.heading()), at)
 	if jump.length() > 1500.0 and role() == "local": view.shift_presentation(jump)
+
+## Where the view (the laid-up boat, the sea, the camera) is centred: the
+## wreck during the crash view, the plane otherwise.
+func view_anchor() -> Vector3:
+	if crash_view_left > 0.0: return crash_view_at
+	return model.position if model != null else Vector3.ZERO
+
+func in_crash_view() -> bool:
+	return crash_view_left > 0.0
 
 ## Patch 4.0 item 13: back to the boat, in the water at the port nearest the plane.
 func switch_to_boat() -> bool:
@@ -386,9 +419,9 @@ func tick(delta: float) -> void:
 	var touched: bool = model.on_ground
 	var sink: float = -model.velocity.y
 	model.step(input, delta)
-	if not touched and model.on_ground and sink > 2.5 and not model.crashed:
+	if not touched and model.on_ground and sink > FIRM_SINK_MPS and not model.crashed:
 		# A firm landing costs some condition (repaired at an airport).
-		planes[plane_kind].condition = maxf(0.05, condition() - (sink - 2.5) * 0.08)
+		planes[plane_kind].condition = maxf(0.05, condition() - (sink - FIRM_SINK_MPS) * 0.05)
 	if model.crashed:
 		crash()
 		return
@@ -425,10 +458,12 @@ func crash() -> void:
 	var home: int = maxi(0, Airports.nearest(model.position))
 	var fuel: float = model.fuel_l
 	planes[plane_kind].condition = 1.0
+	# Local play is its own view: the crash view starts before the respawn so
+	# the laid-up boat (and the sea with it) stays at the wreck meanwhile.
+	if role() == "local": show_crash(last_crash_at)
 	start_plane(home)
 	model.fuel_l = maxf(fuel, float(plane_entry().fuel_l) * 0.25)
 	say("CRASH! %s%s Repair bill %s credits. Your plane is back at %s." % [reason, " Cargo lost." if lost else "", credits(bill), Airports.all()[home].name])
-	if role() == "local": show_crash(last_crash_at)
 
 ## Patch 4.0 arcade controls (Andy, November 20): the plane steers towards the
 ## mouse cursor; W / S move the throttle lever, which holds where it is left
@@ -443,11 +478,35 @@ func read_local_input(delta: float) -> void:
 	lever = clampf(lever + axis * LEVER_RATE * delta, -0.6, 1.0)
 	if controls.action_strength("ship_throttle_zero") > 0.0: lever = 0.0
 	if axis == 0.0 and lever < 0.0: lever = 0.0
-	aim = mouse_aim() if controls.input_allowed() else Vector2.ZERO
+	var raw: Vector2 = shape_aim(mouse_aim()) if controls.input_allowed() else Vector2.ZERO
+	aim_smooth = smooth_aim(aim_smooth, raw, delta)
+	aim = aim_smooth
+	if in_crash_view():
+		# Watching the wreck: the respawned plane waits at idle.
+		lever = 0.0
+		aim = Vector2.ZERO
+		aim_smooth = Vector2.ZERO
+		order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0}
+		return
 	var steer: Vector2 = aim_to_plane(aim, model.full_bank() if model != null else 0.0)
 	order = {"throttle": lever, "pitch": clampf(steer.y, -1.0, 1.0),
 		"roll": clampf(steer.x * AIM_ROLL + controls.steering_axis(), -1.0, 1.0),
 		"yaw": clampf(steer.x * AIM_YAW + controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"), -1.0, 1.0)}
+
+## Patch 4.0.1 item 2: a softer response near the centre (small offsets give
+## small commands), full deflection unchanged at the edge.
+static func shape_aim(raw: Vector2) -> Vector2:
+	var reach: float = raw.length()
+	if reach < 0.0001: return Vector2.ZERO
+	return raw / reach * pow(minf(reach, 1.0), AIM_CURVE)
+
+## Patch 4.0.1 item 2: the low-pass over the aim; snaps to centre exactly when
+## the cursor is centred and the smoothed aim is nearly there (so hands off
+## really is hands off and the auto-level takes over).
+static func smooth_aim(current: Vector2, target: Vector2, delta: float) -> Vector2:
+	var next: Vector2 = current.lerp(target, 1.0 - exp(-maxf(delta, 0.0) / AIM_SMOOTH_S))
+	if target == Vector2.ZERO and next.length() < 0.01: return Vector2.ZERO
+	return next
 
 ## The cursor's offset from the screen centre, -1..1 each way (+x right,
 ## +y up), with a small dead zone at the centre. Zero headless, while looking
@@ -622,11 +681,44 @@ func place_airports(around: Vector3) -> void:
 
 func show_crash(at: Vector3) -> void:
 	if role() == "server": return
+	crash_view_at = at
+	crash_view_left = CRASH_VIEW_S
+	crash_view_from = chase.global_position if is_instance_valid(chase) and chase.is_inside_tree() else at + Vector3(0, 30, -60)
+	if not is_instance_valid(view.ship) or not view.ship.is_inside_tree(): return
+	# The laid-up boat (and the sea with it) stays at the wreck while
+	# in_crash_view(): follow_boat in local play, the network runtime online.
+	var near: Vector3 = Progression.nearest(at, view.ship.global_position)
 	var blast: Node3D = Look.Explosion.new(clampf(float(Planes.PLANES.get(plane_kind, {"length_m": 10.0}).length_m) / 10.0, 1.0, 3.0))
 	view.add_child(blast)
-	blast.global_position = Progression.nearest(at, view.ship.global_position if is_instance_valid(view.ship) else at)
+	blast.global_position = near
 	if is_instance_valid(boom_player): boom_player.play()
 	chase_ready = false
+
+## Patch 4.0.1 item 3: the crash camera. It starts where the chase camera was
+## and slowly orbits the wreck while pulling back and up; the plane (already
+## respawned by the authority) is hidden until the view ends.
+func present_crash(delta: float) -> void:
+	crash_view_left = maxf(0.0, crash_view_left - delta)
+	if is_instance_valid(plane_node): plane_node.visible = crash_view_left <= 0.0
+	if not is_instance_valid(chase) or not is_instance_valid(view.ship): return
+	var wreck: Vector3 = Progression.nearest(crash_view_at, view.ship.global_position)
+	wreck.y = maxf(wreck.y, 2.0)
+	var t: float = clampf(1.0 - crash_view_left / CRASH_VIEW_S, 0.0, 1.0)
+	var start: Vector3 = Progression.nearest(crash_view_from, wreck) - wreck
+	start.y = 0.0
+	if start.length() < 5.0: start = Vector3(0, 0, -60)
+	var size: float = clampf(float(plane_entry().get("length_m", 10.0)), 8.0, 40.0)
+	var radius: float = lerpf(maxf(start.length(), size * 3.0), size * 7.0 + 60.0, t * t * (3.0 - 2.0 * t))
+	var turn: float = start.angle_to(Vector3(0, 0, 1)) * signf(start.x if absf(start.x) > 0.001 else 1.0) + t * 0.9
+	var orbit: Vector3 = Vector3(sin(turn), 0, cos(turn)) * radius
+	chase.global_position = wreck + orbit + Vector3.UP * (size * 1.5 + 18.0 + t * 45.0)
+	chase.look_at(wreck + Vector3.UP * size * 0.3, Vector3.UP)
+	if not chase.current: chase.make_current()
+	if is_instance_valid(marks) and marks.visible: marks.hide()
+	if crash_view_left <= 0.0:
+		chase_ready = false
+		# Back to the plane: the boat (and the sea) rejoin it.
+		if role() == "local": follow_boat()
 
 ## Places the plane model and the chase camera. Every frame, client and local.
 func present(delta: float) -> void:
@@ -641,11 +733,18 @@ func present(delta: float) -> void:
 		chase_ready = false
 	place_airports(view.ship.global_position if is_instance_valid(view.ship) else Vector3.ZERO)
 	if not air:
+		crash_view_left = 0.0
 		if is_instance_valid(chase) and chase.current: view.camera.camera.make_current()
 		if is_instance_valid(warn_player) and warn_player.playing: warn_player.stop()
 		if is_instance_valid(engine_player) and engine_player.playing: engine_player.stop()
 		if is_instance_valid(marks) and marks.visible: marks.hide()
 		return
+	if in_crash_view():
+		present_crash(delta)
+		if is_instance_valid(engine_player) and engine_player.playing: engine_player.stop()
+		if is_instance_valid(warn_player) and warn_player.playing: warn_player.stop()
+		return
+	if is_instance_valid(plane_node): plane_node.visible = true
 	var pose: Transform3D = model.transform()
 	if role() == "client":
 		offset *= exp(-delta / 0.2)
@@ -678,7 +777,7 @@ func present(delta: float) -> void:
 	if warning and not warn_player.playing: warn_player.play()
 	elif not warning and warn_player.playing: warn_player.stop()
 	if not engine_player.playing: engine_player.play()
-	engine_player.pitch_scale = 0.7 + model.engine * 1.1 + (0.6 if Planes.PLANES[plane_kind].engines == "jet2" else 0.0)
+	engine_player.pitch_scale = 0.7 + model.engine * 1.1 + (0.6 if str(Planes.PLANES[plane_kind].engines) in ["fan2", "afterburner"] else 0.0)
 	engine_player.volume_db = lerpf(-26.0, -12.0, model.engine)
 
 # --- UI ------------------------------------------------------------------------------
@@ -803,13 +902,16 @@ func menu_action(kind: String) -> void:
 	refresh_menu()
 
 func refresh_menu() -> void:
-	menu_wallet.text = "Wallet: %s credits · Level %d%s" % [credits(int(view.reward_minor)), level(), "" if unlocked() else " (planes unlock at level %d)" % Levels.PLANE_LEVEL]
+	menu_wallet.text = "Wallet: %s credits · Level %d%s" % [credits(int(view.reward_minor)), level(), "" if unlocked() else " (planes unlock at level %d)" % Levels.PLANE_UNLOCK_LEVEL]
 	for kind: String in Planes.ORDER:
 		var p: Dictionary = Planes.PLANES[kind]
 		var row: Dictionary = menu_rows[kind]
 		row.words.text = "%s — %s credits\nTop %d kn · stalls below %d kn · %d L fuel (%d min) · carries %d %s" % [p.name, credits(int(p.price_minor)),
 			roundi(Planes.top_speed(kind) * 1.944), roundi(Planes.stall_speed(kind) * 1.944), roundi(float(p.fuel_l)), roundi(Planes.endurance_s(kind) / 60.0),
 			int(p.capacity), "passengers or packages" if p.jobs.size() > 1 else "packages"]
+		if int(p.capacity) <= 0:
+			row.words.text = "%s — %s credits\nTop %d kn · stalls below %d kn · %d L fuel (%d min) · no cargo: for the joy of flying" % [p.name, credits(int(p.price_minor)),
+				roundi(Planes.top_speed(kind) * 1.944), roundi(Planes.stall_speed(kind) * 1.944), roundi(float(p.fuel_l)), roundi(Planes.endurance_s(kind) / 60.0)]
 		var button: Button = row.button
 		var reason: String = select_reason(kind) if planes.has(kind) else buy_reason(kind)
 		button.text = ("Active" if kind == plane_kind else "Select") if planes.has(kind) else "Buy"

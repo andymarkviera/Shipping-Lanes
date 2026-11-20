@@ -64,7 +64,7 @@ def main():
                 status_path = control / 'status.json'
                 status = wait_for(lambda: read(status_path), [server])
                 assert status['listening'] and status['pid'] == server.pid and status['players'] == 0
-                assert status['version'] == '4.0.0' and not status['save_failed']
+                assert status['version'] == '4.0.1' and not status['save_failed']
                 if round_number == 0:
                     client = start('client', ['--connect', '--captain=LauncherCheck'])
                     wait_for(lambda: read(status_path).get('players') == 1, [server, client])

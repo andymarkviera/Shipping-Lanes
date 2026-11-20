@@ -1289,8 +1289,10 @@ func _process(_delta: float) -> void:
 	var ship: HandlingShip = view.ship
 	if view.flying():
 		# Patch 4.0: the laid-up boat follows the predicted plane at sea level.
+		# Patch 4.0.1 item 3: it stays at the wreck while the crash view lasts.
 		var m: RefCounted = view.aviation.model
-		place_own(Vector3(m.position.x, 0.0, m.position.z), m.heading())
+		var anchor: Vector3 = view.aviation.view_anchor()
+		place_own(Vector3(anchor.x, 0.0, anchor.z), m.heading())
 		ship.velocity = Vector3.ZERO
 		ship.ground_speed_mps = 0.0
 		view.place_icebergs()

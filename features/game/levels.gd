@@ -10,12 +10,14 @@ const MAX_LEVEL: int = 50
 ## Total XP to reach level L is CURVE_XP * (L - 1) ^ CURVE_POWER: level 2 at
 ## 300 XP, level 10 at about 15,700. An early starter-ship delivery (about
 ## 2,900 credits) is worth about 540 XP; with the bigger ships a captain earns
-## on the way, level 10 (planes) takes a few hours of normal play.
+## on the way, level 10 takes a few hours of normal play.
 const CURVE_XP: float = 300.0
 const CURVE_POWER: float = 1.8
 const XP_PER_SQRT_CREDIT: float = 10.0
-## Patch 4.0 item 9: planes unlock at this level.
-const PLANE_LEVEL: int = 10
+## Patch 4.0.1 item 6: the one plane gate, for buying and flying planes, on the
+## client and on the server (aviation.unlocked()). Planes are open to everyone
+## for now (level 1); a later patch can raise it again (it was 10 in 4.0).
+const PLANE_UNLOCK_LEVEL: int = 1
 ## Hook for later quests: quest ID -> XP. award(progress, QUEST_XP[id], "quest").
 const QUEST_XP: Dictionary = {}
 const Planes = preload("res://features/planes/plane_catalog.gd")

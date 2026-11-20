@@ -3,7 +3,8 @@ extends SceneTree
 ## boat lineup and fishing-boat refund, levels, airports, plane jobs, flight
 ## model with a scripted take-off and landing per plane, old saves), then, in
 ## the real game scene with an isolated save: XP is awarded only by the
-## authority (never by an online client), planes unlock at level 10, Switch
+## authority (never by an online client), planes are open from level 1
+## (Patch 4.0.1: Levels.PLANE_UNLOCK_LEVEL), Switch
 ## to Plane is refused with a load aboard and moves the captain to the nearest
 ## airport without one, the low-altitude fine, a crash (cargo lost, repair
 ## bill charged, respawn at the nearest airport) and Switch to Boat.
@@ -63,15 +64,14 @@ func run() -> void:
 	expect(game.award_delivery(500000) == 0 and game.xp == 0, "an online client cannot award itself XP")
 	game.runtime_role = "local"
 	expect(game.award_delivery(500000) == Levels.xp_for_pay(500000) and game.xp == Levels.xp_for_pay(500000), "a delivery awards XP by its pay")
-	# The level gate.
+	# The level gate (Patch 4.0.1 item 6: open from level 1 for now).
 	game.reward_minor += 200000000
-	expect(air.buy_reason("plane_prop").contains("level %d" % Levels.PLANE_LEVEL), "planes are locked below level 10")
-	expect(not air.buy("plane_prop") and air.planes.is_empty(), "no plane can be bought below level 10")
-	expect(air.switch_reason().contains("level") or air.switch_reason().contains("Dock"), "Switch to Plane explains the level gate")
-	game.xp = Levels.xp_for_level(Levels.PLANE_LEVEL)
-	expect(air.level() == Levels.PLANE_LEVEL, "level 10 reached")
+	game.xp = 0
+	expect(Levels.PLANE_UNLOCK_LEVEL == 1 and air.level() == 1 and air.unlocked(), "planes are open at level 1 (PLANE_UNLOCK_LEVEL)")
+	expect(not air.buy_reason("plane_prop").contains("level"), "no level gate on buying (%s)" % air.buy_reason("plane_prop"))
+	expect(not air.switch_reason().contains("level"), "no level gate on Switch to Plane (%s)" % air.switch_reason())
 	var wallet: int = game.reward_minor
-	expect(air.buy("plane_prop") and air.planes.has("plane_prop") and game.reward_minor == wallet - int(Planes.PLANES.plane_prop.price_minor), "at level 10 the bush prop can be bought at a port")
+	expect(air.buy("plane_prop") and air.planes.has("plane_prop") and game.reward_minor == wallet - int(Planes.PLANES.plane_prop.price_minor), "a level-1 captain buys the bush prop at a port")
 	# Switch to Plane is refused while a load is aboard.
 	game.bulk_active = "patch_4_0_check_load"
 	expect(not game.can_switch() and air.switch_reason().contains("job"), "Switch to Plane is refused with a load aboard")
@@ -122,7 +122,7 @@ func run() -> void:
 	expect(air.boat_reason().is_empty() and air.switch_to_boat() and not game.flying(), "Switch to Boat at the airport")
 	await settle()
 	expect(game.ship.visible and game.ship.collision_layer != 0 and is_instance_valid(game.port), "the boat is back in the water at the nearest port")
-	expect(game.xp == Levels.xp_for_level(Levels.PLANE_LEVEL), "the level survives the switches")
+	expect(game.xp == 0 and air.level() == 1, "the level survives the switches")
 	game.leave()
 	await wait_for(func(scene: Node) -> bool: return scene.name == "Main")
 	finish()

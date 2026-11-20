@@ -1443,6 +1443,21 @@ and the plane never levels itself. The M globe has land relief, and the globe an
 minimap show the airports. Checks: `tools/patch_4_0_check.gd` (the scene-free
 part also runs in `check_catalog.gd`). Waiting for Andy's Windows playtest.
 
+**Patch 4.0.1 (November 20, 2026, issue #222):** VERSION 4.0.1. Andy's first
+plane playtest. The auto-level is back: hands off, the plane rolls wings-level
+and holds level flight, or a gentle 3° glide when set up to land. Landing is
+forgiving: flaps add lift and drag as the throttle drops, there is an
+auto-flare, softer touchdown limits, a runway assist out to 3 km and ±25° that
+also drifts the plane onto the centre line, smoothed mouse aim, spoilers and
+stronger brakes. After a crash the view holds on the wreck for 4 s; the server
+still respawns at once. New Fighter jet (3,000,000; 2.2× the Cargo jet; no
+cargo). The Cargo jet has turbofans instead of flames. Planes are open from
+level 1 (`Levels.PLANE_UNLOCK_LEVEL`). Each airport stands on one flat airfield,
+and the embankment's inverted faces (the black slab with hills showing through)
+are fixed. Checks: `tools/patch_4_0_1_check.gd`; the scene-free part also runs in
+`check_catalog.gd`. The plane HUD rework is next. Waiting for Andy's Windows
+playtest.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge
