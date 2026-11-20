@@ -20,6 +20,7 @@ const CITY_LOOK = preload("res://features/toon/city_look.gd")
 const VOLCANO_LOOK = preload("res://features/toon/volcano_look.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
+const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## Patch 3.0 item 1: explicit runtime roles; ordinary/debug play remains local.
 ## The server's player contexts share one physical world, never duplicate ports.
 var runtime_role: String = "local"
@@ -159,6 +160,8 @@ func button(parent: Node, title: String, action: Callable) -> Button:
 	node.text = title
 	# Sailing HUD actions must never retain keyboard focus (including Tab/cancelled clicks).
 	node.focus_mode = Control.FOCUS_NONE
+	# Patch 3.2: every game button shares one plain UI font, size and casing.
+	if game_mode: DISPLAY.style_button(node)
 	parent.add_child(node)
 	node.pressed.connect(func():
 		if runtime_role in ["server", "world"]: return
@@ -380,7 +383,7 @@ func _ready() -> void:
 	if game_mode:
 		# Patch 2.2 item 4: SHIPS opens the boat hangar. The old row list stays
 		# built (hidden) because refresh_ships still keeps its buttons current.
-		button(tabs, "SHIPS", func(): ships_panel.hide(); hangar.open())
+		button(tabs, "Ships", func(): ships_panel.hide(); hangar.open())
 	button(tabs, "Close services", func(): jobs_panel.hide(); ships_panel.hide())
 	jobs_panel = VBoxContainer.new()
 	services.add_child(jobs_panel)
@@ -833,7 +836,7 @@ func select_port(index: int, restoring: bool = false) -> bool:
 		# Patch 2.0 item 5: the game's helm bar (game_hud) replaces the throttle panel.
 		helm.throttle_display.hide()
 		PLAYFUL.dress(helm.notice.panel, true)
-		preload("res://features/ui/display_fonts.gd").apply(helm.notice.label, "red")
+		DISPLAY.plain(helm.notice.label, Color("ff8a7a"))
 		PLAYFUL.dress(helm.gauge_display.panel)
 	helm.keep_sailing = game_mode
 	helm.menu_requested.connect(game_menu.open if game_mode else leave)
@@ -1173,12 +1176,12 @@ func _process(_delta: float) -> void:
 	refresh_ships()
 	accept_button.tooltip_text = accept_reason()
 	accept_button.disabled = not accept_button.tooltip_text.is_empty()
-	refuel_button.text = "REFUEL"
-	repair_button.text = "REPAIR"
+	refuel_button.text = "Refuel" if game_mode else "REFUEL"
+	repair_button.text = "Repair" if game_mode else "REPAIR"
 	if game_mode:
-		# The price of what the button will buy right now.
-		if fuel_offered() >= 1.0: refuel_button.text = "REFUEL %.2f" % (ceili(fuel_offered() * FUEL_MINOR_PER_LITER) / 100.0)
-		if repair_offered() > 0: repair_button.text = "REPAIR %.2f" % (repair_offered() * REPAIR_MINOR_PER_PERCENT / 100.0)
+		# The price of what the button will buy right now (Patch 3.2: "Refuel  4.10").
+		if fuel_offered() >= 1.0: refuel_button.text = "Refuel  %.2f" % (ceili(fuel_offered() * FUEL_MINOR_PER_LITER) / 100.0)
+		if repair_offered() > 0: repair_button.text = "Repair  %.2f" % (repair_offered() * REPAIR_MINOR_PER_PERCENT / 100.0)
 	# Full/no-damage remains a harmless action with explicit feedback; loading locks services.
 	refuel_button.disabled = loading.busy()
 	repair_button.disabled = loading.busy()
@@ -1202,6 +1205,7 @@ func _process(_delta: float) -> void:
 	var active: Dictionary = offers.active_job("preview_captain")
 	abandon_button.visible = not bulk_active.is_empty() or (not heavy_mode and active.get("state") == "loaded")
 	abandon_button.text = "Confirm abandon — no payment" if not abandon_job_id.is_empty() and Time.get_ticks_msec() <= abandon_deadline else "Abandon cargo (no payment)"
+	if game_mode: abandon_button.text = "Confirm Abandon (No Pay)" if abandon_button.text.begins_with("Confirm") else "Abandon Cargo"
 	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
 	if not loading.busy() and offer_notice == "Accepted — loading your cargo.": offer_notice = loading.notice
 	if loading.busy(): loading_text.text = "Loading %.0f%% — please wait." % loading.progress_percent()

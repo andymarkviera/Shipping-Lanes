@@ -105,7 +105,7 @@ func check_screen(game: Node) -> void:
 	expect(await dock_anywhere(game), "The starter ship docks")
 	await settle()
 	for node: Node in game.find_children("*", "Button", true, false):
-		if (node as Button).text == "SHIPS" and (node as Button).is_visible_in_tree(): (node as Button).pressed.emit()
+		if (node as Button).text == "Ships" and (node as Button).is_visible_in_tree(): (node as Button).pressed.emit()
 	await settle()
 	expect(hangar.is_open() and hangar.current() == "container" and not paused, "SHIPS opens the hangar on the active ship; the world is not paused")
 	expect(hangar.models.size() == 20, "All 20 models are built once and cached (%d)" % hangar.models.size())

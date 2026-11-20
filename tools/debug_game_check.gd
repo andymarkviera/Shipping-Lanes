@@ -68,6 +68,22 @@ func run() -> void:
 	await settle()
 	expect(game.persistence == null, "debug world has no persistence (no save opened)")
 	expect(game.debug.tag.visible and game.debug.tag.text == "DEBUG", "DEBUG tag shown")
+	# Patch 3.2 follow-up: collapsed into a "Debug Menu" button; it and Esc toggle it.
+	expect(not game.debug.is_open() and game.debug.toggle_button.is_visible_in_tree() and game.debug.toggle_button.text == "Debug Menu", "debug controls start collapsed behind Debug Menu")
+	game.debug.toggle_button.pressed.emit()
+	await settle()
+	expect(game.debug.panel.is_visible_in_tree(), "Debug Menu opens the controls")
+	game.debug.toggle_button.pressed.emit()
+	await settle()
+	expect(not game.debug.is_open(), "Debug Menu again closes the controls")
+	game.debug.toggle()
+	var esc: InputEventKey = InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	root.push_input(esc)
+	await settle()
+	expect(not game.debug.is_open() and not game.game_menu.is_open(), "Esc closes the open debug controls (not the Esc menu)")
 	for kind: String in Hangar.ladder(): expect(game.fleet.has(kind), "owns " + kind)
 	expect(Hangar.ladder().size() == 20, "20 ladder ships (small boats and the two pirate ships included)")
 	game.reward_minor = 0

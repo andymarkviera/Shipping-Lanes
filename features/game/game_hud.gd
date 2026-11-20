@@ -8,6 +8,9 @@ const DISPLAY = preload("res://features/ui/display_fonts.gd")
 ## It owns no cargo, money or docking state. Test scenes never create it.
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const TOAST_SECONDS: float = 6.0
+## Patch 3.2: the port name heading's largest size and the one job-card amount size.
+const TITLE_PX: int = 22
+const PAY_PX: int = 18
 const BOX_COLOURS: Array[Color] = [Color("e2574c"), Color("3d9be0"), Color("ffc940"), Color("7ed957")]
 var view: Node3D
 var bar: PanelContainer
@@ -37,7 +40,7 @@ func setup(scene: Node3D) -> void:
 	build_toast()
 	salute = text(self, 32)
 	salute.text = "CANNON SALUTE!"
-	DISPLAY.apply(salute, "red")
+	DISPLAY.plain(salute, Color("ff6a5a"), 32)
 	salute.hide()
 	arrange_port_card()
 
@@ -89,7 +92,7 @@ func build_bar() -> void:
 		mark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mark.horizontal_alignment = [HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENT_RIGHT][letters.get_child_count() - 1]
 	knots = text(row, 28, PLAYFUL.SUN)
-	DISPLAY.apply(knots)
+	DISPLAY.plain(knots, PLAYFUL.SUN, 28)
 	knots.custom_minimum_size.x = 92
 	knots.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	knots.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -97,9 +100,8 @@ func build_bar() -> void:
 		item.reparent(row, false)
 		item.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	view.dock_button.custom_minimum_size = Vector2(104, 46)
-	view.dock_button.add_theme_font_size_override("font_size", 19)
 	dock_hint = text(column, 14, PLAYFUL.CREAM)
-	DISPLAY.apply(dock_hint, "red")
+	DISPLAY.plain(dock_hint, Color("ff8a7a"), 14)
 	dock_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func build_toast() -> void:
@@ -115,12 +117,14 @@ func build_toast() -> void:
 ## while a heavy job needs its Lower and Raise buttons).
 func arrange_port_card() -> void:
 	var stack: Node = view.details.get_parent()
-	title = text(stack, 22, PLAYFUL.SUN)
+	# Patch 3.2: sprite lettering only for the port name, the money and the card title.
+	title = text(stack, TITLE_PX, PLAYFUL.SUN)
 	DISPLAY.apply(title)
+	title.clip_text = true
 	DISPLAY.apply(view.voyage_hud.money, "gold")
 	DISPLAY.apply(view.voyage_hud.heading)
-	DISPLAY.apply(view.refuel_button, "gold")
-	DISPLAY.apply(view.repair_button, "gold")
+	DISPLAY.plain(view.details, Color.WHITE)
+	DISPLAY.plain(view.navigation, Color.WHITE)
 
 	stack.move_child(title, 0)
 	view.readiness.hide()
@@ -130,12 +134,12 @@ func arrange_port_card() -> void:
 	var tabs: Node = view.refuel_button.get_parent()
 	for item: Node in tabs.get_children():
 		if item is Button and item.text in ["CARGO", "Close services"]: item.hide()
-		if item is Button and item.text == "SHIPS": ships_button = item
+		if item is Button and item.text == "Ships": ships_button = item
 	view.offer_text.hide()
 	view.jobs_list.hide()
 	view.accept_button.hide()
 	view.deliver_button.text = "Deliver"
-	view.cancel_load_button.text = "Cancel loading"
+	view.cancel_load_button.text = "Cancel Loading"
 	cards = VBoxContainer.new()
 	cards.add_theme_constant_override("separation", 8)
 	view.jobs_panel.add_child(cards)
@@ -175,10 +179,15 @@ func rebuild_cards() -> void:
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		words.custom_minimum_size.x = 210
 		row.add_child(words)
-		text(words, 18).text = str(job.what)
-		text(words, 13, PLAYFUL.CREAM).text = "%s → %s" % [from, job.to]
-		var pay: Label = text(row, 20, PLAYFUL.SUN)
-		DISPLAY.apply(pay, "gold")
+		var what: Label = text(words, 18)
+		DISPLAY.plain(what, Color.WHITE, 18)
+		what.text = str(job.what)
+		var route: Label = text(words, 13, PLAYFUL.CREAM)
+		DISPLAY.plain(route, PLAYFUL.CREAM, 13)
+		route.text = "%s → %s" % [from, job.to]
+		# Patch 3.2: the amount is gold in the same plain bold face, one size.
+		var pay: Label = text(row, PAY_PX, PLAYFUL.SUN)
+		DISPLAY.plain(pay, PLAYFUL.SUN, PAY_PX)
 		pay.text = "+%.2f" % (int(job.pay) / 100.0)
 		pay.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var accept: Button = view.button(row, "Accept", take.bind(str(job.id)))
@@ -218,7 +227,7 @@ func refresh(delta: float) -> void:
 	var warn: bool = ship.state.fuel_liters < ship.definition.fuel_capacity_liters * 0.25 or ship.state.condition < 0.5
 	if warn != instrument_warning:
 		instrument_warning = warn
-		if warn: DISPLAY.apply(view.voyage_hud.instruments, "red")
+		if warn: DISPLAY.plain(view.voyage_hud.instruments, Color("ff8a7a"))
 		else: DISPLAY.clear(view.voyage_hud.instruments)
 	var state: String = view.docking.state(view.owner_id)
 	var docked: bool = state == "docked"
@@ -243,9 +252,9 @@ func refresh(delta: float) -> void:
 	if words != toast_text:
 		var lower: String = words.to_lower()
 		if "paid" in lower or "credits" in lower:
-			DISPLAY.apply(view.loading_text, "gold")
+			DISPLAY.plain(view.loading_text, PLAYFUL.SUN)
 		elif "cannot" in lower or "not enough" in lower or "failed" in lower or "collision" in lower or "sank" in lower:
-			DISPLAY.apply(view.loading_text, "red")
+			DISPLAY.plain(view.loading_text, Color("ff8a7a"))
 		else:
 			DISPLAY.clear(view.loading_text)
 		toast_text = words
@@ -261,9 +270,11 @@ func refresh(delta: float) -> void:
 	view.port_panel.visible = docked or view.heavy_controls.visible or DevMode.enabled
 	title.text = view.port.definition.display_name.to_upper()
 	title.visible = docked
+	# Patch 3.2: the heading fits its card (it shrinks rather than overflows).
+	if docked: DISPLAY.fit(title, maxf(160.0, view.port_panel.size.x - 28.0), TITLE_PX)
 	view.navigation.visible = not view.navigation.text.is_empty()
 	view.jobs_panel.visible = docked and not view.ships_panel.visible
-	if ships_button != null: ships_button.text = "JOBS" if view.ships_panel.visible else "SHIPS"
+	if ships_button != null: ships_button.text = "Jobs" if view.ships_panel.visible else "Ships"
 	cards.visible = view.accept_reason().is_empty()
 	# Deliver shows only where it works; elsewhere the line below says where to go.
 	view.deliver_button.visible = view.abandon_button.visible and not view.deliver_button.disabled
