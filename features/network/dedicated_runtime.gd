@@ -8,8 +8,9 @@ const CaptainName = preload("res://features/network/captain_name.gd")
 const Codec = preload("res://features/network/public_snapshot_codec.gd")
 const Relevance = preload("res://features/network/ship_relevance.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
-# 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
-const PROTOCOL: int = 30101
+const DayNight = preload("res://features/sky/day_night.gd")
+# 3.1.0 adds the world clock to welcome/pong. 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
+const PROTOCOL: int = 31000
 const MAX_PLAYERS: int = 8
 const INTERVAL: float = 0.05
 const BUFFER_SECONDS: float = 0.15
@@ -764,7 +765,7 @@ func hello(version: int, captain: String, release: String = "", key: String = ""
 	ships[id] = context.ship
 	wrap.add_hull(id, context.ship)
 	session.roster[id] = {"peer_id": sender}
-	welcome.rpc_id(sender, PROTOCOL, session.epoch, id)
+	welcome.rpc_id(sender, PROTOCOL, session.epoch, id, DayNight.world_seconds())
 	print("DEDICATED_JOIN players=%d" % contexts.size())
 
 @rpc("authority", "call_remote", "reliable", 0)
@@ -801,10 +802,12 @@ func depart(sender: int) -> void:
 	print("DEDICATED_LEAVE players=%d" % contexts.size())
 
 @rpc("authority", "call_remote", "reliable", 0)
-func welcome(version: int, epoch: String, id: String) -> void:
+func welcome(version: int, epoch: String, id: String, clock: float) -> void:
 	if hosting or multiplayer.get_remote_sender_id() != 1 or version != PROTOCOL: return
 	if not entity.is_empty() or epoch.length() != 32 or id != "ship_%d" % multiplayer.get_unique_id(): return
 	session.epoch = epoch
+	# Patch 3.1: every player shares the server's time of day.
+	DayNight.sync(clock)
 	epoch_tag = epoch.left(8).hex_to_int()
 	entity = id
 	view.owner_id = multiplayer.get_unique_id()
@@ -1187,13 +1190,14 @@ func ping(stamp: int) -> void:
 	var now: int = Time.get_ticks_msec()
 	if now - int(last_ping.get(sender, -1000)) < 500: return
 	last_ping[sender] = now
-	pong.rpc_id(sender, stamp)
+	pong.rpc_id(sender, stamp, DayNight.world_seconds())
 
 @rpc("authority", "call_remote", "unreliable", 1)
-func pong(stamp: int) -> void:
+func pong(stamp: int, clock: float) -> void:
 	if hosting or multiplayer.get_remote_sender_id() != 1: return
 	var rtt: int = Time.get_ticks_msec() - stamp
 	if rtt < 0 or rtt > 10000: return
+	DayNight.sync(clock + rtt / 2000.0)
 	rtt_ms = float(rtt) if rtt_ms < 0 else lerpf(rtt_ms, float(rtt), 0.3)
 	if ping_label != null: ping_label.text = "%d ms" % roundi(rtt_ms)
 
@@ -1272,6 +1276,7 @@ func shutdown_saves() -> void:
 	saves.close()
 
 func _exit_tree() -> void:
+	if not hosting: DayNight.clock_offset = 0.0
 	shutdown_saves()
 	if peer != null: peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()

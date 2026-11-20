@@ -8184,3 +8184,24 @@ suites, listening or hardware frame-time playtests. PR stays draft for acceptanc
 - Not verified: Windows/Mac play, the playit.gg relay or real latency/loss, feel
   of the correction tuning, the modal's look. Gas/oil/refinery/cargo-fuel code
   and workflows unchanged.
+
+## Patch 3.1 — day/night cycle, sunset, songs (November 20, 2026)
+
+Issue #214; REBUILD_PLAN.md section 16. Status: implemented for draft review.
+- `features/sky/day_night.gd`: 40-minute cycle (day, sunset, night, dawn) painted
+  last over the biome chain at 10 Hz: sun arc (noon = the old fixed sun), moon on
+  the same light at night, ambient, fog, sky colours, ocean tint. `toon_sky.gdshader`
+  gains a banded sunset glow and stars (both default 0, so the day sky is unchanged).
+  Headless runs see a fixed noon so older look checks stay exact.
+- Time of day: server Unix time sent in `welcome` and every `pong` (half-RTT
+  corrected, sub-second jitter ignored); offline uses the local clock. Protocol
+  30101 → 31000, VERSION 3.1.0. Saves unchanged.
+- `features/audio/game_music.gd`: Andy Viera's three songs (credit in
+  `features/audio/CREDITS.md`), 15 s sailing gate, 10 s fade-in to 0.32 × the
+  Music/Ambience slider, loop, 8 s fade-out on a full stop, 5 s fade-out + 3 s
+  silence on a phase change. mp3s imported with loop on, added to all export presets.
+- Debug mode: NEXT TIME OF DAY button.
+- Passed (Linux, Godot 4.7.2 headless): import, 259-script parse, boot, new
+  `tools/day_night_check.gd` (27), polar/desert/tropical/rain biome checks,
+  volcano, game ambience, play connection, `check_dedicated_split.py --prediction`.
+- Not verified: the look and sound on screen, Windows/Mac frame time.

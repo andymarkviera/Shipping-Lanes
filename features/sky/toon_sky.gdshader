@@ -9,6 +9,11 @@ uniform vec3 cloud_shade_color: source_color = vec3(0.76, 0.88, 0.99);
 uniform vec3 sun_color: source_color = vec3(1.0, 0.97, 0.80);
 uniform float cloud_cover: hint_range(0.0, 1.0) = 0.6;
 uniform float drift_speed = 0.0012; // turns of the sky per second, very slow
+// Patch 3.1 (day_night.gd): banded sunset glow round the sun and stars at night.
+// Both default to 0, so the day sky is unchanged.
+uniform vec3 glow_color: source_color = vec3(1.0, 0.42, 0.16);
+uniform float glow_amount: hint_range(0.0, 1.0) = 0.0;
+uniform float night_amount: hint_range(0.0, 1.0) = 0.0;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -50,6 +55,24 @@ void sky() {
 	float height = clamp(EYEDIR.y, 0.0, 1.0);
 	float rise = 1.0 - height;
 	vec3 color = mix(horizon_color, top_color, 1.0 - rise * rise * rise);
+
+	if (glow_amount > 0.001 && LIGHT0_ENABLED) {
+		// Toon sunset: the glow toward the sun in three flat bands, low on the sky.
+		vec2 flat_eye = normalize(EYEDIR.xz + vec2(1e-5));
+		vec2 flat_sun = normalize(LIGHT0_DIRECTION.xz + vec2(1e-5));
+		float toward = max(dot(flat_eye, flat_sun), 0.0);
+		float glow = pow(toward, 3.0) * pow(rise, 6.0);
+		float bands = floor(glow * 3.0 + 0.35) / 3.0;
+		color = mix(color, glow_color, clamp(bands, 0.0, 1.0) * glow_amount * 0.85);
+	}
+	if (night_amount > 0.001) {
+		// Stars: one per cell at most, small flat dots, only above the haze.
+		vec3 cell = floor(EYEDIR * 140.0);
+		float h = hash(cell.xy + cell.z * 17.0);
+		vec3 centre = (cell + 0.5 + 0.3 * vec3(hash(cell.yz) - 0.5, hash(cell.zx) - 0.5, 0.0)) / 140.0;
+		float star = step(0.985, h) * (1.0 - smoothstep(0.0012, 0.0024, length(EYEDIR - normalize(centre)) * 0.5));
+		color = mix(color, vec3(1.0, 0.98, 0.9), star * night_amount * smoothstep(0.08, 0.25, EYEDIR.y));
+	}
 
 	if (LIGHT0_ENABLED) {
 		float facing = dot(EYEDIR, LIGHT0_DIRECTION);

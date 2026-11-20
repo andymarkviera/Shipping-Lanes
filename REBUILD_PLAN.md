@@ -1383,6 +1383,33 @@ short extrapolation, 1 s ping readout, and compact quantized motion frames
 version 3.0.1. Saves unchanged. Windows/Mac playtest over the relay pending.
 
 
+## 16. Patch 3.1 (Andy, issue #214, November 20, 2026): day/night and songs
+
+Same rules as before: Godot 4.7.2, Wind Waker look, section 7 no-jank checklist,
+smooth frame time, Windows and Mac clients, saves and gas/oil/refinery/cargo-fuel
+code intact, no workflow changes. One pass, one PR.
+
+1. **Day/night cycle.** The game was daytime-only. Sky, sun, ambient light, water
+   tint and fog follow the time of day: day, a really nice toon sunset (banded
+   gold glow round a low sun, peach clouds, pink-purple sky), night (moonlight,
+   dark blue sky with stars, dark sea) and dawn. Painted last over every biome so
+   the polar, desert, tropical and rain looks keep their own colours.
+2. **Shared time of day.** Server-authoritative: the dedicated server sends its
+   clock on join and with every pong, so all players see the same hour. Offline
+   and test mode use this machine's clock.
+3. **Music by time of day** (Andy Viera's original songs: day "Neon Buoy",
+   sunset "Sunlit Current", night "The Blackwater Passage"). Starts only after
+   15 s of continuous sailing, slow fade-in to a quiet background level, the same
+   song loops straight through. A full stop slowly fades it fully out; it returns
+   after another 15 s of sailing. On a time-of-day change: fade out to a full
+   stop, 3 s of silence, then slowly fade in the next song. No crossfade.
+
+**Patch 3.1 status (November 20, 2026):** implemented for draft review. One
+40-minute cycle (day 22 min, sunset 5.2, night 9.6, dawn 3.2; dawn plays the day
+song), `features/sky/day_night.gd`, `features/audio/game_music.gd`; protocol 31000,
+VERSION 3.1.0. Debug mode has NEXT TIME OF DAY. Linux headless checks pass
+(PROGRESS.md); Windows/Mac look, sound and frame time await Andy's playtest.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge

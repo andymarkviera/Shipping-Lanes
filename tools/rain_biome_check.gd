@@ -72,7 +72,7 @@ func run() -> void:
 	if not expect(game != null, "Game scene opened"): return finish()
 	var rain: Node = game.get("rain")
 	var polar: Node = game.get("polar")
-	if not expect(rain != null and polar != null and polar.overlays.has(rain) and polar.overlays.back() == rain, "the game has the rain biome painted last over the others"): return finish()
+	if not expect(rain != null and polar != null and polar.overlays.has(rain) and polar.overlays.filter(func(layer: Node) -> bool: return layer.name != "DayNight").back() == rain, "the game has the rain biome painted last over the other biomes"): return finish()
 	var environment: Environment = polar.environment
 	var sea: ShaderMaterial = polar.ocean.ocean_material
 	await process_frame
