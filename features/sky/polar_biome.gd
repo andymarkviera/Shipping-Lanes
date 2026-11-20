@@ -10,7 +10,8 @@ const Progression = preload("res://features/game/progression.gd")
 ## Fully polar this close to the north/south edge (both polar ports inside),
 ## no polar look beyond CLEAR_EDGE_M. Metres.
 const FULL_EDGE_M: float = 2350.0
-const CLEAR_EDGE_M: float = 2950.0
+## Patch 3.2: wider, so the North Pole ice field south of the port is polar too.
+const CLEAR_EDGE_M: float = 3700.0
 ## A whole fade takes at least this long, even after a jump.
 const EASE_SECONDS: float = 1.5
 

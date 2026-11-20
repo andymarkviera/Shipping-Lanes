@@ -73,8 +73,9 @@ func run() -> void:
 	game.ship.state.fuel_liters = 1.0
 	game.offer_notice = "Collision! Hull 75%. Dock and click REPAIR."
 	await settle()
-	expect(game.voyage_hud.instruments.get_theme_font("font") == DISPLAY.RED, "Low fuel uses red sheet")
-	expect(game.loading_text.get_theme_font("font") == DISPLAY.RED, "Collision uses red sheet")
+	# Patch 3.2: warnings are plain bold text in red, not the red sprite sheet.
+	expect(game.voyage_hud.instruments.get_theme_font("font") == DISPLAY.plain_font() and game.voyage_hud.instruments.get_theme_color("font_color").r > 0.9, "Low fuel is plain red text")
+	expect(game.loading_text.get_theme_font("font") == DISPLAY.plain_font() and game.loading_text.get_theme_color("font_color").r > 0.9, "Collision is plain red text")
 	game.ship.state.fuel_liters = fuel
 	game.offer_notice = ""
 	await settle()

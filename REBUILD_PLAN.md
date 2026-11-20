@@ -1422,6 +1422,16 @@ gives a server-side, never-saved overlay of infinite money and every ship;
 Options shows "Single Player" and the sprite fonts' punctuation is re-seated.
 New checks: `debug_captain_check.gd`, `menu_glyph_check.gd`.
 
+**Patch 3.2 (November 20, 2026, issue #218):** VERSION 3.2.0. One in-game
+typography system: sprite lettering only for the port name, the money and the
+objective card title; every game button one plain bold font at one size, in
+Title Case ("Refuel  4.10"); `tools/ui_text_check.gd` guards it. Debug mode's
+panel collapses behind a "Debug Menu" button (bottom left; the button or Esc
+toggles it) and its DEBUG tag is a corner badge. The North Pole port sits in a
+bay inside an ice field reached only by three winding straits (sea lanes); the
+South Pole gains 17 seeded glaciers and 25 more icebergs clear of every sea
+route, and a natural glacier backs its quay. No port moved.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge
