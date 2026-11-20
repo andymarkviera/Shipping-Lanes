@@ -8227,3 +8227,42 @@ Issue #216. Status: implemented for draft review.
   `check_m1_voyage.gd`, `check_play_connection.py`.
 - Not done: adding `port_menu_check` to `.github/workflows/checks.yml`; workflow
   edits are off-limits for this patch. Not verified: Windows play, a real online dock.
+
+### Patch 3.1.1 additions — berths, admin debug name, Single Player label
+
+Andy's PR #217 comment. VERSION stays 3.1.1; no workflow edits; gas/oil untouched.
+- Berths: every berth box is 64 × 290 m and already holds the largest hull
+  (38 × 276 m) plus margin. The fault was distance: the port pick (250 m),
+  "approaching" (150 m) and the Dock button measured to **berth 1 only**, and
+  berths 2 and 3 sit 285 m and 570 m along the quay. `test_port.gd` gains
+  `nearest_berth()` / `berth_distance()`; `docking_authority.gd` (new
+  `APPROACH_M`) and `port_test.gd` use them. `ports_probe` gains
+  `check_berth_detection()`: all 6 ports × 3 berths × every catalog hull — the
+  footprint fits the box, moored and arriving ships are detected at that berth,
+  and the authority reads "approaching", picks, docks and holds that berth.
+  The frozen online `public_physics_world.gd` was not changed.
+- Debug captain name (server-authoritative, `dedicated_runtime.gd`): an admin
+  renamed "debug" (any case) gets infinite money and every ship until renamed.
+  Admins are player keys (sha256 of the install key — the keys under `players`
+  in `saves/world.json`) listed in an `admin_keys` array in `server-config.json`
+  beside the saves folder (or `--server-config=`); that file is not in the repo.
+  The real money, fleet and voyage are kept aside and are all a checkpoint ever
+  writes; renaming restores them and, if a debug-only ship is being sailed,
+  swaps back to the captain's own ship once no job is under way. The nameplate
+  still reads "debug". Others named debug only get the label.
+  New `tools/debug_captain_check.gd` (21 checks).
+- Main menu > Options: "Single-player Test Mode" → "Single Player" (id `debug`).
+  Cause of the jank: the font baker put every glyph's bottom on the baseline,
+  so "-" drew like "_" and quotes sat low. The three `.fnt` files re-seat
+  - = + ~ < > ( ) [ ] { } | " ' ` ^ * _ , ; and `tools/bake_display_fonts.py`
+  does the same on a re-bake. New `tools/menu_glyph_check.gd` (57 checks): every
+  swirl label's glyphs exist in its sprite font, plus punctuation placement
+  (15 fail on the old fonts).
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, all Stage 2
+  commands, Stage 3 Python, Stage 4 report probes (`ports_probe` 598 checks),
+  `debug_captain_check`, `menu_glyph_check`, `port_menu_check`,
+  `day_night_check`, `display_fonts_check`, `check_m1_voyage`, `mooring_check`,
+  `debug_game_check`, `hangar_check`, `crane_check`, `check_snapshot_budget`,
+  `check_dedicated_split.py` (plain, `--prediction`, `--replication`).
+- Not verified: Windows play, a real online session with an admin key, the
+  re-seated punctuation on screen. The new checks are not in the Checks workflow.

@@ -12,6 +12,8 @@ extends Node
 const MAX_SLIDE_SECONDS: float = 3.0
 const SLIDE_MPS: float = 20.0
 const SLIDE_TURN_RADPS: float = PI / 2
+## Patch 3.1.1: "approaching" is within this distance of any berth of the port.
+const APPROACH_M: float = 150.0
 const PORT_FULL: String = "Port full — every berth is taken."
 ## How long Undock holds the ship in the berth before the helm is back. The
 ## game (Patch 2.4 item 4) raises it so the mooring lines are reeled in first.
@@ -164,7 +166,7 @@ func advance(delta: float) -> void:
 			continue
 		if entry.state in ["underway", "approaching"]:
 			if entry.ghost and clear_of_berth(entry): ghost(entry, false)
-			entry.state = "approaching" if entry.body.global_position.distance_to(entry.port.berth_anchor.global_position) < 150 else "underway"
+			entry.state = "approaching" if entry.port.berth_distance(entry.body.global_position) < APPROACH_M else "underway"
 			continue
 		freeze(entry.body)
 		if entry.state == "docked": continue

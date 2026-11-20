@@ -2,6 +2,7 @@
 Sources already have alpha. Opaque white backgrounds are keyed by flood fill only,
 so white letter interiors survive. Missing coloured glyphs tint the white sheet.
 """
+import re
 from pathlib import Path
 from PIL import Image, ImageDraw
 import numpy as np
@@ -59,6 +60,22 @@ def tinted(im, kind):
     for i in range(3): a[:,:,i] = (base[i] * light).astype('uint8')
     return Image.fromarray(a)
 
+def reseat(chars, base=56):
+    """Patch 3.1.1: punctuation baked bottom-on-baseline read wrong ("-" looked
+    like "_", quotes sat low). Re-seat it from the font's own H and x heights.
+    tools/menu_glyph_check.gd checks the result."""
+    rows = {int(re.search(r'id=(\d+)', c).group(1)): c for c in chars}
+    def get(code, field): return int(re.search(field + r'=(-?\d+)', rows[code]).group(1))
+    cap_top, x_top = get(ord('H'), 'yoffset'), get(ord('x'), 'yoffset')
+    mid, cap_mid = (x_top + base) / 2, (cap_top + base) / 2
+    want = {}
+    for ch in '-=+~<>': want[ord(ch)] = round(mid - get(ord(ch), 'height') / 2)
+    for ch in '()[]{}|': want[ord(ch)] = round(cap_mid - get(ord(ch), 'height') / 2)
+    for ch in '"\'`^*': want[ord(ch)] = cap_top
+    want[ord('_')] = base - get(ord('_'), 'height') + 5
+    for ch in ',;': want[ord(ch)] = base - get(ord(ch), 'height') + 7
+    return [re.sub(r'yoffset=-?\d+', f'yoffset={want[code]}', c) if code in want else c for code, c in rows.items()]
+
 def bake(kind, glyphs):
     atlas = Image.new('RGBA', (1536, 512))
     chars = []
@@ -81,6 +98,7 @@ def bake(kind, glyphs):
         baseline = 62 if ch in 'gjpqy' and kind == 'white' else 56
         chars.append(f'char id={code} x={x} y={y} width={w} height={h} xoffset=0 yoffset={baseline-h} xadvance={w+2} page=0 chnl=15')
     atlas.save(OUT / f'{kind}.png')
+    chars = reseat(chars)
     (OUT/f'{kind}.fnt').write_text(f'info face="Andy {kind}" size=64 bold=0 italic=0 unicode=1\ncommon lineHeight=64 base=56 scaleW=1536 scaleH=512 pages=1 packed=0\npage id=0 file="{kind}.png"\nchars count={len(chars)}\n'+'\n'.join(chars)+'\nkernings count=0\n')
 for kind,glyphs in [('white',white),('red',red),('gold',gold)]: bake(kind,glyphs)
 print('Baked three atlases, 95 ASCII glyphs each; coloured lowercase aliases caps.')

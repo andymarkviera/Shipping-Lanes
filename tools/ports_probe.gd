@@ -1,6 +1,7 @@
 extends Node3D
 const Preview = preload("res://features/ports/port_test.tscn")
 const Ports = preload("res://features/ports/port_test.gd")
+const DockingAuthorityScript = preload("res://features/ports/docking_authority.gd")
 var checks: int = 0
 var failures: int = 0
 
@@ -88,6 +89,7 @@ func _ready() -> void:
 		verify(moved.ok and moved.transform.origin.is_equal_approx(port.spawn_anchor.global_position), "Port transforms propagate to spawn candidates")
 		port.queue_free()
 		await get_tree().process_frame
+	await check_berth_detection()
 	var preview: Node3D = Preview.instantiate()
 	# Never open the player's voyage save from a probe, with or without --ports-check.
 	preview.save_enabled = false
@@ -196,6 +198,78 @@ func check_port_size(port: Node3D, space: PhysicsDirectSpaceState3D) -> void:
 	verify(port.BERTH_SPACING_M >= biggest + 2 * port.berth.clearance_margin_m + 5 and port.berth.envelope_m.z >= biggest + 2 * port.berth.clearance_margin_m, "%s: three of the biggest ships (%.0f m) fit end to end" % [name_, biggest])
 	var quay_end: float = maxf(port.quay_length_m, port.berth_anchors[-1].position.z + 140.0)
 	verify(quay_end >= port.berth_anchors[-1].position.z + biggest / 2, "%s: the quay runs the length of the last berth" % name_)
+
+## Patch 3.1.1: every berth of every port detects a docked or arriving ship of
+## every hull size. The berth box covers the whole mooring footprint, the berth
+## counts as nearest, the ship reads "approaching", and Dock picks that berth.
+func check_berth_detection() -> void:
+	var rule = preload("res://features/ports/berth_eligibility.gd")
+	var hulls: Array[ShipDefinition] = preload("res://features/catalog/fleet_inspection.gd").definitions()
+	verify(hulls.size() >= 10, "Every hull in the catalog is checked (%d)" % hulls.size())
+	var scenes: Array[PackedScene] = []
+	scenes.append_array(Ports.PORTS)
+	scenes.append_array(Ports.GAME_PORTS)
+	var place: int = 0
+	for scene: PackedScene in scenes:
+		place += 1
+		var port: Node3D = scene.instantiate()
+		port.position = Vector3(4000 * place, 0, -3000)
+		port.rotation.y = .4 * place
+		add_child(port)
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		var name_: String = port.definition.display_name
+		var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+		var service: String = port.berth.service_ids[0]
+		var zone: AABB = AABB(-port.berth.envelope_m / 2, port.berth.envelope_m)
+		for index: int in port.berth_anchors.size():
+			var anchor: Transform3D = port.berth_anchors[index].global_transform
+			var covered: bool = true
+			var nearest: bool = true
+			var arriving_ok: bool = true
+			var failed: Array[String] = []
+			for hull: ShipDefinition in hulls:
+				var moored: Transform3D = rule.berth_pose(anchor, anchor, port.quay_offset_m(hull))
+				var size: Vector3 = hull.hull_size_m + Vector3.ONE * port.berth.clearance_margin_m * 2
+				var footprint: AABB = (anchor.affine_inverse() * moored.translated_local(Vector3(0, 1, 0))) * AABB(-size / 2, size)
+				if not zone.encloses(footprint):
+					covered = false
+					failed.append(hull.id + " footprint")
+				if port.nearest_berth(moored.origin) != index or port.berth_distance(moored.origin) >= DockingAuthorityScript.APPROACH_M:
+					nearest = false
+					failed.append(hull.id + " moored")
+				# Arriving: off the quay and short of the berth, still slow.
+				var arriving: Transform3D = anchor.translated_local(Vector3(-port.quay_side * (hull.hull_size_m.x + 25), 0, -40))
+				var ready: Dictionary = rule.evaluate_easy(port.berth, anchor, hull, arriving, Vector3(0, 0, 1), service, "", space, [], port.quay_offset_m(hull))
+				if port.nearest_berth(arriving.origin) != index or port.berth_distance(arriving.origin) >= DockingAuthorityScript.APPROACH_M or not ready.eligible:
+					arriving_ok = false
+					failed.append("%s arriving (%s)" % [hull.id, ready.code])
+			verify(covered, "%s berth %d: the berth box covers every hull's mooring footprint %s" % [name_, index + 1, failed])
+			verify(nearest, "%s berth %d: a moored ship of every hull is detected at this berth %s" % [name_, index + 1, failed])
+			verify(arriving_ok, "%s berth %d: an arriving ship of every hull is detected and may dock %s" % [name_, index + 1, failed])
+			# The authority itself: approaching, Dock takes this berth, docked here.
+			var authority = DockingAuthorityScript.new()
+			authority.set_physics_process(false)
+			add_child(authority)
+			var body: HandlingShip = HandlingShip.new()
+			CollisionRules.add_box_hull(body, body.definition.hull_size_m)
+			add_child(body)
+			body.simulation_paused = true
+			body.global_transform = anchor.translated_local(Vector3(-port.quay_side * 45, 0, -60))
+			body.velocity = Vector3.ZERO
+			await get_tree().physics_frame
+			authority.register(1, body, port)
+			authority.advance(.01)
+			var pick: Dictionary = authority.pick_berth(1, service, "")
+			verify(authority.state(1) == "approaching" and pick.index == index, "%s berth %d: the docking authority sees the ship approaching this berth (%s, picked %d)" % [name_, index + 1, authority.state(1), pick.index])
+			verify(authority.request_dock(1, service, "").ok, "%s berth %d: Dock works" % [name_, index + 1])
+			authority.advance(authority.MAX_SLIDE_SECONDS + .1)
+			verify(authority.state(1) == "docked" and authority.members[1].berth_index == index and port.nearest_berth(body.global_position) == index, "%s berth %d: the ship docks and stays detected at this berth" % [name_, index + 1])
+			authority.disconnect_owner(1)
+			authority.free()
+			body.free()
+		port.queue_free()
+		await get_tree().process_frame
 
 func check_berth(port: Node3D) -> void:
 	await get_tree().physics_frame

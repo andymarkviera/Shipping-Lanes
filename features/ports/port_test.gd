@@ -1089,7 +1089,8 @@ func _physics_process(delta: float) -> void:
 	offers.advance_to(int(offer_time * 1000))
 	if docking.state(owner_id) in ["underway", "approaching"] and not loading.busy():
 		for other: Node3D in world_ports:
-			if other != port and ship.global_position.distance_to(other.berth_anchor.global_position) < 250 and ship.global_position.distance_to(other.berth_anchor.global_position) < ship.global_position.distance_to(port.berth_anchor.global_position):
+			# Patch 3.1.1: measured to the nearest berth, so arriving at berth 2 or 3 counts.
+			if other != port and other.berth_distance(ship.global_position) < 250 and other.berth_distance(ship.global_position) < port.berth_distance(ship.global_position):
 				port.spawn_allocator.release(spawn_ticket)
 				spawn_ticket = 0
 				port = other
@@ -1120,7 +1121,7 @@ func _physics_process(delta: float) -> void:
 	var current: String = docking.state(owner_id)
 	dock_status = status
 	# The game always shows Dock beside the throttle, greyed out with no berth in range.
-	dock_button.visible = game_mode or ship.global_position.distance_to(port.berth_anchor.global_position) < 150 or current in ["docking", "docked", "undocking"]
+	dock_button.visible = game_mode or port.berth_distance(ship.global_position) < docking.APPROACH_M or current in ["docking", "docked", "undocking"]
 	dock_button.text = "Undock" if current == "docked" else "Dock"
 	dock_button.disabled = loading.busy() or cranes_busy() or sink_seconds > 0.0 or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
