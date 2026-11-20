@@ -1,0 +1,135 @@
+extends RefCounted
+## Patch 4.0 item 8: the airports. As many as there are ports, placed from one
+## fixed seed on coastal land: each runway lies along the coast, every part of
+## it on land (BAND_M metres inland: past the beach, never far up country),
+## clear of every port and its approach, the polar ice, the city, the volcano,
+## the straits' bridges and each other. The strip stands on a level airfield
+## embankment at RUNWAY_Y, just above the tallest green hill (TOON_COAST). Everything comes from baked data (the land grid, the ice grid,
+## Progression.WORLD) and the fixed seed, so client and server work out the
+## same airports. Built once and cached. No state lives here.
+const Progression = preload("res://features/game/progression.gd")
+const CITY_LOOK = preload("res://features/toon/city_look.gd")
+const SEED: int = 40400
+const RUNWAY_M: float = 1100.0
+const RUNWAY_WIDTH_M: float = 34.0
+## The runway's surface height: just above the green hills' tops (18 m).
+const RUNWAY_Y: float = 19.5
+## Every runway sample (centre and both edges) lies this far inland: on dry
+## land, and the middle within a few hundred metres of the coast.
+const BAND_M: Vector2 = Vector2(24.0, 700.0)
+const MIDDLE_INLAND_M: float = 320.0
+const PORT_CLEAR_M: float = 1100.0
+const AIRPORT_CLEAR_M: float = 1800.0
+const ICE_CLEAR_M: float = 250.0
+const NAMES: Array[String] = ["Brindle Field", "Slatewater Air", "Cinder Strip", "Gannet Aerodrome", "Ironreach Airfield", "Hearth Point Airport", "Kelp Field", "Ember Airstrip"]
+static var _cache: Array[Dictionary] = []
+
+static func count() -> int:
+	return Progression.WORLD.size()
+
+## [{id, name, at (runway middle, Vector3 at RUNWAY_Y), heading (radians, +Z
+## turned towards +X), length, width, terminal (Vector3)}], one per port.
+static func all() -> Array[Dictionary]:
+	if not _cache.is_empty(): return _cache
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = SEED
+	var ring: Array[Vector2] = Progression.coast_ring(110.0, 60.0)
+	var placed: Array[Dictionary] = []
+	if ring.is_empty(): return _cache
+	var tries: int = 0
+	while placed.size() < count() and tries < 6000:
+		tries += 1
+		var spot: Vector2 = ring[rng.randi_range(0, ring.size() - 1)]
+		var heading: float = coast_heading(spot)
+		if is_nan(heading): continue
+		heading += rng.randf_range(-0.06, 0.06)
+		if not site_ok(spot, heading, placed): continue
+		var along: Vector2 = Vector2(sin(heading), cos(heading))
+		var inland: Vector2 = land_side(spot, along)
+		var terminal: Vector2 = spot + inland * (RUNWAY_WIDTH_M * 0.5 + 34.0) + along * 120.0
+		placed.append({"id": "airport_%d" % placed.size(), "name": NAMES[placed.size() % NAMES.size()], "at": Vector3(spot.x, RUNWAY_Y, spot.y),
+			"heading": heading, "length": RUNWAY_M, "width": RUNWAY_WIDTH_M, "terminal": Vector3(terminal.x, RUNWAY_Y, terminal.y)})
+	_cache = placed
+	return _cache
+
+## The coast's direction at a spot: perpendicular to the land depth's slope.
+static func coast_heading(spot: Vector2) -> float:
+	var step: float = 20.0
+	var slope: Vector2 = Vector2(Progression.land_depth(spot + Vector2(step, 0)) - Progression.land_depth(spot - Vector2(step, 0)),
+		Progression.land_depth(spot + Vector2(0, step)) - Progression.land_depth(spot - Vector2(0, step)))
+	if slope.length() < 0.5: return NAN
+	var tangent: Vector2 = Vector2(-slope.y, slope.x).normalized()
+	return atan2(tangent.x, tangent.y)
+
+## The unit side of the runway that faces inland.
+static func land_side(spot: Vector2, along: Vector2) -> Vector2:
+	var side: Vector2 = Vector2(along.y, -along.x)
+	return side if Progression.land_depth(spot + side * 60.0) > Progression.land_depth(spot - side * 60.0) else -side
+
+## Whether a runway centred at `spot` along `heading` fits: level beach all
+## along both edges and the middle, away from ports, ice, the volcano, bridges
+## and the airports already placed.
+static func site_ok(spot: Vector2, heading: float, placed: Array[Dictionary]) -> bool:
+	for index: int in Progression.WORLD.size():
+		var port: Vector3 = Progression.WORLD[index].at
+		if spot.distance_to(Vector2(port.x, port.z)) < PORT_CLEAR_M or spot.distance_to(Vector2(port.x, port.z + 500.0)) < PORT_CLEAR_M: return false
+		var gate: Vector3 = Progression.gate(index)
+		if spot.distance_to(Vector2(gate.x, gate.z)) < PORT_CLEAR_M: return false
+	for other: Dictionary in placed:
+		if Progression.short_way(Vector3(spot.x, 0, spot.y) - other.at).length() < AIRPORT_CLEAR_M: return false
+	if spot.distance_to(Progression.VOLCANO.at) < 900.0: return false
+	if Progression.land_depth(spot) > MIDDLE_INLAND_M: return false
+	if CITY_LOOK.is_city(Rect2(spot - Vector2(450, 450), Vector2(900, 900))): return false
+	for bridge: Dictionary in Progression.BRIDGES:
+		if spot.distance_to(bridge.at) < 900.0: return false
+	var along: Vector2 = Vector2(sin(heading), cos(heading))
+	var side: Vector2 = Vector2(along.y, -along.x)
+	var steps: int = 24
+	for index: int in steps + 1:
+		var at: Vector2 = spot + along * RUNWAY_M * (float(index) / steps - 0.5)
+		for offset: float in [-0.5, 0.0, 0.5]:
+			var sample: Vector2 = at + side * RUNWAY_WIDTH_M * offset
+			var depth: float = Progression.land_depth(sample)
+			if depth < BAND_M.x or depth > BAND_M.y: return false
+			if Progression.ice_depth(sample) > -ICE_CLEAR_M: return false
+	return true
+
+## The airport nearest a world position (the short way round), or -1.
+static func nearest(position: Vector3) -> int:
+	var best: int = -1
+	var best_distance: float = INF
+	var list: Array[Dictionary] = all()
+	for index: int in list.size():
+		var distance: float = Progression.short_way(list[index].at - position).length()
+		if distance < best_distance:
+			best_distance = distance
+			best = index
+	return best
+
+## Metres from a position to an airport's runway middle, the short way round.
+static func distance_to(index: int, position: Vector3) -> float:
+	var flat: Vector3 = Progression.short_way(all()[index].at - position)
+	flat.y = 0.0
+	return flat.length()
+
+## Whether a world X/Z lies on airport `index`'s runway (in its rectangle).
+static func on_runway(index: int, position: Vector3, margin: float = 0.0) -> bool:
+	var entry: Dictionary = all()[index]
+	var local: Vector3 = Progression.short_way(position - entry.at)
+	var along: float = local.x * sin(entry.heading) + local.z * cos(entry.heading)
+	var across: float = local.x * cos(entry.heading) - local.z * sin(entry.heading)
+	return absf(along) <= entry.length * 0.5 + margin and absf(across) <= entry.width * 0.5 + margin
+
+## Any runway under a position, or -1.
+static func runway_at(position: Vector3) -> int:
+	for index: int in all().size():
+		if on_runway(index, position, 6.0): return index
+	return -1
+
+## Where a plane waits at airport `index`: on the runway's near end, lined up
+## for take-off along it. Basis: +Z forward (as the ships), +Y up.
+static func start_pose(index: int) -> Transform3D:
+	var entry: Dictionary = all()[index]
+	var along: Vector3 = Vector3(sin(entry.heading), 0, cos(entry.heading))
+	var origin: Vector3 = entry.at - along * (entry.length * 0.5 - 60.0)
+	return Transform3D(Basis(Vector3.UP, entry.heading), origin)

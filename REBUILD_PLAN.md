@@ -1432,6 +1432,17 @@ bay inside an ice field reached only by three winding straits (sea lanes); the
 South Pole gains 17 seeded glaciers and 25 more icebergs clear of every sea
 route, and a natural glacier backs its quay. No port moved.
 
+**Patch 4.0 (November 20, 2026, issue #220, draft PR #221):** VERSION 4.0.0.
+Fishing boat retired (owned ones sold back at full price on load), speedboat
+2,500, racer 12,000 and calmer, new Jetty (five times the racer, jet flame).
+Server-side XP and levels (Lv N and XP bar in the money panel). Seeded airports
+(one per port), three planes from level 10, Passengers/Packages plane jobs,
+low-altitude fine, crash respawn with a repair bill, Switch to Plane/Boat.
+Arcade plane controls: the mouse steers, W/S set the throttle, gear is automatic,
+and the plane never levels itself. The M globe has land relief, and the globe and
+minimap show the airports. Checks: `tools/patch_4_0_check.gd` (the scene-free
+part also runs in `check_catalog.gd`). Waiting for Andy's Windows playtest.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge

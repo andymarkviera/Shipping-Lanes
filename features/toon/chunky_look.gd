@@ -204,8 +204,9 @@ static func _mooring_bitts(root: Node3D, kind: String, definition: ShipDefinitio
 		deck = 3.5
 		ends = {"Bow": [20.0 * size.z / 90.0, 12.0 * size.x / 24.0], "Stern": [-38.0 * size.z / 90.0, 12.0 * size.x / 24.0]}
 		inboard = 1.5 * size.x / 24.0
-	elif kind == "small_racer":
+	elif kind in ["small_racer", "small_jetty"]:
 		# Patch 2.9 item 5: small flush cleats on the racer's low, narrow deck.
+		# Patch 4.0 item 4: the Jetty shares the racer's low deck.
 		s = 0.22
 		deck = 2.6 * size.y / 4.0 + 0.1
 		rail = deck
@@ -239,6 +240,8 @@ static func _dress_small(root: Node3D, hull: MeshInstance3D, definition: ShipDef
 	match kind:
 		"small_racer":
 			_dress_racer(root, hull, size, cache)
+		"small_jetty":
+			_dress_jetty(root, hull, size, cache)
 		"small_speedboat":
 			var blue: Color = Color("2a9fd6")
 			hull.mesh = hull_mesh(size.z, size.x, -2.6 * s, deck, 3.5 * s, 0.8 * s, blue, Color("e8d9b5"))
@@ -395,6 +398,46 @@ static func _dress_racer(root: Node3D, hull: MeshInstance3D, size: Vector3, cach
 		var roundel: MeshInstance3D = _drum(root, 0.32, 0.32, 0.04, Vector3(side * beam * 0.49, deck - 0.35, size.z * 0.1), WHITE, cache)
 		roundel.rotation.z = PI / 2.0
 		roundel.rotation.y = side * 0.05
+
+## Patch 4.0 item 4: the Jetty, a jet boat in the style of the other small boats:
+## the racer's long deep-V in teal, white and orange, a bubble canopy over two
+## seats, twin tail fins and one big jet nozzle on the transom. The jet flame
+## (JET_FLAME, toon cones that grow with the throttle) comes out of the nozzle.
+const JET_FLAME = preload("res://features/toon/jet_flame.gd")
+static func _dress_jetty(root: Node3D, hull: MeshInstance3D, size: Vector3, cache: Dictionary) -> void:
+	var teal: Color = Color("1fb5a8")
+	var orange: Color = Color("ff8a2a")
+	var s: float = size.y / 4.0
+	var deck: float = 2.6 * s
+	var aft: float = -size.z / 2.0
+	var beam: float = size.x
+	var colours: Array[Color] = [WHITE, INK, teal, orange, WHITE, INK]
+	hull.mesh = racer_hull_mesh(size.z, beam, -2.2 * s, deck, colours)
+	var top: float = deck + 0.12
+	# A teal spine down the foredeck and a white nose cap.
+	_box(root, Vector3(beam * 0.2, 0.08, size.z * 0.42), Vector3(0, top + 0.02, size.z * 0.2), teal, cache)
+	_box(root, Vector3(beam * 0.12, 0.1, 0.8), Vector3(0, top + 0.05, size.z * 0.42), orange, cache)
+	# Cockpit with two seats under a raked bubble canopy.
+	var cockpit_z: float = -size.z * 0.08
+	_box(root, Vector3(beam * 0.55, 0.06, size.z * 0.22), Vector3(0, top + 0.01, cockpit_z), Color("3a3f4b"), cache)
+	for z: float in [cockpit_z + 0.55, cockpit_z - 0.55]:
+		_box(root, Vector3(0.5, 0.2, 0.5), Vector3(0, top + 0.12, z), WHITE, cache)
+		_box(root, Vector3(0.5, 0.6, 0.14), Vector3(0, top + 0.4, z - 0.28), orange, cache)
+	var canopy: MeshInstance3D = _ball(root, beam * 0.3, 1.0, Vector3(0, top + 0.3, cockpit_z + 0.2), GLASS, cache)
+	canopy.scale = Vector3(1.0, 0.8, 2.6)
+	# Engine deck, twin swept tail fins and the jet nozzle on the transom.
+	_box(root, Vector3(beam * 0.7, 0.18, size.z * 0.18), Vector3(0, top + 0.06, aft + size.z * 0.12), INK, cache)
+	for side: float in [-1.0, 1.0]:
+		var fin: MeshInstance3D = _box(root, Vector3(0.12, 1.1, 1.2), Vector3(side * beam * 0.3, top + 0.6, aft + 0.9), teal, cache)
+		fin.rotation.x = 0.45
+	var nozzle: MeshInstance3D = _drum(root, 0.55, 0.42, 0.9, Vector3(0, deck - 0.1, aft - 0.35), INK, cache)
+	nozzle.rotation.x = PI / 2.0
+	var ring: MeshInstance3D = _drum(root, 0.6, 0.6, 0.12, Vector3(0, deck - 0.1, aft - 0.82), orange, cache)
+	ring.rotation.x = PI / 2.0
+	var flame: Node3D = JET_FLAME.new()
+	flame.name = "JetFlame"
+	flame.position = Vector3(0, deck - 0.1, aft - 0.88)
+	root.add_child(flame)
 
 static func _tint(port: Node3D, label: String, colour: Color) -> void:
 	var mesh: MeshInstance3D = _mesh_of(port, label)

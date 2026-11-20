@@ -237,12 +237,18 @@ func refresh(delta: float) -> void:
 	shown_speed_mps = lerpf(shown_speed_mps, ship.ground_speed_mps, 1.0 - exp(-5.0 * maxf(delta, 0.0)))
 	if ship.ground_speed_mps < 0.05 and shown_speed_mps < 0.3: shown_speed_mps = 0.0
 	knots.text = "%d kn" % roundi(shown_speed_mps * 3600.0 / 1852.0)
+	# Patch 4.0: flying, the bar shows airspeed, height and throttle instead.
+	var air: bool = view.has_method("flying") and view.flying()
+	slider.get_parent().visible = not air
+	knots.custom_minimum_size.x = 300 if air else 92
+	if air: knots.text = view.aviation.helm_text()
 	var commanded: float = ship.commanded_throttle
 	if not dragging:
 		slider.set_value_no_signal(commanded / maxf(0.01, ship.definition.forward_throttle_limit if commanded >= 0.0 else ship.definition.reverse_throttle_limit))
 	slider.editable = ship.helm_available()
 	var status: Dictionary = view.dock_status
-	var near: bool = state in ["underway", "approaching"] and status.get("code", "") in ["SPEED", "BLOCKED"]
+	var near: bool = state in ["underway", "approaching"] and status.get("code", "") in ["SPEED", "BLOCKED"] and not air
+	view.dock_button.visible = not air
 	dock_hint.text = str(status.get("message", "")) if near else ""
 	dock_hint.visible = near
 	view.dock_button.tooltip_text = "" if not view.dock_button.disabled or docked else "Sail up to a berth and slow down."

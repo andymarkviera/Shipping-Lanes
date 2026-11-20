@@ -1,14 +1,17 @@
 extends SceneTree
-## Patch 2.4 item 8: the small boats family. Records and prices (cheap, no
-## cargo, fastest the racer), toon models with mooring fairleads, and the wave
-## jumping: at full speed on high water the offshore racer gets big airtime, the
-## speedboat small hops and the fishing boat none; every landing is clean (no
-## chatter, no flip) at 30 and 60 frames per second.
+## Patch 2.4 item 8: the small boats family. Records and prices (no cargo),
+## toon models with mooring fairleads, and the wave riding at 30 and 60 frames
+## per second: every landing is clean (no chatter, no flip).
+## Patch 4.0: the fishing boat is retired (not sold, not in the hangar); the
+## speedboat costs 2,500 and the offshore racer 12,000; the racer now skims the
+## chop instead of pogoing (short hops, mild pitch); the Jetty (30,000) tops out
+## at five times the racer's speed and stays on the water.
 const Progression = preload("res://features/game/progression.gd")
 const Hangar = preload("res://features/game/boat_hangar.gd")
 const CHUNKY_LOOK = preload("res://features/toon/chunky_look.gd")
 var checks: int = 0
 var failures: int = 0
+var pitch_of: Dictionary = {}
 
 func expect(ok: bool, label: String) -> void:
 	checks += 1
@@ -25,14 +28,16 @@ func run() -> void:
 	root.add_child(root_node)
 	# Patch 2.9.1: the family also holds the pirate ships (pirate_galleon_check).
 	var boats: Array[String] = Progression.SMALL_KINDS.filter(func(kind: String) -> bool: return not Progression.PIRATE_KINDS.has(kind))
-	expect(boats == ["small_fishing", "small_speedboat", "small_racer"] and Progression.SMALL_KINDS.slice(0, 3) == boats, "Three small boats, cheapest first")
+	expect(boats == ["small_speedboat", "small_racer", "small_jetty"] and Progression.SMALL_KINDS.slice(0, 3) == boats, "Three small boats, cheapest first")
+	expect(not Progression.buyable("small_fishing") and not Hangar.ladder().has("small_fishing"), "The fishing boat is no longer sold")
+	expect(int(Progression.SHIPS.small_speedboat.price_minor) == 250000 and int(Progression.SHIPS.small_racer.price_minor) == 1200000 and int(Progression.SHIPS.small_jetty.price_minor) == 3000000, "Speedboat 2,500, racer 12,000, Jetty 30,000 credits")
 	var top: Dictionary = {}
 	for kind: String in boats:
 		var definition: ShipDefinition = Progression.definition(kind)
 		expect(definition.id.begins_with("ship_small_") and Progression.ladder_kind(definition.id) == kind, "%s has its own record and save ID" % kind)
 		expect(definition.handling_error().is_empty(), "%s record is valid: %s" % [kind, definition.handling_error()])
 		expect(definition.cargo_type_ids.is_empty() and definition.cargo_capacities.is_empty() and definition.dwt_tonnes == 0, "%s carries no cargo" % kind)
-		expect(int(Progression.SHIPS[kind].price_minor) < int(Progression.SHIPS.container.price_minor), "%s is cheaper than the starter ship" % kind)
+		expect(Progression.buyable(kind), "%s is for sale" % kind)
 		expect(Hangar.ladder().has(kind) and Hangar.family_of(kind) == "small" and Hangar.tier_of(kind) == Progression.small_tier(kind), "%s is in the hangar's Small boats family" % kind)
 		expect(Progression.heavy_tier(kind) == 0 and Progression.bulk_tier(kind) == 0 and Progression.container_tier(kind) == 0, "%s is in no cargo family" % kind)
 		top[kind] = definition.forward_acceleration_mps2 / definition.linear_drag_per_second
@@ -45,9 +50,13 @@ func run() -> void:
 	# Patch 2.9 item 4: speedboat 50 kn, offshore (cigarette) racer 200 kn.
 	expect(absf(Hangar.top_knots(Progression.definition("small_speedboat")) - 50.0) < 0.05, "The speedboat tops out at 50 kn")
 	expect(absf(Hangar.top_knots(Progression.definition("small_racer")) - 200.0) < 0.05, "The offshore racer tops out at 200 kn")
-	expect(top.small_racer > top.small_speedboat and top.small_speedboat > top.small_fishing, "The racer is fastest, the fishing boat slowest")
+	expect(absf(Hangar.top_knots(Progression.definition("small_jetty")) - 5.0 * Hangar.top_knots(Progression.definition("small_racer"))) < 0.5, "The Jetty tops out at five times the racer (%.0f kn)" % Hangar.top_knots(Progression.definition("small_jetty")))
+	expect(top.small_jetty > top.small_racer and top.small_racer > top.small_speedboat, "The Jetty is fastest, the speedboat slowest")
+	var jetty_model: Node3D = CHUNKY_LOOK.model("small_jetty", Progression.definition("small_jetty"))
+	expect(jetty_model.find_child("JetFlame", true, false) != null, "The Jetty has its jet flame")
+	jetty_model.free()
 	# A save naming a small boat by its record ID reads it as the kind.
-	var save: Dictionary = {"ship": "ship_small_racer_03", "fleet": {"container": {"fuel": 1.0, "condition": 1.0}, "ship_small_racer_03": {"fuel": 0.5, "condition": 1.0}}}
+	var save: Dictionary = {"ship": "ship_small_racer_03", "fleet": {"container": {"fuel": 1.0, "condition": 1.0}, "ship_small_racer_03": {"fuel": 0.5, "condition": 1.0}}, "version": 5, "spent": 0, "banked": 0, "credits": 0}
 	Progression.migrate(save)
 	expect(save.ship == "small_racer" and save.fleet.has("small_racer"), "Small boat record IDs migrate to kinds")
 	var air: Dictionary = {}
@@ -57,10 +66,10 @@ func run() -> void:
 	for fps: int in [30, 60]:
 		var racer: float = air["small_racer@%d" % fps]
 		var speedboat: float = air["small_speedboat@%d" % fps]
-		expect(racer >= 0.7, "The racer gets big airtime at %d fps (%.2f s)" % [fps, racer])
-		expect(speedboat > 0.05 and speedboat < racer * 0.7, "The speedboat jumps, but less than the racer, at %d fps (%.2f s)" % [fps, speedboat])
-		expect(air["small_fishing@%d" % fps] == 0.0, "The fishing boat never leaves the water at %d fps" % fps)
-	expect(absf(air["small_racer@30"] - air["small_racer@60"]) <= 0.35 * air["small_racer@60"], "Racer airtime does not depend on the frame rate")
+		expect(racer <= 0.35, "The racer skims the chop, no big jumps, at %d fps (%.2f s)" % [fps, racer])
+		expect(float(pitch_of["small_racer@%d" % fps]) <= deg_to_rad(12.0), "The racer's bow stays calm (was pinned at 14 deg) at %d fps (%.1f deg)" % [fps, rad_to_deg(float(pitch_of["small_racer@%d" % fps]))])
+		expect(speedboat > 0.05, "The speedboat still hops at %d fps (%.2f s)" % [fps, speedboat])
+		expect(air["small_jetty@%d" % fps] == 0.0, "The Jetty stays on the water at %d fps" % fps)
 	# Patch 2.9 item 5: the cigarette-style racer model, level at rest, bow-up on the plane.
 	var racer_model: Node3D = CHUNKY_LOOK.model("small_racer", Progression.definition("small_racer"))
 	var racer_hull: MeshInstance3D = racer_model.get_node("Hull") as MeshInstance3D
@@ -125,6 +134,7 @@ func ride(parent: Node3D, kind: String, fps: int, speed: float) -> float:
 	expect(worst_step <= 12.0 / fps, "%s moves smoothly, no snaps (%.3f m in one frame)" % [label, worst_step])
 	expect(shallow_landings <= maxi(1, jumps / 5), "%s does not chatter on the water (%d of %d jumps shorter than 0.1 s)" % [label, shallow_landings, jumps])
 	body.queue_free()
+	pitch_of["%s@%d" % [kind, fps]] = steepest
 	return motion.longest_air_s
 
 ## Patch 2.9 item 5: average pitch and height of a hull held at one speed on

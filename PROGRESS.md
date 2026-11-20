@@ -8317,3 +8317,66 @@ no port moved; no workflow edits.
   edits are Andy's/Hark's call).
 - Not verified: Windows play, the globe's look on screen (headless has no
   renderer), sailing the straits by hand with the biggest hulls.
+
+## Patch 4.0 — planes, levels, boat lineup, globe relief (November 20, 2026)
+
+Issue #220, draft PR #221. VERSION 3.2.0 → 4.0.0. No workflow edits. The gas,
+oil, refinery and cargo-fuel code is untouched.
+- A: the fishing boat can no longer be bought. A save that owns one gets the full
+  price back and the boat leaves the fleet (voyage `retire_ships`, server save
+  schema 1→2). If it was the active ship, the captain moves to another owned ship
+  or the starter. Speedboat 2,500, offshore racer 12,000 (calmer on the chop).
+  New Jetty: 30,000, five times the racer's top speed, no cargo jobs, toon jet
+  flame that grows with throttle.
+- B: XP for each delivery, scaled by its pay, awarded by the server or local
+  authority only (`levels.gd`, with a quest hook). Level 10 takes a few hours.
+  Everyone starts at level 1. "Lv N" and an XP bar sit under the credits; the hint
+  text is gone and the ping label no longer overlaps the panel.
+- C: one seeded coastal airport per port (the same on client and server). Each
+  has a card with Refuel, Repair, Planes, Switch to Boat and the plane jobs
+  (Passengers and Packages). Three planes from level 10. Flight model with lift,
+  drag, stall, the poles and runways. The low-altitude warning is followed by a
+  fine. A crash means an explosion, lost cargo, a repair bill and a respawn at the
+  nearest airport. The port card has Switch to Plane, disabled while a load is
+  aboard.
+- Arcade controls (Andy's addenda): the plane steers towards the mouse cursor.
+  The cursor's offset is turned into the plane's frame, so the plane banks
+  towards the cursor and pulls. W/S move the throttle, which holds where it is
+  left. A/D roll and Q/E yaw are optional. The gear is automatic: down near an
+  airport below 60 m when slow, up after take-off. There is no auto-level or
+  auto-trim; with the cursor centred the plane keeps its attitude. The assists
+  are a coordinated turn, sideslip cancelling, a stall-recovery assist and a
+  runway-alignment yaw on final. The HUD shows an aim reticle and a
+  flight-direction marker. The arrow-key nose bindings are removed.
+- D: the M globe has a land relief shell, built once from the baked land grid
+  plus seeded ridge noise: hills, mountains, snowy peaks and the volcano cone.
+  Port markers sit above it. The globe and the minimap mark every airport.
+- E: snapshots carry an air block (altitude, attitude, climb rate). The own plane
+  is predicted with the server's physics and replayed; leftover error is smoothed,
+  not snapped.
+- Checks: new `tools/patch_4_0_check.gd` (183 checks, about 5 s), and its
+  scene-free part (`tools/patch_4_0_logic.gd`) also runs inside `check_catalog.gd`
+  in the Checks job. It covers: the fishing boat gone and refunded, the prices,
+  the Jetty at 5× the racer with no cargo, XP only from the authority, the
+  level-10 gate, airports deterministic and one per port, lift and stall, a
+  held bank with no auto-level, the gear, a scripted take-off → landing for
+  every plane, a crash (respawn at the nearest airport, cargo lost, repair
+  billed), Switch to Plane refused with a load, the low-altitude fine, and the
+  3.2 fishing save loading.
+  `globe_map_check.gd` adds relief and airport-marker checks.
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, every
+  Stage 2 command, Stage 4 probes, `patch_4_0_check`, `small_boats_check`,
+  `debug_game_check`, `ui_text_check`, `globe_map_check`, `server_saves_check`,
+  `hangar_check`, `check_snapshot_budget`, `debug_captain_check`,
+  `port_menu_check`, `display_fonts_check`, `menu_glyph_check`,
+  `world_land_check`, `polar_biome_check`, `day_night_check`, `mooring_check`,
+  `crane_check`.
+- Not run here: Python was not permitted in this job, so Stage 3 and
+  `check_dedicated_split.py` (`--prediction`, `--replication`) did not run
+  locally. No Python changed in this round; CI runs Stage 3.
+- Seen while testing: adding 20 million credits to a wallet stopped the ship
+  from finishing docking (it stayed "docking"). 2 million is fine. Not
+  investigated; may be pre-existing.
+- Not verified: Windows play, how the planes feel with a real mouse, the globe
+  relief on screen (headless has no renderer), a real online session at plane
+  and Jetty speeds.

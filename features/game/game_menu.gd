@@ -20,7 +20,10 @@ const KEY_ROWS: Array = [["Throttle up / down", "ship_throttle_up", "ship_thrott
 	["Engine to zero", "ship_throttle_zero"], ["Horn", "horn"],
 	["World map", "map_toggle"], ["Recenter camera", "camera_recenter"],
 	["Cannon salute (pirate ships)", "cannon_salute"]]
-const FIXED_ROWS: Array = [["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"],
+## Patch 4.0 arcade planes: the mouse steers, W / S set the throttle and the gear
+## is automatic; A / D roll and Q / E yaw are optional extras.
+const FIXED_ROWS: Array = [["Plane: steer", "Move the mouse"], ["Plane: throttle", "W / S"],
+	["Plane: roll, yaw (optional)", "A / D, Q / E"], ["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"],
 	["Turn the world map", "Drag"], ["Menu", "Esc"]]
 
 func _ready() -> void:

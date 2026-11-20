@@ -2,7 +2,12 @@ extends RefCounted
 ## Dedicated saves only. Frozen 3.0 envelope; append migrations, never replace
 ## earlier steps. Variant bytes contain values only (objects are never decoded).
 const Snapshot = preload("res://features/cargo/voyage_snapshot.gd")
-const SCHEMA_VERSION: int = 1 # Patch 3.0 baseline. Keep every 3.x fixture forever.
+const Levels = preload("res://features/game/levels.gd")
+const Progression = preload("res://features/game/progression.gd")
+# 1: Patch 3.0 baseline. Keep every 3.x fixture forever.
+# 2: Patch 4.0: each player row gains "progress" (level 1, 0 XP, no planes), and
+#    any fishing boat is sold back at its full price (Progression.retire_ships).
+const SCHEMA_VERSION: int = 2
 const MAX_BYTES: int = 64000000
 var folder: String
 var players: Dictionary = {}
@@ -23,6 +28,14 @@ static func migrate(data: Dictionary) -> Dictionary:
 				result.players = result.captains
 				result.erase("captains")
 				result.schema_version = 1
+			1: # Patch 4.0: levels and planes; the fishing boat is retired.
+				if not result.get("players") is Dictionary: return {}
+				for key: Variant in result.players:
+					var row: Variant = result.players[key]
+					if not row is Dictionary or not row.get("voyage") is Dictionary: return {}
+					Progression.migrate(row.voyage)
+					row.progress = Levels.fresh_progress()
+				result.schema_version = 2
 			_: return {} # Missing migration: refuse to boot, never initialize over it.
 	return result
 
@@ -31,8 +44,8 @@ static func valid(data: Dictionary) -> bool:
 	for key: Variant in data.players:
 		if not key is String or not key_valid(key): return false
 		var row: Variant = data.players[key]
-		if not row is Dictionary or row.size() != 2 or not row.get("captain") is String or not row.get("voyage") is Dictionary: return false
-		if not Snapshot.valid(row.voyage): return false
+		if not row is Dictionary or row.size() != 3 or not row.get("captain") is String or not row.get("voyage") is Dictionary: return false
+		if not Snapshot.valid(row.voyage) or not Levels.progress_valid(row.get("progress")): return false
 	return true
 
 func open_store(path: String) -> bool:

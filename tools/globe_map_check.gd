@@ -9,6 +9,7 @@ extends SceneTree
 const FOLDER: String = "user://globe_map_check"
 const GlobeMap = preload("res://features/game/globe_map.gd")
 const Progression = preload("res://features/game/progression.gd")
+const Airports = preload("res://features/planes/airports.gd")
 var failures: Array[String] = []
 var checks: int = 0
 
@@ -88,6 +89,38 @@ func run() -> void:
 	var size: Vector2 = map.frame.size
 	var room: Vector2 = map.screen.get_viewport_rect().size
 	expect(size.x > 0 and absf(size.x - size.y) < 1 and (map.frame.position + size / 2).distance_to(room / 2) < 2, "Globe is a square in the middle")
+	# Patch 4.0 item D14: the land stands up in relief; ports and airports sit on it.
+	expect(map.relief != null and map.relief.get_parent() == map.spin and map.relief.mesh == GlobeMap.relief_mesh(), "The land relief shell is on the globe, built once")
+	var shell: Array = GlobeMap.relief_mesh().surface_get_arrays(0) if GlobeMap.relief_mesh().get_surface_count() > 0 else []
+	if expect(not shell.is_empty(), "The relief shell has a surface"):
+		var verts: PackedVector3Array = shell[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = shell[Mesh.ARRAY_NORMAL]
+		var raised: int = 0
+		var peak: float = 0.0
+		var outward: bool = true
+		for index: int in verts.size():
+			var height: float = verts[index].length() - 1.0
+			if height > 0.004: raised += 1
+			peak = maxf(peak, height)
+			outward = outward and normals[index].dot(verts[index]) > 0.5
+		expect(verts.size() > 2000 and verts.size() < 40000, "The relief shell keeps a modest vertex count (%d)" % verts.size())
+		expect(raised > verts.size() / 4 and peak > 0.012 and peak < 0.035, "The land is raised into hills and ridges (%d raised, peak %.4f)" % [raised, peak])
+		expect(outward, "Relief normals face out of the globe")
+	expect(GlobeMap.ground(Vector3(Progression.VOLCANO.at.x, 0, Progression.VOLCANO.at.y)) > 1.015, "Ember Isle stands up as a cone")
+	expect(is_equal_approx(GlobeMap.ground(Progression.WRAP_CENTRE + Vector3(Progression.WRAP_M / 2, 0, 0)), 1.0), "The open sea is not raised")
+	var lifted: bool = true
+	for index: int in map.port_markers.size():
+		var berth: Vector3 = game.world_ports[index].berth_anchor.global_position
+		lifted = lifted and map.port_markers[index].position.length() >= GlobeMap.ground(berth) + GlobeMap.MARKER_LIFT * 0.9
+	expect(map.port_markers.size() == game.world_ports.size() and lifted, "Every port is marked, above the land relief")
+	expect(map.airport_markers.size() == Airports.count() and Airports.all().size() == Airports.count(), "Every airport is marked (%d of %d)" % [map.airport_markers.size(), Airports.count()])
+	for index: int in map.airport_markers.size():
+		var airport: Dictionary = Airports.all()[index]
+		var pin: Node3D = map.airport_markers[index]
+		var along: Vector3 = Vector3(sin(airport.heading), 0, cos(airport.heading)) * airport.length * 0.5
+		var highest: float = maxf(GlobeMap.ground(airport.at), maxf(GlobeMap.ground(airport.at + along), GlobeMap.ground(airport.at - along)))
+		expect(pin.position.normalized().distance_to(GlobeMap.on_globe(airport.at)) < 0.001 and pin.position.length() > highest + 0.004, airport.name + " is marked above the land relief")
+		expect(pin.get_child_count() >= 3 and absf(pin.basis.y.normalized().dot(GlobeMap.on_globe(airport.at)) - 1.0) < 0.001, airport.name + " marker is a runway glyph standing upright")
 	# Patch 2.5 item 1B: the dotted course follows the sea route round the land.
 	var goal: Vector3 = game.world_ports[2].berth_anchor.global_position
 	var route: Array[Vector3] = Progression.course(game.ship.global_position, goal, 2)

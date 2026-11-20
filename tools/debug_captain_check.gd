@@ -82,7 +82,7 @@ func run() -> void:
 	expect(runtime.captains[2] == "DeBuG", "admin named DeBuG: the nameplate keeps the name")
 	expect(admin.reward_minor == Runtime.DEBUG_CREDITS_MINOR, "admin named debug: infinite money")
 	var all_ships: bool = true
-	for kind: String in Progression.SHIPS: all_ships = all_ships and admin.fleet.has(kind)
+	for kind: String in Progression.SHIPS: all_ships = all_ships and (admin.fleet.has(kind) or not Progression.buyable(kind))
 	expect(all_ships, "admin named debug: owns every ship")
 	expect(runtime.gameplay_state(admin).credits == Runtime.DEBUG_CREDITS_MINOR, "the client is sent the overlay money")
 	admin.pay(5000000)

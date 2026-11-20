@@ -151,6 +151,24 @@ var polar_ice: Node3D
 ## Patch 2.3 debug: the temporary debug layer (features/debug). Null in a normal game.
 const DEBUG_GAME = preload("res://features/debug/debug_game.gd")
 var debug: CanvasLayer
+## Patch 4.0 item 5: the captain's XP (Levels). Server-owned online: only the
+## server's player simulation adds to it (award_delivery); clients show it.
+const Levels = preload("res://features/game/levels.gd")
+var xp: int = 0
+## Patch 4.0 items 8-13: the captain's planes and flights (the game only).
+const AVIATION = preload("res://features/planes/aviation.gd")
+var aviation: Node
+
+## Patch 4.0 item 5: XP for a completed delivery that paid `pay_minor`. The
+## authority only (server simulation, local play); a client view never awards.
+func award_delivery(pay_minor: int) -> int:
+	if runtime_role == "client" or not game_mode: return 0
+	var gained: int = Levels.xp_for_pay(pay_minor)
+	xp = Levels.award(xp, gained, "delivery")
+	return gained
+
+func flying() -> bool:
+	return is_instance_valid(aviation) and aviation.flying()
 
 func play_sound(kind: String) -> void:
 	if sfx.has(kind): sfx[kind].play()
@@ -183,6 +201,10 @@ func _ready() -> void:
 		voyage_hud.free()
 		minimap.free()
 		select_port(0)
+		aviation = AVIATION.new()
+		aviation.name = "Aviation"
+		aviation.view = self
+		add_child(aviation)
 		return
 	# A check may point the game at an isolated save. Players never set this.
 	if game_mode: save_path = str(get_tree().get_meta("game_save_path", save_path))
@@ -409,6 +431,7 @@ func _ready() -> void:
 	services.add_child(ships_panel)
 	if game_mode:
 		for kind: String in Progression.SHIPS:
+			if not Progression.buyable(kind): continue
 			var row: HBoxContainer = HBoxContainer.new()
 			ships_panel.add_child(row)
 			ship_buttons[kind] = [button(row, "", ship_action.bind(kind)), button(row, "", sell_ship.bind(kind))]
@@ -428,6 +451,12 @@ func _ready() -> void:
 		layer.add_child(game_hud)
 		game_hud.setup(self)
 	select_port(0)
+	if game_mode:
+		aviation = AVIATION.new()
+		aviation.name = "Aviation"
+		aviation.view = self
+		add_child(aviation)
+		aviation.setup_presentation()
 	if game_mode and runtime_role != "server":
 		var ambience: Node = preload("res://features/audio/game_ambience.gd").new()
 		ambience.name = "GameAmbience"
@@ -712,6 +741,10 @@ func ship_action(kind: String) -> void:
 	if kind == ship_kind or docking.state(owner_id) != "docked": return
 	var entry: Dictionary = Progression.SHIPS[kind]
 	if not fleet.has(kind):
+		# Patch 4.0 item 1: a retired boat (the fishing boat) is no longer sold.
+		if not Progression.buyable(kind):
+			offer_notice = "The %s is no longer sold." % entry.name
+			return
 		if reward_minor < entry.price_minor:
 			offer_notice = "Not enough money for the %s." % entry.name
 			return
@@ -1044,13 +1077,18 @@ func deliver() -> void:
 		banked_minor += pay_minor
 		bulk_active = ""
 		reward_minor += pay_minor
-		offer_notice = "Delivery complete — paid %.2f credits." % (pay_minor / 100.0)
+		var gained: int = award_delivery(pay_minor)
+		offer_notice = "Delivery complete — paid %.2f credits. +%d XP." % [pay_minor / 100.0, gained]
 		play_sound("chime")
 		refresh_jobs()
 		return
+	var before: int = reward_minor
 	var result: Dictionary = delivery.deliver(self)
 	offer_notice = result.message
-	if result.ok: play_sound("chime")
+	if result.ok:
+		var gained: int = award_delivery(reward_minor - before)
+		if gained > 0: offer_notice += " +%d XP." % gained
+		play_sound("chime")
 	refresh_jobs()
 
 func leave() -> void:
@@ -1076,6 +1114,12 @@ func wrap_world() -> void:
 	ship.global_position += shift
 	if ship.get("attached") == true: ship.payload_body.global_position += shift
 	if runtime_role == "server": return
+	shift_presentation(shift)
+
+## The camera, the wake, the sea pattern and the biome dressings move with a
+## jump of the viewer (a seam crossing; Patch 4.0: a plane over a pole).
+func shift_presentation(shift: Vector3) -> void:
+	if runtime_role == "server": return
 	camera.shift(shift)
 	wake.shift(shift)
 	ocean.shift(shift)
@@ -1085,12 +1129,14 @@ func wrap_world() -> void:
 func _physics_process(delta: float) -> void:
 	if runtime_role in ["client", "world"]: return
 	if not is_instance_valid(ship): return
+	# Patch 4.0: a captain flying a plane; the plane wraps (and crosses the poles) itself.
+	if is_instance_valid(aviation): aviation.tick(delta)
 	if game_mode:
-		wrap_world()
+		if not flying(): wrap_world()
 		if runtime_role != "server": place_icebergs()
 	offer_time += delta
 	offers.advance_to(int(offer_time * 1000))
-	if docking.state(owner_id) in ["underway", "approaching"] and not loading.busy():
+	if docking.state(owner_id) in ["underway", "approaching"] and not loading.busy() and not flying():
 		for other: Node3D in world_ports:
 			# Patch 3.1.1: measured to the nearest berth, so arriving at berth 2 or 3 counts.
 			if other != port and other.berth_distance(ship.global_position) < 250 and other.berth_distance(ship.global_position) < port.berth_distance(ship.global_position):
@@ -1106,7 +1152,8 @@ func _physics_process(delta: float) -> void:
 		# M4: a delivered heavy job is banked and offered again at its port.
 		for done: Dictionary in heavy_jobs.completed.values():
 			banked_minor += int(done.reward_minor)
-			offer_notice = "Heavy load delivered — paid %.2f credits." % (done.reward_minor / 100.0)
+			var gained: int = award_delivery(int(done.reward_minor))
+			offer_notice = "Heavy load delivered — paid %.2f credits. +%d XP." % [done.reward_minor / 100.0, gained]
 		heavy_jobs.completed.clear()
 		play_sound("chime")
 		refresh_jobs()
@@ -1124,7 +1171,7 @@ func _physics_process(delta: float) -> void:
 	var current: String = docking.state(owner_id)
 	dock_status = status
 	# The game always shows Dock beside the throttle, greyed out with no berth in range.
-	dock_button.visible = game_mode or port.berth_distance(ship.global_position) < docking.APPROACH_M or current in ["docking", "docked", "undocking"]
+	dock_button.visible = (game_mode and not flying()) or port.berth_distance(ship.global_position) < docking.APPROACH_M or current in ["docking", "docked", "undocking"]
 	dock_button.text = "Undock" if current == "docked" else "Dock"
 	dock_button.disabled = loading.busy() or cranes_busy() or sink_seconds > 0.0 or not (current == "docked" or (current in ["underway", "approaching"] and status.eligible))
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
@@ -1226,6 +1273,9 @@ func _process(_delta: float) -> void:
 		# The game: nothing here. The keys are listed in Esc > CONTROLS.
 		if game_mode: navigation.text = ""
 	if services.visible and not game_mode: navigation.text += "\nRefuel / repair: " + free_note()
+	if is_instance_valid(aviation):
+		aviation.present(_delta)
+		aviation.refresh_ui()
 	if is_instance_valid(game_hud): game_hud.refresh(_delta)
 
 ## Save, then close the game. The window's close button and the Esc menu's Quit.

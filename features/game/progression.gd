@@ -2290,9 +2290,14 @@ const SHIPS = {
 	"heavy_4": {"name": "Semi-submersible heavy ship", "price_minor": 40000000, "record": "res://features/catalog/records/heavy_04_ship.tres"},
 	"heavy_5": {"name": "Giant semi-submersible", "price_minor": 90000000, "record": "res://features/catalog/records/heavy_05_ship.tres"},
 	# Patch 2.4 item 8: the small boats. Cheap, just for fun, no cargo jobs.
-	"small_fishing": {"name": "Fishing boat", "price_minor": 20000, "record": "res://features/catalog/records/small_fishing_ship.tres"},
-	"small_speedboat": {"name": "Speedboat", "price_minor": 40000, "record": "res://features/catalog/records/small_speedboat_ship.tres"},
-	"small_racer": {"name": "Offshore racer", "price_minor": 60000, "record": "res://features/catalog/records/small_racer_ship.tres"},
+	# Patch 4.0 item 1: the fishing boat is retired. It stays here only so older
+	# saves that own it still read; migrate() sells it back at its full price.
+	"small_fishing": {"name": "Fishing boat", "price_minor": 20000, "record": "res://features/catalog/records/small_fishing_ship.tres", "retired": true},
+	# Patch 4.0 item 2: new prices for the speedboat and the offshore racer.
+	"small_speedboat": {"name": "Speedboat", "price_minor": 250000, "record": "res://features/catalog/records/small_speedboat_ship.tres"},
+	"small_racer": {"name": "Offshore racer", "price_minor": 1200000, "record": "res://features/catalog/records/small_racer_ship.tres"},
+	# Patch 4.0 item 4: the Jetty, a jet boat five times as fast as the racer.
+	"small_jetty": {"name": "Jetty", "price_minor": 3000000, "record": "res://features/catalog/records/small_jetty_ship.tres"},
 	# Patch 2.9.1 item 1: the pirate galleon. A prestige buy in the same "small"
 	# (Other boats) family: no cargo jobs, just for sailing.
 	"small_galleon": {"name": "Pirate galleon", "price_minor": 20000000, "record": "res://features/catalog/records/pirate_galleon_ship.tres"},
@@ -2316,7 +2321,9 @@ const HEAVY_KINDS: Array[String] = ["heavy", "heavy_2", "heavy_3", "heavy_4", "h
 ## cargo and take no jobs; the planing ones jump the waves (ShipVisualMotion).
 ## Patch 2.9.1: the family is shown as "Other boats" and also holds the pirate
 ## ships (PIRATE_KINDS); the family ID stays "small" so saves are unchanged.
-const SMALL_KINDS: Array[String] = ["small_fishing", "small_speedboat", "small_racer", "small_brigantine", "small_galleon"]
+## Patch 4.0: the fishing boat is gone (RETIRED_KINDS) and the Jetty joins.
+const SMALL_KINDS: Array[String] = ["small_speedboat", "small_racer", "small_jetty", "small_brigantine", "small_galleon"]
+const RETIRED_KINDS: Array[String] = ["small_fishing"]
 const PIRATE_KINDS: Array[String] = ["small_brigantine", "small_galleon"]
 ## Ship record IDs and the ladder kind each one is saved as. The old container
 ## variants all had the starter's 24-slot hull: the starter and the slower
@@ -2333,6 +2340,7 @@ const LADDER_IDS = {
 	"ship_bulk_supramax_02": "bulk_2", "ship_bulk_panamax_03": "bulk_3",
 	"ship_bulk_capesize_04": "bulk_4", "ship_bulk_valemax_05": "bulk_5",
 	"ship_small_fishing_01": "small_fishing", "ship_small_speedboat_02": "small_speedboat", "ship_small_racer_03": "small_racer",
+	"ship_small_jetty_04": "small_jetty",
 	"ship_pirate_galleon_01": "small_galleon", "ship_pirate_brigantine_02": "small_brigantine",
 }
 ## A sold ship pays back half its price.
@@ -2391,9 +2399,16 @@ static func bulk_tier(kind: String) -> int:
 static func heavy_tier(kind: String) -> int:
 	return HEAVY_KINDS.find(kind) + 1
 
-## 1 to 3 for a small boat, 0 for any other kind.
+## 1 to 5 for a small boat (pirate ships included), 0 for any other kind.
+## Patch 4.0: the retired fishing boat still counts as a small boat (tier 9),
+## so it never takes a job in the moment before its save is migrated.
 static func small_tier(kind: String) -> int:
+	if RETIRED_KINDS.has(kind): return 9
 	return SMALL_KINDS.find(kind) + 1
+
+## Patch 4.0 item 1: whether a kind can still be bought.
+static func buyable(kind: String) -> bool:
+	return SHIPS.has(kind) and not SHIPS[kind].get("retired", false)
 
 ## Deadweight tonnes a bulk tier carries, from its record.
 static func bulk_capacity(tier: int) -> int:
@@ -2458,6 +2473,43 @@ static func migrate(d: Dictionary) -> void:
 		var mapped: Variant = ladder_kind(kind) if kind is String else kind
 		if not fleet.has(mapped): fleet[mapped] = d.fleet[kind]
 	d.fleet = fleet
+	retire_ships(d)
+
+## Patch 4.0 item 1: a save that owns a retired boat (the fishing boat) sells it
+## back at its FULL price and drops it from the fleet. If it was the ship being
+## sailed, the captain moves to their first other owned ship that is not a
+## heavy lifter (container, bulk, then other boats), else to the starter
+## container ship. The refund keeps wallet = earned - spent: it comes off the
+## money spent, and any rest is banked (version 5). Runs once: after it the
+## fleet holds no retired kind. Returns the credits refunded.
+static func retire_ships(d: Dictionary) -> int:
+	if not d.get("fleet") is Dictionary or not d.get("ship") is String: return 0
+	var refunded: int = 0
+	for kind: String in RETIRED_KINDS:
+		if not d.fleet.has(kind): continue
+		var price: int = int(SHIPS[kind].price_minor)
+		d.fleet.erase(kind)
+		var from_spent: int = mini(price, maxi(0, int(d.get("spent", 0)))) if d.get("spent") is int else 0
+		var rest: int = price - from_spent
+		if d.get("version") != 5: rest = 0 # Version 4 has no bank: refund what was spent.
+		if d.get("spent") is int: d.spent -= from_spent
+		if rest > 0: d.banked = int(d.get("banked", 0)) + rest
+		if d.get("credits") is int: d.credits += from_spent + rest
+		refunded += from_spent + rest
+		if d.ship != kind: continue
+		var next: String = "container"
+		for candidate: String in CONTAINER_KINDS + BULK_KINDS + SMALL_KINDS:
+			if d.fleet.has(candidate):
+				next = candidate
+				break
+		if not d.fleet.has(next): d.fleet[next] = {"fuel": 1.0, "condition": 1.0}
+		d.ship = next
+		d.heavy_mode = false
+		var stored: Variant = d.fleet[next]
+		if stored is Dictionary and fraction(stored.get("fuel")) and fraction(stored.get("condition")):
+			d.fuel = float(stored.fuel) * definition(next).fuel_capacity_liters
+			d.condition = float(stored.condition)
+	return refunded
 
 static func resale_minor(kind: String) -> int:
 	return int(SHIPS[kind].price_minor) * RESALE_PERCENT / 100

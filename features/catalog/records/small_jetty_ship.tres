@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="ShipDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/ship_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ship_small_jetty_04"
+display_name = "Jetty"
+scene_path = "res://features/ships/starter_container_01/ship_starter_container_01.tscn"
+runtime_scene_path = "res://features/ships/starter_container_01/starter_runtime.tscn"
+cargo_type_ids = Array[String]([])
+cargo_capacities = {}
+hull_size_m = Vector3(3, 2, 12)
+camera_radius_m = 8.0
+camera_distance_m = 48.0
+wake_half_length_m = 5.8
+wake_half_width_m = 1.5
+cargo_anchor_m = Vector3(0, 1, 0)
+jump_lift = 0.0
+chop_height_m = 0.2
+plane_trim_degrees = 2.5
+neutral_stop_deceleration_mps2 = 4.0
+forward_acceleration_mps2 = 154.3333
+reverse_acceleration_mps2 = 3.0
+linear_drag_per_second = 0.3
+forward_throttle_limit = 1.0
+reverse_throttle_limit = 0.4
+command_rate_per_second = 0.8
+engine_ramp_up_per_second = 0.6
+engine_ramp_down_per_second = 1.5
+max_turn_rate_degrees = 28.0
+turn_acceleration_degrees = 40.0
+rudder_full_effect_speed_mps = 2.0
+thruster_acceleration_mps2 = 0.6
+lateral_drag_per_second = 2.5
+thruster_cutoff_speed_mps = 3.0
+fuel_capacity_liters = 900.0
+fuel_full_output_lps = 0.6
+fuel_idle_lps = 0.01

@@ -13,6 +13,9 @@ const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const METRES_PER_RADIAN: float = Progression.WRAP_M / TAU
 ## Patch 2.5 item 1B: beach colour round the land on the minimap and globe.
 const SAND: Color = Color("f1dfa4")
+const Airports = preload("res://features/planes/airports.gd")
+## Patch 4.0 item D14: the airport colour, as on the M globe.
+const AIRPORT_RED: Color = Color("e8504a")
 var view: Node3D
 var clock: float = 0.0
 
@@ -165,6 +168,16 @@ func _draw() -> void:
 		var dot: Vector2 = on_disc(point, radius)
 		draw_circle(dot, 5.5, PLAYFUL.INK)
 		draw_circle(dot, 3.5, PLAYFUL.SUN if port == view.port else Color.WHITE)
+	# Patch 4.0 item D14: each airport as a short runway bar along its heading
+	# with a red middle, unlike the round port dots.
+	for airport: Dictionary in Airports.all():
+		var point: Vector2 = sphere_point(airport.at, ship)
+		if not visible_on(point): continue
+		var dot: Vector2 = on_disc(point, radius)
+		var along: Vector2 = Vector2(-sin(airport.heading), -cos(airport.heading)) * 5.0
+		draw_line(dot - along, dot + along, PLAYFUL.INK, 5.0, true)
+		draw_line(dot - along * 0.8, dot + along * 0.8, Color("c9ced6"), 2.5, true)
+		draw_circle(dot, 1.8, AIRPORT_RED)
 	if not destination.is_empty():
 		# A destination over the horizon sits on the rim, in the direction to sail.
 		var goal: Vector2 = on_disc(goal_at, radius)
