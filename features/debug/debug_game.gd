@@ -69,6 +69,8 @@ func _ready() -> void:
 	readout = Label.new()
 	stack.add_child(readout)
 	add_button(stack, "HANGAR", func() -> void: view.hangar.open())
+	# Patch 3.1: jump to the next time of day (local test world only).
+	add_button(stack, "NEXT TIME OF DAY", func() -> void: preload("res://features/sky/day_night.gd").skip_phase())
 	var heading: Label = Label.new()
 	heading.text = "Quick travel"
 	stack.add_child(heading)

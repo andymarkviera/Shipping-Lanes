@@ -3,7 +3,7 @@ extends Control
 const FEED: String = "https://raw.githubusercontent.com/andymarkviera/Shipping-Lanes-Releases/main/server.json"
 const SCENE: String = "res://features/network/play_connection.tscn"
 const TARGET: StringName = &"play_server"
-const VERSION: String = "3.0.1"
+const VERSION: String = "3.1.0"
 const CaptainName = preload("res://features/network/captain_name.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 var lookup_on_ready: bool = true

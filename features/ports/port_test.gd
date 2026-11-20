@@ -9,6 +9,7 @@ const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const POLAR_BIOME = preload("res://features/sky/polar_biome.gd")
+const DAY_NIGHT = preload("res://features/sky/day_night.gd")
 const POLAR_ICE = preload("res://features/toon/polar_ice.gd")
 const DESERT_BIOME = preload("res://features/sky/desert_biome.gd")
 const DESERT_LOOK = preload("res://features/toon/desert_look.gd")
@@ -64,6 +65,8 @@ var cranes: Node3D
 var bridges: Node3D
 ## Patch 2.5 item 3: the North Pole biome (game only).
 var polar: Node
+## Patch 3.1: the day/night cycle (game only).
+var day_night: Node
 ## Patch 2.5 item 4: the desert biome, painted over the polar look (game only).
 var desert: Node
 ## Patch 2.5 item 5: the tropical biome, painted over the polar and desert looks
@@ -236,6 +239,11 @@ func _ready() -> void:
 		rain.setup(polar)
 		city_paint = CITY_LOOK.window_materials()
 		rain.windows = city_paint
+		# Patch 3.1: day, sunset and night, painted last over every biome.
+		day_night = DAY_NIGHT.new()
+		day_night.name = "DayNight"
+		add_child(day_night)
+		day_night.setup(polar)
 	var scenes: Array = PORTS.duplicate()
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
@@ -422,6 +430,10 @@ func _ready() -> void:
 		ambience.name = "GameAmbience"
 		ambience.view = self
 		add_child(ambience)
+		var music: Node = preload("res://features/audio/game_music.gd").new()
+		music.name = "GameMusic"
+		music.view = self
+		add_child(music)
 	if runtime_role == "local" and game_mode and DEBUG_GAME.active(get_tree()):
 		debug = DEBUG_GAME.new()
 		debug.view = self
@@ -1131,6 +1143,7 @@ func _process(_delta: float) -> void:
 	if desert != null: desert.update(ship.global_position, _delta)
 	if tropical != null: tropical.update(ship.global_position, _delta)
 	if rain != null: rain.update(ship.global_position, _delta)
+	if day_night != null: day_night.update(_delta)
 	if volcano != null: volcano.update(camera.camera.global_position, polar.sun)
 	# Patch 2.5 item 1B: the coast surf rides the same swell as the sea.
 	if surf_paint != null:

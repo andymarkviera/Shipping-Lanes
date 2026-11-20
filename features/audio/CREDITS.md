@@ -24,3 +24,8 @@ Rebuild: `python tools/audio/generate_game_ambience.py`. All are 32-second,
 crane motors, metal squeaks and horns; ice combines wind and creaks; rain
 combines rainfall and city hum. In-game sea/tropical surf and tropical gulls
 reuse the credited menu loops above.
+
+Music (Patch 3.1), in `assets/audio/music/`: `day_Neon_Buoy.mp3` ("Neon Buoy"),
+`sunset_Sunlit_Current.mp3` ("Sunlit Current") and
+`night_The_Blackwater_Passage.mp3` ("The Blackwater Passage"). Credit:
+Andy Viera (original). Played by `game_music.gd`, one song per time of day.
