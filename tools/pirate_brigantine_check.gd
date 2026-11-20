@@ -37,7 +37,7 @@ func run() -> void:
 	expect(Hangar.ladder().has(KIND) and Hangar.family_of(KIND) == "small" and Hangar.tier_of(KIND) == 4, "The hangar lists it fourth in Other boats")
 	expect(Hangar.capacity_text(KIND) == "none, just for fun", "The card says it carries nothing")
 	var price: int = int(Progression.SHIPS[KIND].price_minor)
-	expect(price < int(Progression.SHIPS.small_galleon.price_minor) and price > 10 * int(Progression.SHIPS.small_racer.price_minor), "It costs less than the galleon, far more than a small boat (%s credits)" % Hangar.credits(price))
+	expect(price < int(Progression.SHIPS.small_galleon.price_minor) and price > int(Progression.SHIPS.small_jetty.price_minor), "It costs less than the galleon, more than any small boat (Patch 4.0) (%s credits)" % Hangar.credits(price))
 	var save: Dictionary = {"ship": "ship_pirate_brigantine_02", "fleet": {"container": {"fuel": 1.0, "condition": 1.0}, "ship_pirate_brigantine_02": {"fuel": 0.5, "condition": 1.0}, "ship_pirate_galleon_01": {"fuel": 1.0, "condition": 1.0}}}
 	Progression.migrate(save)
 	expect(save.ship == KIND and save.fleet.has(KIND) and save.fleet.has("small_galleon"), "Its record ID migrates to the kind, beside the galleon's")

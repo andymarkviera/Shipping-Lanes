@@ -10,7 +10,16 @@ const Relevance = preload("res://features/network/ship_relevance.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const DayNight = preload("res://features/sky/day_night.gd")
 # 3.1.0 adds the world clock to welcome/pong (3.1.1: same wire, 18-minute cycle). 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
-const PROTOCOL: int = 31000
+const PROTOCOL: int = 40000
+const Planes = preload("res://features/planes/plane_catalog.gd")
+const Levels = preload("res://features/game/levels.gd")
+const PlaneLook = preload("res://features/planes/plane_look.gd")
+## Patch 4.0: other captains' planes, drawn from their motion's air block.
+var air_replicas: Dictionary = {}
+## Patch 4.0 item 15: boat actions are refused while a captain flies, plane
+## actions while they sail; the plane's own rules (Aviation) do the rest.
+const BOAT_ACTIONS: Array[String] = ["dock", "cancel_dock", "accept", "cancel_load", "abandon", "deliver", "refuel", "repair", "recover", "ship", "sell", "lower", "raise", "salute"]
+const PLANE_ACTIONS: Array[String] = ["plane_switch", "boat_switch", "plane_buy", "plane_select", "plane_refuel", "plane_repair", "plane_accept", "plane_deliver"]
 const MAX_PLAYERS: int = 8
 const INTERVAL: float = 0.05
 const BUFFER_SECONDS: float = 0.15
@@ -128,10 +137,12 @@ var debug_real: Dictionary = {}
 func gameplay_payload_error(payload: Dictionary) -> String:
 	if payload.size() != 2 or not payload.get("action") is String or not payload.get("value") is String: return "BAD_PAYLOAD"
 	if payload.value.length() > 128: return "BAD_PAYLOAD"
-	if payload.action not in ["dock", "cancel_dock", "accept", "cancel_load", "abandon", "deliver", "refuel", "repair", "recover", "ship", "sell", "lower", "raise", "salute"]: return "UNKNOWN_ACTION"
+	if payload.action not in BOAT_ACTIONS and payload.action not in PLANE_ACTIONS: return "UNKNOWN_ACTION"
 	if payload.action in ["ship", "sell"]:
 		if not Progression.SHIPS.has(payload.value): return "BAD_PAYLOAD"
-	elif payload.action == "accept":
+	elif payload.action in ["plane_buy", "plane_select"]:
+		if not Planes.PLANES.has(payload.value): return "BAD_PAYLOAD"
+	elif payload.action in ["accept", "plane_accept"]:
 		if payload.value.is_empty(): return "BAD_PAYLOAD"
 	elif not payload.value.is_empty(): return "BAD_PAYLOAD"
 	return ""
@@ -142,6 +153,21 @@ func execute_gameplay(sender: int, payload: Dictionary) -> String:
 	if now - int(last_gameplay_at.get(sender, -1000)) < 100: return "RATE_LIMITED"
 	last_gameplay_at[sender] = now
 	var context: Node3D = contexts[sender]
+	var air: Node = context.aviation
+	if air.flying() and payload.action in BOAT_ACTIONS and payload.action != "salute": return "OUT_OF_RANGE"
+	if payload.action in PLANE_ACTIONS:
+		var done: bool = false
+		match payload.action:
+			"plane_switch": done = air.switch_to_plane()
+			"boat_switch": done = air.switch_to_boat()
+			"plane_buy": done = air.buy(payload.value)
+			"plane_select": done = air.select(payload.value)
+			"plane_refuel": done = air.refuel()
+			"plane_repair": done = air.repair()
+			"plane_accept": done = air.accept(payload.value)
+			"plane_deliver": done = air.deliver()
+		adopt_hull(sender)
+		return "OK" if done else "OUT_OF_RANGE"
 	match payload.action:
 		"salute":
 			if not Progression.PIRATE_KINDS.has(context.ship_kind) or now - int(last_salute.get(sender, -5000)) < 5000: return "OUT_OF_RANGE"
@@ -179,14 +205,7 @@ func execute_gameplay(sender: int, payload: Dictionary) -> String:
 			if context.cranes_busy(): return "BUSY"
 			if context.docking.state(sender) != "docked": return "OUT_OF_RANGE"
 			context.ship_action(payload.value)
-			var id: String = "ship_%d" % sender
-			if ships[id] != context.ship:
-				disable_tree(context.ship)
-				context.ship.set_physics_process(true)
-				replication.orders.erase(id)
-				wrap.remove_hull(id)
-				ships[id] = context.ship
-				wrap.add_hull(id, context.ship)
+			adopt_hull(sender)
 		"sell":
 			if context.docking.state(sender) != "docked": return "OUT_OF_RANGE"
 			context.sell_ship(payload.value)
@@ -194,6 +213,23 @@ func execute_gameplay(sender: int, payload: Dictionary) -> String:
 			if not context.heavy_mode: return "OUT_OF_RANGE"
 			if not context.ship.request_height(-1.0 if payload.action == "lower" else 2.6): return "OUT_OF_RANGE"
 	return "OK"
+
+## A captain's simulation made a new hull (a ship swap, or back from a plane):
+## it joins the shared world in place of the old one.
+func adopt_hull(sender: int) -> void:
+	var context: Node3D = contexts[sender]
+	var id: String = "ship_%d" % sender
+	if ships.get(id) == context.ship: return
+	disable_tree(context.ship)
+	context.ship.set_physics_process(not context.flying())
+	replication.orders.erase(id)
+	wrap.remove_hull(id)
+	ships[id] = context.ship
+	wrap.add_hull(id, context.ship)
+
+## Patch 4.0: whether a captain is flying (helm limits and motion differ).
+func entity_flying(sender: int) -> bool:
+	return contexts.has(sender) and contexts[sender].flying()
 
 func send_gameplay(kind: String, value: String = "") -> void:
 	if entity.is_empty(): return
@@ -233,11 +269,12 @@ func status_row(sender: int) -> Dictionary:
 		"docked": body.docked, "filled": body.assembly.container_visuals.filled,
 		"paused": body.simulation_paused, "pause_reason": body.pause_reason, "heavy": heavy,
 		"job": context.bulk_active if context.bulk_mode() else context.offers.active_job("preview_captain").get("id", ""),
-		"credits": context.reward_minor}
+		"credits": context.reward_minor, "plane": context.aviation.plane_kind if context.flying() else ""}
 
 ## Per-tick motion for one hull; quantized by the codec, shared by recipients.
 func motion_row(sender: int) -> Dictionary:
 	var context: Node3D = contexts[sender]
+	if context.flying(): return air_motion(sender, false)
 	var body: HandlingShip = context.ship
 	var row: Dictionary = {"peer": sender, "position": body.position, "yaw": body.rotation.y, "velocity": body.velocity,
 		"speed": body.ground_speed_mps, "yaw_rate": body.yaw_rate, "engine": body.actual_throttle,
@@ -247,7 +284,22 @@ func motion_row(sender: int) -> Dictionary:
 		row.heavy = {"height": body.deck_height, "pose": body.payload_body.global_transform if body.payload_body.is_inside_tree() else Transform3D.IDENTITY}
 	return row
 
+## Patch 4.0 item 15: a plane's motion. The air block carries the altitude
+## (full precision), the whole attitude and the climb rate.
+func air_motion(sender: int, own: bool) -> Dictionary:
+	var air: Node = contexts[sender].aviation
+	var m: RefCounted = air.model
+	var block: Dictionary = {"altitude": m.position.y, "basis": m.basis, "vy": m.velocity.y, "ground": m.on_ground, "gear": m.gear_down, "stall": m.stalled}
+	if own:
+		return {"ack": int(replication.orders.get("ship_%d" % sender, EMPTY).get("seq", 0)),
+			"position": m.position, "yaw": m.heading(), "velocity": m.velocity, "ground_speed": m.airspeed(), "yaw_rate": 0.0,
+			"throttle": float(air.order.throttle), "engine": m.engine, "rudder": float(air.order.roll), "lateral": float(air.order.yaw),
+			"fuel": m.fuel_l, "condition": air.condition(), "air": block}
+	return {"peer": sender, "position": m.position, "yaw": m.heading(), "velocity": m.velocity, "speed": m.airspeed(), "yaw_rate": 0.0,
+		"engine": m.engine, "throttle": clampf(float(air.order.throttle), -1.0, 1.0), "rudder": float(air.order.roll), "lateral": float(air.order.yaw), "remaining": 0.0, "air": block}
+
 func own_motion(sender: int) -> Dictionary:
+	if contexts[sender].flying(): return air_motion(sender, true)
 	var ship: HandlingShip = contexts[sender].ship
 	return {"ack": int(replication.orders.get("ship_%d" % sender, EMPTY).get("seq", 0)),
 		"position": ship.global_position, "yaw": ship.rotation.y, "velocity": ship.velocity,
@@ -274,7 +326,8 @@ func gameplay_state(context: Node3D) -> Dictionary:
 		"credits": context.reward_minor, "spent": context.spent_minor, "banked": context.banked_minor,
 		"fleet": context.fleet.duplicate(true), "bulk": context.bulk_active, "heavy": context.heavy_jobs.active.duplicate(true),
 		"notice": context.offer_notice, "abandon": context.abandon_job_id, "abandon_deadline": maxi(0, context.abandon_deadline - Time.get_ticks_msec()),
-		"sell": context.sell_kind, "sell_deadline": maxi(0, context.sell_deadline - Time.get_ticks_msec())}
+		"sell": context.sell_kind, "sell_deadline": maxi(0, context.sell_deadline - Time.get_ticks_msec()),
+		"air": context.aviation.state()}
 
 @rpc("authority", "call_remote", "reliable", 0)
 func gameplay_snapshot(epoch: String, data: Dictionary) -> void:
@@ -302,6 +355,8 @@ func gameplay_snapshot(epoch: String, data: Dictionary) -> void:
 	view.abandon_deadline = Time.get_ticks_msec() + data.abandon_deadline
 	view.sell_kind = data.sell
 	view.sell_deadline = Time.get_ticks_msec() + data.sell_deadline
+	# Patch 4.0: XP, planes and plane mode are the server's word.
+	if data.get("air") is Dictionary: view.aviation.apply_state(data.air)
 	if jobs_changed: view.refresh_jobs()
 
 @rpc("authority", "call_remote", "reliable", 0)
@@ -387,6 +442,11 @@ func present_world(target: float, _delta: float) -> void:
 		var ahead: float = clampf(target - b.stamp, 0.0, EXTRAPOLATE_SECONDS)
 		var body: HandlingShip = view.ship
 		var own: bool = id == entity
+		if not own and str(state.get("plane", "")) != "" and Planes.PLANES.has(str(state.plane)) and b.has("air"):
+			present_plane(id, state, a, b, weight, ahead, _delta)
+			continue
+		if air_replicas.has(id): drop_air_replica(id)
+		if own and view.flying(): continue
 		if not own:
 			if replicas.has(id) and replicas[id].kind != state.kind: drop_replica(id)
 			if not replicas.has(id): make_replica(id, state)
@@ -458,6 +518,49 @@ func present_world(target: float, _delta: float) -> void:
 	var second: Dictionary = world_samples[mini(1, world_samples.size() - 1)]
 	if first.cranes.is_empty() and second.cranes.is_empty() and presented_cranes.is_empty(): return
 	apply_cranes(first.cranes, second.cranes, clampf((target - first.stamp) / maxf(0.000001, second.stamp - first.stamp), 0, 1))
+
+## Patch 4.0: another captain's plane between its last two motion samples.
+func present_plane(id: String, state: Dictionary, a: Dictionary, b: Dictionary, weight: float, ahead: float, delta: float) -> void:
+	if replicas.has(id): drop_replica(id)
+	var kind: String = str(state.plane)
+	if air_replicas.has(id) and air_replicas[id].kind != kind: drop_air_replica(id)
+	if not air_replicas.has(id):
+		var node: Node3D = PlaneLook.model(kind)
+		var plate: Label3D = Label3D.new()
+		plate.text = state.captain
+		plate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		plate.position.y = float(Planes.PLANES[kind].length_m) * 0.6 + 8.0
+		plate.font_size = 48
+		plate.pixel_size = 0.08
+		plate.visibility_range_end = 2500
+		node.add_child(plate)
+		view.add_child(node)
+		air_replicas[id] = {"node": node, "kind": kind, "label": plate, "entry": {"kind": kind, "position": Vector3.ZERO, "heading": 0.0, "captain": state.captain}}
+	var replica: Dictionary = air_replicas[id]
+	var from_air: Dictionary = a.get("air", b.air)
+	var from: Vector3 = Vector3(a.position.x, from_air.altitude, a.position.z)
+	var to: Vector3 = Vector3(b.position.x, b.air.altitude, b.position.z)
+	var basis: Basis = from_air.basis.slerp(b.air.basis, weight)
+	# A pole or seam crossing between samples: no sweep across the world.
+	if Progression.short_way(to - from).length() > 2000.0:
+		from = to
+		basis = b.air.basis
+	var next: Vector3 = from.lerp(Progression.nearest(to, from), weight) + Vector3(b.velocity.x, b.air.vy, b.velocity.z) * ahead
+	var near: Vector3 = Progression.nearest(next, view.ship.position)
+	near.y = next.y
+	var gear: float = clampf(float(Planes.PLANES[kind].length_m) * 0.12, 1.2, 4.5)
+	replica.node.global_transform = Transform3D(basis, near - basis.y * gear)
+	PlaneLook.animate(replica.node, b.engine, b.air.gear, delta)
+	replica.label.text = state.captain
+	var entry: Dictionary = replica.entry
+	entry.position = near
+	entry.heading = atan2(basis.z.x, basis.z.z)
+	entry.captain = state.captain
+	view.other_ships.append(entry)
+
+func drop_air_replica(id: String) -> void:
+	air_replicas[id].node.queue_free()
+	air_replicas.erase(id)
 
 func pack_cranes() -> Array:
 	var frames: Array = []
@@ -615,9 +718,11 @@ func _ready() -> void:
 			ping_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 			ping_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 			ping_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			ping_label.offset_left = -120
-			ping_label.offset_right = -16
-			ping_label.offset_top = 12
+			# Patch 4.0 item 7: just left of the money panel (which spans 340 to
+			# 20 px from the right edge), with a margin, clear of its border.
+			ping_label.offset_left = -456
+			ping_label.offset_right = -352
+			ping_label.offset_top = 26
 			ping_label.text = "— ms"
 		make_ghost()
 		hist_seq.resize(HISTORY)
@@ -741,6 +846,9 @@ func hello(version: int, captain: String, release: String = "", key: String = ""
 			joining_keys.erase(player_key)
 			peer.disconnect_peer(sender)
 			return
+		# Patch 4.0: XP, planes and plane mode (rows from 4.0 on always have them).
+		var progress: Variant = saves.players[player_key].get("progress")
+		if progress is Dictionary: context.aviation.restore(progress)
 		# select_port creates a replacement hull; never run it during recovery.
 		disable_tree(context)
 	joining_keys.erase(player_key)
@@ -751,7 +859,7 @@ func hello(version: int, captain: String, release: String = "", key: String = ""
 		return
 	player_keys[sender] = player_key
 	context.set_physics_process(true)
-	context.ship.set_physics_process(true)
+	context.ship.set_physics_process(not context.flying())
 	context.docking.set_physics_process(true)
 	context.loading.set_process(true)
 	context.loading.set_physics_process(true)
@@ -868,12 +976,28 @@ func _physics_process(delta: float) -> void:
 		for id: String in ships:
 			var ship: HandlingShip = ships[id]
 			var order: Dictionary = replication.orders.get(id, EMPTY)
+			var owner_context: Node3D = contexts.get(int(id.trim_prefix("ship_")))
+			if owner_context != null and owner_context.flying():
+				# Patch 4.0: a flying captain's helm flies the plane (Aviation.tick).
+				var live: bool = not order.is_empty() and Time.get_ticks_msec() - order.at <= TIMEOUT_MS
+				owner_context.aviation.order = {"throttle": float(order.throttle) if live else 0.0, "pitch": float(order.get("pitch", 0.0)) if live else 0.0,
+					"roll": float(order.rudder) if live else 0.0, "yaw": float(order.lateral) if live else 0.0}
+				continue
 			if order.is_empty() or Time.get_ticks_msec() - order.at > TIMEOUT_MS:
 				ship.zero_throttle()
 				ship.maneuver(0, 0)
 			else:
 				ship.command_throttle(order.throttle)
 				ship.maneuver(order.rudder, order.lateral)
+	elif not entity.is_empty() and is_instance_valid(view) and view.flying():
+		# Patch 4.0 item 15: the own plane answers its controls this tick, with
+		# the server's physics; reconcile() later corrects it without a snap.
+		var flight: Dictionary = view.aviation.client_input(delta)
+		throttle = float(flight.throttle)
+		steering = float(flight.roll)
+		thruster = float(flight.yaw)
+		view.aviation.predict(delta, sequence + 1)
+		history_count = 0
 	elif not entity.is_empty() and is_instance_valid(view):
 		if not view.ship.helm_available(): throttle = 0.0
 		var allowed: bool = view.controls.input_allowed() and view.ship.helm_available()
@@ -972,6 +1096,7 @@ func fleet_status(epoch: String, changes: Dictionary, removed: Array) -> void:
 		tracks.erase(id)
 		members.erase(id)
 		if replicas.has(id): drop_replica(id)
+		if air_replicas.has(id): drop_air_replica(id)
 	for id: Variant in changes:
 		var row: Variant = changes[id]
 		if not id is String or not row is Dictionary or not row.get("kind") is String or not Progression.SHIPS.has(row.kind): continue
@@ -983,8 +1108,10 @@ func fleet_status(epoch: String, changes: Dictionary, removed: Array) -> void:
 
 func send_helm(command: float, rudder: float, lateral: float) -> void:
 	sequence += 1
-	helm_input.rpc_id(1, ShipActions.make_request(session.epoch, multiplayer.get_unique_id(), entity, "helm", sequence,
-		{"throttle": command, "rudder": rudder, "lateral": lateral, "sent_ms": Time.get_ticks_msec()}))
+	var payload: Dictionary = {"throttle": command, "rudder": rudder, "lateral": lateral, "sent_ms": Time.get_ticks_msec()}
+	# Patch 4.0: a plane's helm also sends the pitch.
+	if is_instance_valid(view) and view.flying(): payload.pitch = float(view.aviation.order.pitch)
+	helm_input.rpc_id(1, ShipActions.make_request(session.epoch, multiplayer.get_unique_id(), entity, "helm", sequence, payload))
 
 @rpc("authority", "call_remote", "unreliable_ordered", 2)
 func snapshot_chunk(tag: int, frame: int, stamp: float, index: int, count: int, chunk: PackedByteArray) -> void:
@@ -1052,10 +1179,11 @@ func snapshot(frame: int, stamp: float, packed: PackedByteArray) -> void:
 	world_samples.append({"stamp": stamp, "ships": statuses, "cranes": cranes})
 	while world_samples.size() > 16: world_samples.pop_front()
 	if received_states == 1:
-		view.ship.position = state.position
+		view.ship.position = Vector3(state.position.x, 0.0 if state.has("air") else state.position.y, state.position.z)
 		view.ship.rotation.y = state.yaw
 		view.camera.set_focus(view.ship.assembly.focus)
-	reconcile(state)
+	if state.has("air"): view.aviation.reconcile(state)
+	else: reconcile(state)
 	client_snapshot_us = lerpf(client_snapshot_us, float(Time.get_ticks_usec() - started_us), 0.05)
 
 # --- Patch 3.0.1 item 2a: own-hull prediction ----------------------------------
@@ -1076,6 +1204,7 @@ func make_ghost() -> void:
 func predicting() -> bool:
 	if not is_physics_processing() or not is_instance_valid(ghost) or received_states == 0: return false
 	var own: Dictionary = statuses.get(entity, EMPTY)
+	if view.flying(): return false
 	return not own.is_empty() and own.dock in ["underway", "approaching"] and not own.docked and not own.paused
 
 func ghost_step(command: float, rudder: float, lateral: float, delta: float) -> void:
@@ -1123,7 +1252,9 @@ func reconcile(state: Dictionary) -> void:
 	var shown: Vector3 = Progression.nearest(view.ship.position, ghost.position)
 	offset_position = shown - ghost.position
 	offset_yaw = angle_difference(ghost.rotation.y, view.ship.rotation.y)
-	if offset_position.length() > SNAP_ERROR_M or absf(offset_yaw) > SNAP_YAW:
+	# Patch 4.0 item 15: scaled with speed, so the 1000 kn Jetty's ordinary
+	# prediction error is smoothed, never snapped (no rubber band).
+	if offset_position.length() > maxf(SNAP_ERROR_M, ghost.velocity.length() * 0.5) or absf(offset_yaw) > SNAP_YAW:
 		offset_position = Vector3.ZERO
 		offset_yaw = 0.0
 		snaps += 1
@@ -1156,6 +1287,15 @@ func _process(_delta: float) -> void:
 	if samples.is_empty(): return
 	var target: float = Time.get_ticks_msec() / 1000.0 - clock_offset - buffer_seconds
 	var ship: HandlingShip = view.ship
+	if view.flying():
+		# Patch 4.0: the laid-up boat follows the predicted plane at sea level.
+		var m: RefCounted = view.aviation.model
+		place_own(Vector3(m.position.x, 0.0, m.position.z), m.heading())
+		ship.velocity = Vector3.ZERO
+		ship.ground_speed_mps = 0.0
+		view.place_icebergs()
+		present_world(target, _delta)
+		return
 	if predicting():
 		var fade: float = exp(-_delta / CORRECTION_SECONDS)
 		offset_position *= fade
@@ -1258,7 +1398,7 @@ func capture_player(sender: int) -> void:
 		context.heavy_jobs.update(context.ship)
 		context.reward_minor += context.heavy_jobs.reward_pending
 		context.heavy_jobs.reward_pending = 0
-	saves.players[player_keys[sender]] = {"captain": captains[sender], "voyage": real_voyage(sender)}
+	saves.players[player_keys[sender]] = {"captain": captains[sender], "voyage": real_voyage(sender), "progress": real_progress(sender)}
 
 func checkpoint_players() -> void:
 	for sender: int in contexts: capture_player(sender)
@@ -1331,10 +1471,13 @@ func start_debug(sender: int) -> void:
 	# A pending swap back (renamed away, still in a debug ship) keeps its real copy.
 	if not debug_real.has(sender):
 		debug_real[sender] = {"credits": context.reward_minor, "spent": context.spent_minor, "banked": context.banked_minor,
-			"fleet": context.fleet.duplicate(true), "ship": context.ship_kind, "voyage": SaveSnapshot.capture(context)}
+			"fleet": context.fleet.duplicate(true), "ship": context.ship_kind, "voyage": SaveSnapshot.capture(context),
+			"progress": context.aviation.capture(), "planes": context.aviation.planes.duplicate(true)}
 	debug_real[sender].active = true
+	# Patch 4.0 item 16: every plane too, at any level.
+	context.aviation.unlock_all()
 	for kind: String in Progression.SHIPS:
-		if not context.fleet.has(kind): context.fleet[kind] = {"fuel": 1.0, "condition": 1.0}
+		if Progression.buyable(kind) and not context.fleet.has(kind): context.fleet[kind] = {"fuel": 1.0, "condition": 1.0}
 	context.reward_minor = DEBUG_CREDITS_MINOR
 	context.offer_notice = "Debug captain: infinite money and every ship until you rename."
 
@@ -1348,6 +1491,14 @@ func end_debug(sender: int) -> void:
 	context.banked_minor = real.banked
 	context.fleet = real.fleet.duplicate(true)
 	context.sell_kind = ""
+	context.aviation.debug_unlocked = false
+	context.aviation.planes = real.planes.duplicate(true)
+	# A plane that was only the overlay's is kept until the captain lands and
+	# switches; the checkpoint stores the real progress meanwhile.
+	if context.flying() and not context.aviation.planes.has(context.aviation.plane_kind):
+		context.aviation.planes[context.aviation.plane_kind] = {"fuel": 1.0, "condition": 1.0}
+		real.borrowed_plane = context.aviation.plane_kind
+	elif not context.aviation.planes.has(context.aviation.plane_kind): context.aviation.plane_kind = context.aviation.first_plane()
 	context.offer_notice = "Debug off: your own money and ships are back."
 	return_real_ship(sender)
 
@@ -1356,6 +1507,15 @@ func end_debug(sender: int) -> void:
 func return_real_ship(sender: int) -> void:
 	var context: Node3D = contexts[sender]
 	var real: Dictionary = debug_real[sender]
+	if real.has("borrowed_plane"):
+		# Patch 4.0: an overlay-only plane goes back once the captain is a sailor again.
+		if context.flying():
+			real.retry_at = Time.get_ticks_msec() + DEBUG_RETRY_MS
+			context.offer_notice = "Debug off. Land and switch to your boat to give the debug plane back."
+			return
+		context.aviation.planes.erase(real.borrowed_plane)
+		if context.aviation.plane_kind == real.borrowed_plane: context.aviation.plane_kind = context.aviation.first_plane()
+		real.erase("borrowed_plane")
 	if context.ship_kind == real.ship:
 		debug_real.erase(sender)
 		return
@@ -1387,6 +1547,27 @@ func tick_debug(sender: int) -> void:
 	var real: Dictionary = debug_real[sender]
 	if real.active: contexts[sender].reward_minor = DEBUG_CREDITS_MINOR
 	elif Time.get_ticks_msec() >= int(real.get("retry_at", 0)): return_real_ship(sender)
+
+## Patch 4.0: the progress row a checkpoint stores. Never the debug overlay:
+## while it is on, the progress as it was when debug began (with the plane
+## mode as it is now, if that plane is the captain's own).
+func real_progress(sender: int) -> Dictionary:
+	var context: Node3D = contexts[sender]
+	var live: Dictionary = context.aviation.capture()
+	if not debug_real.has(sender): return live
+	var real: Dictionary = debug_real[sender].progress.duplicate(true)
+	real.planes = debug_real[sender].planes.duplicate(true)
+	if context.flying() and real.planes.has(context.aviation.plane_kind):
+		real.mode = "plane"
+		real.plane = context.aviation.plane_kind
+		real.airport = live.airport
+		real.plane_job = live.plane_job
+	else:
+		real.mode = "boat"
+		real.plane_job = ""
+		if not real.planes.has(real.plane): real.plane = ""
+	if not Levels.progress_valid(real): return Levels.fresh_progress()
+	return real
 
 ## What a checkpoint stores. Never the debug overlay: in the real ship, the live
 ## voyage with the real money and fleet; in a debug ship, the voyage as it was

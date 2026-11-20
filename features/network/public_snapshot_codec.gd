@@ -61,7 +61,12 @@ static func decode(bytes: PackedByteArray) -> Dictionary:
 # One unreliable binary frame per recipient per send tick. Positions are fixed
 # point (1/256 m), yaw is a u16 turn fraction, rates and velocities are halves.
 # Slow-changing ship status travels separately, reliably and only on change.
-const MOTION_FORMAT: int = 3
+## Patch 4.0 item 15: format 4 adds the air block (FLAG_AIR) for planes: the
+## altitude as a full float (a half was 2 m steps at cruise height), the whole
+## attitude as a quaternion, the climb rate and the gear/ground/stall flags.
+const MOTION_FORMAT: int = 4
+const MOTION_AIR: int = 16
+const FLAG_AIR: int = 2
 const MOTION_HEADER: int = 44
 const MOTION_RECORD: int = 32
 const MOTION_HEAVY: int = 26
@@ -93,8 +98,8 @@ static func put_order(bytes: PackedByteArray, at: int, value: float) -> void:
 static func encode_motion(own: Dictionary, rows: Array, cranes: PackedByteArray = PackedByteArray()) -> PackedByteArray:
 	var bytes: PackedByteArray = PackedByteArray()
 	if rows.size() > MOTION_MAX_SHIPS or cranes.size() > 60000: return bytes
-	var size: int = MOTION_HEADER + cranes.size()
-	for row: Dictionary in rows: size += MOTION_RECORD + (MOTION_HEAVY if row.has("heavy") else 0)
+	var size: int = MOTION_HEADER + cranes.size() + (MOTION_AIR if own.has("air") else 0)
+	for row: Dictionary in rows: size += MOTION_RECORD + (MOTION_HEAVY if row.has("heavy") else 0) + (MOTION_AIR if row.has("air") else 0)
 	bytes.resize(size)
 	bytes.encode_u8(0, MOTION_FORMAT)
 	bytes.encode_u8(1, rows.size())
@@ -111,9 +116,13 @@ static func encode_motion(own: Dictionary, rows: Array, cranes: PackedByteArray 
 	put_order(bytes, 30, own.throttle)
 	put_unit(bytes, 32, own.rudder)
 	put_unit(bytes, 33, own.lateral)
+	bytes.encode_u8(34, FLAG_AIR if own.has("air") else 0)
 	bytes.encode_float(36, own.fuel)
 	bytes.encode_float(40, own.condition)
 	var at: int = MOTION_HEADER
+	if own.has("air"):
+		put_air(bytes, at, own.air)
+		at += MOTION_AIR
 	for row: Dictionary in rows:
 		bytes.encode_u32(at, row.peer)
 		put_position(bytes, at + 4, row.position)
@@ -128,7 +137,7 @@ static func encode_motion(own: Dictionary, rows: Array, cranes: PackedByteArray 
 		put_unit(bytes, at + 26, row.rudder)
 		put_unit(bytes, at + 27, row.lateral)
 		bytes.encode_half(at + 28, row.remaining)
-		bytes.encode_u8(at + 30, FLAG_HEAVY if row.has("heavy") else 0)
+		bytes.encode_u8(at + 30, (FLAG_HEAVY if row.has("heavy") else 0) | (FLAG_AIR if row.has("air") else 0))
 		at += MOTION_RECORD
 		if row.has("heavy"):
 			var pose: Transform3D = row.heavy.pose
@@ -140,8 +149,29 @@ static func encode_motion(own: Dictionary, rows: Array, cranes: PackedByteArray 
 			var parts: Array[float] = [turn.x, turn.y, turn.z, turn.w]
 			for index: int in 4: bytes.encode_s16(at + 18 + index * 2, clampi(roundi(parts[index] * 32767.0), -32767, 32767))
 			at += MOTION_HEAVY
+		if row.has("air"):
+			put_air(bytes, at, row.air)
+			at += MOTION_AIR
 	for index: int in cranes.size(): bytes[at + index] = cranes[index]
 	return bytes
+
+## {altitude, basis, vy, ground, gear, stall} in MOTION_AIR bytes.
+static func put_air(bytes: PackedByteArray, at: int, air: Dictionary) -> void:
+	bytes.encode_float(at, clampf(float(air.altitude), -1000.0, 100000.0))
+	var turn: Quaternion = (air.basis as Basis).orthonormalized().get_rotation_quaternion()
+	var parts: Array[float] = [turn.x, turn.y, turn.z, turn.w]
+	for index: int in 4: bytes.encode_s16(at + 4 + index * 2, clampi(roundi(parts[index] * 32767.0), -32767, 32767))
+	bytes.encode_half(at + 12, clampf(float(air.vy), -500.0, 500.0))
+	bytes.encode_u8(at + 14, (1 if air.ground else 0) | (2 if air.gear else 0) | (4 if air.stall else 0))
+	bytes.encode_u8(at + 15, 0)
+
+static func get_air(bytes: PackedByteArray, at: int) -> Dictionary:
+	var turn: Quaternion = Quaternion(bytes.decode_s16(at + 4) / 32767.0, bytes.decode_s16(at + 6) / 32767.0, bytes.decode_s16(at + 8) / 32767.0, bytes.decode_s16(at + 10) / 32767.0)
+	var altitude: float = bytes.decode_float(at)
+	var vy: float = bytes.decode_half(at + 12)
+	if turn.length_squared() < 0.5 or not is_finite(altitude) or not is_finite(vy): return {}
+	var flags: int = bytes.decode_u8(at + 14)
+	return {"altitude": altitude, "basis": Basis(turn.normalized()), "vy": vy, "ground": flags & 1 != 0, "gear": flags & 2 != 0, "stall": flags & 4 != 0}
 
 ## Returns {} for anything malformed or non-finite. Otherwise {own, rows, cranes}.
 static func decode_motion(bytes: PackedByteArray) -> Dictionary:
@@ -160,6 +190,12 @@ static func decode_motion(bytes: PackedByteArray) -> Dictionary:
 	if not is_finite(own.fuel) or own.fuel < 0 or not is_finite(own.condition): return {}
 	var rows: Array = []
 	var at: int = MOTION_HEADER
+	if bytes.decode_u8(34) & FLAG_AIR:
+		if bytes.size() < at + MOTION_AIR + crane_size: return {}
+		var own_air: Dictionary = get_air(bytes, at)
+		if own_air.is_empty(): return {}
+		own.air = own_air
+		at += MOTION_AIR
 	for index: int in count:
 		if bytes.size() < at + MOTION_RECORD + crane_size: return {}
 		var row: Dictionary = {"peer": bytes.decode_u32(at),
@@ -181,6 +217,12 @@ static func decode_motion(bytes: PackedByteArray) -> Dictionary:
 			if not origin.is_finite() or not is_finite(height): return {}
 			row.heavy = {"height": height, "pose": Transform3D(Basis(turn.normalized()), origin)}
 			at += MOTION_HEAVY
+		if flags & FLAG_AIR:
+			if bytes.size() < at + MOTION_AIR + crane_size: return {}
+			var air: Dictionary = get_air(bytes, at)
+			if air.is_empty(): return {}
+			row.air = air
+			at += MOTION_AIR
 		rows.append(row)
 	if bytes.size() != at + crane_size: return {}
 	return {"own": own, "rows": rows, "cranes": bytes.slice(at, at + crane_size)}

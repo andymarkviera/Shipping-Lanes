@@ -11,6 +11,8 @@ const DEFAULT_BINDINGS: Dictionary = {
 	"horn": KEY_H, "pause": KEY_ESCAPE,
 	# Patch 2.9.1 item 4: the pirate ships' cosmetic broadside.
 	"cannon_salute": KEY_G,
+	# Patch 4.0 item 10: a plane's nose (the stick: Up pushes it down).
+	"plane_nose_down": KEY_UP, "plane_nose_up": KEY_DOWN,
 }
 const LABELS: Dictionary = {
 	"ship_throttle_up": "Increase throttle", "ship_throttle_down": "Decrease / reverse throttle",
@@ -20,6 +22,7 @@ const LABELS: Dictionary = {
 	"camera_recenter": "Recenter camera", "interact": "Interact", "map_toggle": "Map",
 	"horn": "Horn", "pause": "Menu",
 	"cannon_salute": "Cannon salute (pirate ships)",
+	"plane_nose_down": "Plane: nose down", "plane_nose_up": "Plane: nose up",
 }
 
 @export_range(0.0, 1.0) var master_volume: float = 0.8

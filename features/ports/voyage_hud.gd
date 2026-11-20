@@ -8,6 +8,11 @@ var instruments: Label
 var progress: ProgressBar
 ## Patch 2.0 item 5, the game only: the wallet, large, at the top of the card.
 var money: Label
+## Patch 4.0 item 6, the game only: "Lv N" and a thin XP bar under the money.
+var level_row: HBoxContainer
+var level_label: Label
+var xp_bar: ProgressBar
+const Levels = preload("res://features/game/levels.gd")
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
@@ -27,6 +32,33 @@ func _ready() -> void:
 	money.add_theme_font_size_override("font_size", 24)
 	money.add_theme_color_override("font_color", Color("ffc940"))
 	money.hide()
+	level_row = HBoxContainer.new()
+	level_row.add_theme_constant_override("separation", 10)
+	level_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(level_row)
+	level_label = Label.new()
+	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	level_label.add_theme_font_size_override("font_size", 16)
+	level_label.add_theme_color_override("font_color", Color("fff4d6"))
+	level_row.add_child(level_label)
+	xp_bar = ProgressBar.new()
+	xp_bar.show_percentage = false
+	xp_bar.min_value = 0.0
+	xp_bar.max_value = 1.0
+	xp_bar.custom_minimum_size = Vector2(0, 6)
+	xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	xp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var track: StyleBoxFlat = StyleBoxFlat.new()
+	track.bg_color = Color("1b2540")
+	track.set_corner_radius_all(3)
+	var fill: StyleBoxFlat = StyleBoxFlat.new()
+	fill.bg_color = Color("7ed957")
+	fill.set_corner_radius_all(3)
+	xp_bar.add_theme_stylebox_override("background", track)
+	xp_bar.add_theme_stylebox_override("fill", fill)
+	level_row.add_child(xp_bar)
+	level_row.hide()
 	heading = label(stack)
 	heading.add_theme_color_override("font_color", Color("9ee3b1"))
 	cargo = label(stack)
@@ -87,7 +119,9 @@ static func describe(view: Node3D) -> Dictionary:
 			result.next = "Sail to the destination, slow down near the quay, then Dock."
 			if view.docking.state(view.owner_id) == "docked":
 				result.next = "Open CARGO and select Deliver cargo at this port." if view.port == destination else "Undock and sail to " + destination.definition.display_name + "."
-	if view.get("game_mode") == true: game_hints(view, result)
+	# Patch 4.0: a captain in a plane sees the plane's job and fuel instead.
+	if view.has_method("flying") and view.flying(): result = view.aviation.describe()
+	elif view.get("game_mode") == true: game_hints(view, result)
 	if is_instance_valid(view.persistence) and not view.persistence.ready_to_save:
 		result.stage = "SAVE NEEDS ATTENTION" if view.persistence.blocked else "RESTORING VOYAGE"
 		result.next = view.offer_notice if view.persistence.blocked else "Please wait while your voyage is restored."
@@ -95,15 +129,12 @@ static func describe(view: Node3D) -> Dictionary:
 
 ## M5, the game only: say the next step with no job in hand, and warn early
 ## about fuel and hull so a new captain is not surprised by a tow or a sinking.
+## Patch 4.0 item 7: the money panel no longer shows "Pick a job card and click
+## Accept." (docked, no job) or "You can afford the ... open SHIPS.". Under way
+## with no job it still says how to reach a port.
 static func game_hints(view: Node3D, result: Dictionary) -> void:
 	var docked: bool = view.docking.state(view.owner_id) == "docked"
-	if result.stage == "NO ACTIVE JOB":
-		result.next = "Pick a job card and click Accept." if docked else "Sail up to a quay (see the globe), slow down and click Dock."
-		var ships: Dictionary = preload("res://features/game/progression.gd").SHIPS
-		for kind: String in ships:
-			if not view.fleet.has(kind) and view.reward_minor >= int(ships[kind].price_minor):
-				result.next += "\nYou can afford the %s: %s." % [ships[kind].name, "open SHIPS" if docked else "dock and open SHIPS"]
-				break
+	if result.stage == "NO ACTIVE JOB": result.next = "" if docked else "Sail up to a quay (see the globe), slow down and click Dock."
 	result.next = result.next.replace("Open CARGO and select Deliver cargo at this port.", "Click Deliver.")
 	if view.ship.state.fuel_liters < view.ship.definition.fuel_capacity_liters * 0.25:
 		result.next += "\nFuel is low. " + ("Click REFUEL before you leave." if docked else "Dock at the nearest port and click REFUEL.")
@@ -117,6 +148,7 @@ func refresh(view: Node3D) -> void:
 	route.text = data.route
 	route.visible = not route.text.is_empty()
 	instruction.text = data.next
+	instruction.visible = not instruction.text.is_empty()
 	progress.visible = data.progress >= 0
 	progress.value = maxf(0, data.progress)
 	var values: Dictionary = HandlingFeedback.instruments(view.ship)
@@ -125,8 +157,14 @@ func refresh(view: Node3D) -> void:
 		# Patch 2.0 item 5: less on the card. The speed is on the helm bar, the
 		# containers are on deck, and "no job" needs no heading.
 		instruments.text = game_line(view, values)
+		if view.has_method("flying") and view.flying(): instruments.text = view.aviation.instruments_line()
 		money.text = "%.2f credits" % (view.reward_minor / 100.0)
 		money.show()
+		var xp: int = int(view.get("xp"))
+		level_label.text = "Lv %d" % Levels.level_for(xp)
+		xp_bar.value = Levels.level_progress(xp)
+		xp_bar.tooltip_text = "%d XP · next level at %d XP" % [xp, Levels.xp_for_level(Levels.level_for(xp) + 1)]
+		level_row.show()
 		heading.visible = data.stage != "NO ACTIVE JOB"
 		cargo.hide()
 

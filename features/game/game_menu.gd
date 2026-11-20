@@ -19,8 +19,9 @@ const KEY_ROWS: Array = [["Throttle up / down", "ship_throttle_up", "ship_thrott
 	["Side thrusters", "ship_thruster_left", "ship_thruster_right"],
 	["Engine to zero", "ship_throttle_zero"], ["Horn", "horn"],
 	["World map", "map_toggle"], ["Recenter camera", "camera_recenter"],
-	["Cannon salute (pirate ships)", "cannon_salute"]]
-const FIXED_ROWS: Array = [["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"],
+	["Cannon salute (pirate ships)", "cannon_salute"],
+	["Plane: nose down / up", "plane_nose_down", "plane_nose_up"]]
+const FIXED_ROWS: Array = [["Plane: throttle, bank, rudder", "W/S, A/D, Q/E"], ["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"],
 	["Turn the world map", "Drag"], ["Menu", "Esc"]]
 
 func _ready() -> void:

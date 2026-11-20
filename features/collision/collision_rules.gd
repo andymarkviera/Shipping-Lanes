@@ -13,7 +13,9 @@ const SOLID_WATERCRAFT: int = HULL | SHORE
 ## Patch 2.9 item 4: 103 m/s covers the offshore racer's 200 kn (102.9 m/s).
 ## move_and_slide sweeps the hull along each step (1.7 m at 60 Hz), so even a
 ## 0.1 m wall still stops it (tools/collision_probe.gd, "overspeed clamped").
-const SUPPORTED_SPEED_MPS: float = 103.0
+## Patch 4.0 item 4: 520 m/s covers the Jetty's 1000 kn (514.4 m/s), 8.7 m a
+## step at 60 Hz; the sweep still stops it at a thin wall (collision_probe).
+const SUPPORTED_SPEED_MPS: float = 520.0
 
 static func add_box_hull(body: CollisionObject3D, size: Vector3 = Vector3(13, 4, 64)) -> CollisionShape3D:
 	var collider: CollisionShape3D = CollisionShape3D.new()

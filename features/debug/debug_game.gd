@@ -45,6 +45,8 @@ func _ready() -> void:
 	layer = 8
 	for kind: String in Hangar.ladder(): view.fleet[kind] = {"fuel": 1.0, "condition": 1.0}
 	view.reward_minor = CREDITS_MINOR
+	# Patch 4.0: every plane, at any level, in the single-player test mode.
+	if is_instance_valid(view.get("aviation")): view.aviation.unlock_all()
 	# Patch 3.2: the DEBUG tag is a small badge in the bottom-left corner, on its
 	# own top layer (visible over the hangar, the map and the Esc menu) and clear
 	# of every heading.
