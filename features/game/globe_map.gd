@@ -10,6 +10,8 @@ const DISPLAY = preload("res://features/ui/display_fonts.gd")
 const Navigation = preload("res://features/ports/local_navigation.gd")
 const Progression = preload("res://features/game/progression.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
+const TOON_COAST = preload("res://features/toon/toon_coast.gd")
+const Airports = preload("res://features/planes/airports.gd")
 const DRAG_RADIANS_PER_PIXEL: float = 0.006
 const ZOOM_NEAR: float = 1.6
 const ZOOM_FAR: float = 4.2
@@ -21,6 +23,47 @@ const COURSE_DOT_SIZE: float = 0.007
 ## Patch 2.9.1 item 5: a starter-size hull is this long on the unit globe.
 const BOAT_LENGTH: float = 0.1
 const MAX_BOATS: int = 64
+## Patch 4.0 item D14: the land stands up off the globe in toon relief, like
+## the 3D glaciers in the world: a beach rim, green hills, ridged mountains
+## with snowy tops and Ember Isle's cone. One shell mesh over the land, built
+## once from the baked land grid and fixed-seed noise, sampled every
+## RELIEF_STEP_CELLS grid cells. Heights are in globe units (the sea is 1.0)
+## and much exaggerated so the hills read at globe size.
+const RELIEF_STEP_CELLS: int = 2
+const RELIEF_SEA: float = -0.003
+const RELIEF_SHORE: float = 0.0015
+const RELIEF_HILL: float = 0.004
+const RELIEF_ROLL: float = 0.003
+const RELIEF_MOUNTAIN: float = 0.018
+const RELIEF_VOLCANO: float = 0.024
+const RELIEF_SEED: int = 4014
+## Mountains fade out round each airport, like the level airfield in the world.
+const AIRFIELD_FLAT_M: Vector2 = Vector2(650.0, 1200.0)
+## Ports, airports and their tags sit this far above the land under them.
+const MARKER_LIFT: float = 0.008
+const SAND_COLOUR: Color = Color("f1dfa4")
+const FOREST: Color = Color("4fae3f")
+const ROCK: Color = Color("8f7f6a")
+const SNOW: Color = Color("f7fbfd")
+const ASH: Color = Color("5a4a46")
+const LAVA: Color = Color("ff7a2e")
+const RUNWAY: Color = Color("3d4452")
+const AIRPORT_PLANE: Color = Color("e8504a")
+const RELIEF_SHADER: String = """
+shader_type spatial;
+render_mode unshaded, cull_back;
+varying vec3 up_view;
+void vertex() { up_view = (MODELVIEW_MATRIX * vec4(normalize(VERTEX), 0.0)).xyz; }
+void fragment() {
+	// The globe's toon light, then the hills' own: slopes facing the light
+	// are lit, slopes facing away take a shade band, flat land neither.
+	vec3 sun = normalize(vec3(-0.5, 0.6, 0.65));
+	float globe = dot(normalize(up_view), sun);
+	float slope = dot(NORMAL, sun) - globe;
+	float relief = slope > 0.1 ? 1.12 : (slope < -0.1 ? 0.76 : (slope < -0.03 ? 0.9 : 1.0));
+	ALBEDO = COLOR.rgb * (globe > 0.05 ? 1.0 : 0.72) * relief;
+}
+"""
 const BOAT_SHADER: String = """
 shader_type spatial;
 render_mode unshaded, cull_back;
@@ -77,6 +120,9 @@ var goal_marker: MeshInstance3D
 var course_line: MeshInstance3D
 var course_dots: int = 0
 var port_markers: Array[MeshInstance3D] = []
+## Patch 4.0 item D14: the land relief shell and one marker per airport.
+var relief: MeshInstance3D
+var airport_markers: Array[Node3D] = []
 var zoom: float = 3.2
 var clock: float = 0.0
 
@@ -158,6 +204,133 @@ static func flat(colour: Color) -> StandardMaterial3D:
 	paint.albedo_color = colour
 	return paint
 
+static var _noises: Array[FastNoiseLite] = []
+static var _relief: ArrayMesh
+
+## [ridges, rolling hills]: fixed-seed noise, so every run builds the same land.
+static func noises() -> Array[FastNoiseLite]:
+	if _noises.is_empty():
+		var ridges: FastNoiseLite = FastNoiseLite.new()
+		ridges.seed = RELIEF_SEED
+		ridges.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		ridges.frequency = 1.0 / 1400.0
+		ridges.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+		ridges.fractal_octaves = 4
+		var rolls: FastNoiseLite = FastNoiseLite.new()
+		rolls.seed = RELIEF_SEED + 1
+		rolls.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		rolls.frequency = 1.0 / 600.0
+		rolls.fractal_octaves = 2
+		_noises = [ridges, rolls]
+	return _noises
+
+## Patch 4.0 item D14: the relief at a world X/Z that is `depth` metres inland:
+## (height above the sea in globe units, below 0 at sea; how much of it is
+## mountain, 0..1; how much is Ember Isle's cone, 0..1).
+static func relief_at(at: Vector2, depth: float) -> Vector3:
+	if depth <= 0.0: return Vector3(RELIEF_SEA, 0, 0)
+	var height: float = lerpf(RELIEF_SEA, RELIEF_SHORE, smoothstep(0.0, 40.0, depth))
+	height += (TOON_COAST.hill_height(depth) - TOON_COAST.HILL_FOOT_Y) / (TOON_COAST.HILL_TOP_Y - TOON_COAST.HILL_FOOT_Y) * RELIEF_HILL
+	var noise: Array[FastNoiseLite] = noises()
+	height += smoothstep(60.0, 240.0, depth) * RELIEF_ROLL * (noise[1].get_noise_2d(at.x, at.y) * 0.5 + 0.5)
+	var flat_field: float = 1.0
+	for airport: Dictionary in Airports.all():
+		flat_field = minf(flat_field, smoothstep(AIRFIELD_FLAT_M.x, AIRFIELD_FLAT_M.y, at.distance_to(Vector2(airport.at.x, airport.at.z))))
+	var ridge: float = clampf((noise[0].get_noise_2d(at.x, at.y) + 0.35) / 1.2, 0.0, 1.0)
+	var mountain: float = smoothstep(110.0, 250.0, depth) * flat_field * ridge * ridge
+	height += mountain * RELIEF_MOUNTAIN
+	var volcano: Vector2 = Progression.VOLCANO.at
+	var cone: float = clampf(1.0 - at.distance_to(volcano) / (float(Progression.VOLCANO.base_m) * 2.0), 0.0, 1.0)
+	if cone > 0.0:
+		# A cone with a small crater dip at the top.
+		height = maxf(height, RELIEF_SHORE + cone * RELIEF_VOLCANO - smoothstep(0.85, 1.0, cone) * RELIEF_VOLCANO * 0.25)
+		mountain *= 1.0 - cone
+	return Vector3(height, mountain, cone)
+
+## The radius of the globe's surface under a world position: 1 at sea, more on
+## raised land. Markers stand on it.
+static func ground(world: Vector3) -> float:
+	var at: Vector2 = Vector2(world.x, world.z)
+	return 1.0 + maxf(0.0, relief_at(at, Progression.land_depth(at)).x)
+
+## The toon colour of a relief sample: beach, meadow, forest, rock, snow, ash.
+static func relief_colour(sample: Vector3, depth: float) -> Color:
+	var colour: Color = SAND_COLOUR.lerp(PLAYFUL.LEAF, smoothstep(30.0, 60.0, depth))
+	colour = colour.lerp(FOREST, smoothstep(70.0, 160.0, depth) * 0.6)
+	colour = colour.lerp(ROCK, smoothstep(0.25, 0.45, sample.y))
+	colour = colour.lerp(SNOW, smoothstep(0.62, 0.75, sample.y))
+	colour = colour.lerp(ASH, smoothstep(0.0, 0.35, sample.z))
+	return colour.lerp(LAVA, smoothstep(0.86, 0.95, sample.z))
+
+## Patch 4.0 item D14: the land relief shell. Every grid cell with land at a
+## corner becomes two triangles; corners at sea dip just under the ball, so
+## the shell rises out of the sea along the atlas's coast line. Vertex normals
+## carry the slopes for RELIEF_SHADER; colours are linear. Built once.
+static func relief_mesh() -> ArrayMesh:
+	if _relief != null: return _relief
+	_relief = ArrayMesh.new()
+	var grid: Dictionary = Progression.natural_land()
+	if grid.is_empty(): return _relief
+	var count: Vector2i = grid.count
+	var depth: PackedFloat32Array = grid.depth
+	var cell: float = grid.cell
+	var origin: Vector2 = grid.origin
+	var columns: int = (count.x - 1) / RELIEF_STEP_CELLS + 1
+	var rows: int = (count.y - 1) / RELIEF_STEP_CELLS + 1
+	var slot: PackedInt32Array = PackedInt32Array()
+	slot.resize(columns * rows)
+	slot.fill(-1)
+	var verts: PackedVector3Array = PackedVector3Array()
+	var colours: PackedColorArray = PackedColorArray()
+	var indices: PackedInt32Array = PackedInt32Array()
+	for row: int in rows - 1:
+		for column: int in columns - 1:
+			var corners: Array[int] = [row * columns + column, row * columns + column + 1, (row + 1) * columns + column + 1, (row + 1) * columns + column]
+			var land: bool = false
+			for corner: int in corners:
+				land = land or depth[(corner / columns) * RELIEF_STEP_CELLS * count.x + (corner % columns) * RELIEF_STEP_CELLS] > 0.0
+			if not land: continue
+			for corner: int in corners:
+				if slot[corner] >= 0: continue
+				var i: int = (corner % columns) * RELIEF_STEP_CELLS
+				var j: int = (corner / columns) * RELIEF_STEP_CELLS
+				var d: float = depth[j * count.x + i]
+				var at: Vector2 = origin + Vector2(i, j) * cell
+				var sample: Vector3 = relief_at(at, d)
+				slot[corner] = verts.size()
+				verts.append(on_globe(Vector3(at.x, 0, at.y)) * (1.0 + sample.x))
+				colours.append(relief_colour(sample, d).srgb_to_linear())
+			for triangle: PackedInt32Array in [PackedInt32Array([corners[0], corners[1], corners[2]]), PackedInt32Array([corners[0], corners[2], corners[3]])]:
+				var a: int = slot[triangle[0]]
+				var b: int = slot[triangle[1]]
+				var c: int = slot[triangle[2]]
+				# Godot's front faces wind so this cross points into the globe.
+				if (verts[b] - verts[a]).cross(verts[c] - verts[a]).dot(verts[a]) > 0.0:
+					var swap: int = b
+					b = c
+					c = swap
+				indices.append_array([a, b, c])
+	if indices.is_empty(): return _relief
+	var normals: PackedVector3Array = PackedVector3Array()
+	normals.resize(verts.size())
+	for index: int in range(0, indices.size(), 3):
+		var a: int = indices[index]
+		var b: int = indices[index + 1]
+		var c: int = indices[index + 2]
+		var outward: Vector3 = (verts[c] - verts[a]).cross(verts[b] - verts[a])
+		normals[a] += outward
+		normals[b] += outward
+		normals[c] += outward
+	for index: int in normals.size(): normals[index] = normals[index].normalized() if normals[index].length() > 0.0 else verts[index].normalized()
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colours
+	arrays[Mesh.ARRAY_INDEX] = indices
+	_relief.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return _relief
+
 func _ready() -> void:
 	layer = 8
 	screen = Control.new()
@@ -230,6 +403,57 @@ func _ready() -> void:
 	screen.add_child(hint)
 	screen.hide()
 
+## Patch 4.0 item D14: the land relief shell on the globe, built on first open.
+func build_relief() -> void:
+	relief = MeshInstance3D.new()
+	relief.mesh = relief_mesh()
+	var shader: Shader = Shader.new()
+	shader.code = RELIEF_SHADER
+	var paint: ShaderMaterial = ShaderMaterial.new()
+	paint.shader = shader
+	relief.material_override = paint
+	spin.add_child(relief)
+
+## Patch 4.0 item D14: every airport as a small runway along its heading with a
+## red plane glyph over it and its name, unlike the round port markers. Each
+## stands on the land relief, lifted clear of it.
+func build_airports() -> void:
+	var tarmac: StandardMaterial3D = flat(RUNWAY)
+	var stripe: StandardMaterial3D = flat(Color.WHITE)
+	var plane: StandardMaterial3D = flat(AIRPORT_PLANE)
+	var parts: Array = [[Vector3(0.024, 0.004, 0.1), Vector3.ZERO, tarmac], [Vector3(0.004, 0.005, 0.08), Vector3.ZERO, stripe],
+		[Vector3(0.008, 0.007, 0.042), Vector3(0, 0.022, 0), plane], [Vector3(0.044, 0.006, 0.011), Vector3(0, 0.022, 0.004), plane],
+		[Vector3(0.02, 0.006, 0.007), Vector3(0, 0.022, -0.017), plane]]
+	for airport: Dictionary in Airports.all():
+		var world: Vector3 = airport.at
+		var up: Vector3 = on_globe(world)
+		var at: Vector2 = lon_lat(world)
+		var east: Vector3 = Vector3(cos(at.x), 0, -sin(at.x))
+		var north: Vector3 = up.cross(east).normalized()
+		var along: Vector3 = (east * -sin(airport.heading) + north * cos(airport.heading)).normalized()
+		var holder: Node3D = Node3D.new()
+		holder.basis = Basis(up.cross(along), up, along)
+		holder.position = up * (ground(world) + MARKER_LIFT)
+		spin.add_child(holder)
+		for part: Array in parts:
+			var piece: MeshInstance3D = MeshInstance3D.new()
+			piece.mesh = box(part[0])
+			piece.position = part[1]
+			piece.material_override = part[2]
+			holder.add_child(piece)
+		var name_tag: Label3D = Label3D.new()
+		name_tag.text = str(airport.name)
+		name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		name_tag.font_size = 36
+		name_tag.font = DISPLAY.font()
+		name_tag.modulate = Color("ffd2cf")
+		name_tag.outline_size = 0
+		name_tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		name_tag.pixel_size = 0.001
+		name_tag.position = holder.position * 1.03 + Vector3(0, 0.04, 0)
+		spin.add_child(name_tag)
+		airport_markers.append(holder)
+
 ## A small toon marker stuck to the globe.
 func marker(mesh: Mesh, colour: Color, size: float) -> MeshInstance3D:
 	var node: MeshInstance3D = MeshInstance3D.new()
@@ -250,9 +474,12 @@ func toggle() -> void:
 func open() -> void:
 	if is_open() or not is_instance_valid(view) or not is_instance_valid(view.ship): return
 	if port_markers.is_empty():
+		build_relief()
 		for port: Node3D in view.world_ports:
 			var dot: MeshInstance3D = marker(SphereMesh.new(), Color.WHITE, 0.035)
-			dot.position = on_globe(port.berth_anchor.global_position) * 1.01
+			# Lifted clear of the raised land under it (Patch 4.0 item D14).
+			var berth: Vector3 = port.berth_anchor.global_position
+			dot.position = on_globe(berth) * maxf(1.01, ground(berth) + MARKER_LIFT)
 			var name_tag: Label3D = Label3D.new()
 			name_tag.text = port.definition.display_name
 			name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -266,6 +493,7 @@ func open() -> void:
 			name_tag.position = dot.position * 1.04 + Vector3(0, 0.05, 0)
 			spin.add_child(name_tag)
 			port_markers.append(dot)
+		build_airports()
 		var ring: TorusMesh = TorusMesh.new()
 		ring.inner_radius = 0.8
 		ring.outer_radius = 1.0

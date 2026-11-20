@@ -8,9 +8,13 @@ extends RefCounted
 ## parasite + induced drag (plus gear, flaps and the stall); a side force that
 ## keeps the plane flying where it points; gravity. Air thins with altitude.
 ## Rotation is rate-commanded (pitch, roll, yaw) with authority that grows
-## with airspeed, a gentle auto-trim that holds level flight hands-off (it
-## cannot hold a plane up below the stall: the nose then drops), a wing
-## leveller when roll is released, and weathervane yaw into the wind.
+## with airspeed. Arcade (Andy, November 20): NO auto-level and no auto-trim:
+## hands off, the plane holds the attitude it is in. The assists are a
+## coordinated turn (the nose follows the bank, sideslip is cancelled), a
+## stall recovery (the nose-up command fades out at the stall angle and a
+## stalled wing drops the nose) and a runway alignment on final approach.
+## The gear is automatic (gear_for): down near an airport when low and slow,
+## up after take-off.
 ## On the ground the gear rolls on a runway: nose-wheel steering, brakes,
 ## rolling friction, and the nose can rotate at the plane's rotate speed.
 ## Touching anything but a runway, or a runway too hard, too steep, with too
@@ -24,19 +28,33 @@ extends RefCounted
 const Progression = preload("res://features/game/progression.gd")
 const Terrain = preload("res://features/planes/terrain.gd")
 const Planes = preload("res://features/planes/plane_catalog.gd")
+const Airports = preload("res://features/planes/airports.gd")
 const GRAVITY: float = 9.81
 const SEA_RHO: float = 1.225
 const SCALE_HEIGHT_M: float = 8500.0
 const MAX_ALTITUDE_M: float = 12000.0
 const ENGINE_RATE: float = 0.6
 ## Touch-down limits on a runway.
-const MAX_SINK_MPS: float = 5.0
-const MAX_BANK_RAD: float = deg_to_rad(15.0)
+const MAX_SINK_MPS: float = 6.0
+const MAX_BANK_RAD: float = deg_to_rad(20.0)
 const MAX_NOSE_DOWN_RAD: float = deg_to_rad(-6.0)
 const MAX_NOSE_UP_RAD: float = deg_to_rad(18.0)
 ## Rolling off a runway onto grass faster than this is a crash.
 const OFF_RUNWAY_MPS: float = 12.0
-const GEAR_DOWN_AGL_M: float = 120.0
+## Automatic gear: down within GEAR_ZONE_M of an airport, below GEAR_AGL_M
+## and slower than GEAR_SPEED_FACTOR x the rotate speed; up otherwise.
+const GEAR_ZONE_M: float = 2600.0
+const GEAR_AGL_M: float = 60.0
+const GEAR_SPEED_FACTOR: float = 1.8
+## Arcade: the controls keep this share of their authority however slow.
+const ARCADE_AUTHORITY: float = 0.3
+## The nose-up command fades out over the last few degrees before the stall.
+const STALL_MARGIN_RAD: float = deg_to_rad(3.0)
+## Runway alignment: gear down, below RUNWAY_ASSIST_AGL_M, within
+## RUNWAY_ASSIST_RAD of a runway's line and RUNWAY_ASSIST_ACROSS_M either side.
+const RUNWAY_ASSIST_RAD: float = deg_to_rad(20.0)
+const RUNWAY_ASSIST_ACROSS_M: float = 150.0
+const RUNWAY_ASSIST_AGL_M: float = 150.0
 
 var kind: String = ""
 var p: Dictionary = {}
@@ -115,6 +133,37 @@ func pitch_angle() -> float:
 func bank_angle() -> float:
 	return asin(clampf(basis.x.y, -1.0, 1.0))
 
+## Bank over the whole circle (right positive), inverted flight included.
+func full_bank() -> float:
+	return atan2(basis.x.y, basis.y.y)
+
+## The automatic gear: down on the ground, and near an airport when low and
+## slow (a landing); up after take-off and everywhere else.
+func gear_for(height_agl: float, speed: float) -> bool:
+	if on_ground: return true
+	if height_agl >= GEAR_AGL_M or speed >= float(p.rotate_mps) * GEAR_SPEED_FACTOR: return false
+	var near: int = Airports.nearest(position)
+	return near >= 0 and Airports.distance_to(near, position) < GEAR_ZONE_M
+
+## The runway alignment assist (a yaw rate, radians per second): gear down,
+## low and nearly lined up with the nearest runway (either end), the nose is
+## steered onto a heading that joins the centre line.
+func runway_assist() -> float:
+	if not gear_down or agl_m > RUNWAY_ASSIST_AGL_M: return 0.0
+	var near: int = Airports.nearest(position)
+	if near < 0: return 0.0
+	var entry: Dictionary = Airports.all()[near]
+	var axis: Vector3 = Vector3(sin(entry.heading), 0, cos(entry.heading))
+	if Vector3(basis.z.x, 0, basis.z.z).dot(axis) < 0.0: axis = -axis
+	var line: float = atan2(axis.x, axis.z)
+	if absf(angle_difference(heading(), line)) > RUNWAY_ASSIST_RAD: return 0.0
+	var local: Vector3 = Progression.short_way(position - entry.at)
+	var along: float = local.x * axis.x + local.z * axis.z
+	var across: float = local.x * axis.z - local.z * axis.x
+	if absf(across) > RUNWAY_ASSIST_ACROSS_M or along > float(entry.length) * 0.5 or along < -float(entry.length) * 0.5 - 2500.0: return 0.0
+	var want: float = line - clampf(across * 0.004, -0.25, 0.25)
+	return clampf(angle_difference(heading(), want) * 0.8, -0.25, 0.25)
+
 static func air_density(altitude: float) -> float:
 	return SEA_RHO * exp(-maxf(altitude, 0.0) / SCALE_HEIGHT_M)
 
@@ -169,30 +218,38 @@ func step(input: Dictionary, dt: float) -> void:
 	var pitch_rate: float = 0.0
 	var roll_rate: float = 0.0
 	var yaw_rate: float = 0.0
+	var turn_rate: float = 0.0
 	if on_ground:
 		# Nose-wheel steering with either yaw or roll keys; rotate near take-off speed.
 		yaw_rate = -(yaw_in + roll_in) * deg_to_rad(30.0) * clampf(speed / 8.0, 0.0, 1.0) * clampf(1.0 - speed / 120.0, 0.3, 1.0)
 		if along >= float(p.rotate_mps) * 0.9: pitch_rate = pitch_in * deg_to_rad(float(p.pitch_dps)) * 0.5 * authority
 		elif pitch_angle() > 0.0: pitch_rate = -deg_to_rad(4.0)
 	else:
-		# Auto-trim: the angle of attack that holds the weight (more in a bank),
-		# kept below the stall. Hands off, the plane holds its flight path.
-		var bank: float = bank_angle()
-		var need: float = mass * GRAVITY / maxf(q * area * maxf(cos(bank), 0.5), 1.0)
-		var trim: float = clampf((need - float(p.cl0) - (0.35 if flaps else 0.0)) / float(p.cl_alpha), deg_to_rad(-4.0), deg_to_rad(float(p.stall_deg) - 2.0))
-		pitch_rate = pitch_in * deg_to_rad(float(p.pitch_dps)) * minf(authority, 1.0)
-		pitch_rate += (trim - angle_of_attack) * 2.0 * minf(authority, 1.0) * (1.0 - absf(pitch_in) * 0.7)
-		if stalled: pitch_rate -= 0.5 # The stalled wing drops the nose.
-		roll_rate = roll_in * deg_to_rad(float(p.roll_dps)) * minf(authority, 1.0)
-		if absf(roll_in) < 0.05: roll_rate -= bank * 0.9 * minf(authority, 1.0)
-		yaw_rate = -yaw_in * deg_to_rad(float(p.yaw_dps)) * minf(authority, 1.0) - beta * 1.5 * minf(authority, 1.0)
-	basis = (basis * Basis(Vector3(1, 0, 0), -pitch_rate * dt) * Basis(Vector3(0, 0, 1), roll_rate * dt) * Basis(Vector3(0, 1, 0), yaw_rate * dt)).orthonormalized()
+		# Arcade flight that never self-levels: the controls command rotation
+		# rates and, hands off (mouse centred), the plane keeps the pitch and
+		# bank it has. Assists (Andy, November 20): roll and yaw are coordinated
+		# (the nose follows the turn a bank makes, sideslip is cancelled), the
+		# stall is recovered (the nose-up command fades out near the stall
+		# angle, a stalled wing lowers the nose until it flies again) and the
+		# nose lines up with the runway on a final approach.
+		var reach: float = maxf(minf(authority, 1.0), ARCADE_AUTHORITY)
+		var bank: float = full_bank()
+		var stall_angle: float = deg_to_rad(float(p.stall_deg))
+		pitch_rate = pitch_in * deg_to_rad(float(p.pitch_dps)) * reach
+		var margin: float = angle_of_attack - (stall_angle - STALL_MARGIN_RAD)
+		if margin > 0.0 and pitch_rate > 0.0: pitch_rate *= clampf(1.0 - margin / STALL_MARGIN_RAD, 0.0, 1.0)
+		if stalled: pitch_rate -= deg_to_rad(float(p.pitch_dps)) * 0.6
+		roll_rate = roll_in * deg_to_rad(float(p.roll_dps)) * reach
+		yaw_rate = -yaw_in * deg_to_rad(float(p.yaw_dps)) * reach - beta * 1.5 * reach + runway_assist()
+		# The coordinated turn: the nose follows the turn the bank makes.
+		if absf(bank) < PI * 0.5: turn_rate = -GRAVITY * tan(clampf(bank, -1.25, 1.25)) / maxf(speed, float(p.rotate_mps))
+	basis = (Basis(Vector3.UP, turn_rate * dt) * basis * Basis(Vector3(1, 0, 0), -pitch_rate * dt) * Basis(Vector3(0, 0, 1), roll_rate * dt) * Basis(Vector3(0, 1, 0), yaw_rate * dt)).orthonormalized()
 	velocity += force / mass * dt
 	if on_ground:
 		forward = basis.z
 		var flat_forward: Vector3 = Vector3(forward.x, 0, forward.z).normalized()
 		var rolling: float = velocity.dot(flat_forward)
-		var friction: float = (0.02 + 0.5 * brake) * GRAVITY * dt
+		var friction: float = (0.02 + 0.8 * brake) * GRAVITY * dt
 		rolling = move_toward(rolling, 0.0, friction) if absf(rolling) > friction else (0.0 if engine < 0.05 else rolling)
 		velocity = flat_forward * rolling + Vector3(0, maxf(velocity.y, 0.0), 0)
 	position += velocity * dt
@@ -225,7 +282,7 @@ func contact() -> void:
 	var below: Dictionary = Terrain.sample(position)
 	var ground: float = float(below.height)
 	agl_m = position.y - gear_height_m - ground
-	gear_down = agl_m < GEAR_DOWN_AGL_M or on_ground
+	gear_down = gear_for(agl_m, velocity.length())
 	flaps = gear_down and velocity.length() < float(p.rotate_mps) * 1.6
 	if agl_m > 0.05:
 		on_ground = false

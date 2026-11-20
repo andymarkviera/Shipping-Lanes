@@ -56,6 +56,11 @@ func run() -> void:
 	var hull: Node = scene.instantiate()
 	expect(hull.get_meta("ship_definition_id") == original.id, "Existing asset ID preserved")
 	hull.free()
+	# Patch 4.0: the scene-free checks (boat lineup and refund, levels, airports,
+	# plane jobs, flight model, old saves) run in the Checks job from here.
+	# tools/patch_4_0_check.gd runs them too, plus the game-scene checks.
+	for failure: String in load("res://tools/patch_4_0_logic.gd").run_all():
+		failures.append("Patch 4.0: " + failure)
 	for failure: String in failures:
 		push_error(failure)
 	print("CATALOG_CHECK_PASS" if failures.is_empty() else "CATALOG_CHECK_FAILED")

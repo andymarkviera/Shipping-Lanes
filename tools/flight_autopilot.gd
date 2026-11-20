@@ -45,7 +45,9 @@ func inputs(m: RefCounted) -> Dictionary:
 			if along < -4800.0 and along > -6200.0 and absf(across) < 1500.0: phase = "join"
 		"join":
 			want = runway_heading - clampf(across * 0.0007, -0.7, 0.7)
-			speed = stall * 1.3
+			speed = stall * 1.2
+			# Start down early: never above the 3 degree glide path.
+			altitude = minf(cruise_m, Airports.RUNWAY_Y + 40.0 + maxf(150.0 - along, 0.0) * tan(deg_to_rad(3.0)))
 			if along > -3800.0 and absf(across) < 350.0 and absf(angle_difference(m.heading(), runway_heading)) < 0.35: phase = "final"
 			elif along > -2500.0: phase = "outbound" # Not lined up: go round again.
 		"final":
@@ -77,7 +79,12 @@ func inputs(m: RefCounted) -> Dictionary:
 		# Flare: idle, and settle on at a gentle sink.
 		climb = -1.6
 		speed = 0.0
-	out.pitch = clampf((climb - m.velocity.y) * 0.9, -1.0, 1.0)
+	# The arcade model holds its attitude hands off (no auto-trim), so the pilot
+	# flies the flight path angle: pitch towards the climb it wants.
+	var airspeed: float = maxf(m.velocity.length(), 1.0)
+	var path: float = asin(clampf(m.velocity.y / airspeed, -1.0, 1.0))
+	var want_path: float = asin(clampf(climb / airspeed, -0.35, 0.35))
+	out.pitch = clampf((want_path - path) * 6.0, -1.0, 1.0)
 	out.throttle = clampf(0.45 + (speed - m.velocity.length()) * 0.12, 0.0, 1.0)
 	return out
 

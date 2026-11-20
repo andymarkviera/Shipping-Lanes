@@ -35,6 +35,13 @@ const LOW_FINE_MINOR: int = 100000
 ## Slower than this on a runway counts as stopped at the airport.
 const STOPPED_MPS: float = 2.0
 const LEVER_RATE: float = 0.6
+## Arcade mouse aim: the cursor's reach (share of the screen's short side
+## from the centre to full deflection), its dead zone, and how much of the
+## sideways aim goes to roll and to the coordinating yaw.
+const AIM_REACH: float = 0.4
+const AIM_DEAD_ZONE: float = 0.06
+const AIM_ROLL: float = 1.6
+const AIM_YAW: float = 0.4
 
 var view: Node3D
 var planes: Dictionary = {}
@@ -47,6 +54,8 @@ var model: RefCounted
 ## pitch, roll, yaw in -1..1.
 var order: Dictionary = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0}
 var lever: float = 0.0
+## The mouse aim this frame (mouse_aim), for the reticle.
+var aim: Vector2 = Vector2.ZERO
 var low_seconds: float = 0.0
 var warning: bool = false
 var crashes: int = 0
@@ -77,6 +86,7 @@ var menu_wallet: Label
 var port_row: HBoxContainer
 var port_buttons: Dictionary = {}
 var banner: Label
+var marks: FlightMarks
 # Client prediction: inputs since the last acknowledged server state.
 var history: Array[Dictionary] = []
 var offset: Vector3 = Vector3.ZERO
@@ -187,7 +197,7 @@ func switch_to_plane() -> bool:
 	lay_up_boat()
 	start_plane(airport)
 	view.bind_port()
-	say("Now flying your %s from %s. Throttle up (W) and pull up (Down arrow) at %d kn." % [plane_entry().name, Airports.all()[airport].name, roundi(float(plane_entry().rotate_mps) * 1.944)])
+	say("Now flying your %s from %s. Throttle up (W), then move the mouse up to lift off at %d kn." % [plane_entry().name, Airports.all()[airport].name, roundi(float(plane_entry().rotate_mps) * 1.944)])
 	return true
 
 func first_plane() -> String:
@@ -420,14 +430,45 @@ func crash() -> void:
 	say("CRASH! %s%s Repair bill %s credits. Your plane is back at %s." % [reason, " Cargo lost." if lost else "", credits(bill), Airports.all()[home].name])
 	if role() == "local": show_crash(last_crash_at)
 
+## Patch 4.0 arcade controls (Andy, November 20): the plane steers towards the
+## mouse cursor; W / S move the throttle lever, which holds where it is left
+## (S at idle on the ground brakes). Optional A / D roll and Q / E yaw add on
+## top. The cursor's offset from the screen centre is turned from the camera's
+## level view into the plane's own frame, so the plane banks towards the
+## cursor and pulls: "steer towards it". Cursor centred: no command, so the
+## plane keeps its attitude (it never levels itself).
 func read_local_input(delta: float) -> void:
 	var controls: PlayerControls = view.controls
 	var axis: float = controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down")
 	lever = clampf(lever + axis * LEVER_RATE * delta, -0.6, 1.0)
 	if controls.action_strength("ship_throttle_zero") > 0.0: lever = 0.0
 	if axis == 0.0 and lever < 0.0: lever = 0.0
-	order = {"throttle": lever, "pitch": controls.action_strength("plane_nose_up") - controls.action_strength("plane_nose_down"),
-		"roll": controls.steering_axis(), "yaw": controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left")}
+	aim = mouse_aim() if controls.input_allowed() else Vector2.ZERO
+	var steer: Vector2 = aim_to_plane(aim, model.full_bank() if model != null else 0.0)
+	order = {"throttle": lever, "pitch": clampf(steer.y, -1.0, 1.0),
+		"roll": clampf(steer.x * AIM_ROLL + controls.steering_axis(), -1.0, 1.0),
+		"yaw": clampf(steer.x * AIM_YAW + controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"), -1.0, 1.0)}
+
+## The cursor's offset from the screen centre, -1..1 each way (+x right,
+## +y up), with a small dead zone at the centre. Zero headless, while looking
+## around (right mouse held) or with the cursor on a button.
+func mouse_aim() -> Vector2:
+	if DisplayServer.get_name() == "headless" or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT): return Vector2.ZERO
+	var port: Viewport = get_viewport()
+	if port == null or port.gui_get_hovered_control() is BaseButton: return Vector2.ZERO
+	var size: Vector2 = port.get_visible_rect().size
+	if size.x < 2.0 or size.y < 2.0: return Vector2.ZERO
+	var off: Vector2 = (port.get_mouse_position() - size * 0.5) / (minf(size.x, size.y) * AIM_REACH)
+	off.y = -off.y
+	if off.length() > 1.0: off = off.normalized()
+	if off.length() < AIM_DEAD_ZONE: return Vector2.ZERO
+	return off * (off.length() - AIM_DEAD_ZONE) / (off.length() * (1.0 - AIM_DEAD_ZONE))
+
+## A screen offset seen from the level chase camera, in the plane's frame
+## (x: towards the plane's right wing, y: towards its canopy) at a bank
+## (right positive). Cursor right of a level plane: bank right and pull.
+static func aim_to_plane(screen: Vector2, bank: float) -> Vector2:
+	return Vector2(screen.x * cos(bank) - screen.y * sin(bank), screen.x * sin(bank) + screen.y * cos(bank))
 
 ## The client's own inputs this frame (it sends them with the helm frame).
 func client_input(delta: float) -> Dictionary:
@@ -603,6 +644,7 @@ func present(delta: float) -> void:
 		if is_instance_valid(chase) and chase.current: view.camera.camera.make_current()
 		if is_instance_valid(warn_player) and warn_player.playing: warn_player.stop()
 		if is_instance_valid(engine_player) and engine_player.playing: engine_player.stop()
+		if is_instance_valid(marks) and marks.visible: marks.hide()
 		return
 	var pose: Transform3D = model.transform()
 	if role() == "client":
@@ -625,6 +667,14 @@ func present(delta: float) -> void:
 		chase.global_position = chase.global_position.lerp(behind, 1.0 - exp(-delta * 6.0))
 	chase.look_at(pose.origin + pose.basis.z * length * 1.5, Vector3.UP)
 	if not chase.current: chase.make_current()
+	if is_instance_valid(marks):
+		var screen: Vector2 = get_viewport().get_visible_rect().size
+		marks.visible = not model.on_ground
+		marks.reticle = screen * 0.5 + Vector2(aim.x, -aim.y) * minf(screen.x, screen.y) * AIM_REACH
+		var ahead: Vector3 = pose.origin + (model.velocity.normalized() if model.airspeed() > 1.0 else pose.basis.z) * 400.0
+		marks.path_shown = not chase.is_position_behind(ahead)
+		if marks.path_shown: marks.path = chase.unproject_position(ahead)
+		marks.queue_redraw()
 	if warning and not warn_player.playing: warn_player.play()
 	elif not warning and warn_player.playing: warn_player.stop()
 	if not engine_player.playing: engine_player.play()
@@ -711,6 +761,32 @@ func build_ui() -> void:
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(banner)
 	banner.hide()
+	# The arcade aim reticle (at the cursor) and the flight-direction marker
+	# (where the plane is actually going).
+	marks = FlightMarks.new()
+	marks.name = "FlightMarks"
+	marks.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	marks.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(marks)
+	marks.hide()
+
+## Patch 4.0 arcade HUD: a ring at the mouse cursor (where the plane is
+## steering) and a small winged circle where the flight path points.
+class FlightMarks extends Control:
+	var reticle: Vector2 = Vector2.ZERO
+	var path: Vector2 = Vector2.ZERO
+	var path_shown: bool = false
+
+	func _draw() -> void:
+		var ink: Color = Color(1.0, 0.95, 0.75, 0.9)
+		draw_arc(reticle, 14.0, 0.0, TAU, 32, ink, 2.0, true)
+		draw_circle(reticle, 2.0, ink)
+		if path_shown:
+			var green: Color = Color(0.55, 1.0, 0.6, 0.95)
+			draw_arc(path, 8.0, 0.0, TAU, 24, green, 2.0, true)
+			draw_line(path + Vector2(8, 0), path + Vector2(20, 0), green, 2.0, true)
+			draw_line(path - Vector2(8, 0), path - Vector2(20, 0), green, 2.0, true)
+			draw_line(path - Vector2(0, 8), path - Vector2(0, 16), green, 2.0, true)
 
 func open_menu() -> void:
 	menu.show()
