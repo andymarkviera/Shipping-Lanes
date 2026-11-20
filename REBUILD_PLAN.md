@@ -1410,6 +1410,12 @@ song), `features/sky/day_night.gd`, `features/audio/game_music.gd`; protocol 310
 VERSION 3.1.0. Debug mode has NEXT TIME OF DAY. Linux headless checks pass
 (PROGRESS.md); Windows/Mac look, sound and frame time await Andy's playtest.
 
+**Patch 3.1.1 (November 20, 2026, issue #216):** 18-minute cycle (day 5 min,
+sunset 5, night 5, dawn 3), same wire protocol 31000, VERSION 3.1.1. Fixes the
+empty port card when docked online (the client view has no physics tick, which
+was the only place the port services were shown). `tools/port_menu_check.gd`
+guards it; it still needs adding to the Checks workflow (Andy's call).
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge

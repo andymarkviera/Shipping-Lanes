@@ -9,7 +9,7 @@ const Codec = preload("res://features/network/public_snapshot_codec.gd")
 const Relevance = preload("res://features/network/ship_relevance.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const DayNight = preload("res://features/sky/day_night.gd")
-# 3.1.0 adds the world clock to welcome/pong. 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
+# 3.1.0 adds the world clock to welcome/pong (3.1.1: same wire, 18-minute cycle). 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
 const PROTOCOL: int = 31000
 const MAX_PLAYERS: int = 8
 const INTERVAL: float = 0.05

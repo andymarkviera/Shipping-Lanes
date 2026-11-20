@@ -8,6 +8,10 @@ extends SceneTree
 const FOLDER: String = "user://day_night_check"
 const DayNight = preload("res://features/sky/day_night.gd")
 const Music = preload("res://features/audio/game_music.gd")
+const NOON: float = DayNight.NOON
+## Late in the sunset (golden) and the middle of the night.
+const SUNSET: float = DayNight.SUNSET_AT + 0.69 * (DayNight.NIGHT_AT - DayNight.SUNSET_AT)
+const NIGHT: float = (DayNight.NIGHT_AT + DayNight.DAWN_AT) * 0.5
 var failures: Array[String] = []
 var checks: int = 0
 
@@ -28,19 +32,22 @@ func set_time(t: float) -> void:
 
 func run() -> void:
 	DayNight.live = true
-	expect(DayNight.song_at(0.3) == "day" and DayNight.song_at(0.6) == "sunset" and DayNight.song_at(0.8) == "night" and DayNight.song_at(0.95) == "day", "songs follow the time of day")
-	expect(DayNight.sun_elevation(0.27) > 50.0 and DayNight.sun_elevation(0.8) < -10.0, "the sun is high at noon and down at night")
-	var noon: Vector2 = DayNight.weights(0.3)
+	expect(DayNight.song_at(NOON) == "day" and DayNight.song_at(SUNSET) == "sunset" and DayNight.song_at(NIGHT) == "night" and DayNight.song_at(0.9) == "day", "songs follow the time of day")
+	# Patch 3.1.1: day 5 min, sunset 5, night 5, dawn 3.
+	expect(DayNight.CYCLE_SECONDS == 1080.0 and is_equal_approx(DayNight.SUNSET_AT * 1080.0, 300.0) and is_equal_approx(DayNight.NIGHT_AT * 1080.0, 600.0) and is_equal_approx(DayNight.DAWN_AT * 1080.0, 900.0), "an 18-minute cycle: 5, 5, 5, 3 minutes")
+	expect(DayNight.song_at(299.0 / 1080.0) == "day" and DayNight.song_at(301.0 / 1080.0) == "sunset" and DayNight.song_at(601.0 / 1080.0) == "night" and DayNight.song_at(901.0 / 1080.0) == "day", "songs change at the phase starts")
+	expect(DayNight.sun_elevation(NOON - 0.015) > 50.0 and DayNight.sun_elevation(NIGHT) < -10.0, "the sun is high at noon and down at night")
+	var noon: Vector2 = DayNight.weights(NOON)
 	expect(noon.x < 0.01 and noon.y < 0.01, "noon has no sunset or night tint")
-	expect(DayNight.weights(0.64).x > 0.4, "the sunset is golden")
-	expect(DayNight.weights(0.8).y > 0.99, "night is night")
+	expect(DayNight.weights(SUNSET).x > 0.4, "the sunset is golden")
+	expect(DayNight.weights(NIGHT).y > 0.99, "night is night")
 	var server: float = Time.get_unix_time_from_system() + 777.0
 	DayNight.clock_offset = 0.0
 	DayNight.sync(server)
 	expect(absf(DayNight.world_seconds() - server) < 1.0, "a client follows the server's clock")
 	DayNight.sync(server + 0.2)
 	expect(absf(DayNight.clock_offset - 777.0) < 0.5, "sub-second jitter is ignored")
-	set_time(0.3)
+	set_time(NOON)
 	DayNight.skip_phase()
 	expect(DayNight.song_at(DayNight.now()) == "sunset", "debug skip goes to the sunset")
 	# Music rules, stepped directly (no playback headless).
@@ -76,7 +83,7 @@ func run() -> void:
 	expect(heard_sunset and silent_for >= 2.9 and silent_for <= 3.2, "3 s of silence, then the next song (%.1f s)" % silent_for)
 	music.free()
 	# The real game scene at noon, sunset and night.
-	set_time(0.3)
+	set_time(NOON)
 	set_meta("game_save_path", FOLDER + "/voyage.db")
 	change_scene_to_file("res://features/game/game.tscn")
 	var game: Node = null
@@ -97,16 +104,16 @@ func run() -> void:
 	var day_energy: float = sun.light_energy
 	var day_top: Color = sky.get_shader_parameter("top_color")
 	expect(day_energy > 0.9 and sun.global_transform.basis.z.y > 0.5, "noon sun is bright and high")
-	set_time(0.64)
+	set_time(SUNSET)
 	for frame: int in 20: await process_frame
 	expect(float(sky.get_shader_parameter("glow_amount")) > 0.3 and sun.light_color.b < 0.7, "sunset glows and the light turns gold")
-	set_time(0.8)
+	set_time(NIGHT)
 	for frame: int in 20: await process_frame
 	expect(float(sky.get_shader_parameter("night_amount")) > 0.99, "stars at night")
 	expect(sun.light_energy < 0.4 and sun.light_energy > 0.1 and sun.global_transform.basis.z.y > 0.2, "the moon lights the night")
 	expect((sky.get_shader_parameter("top_color") as Color).get_luminance() < day_top.get_luminance() * 0.3, "the night sky is dark")
 	expect(game.volcano == null or game.volcano.darkness(sun) > 0.5, "the volcano sees the night")
-	set_time(0.3)
+	set_time(NOON)
 	for frame: int in 20: await process_frame
 	expect(absf(sun.light_energy - day_energy) < 0.01 and float(sky.get_shader_parameter("night_amount")) == 0.0, "day returns unchanged")
 	DayNight.clock_offset = 0.0

@@ -8205,3 +8205,25 @@ Issue #214; REBUILD_PLAN.md section 16. Status: implemented for draft review.
   `tools/day_night_check.gd` (27), polar/desert/tropical/rain biome checks,
   volcano, game ambience, play connection, `check_dedicated_split.py --prediction`.
 - Not verified: the look and sound on screen, Windows/Mac frame time.
+
+## Patch 3.1.1 — shorter day/night, docked port menu online (November 20, 2026)
+
+Issue #216. Status: implemented for draft review.
+- `features/sky/day_night.gd`: 18-minute cycle (day 5 min, sunset 5, night 5,
+  dawn 3). Songs change at the new phase starts; the server clock is unchanged
+  (same Unix time, same protocol 31000). The sun keeps its 3.1.0 height at each
+  phase boundary (piecewise arc), noon moved to `NOON` (headless fixed time).
+- Bug: docked online, the port card showed with nothing in it. The client view
+  runs with physics off (`dedicated_runtime.gd`), and `port_test.gd` only showed
+  the services row (CARGO/REFUEL/REPAIR/SHIPS, job cards) in `_physics_process`.
+  Now `show_services()` also runs from `_process` on a client. Not day/night.
+- New `tools/port_menu_check.gd`: real game scene built as an online client view,
+  docked by a snapshot-style member, checks the port card, services, job panel,
+  REFUEL/REPAIR/SHIPS on screen, a real mouse click reaching REFUEL, and the menu
+  hiding on undock. Without the fix 6 of 9 fail; with it 9/9 pass.
+- VERSION 3.1.0 → 3.1.1 (`play_connection.gd`, `server_package/check_runtime.py`).
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, every Stage 2
+  Checks command, `day_night_check.gd` (29), `port_menu_check.gd` (9),
+  `check_m1_voyage.gd`, `check_play_connection.py`.
+- Not done: adding `port_menu_check` to `.github/workflows/checks.yml`; workflow
+  edits are off-limits for this patch. Not verified: Windows play, a real online dock.

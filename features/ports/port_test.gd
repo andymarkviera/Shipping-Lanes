@@ -1126,6 +1126,12 @@ func _physics_process(delta: float) -> void:
 	dock_button.modulate = Color.WHITE if dock_button.disabled else Color("9ee3b1")
 	cancel_button.visible = current in ["docking", "undocking"]
 	readiness.text = "Berth: " + (current.capitalize() + ("…" if current != "docked" else "") if current in ["docking", "docked", "undocking"] else status.message)
+	show_services(current)
+
+## The port services (CARGO, REFUEL, REPAIR, SHIPS and the job cards) show while
+## docked. Patch 3.1.1: an online client's view has no physics tick, so _process
+## calls this there too; before, a docked online player saw an empty port card.
+func show_services(current: String) -> void:
 	# The game shows the job cards as soon as the ship is docked, so list them then.
 	if game_mode and current == "docked" and not services.visible: refresh_jobs()
 	services.visible = current == "docked"
@@ -1135,6 +1141,7 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	if runtime_role in ["server", "world"]: return
 	if not is_instance_valid(ship): return
+	if runtime_role == "client": show_services(docking.state(owner_id))
 	voyage_hud.refresh(self)
 	# The sea is one 4 km sheet. In the game's larger world it follows the ship.
 	if game_mode: RenderingServer.global_shader_parameter_set("port_viewer_world", ship.global_position)
