@@ -92,7 +92,7 @@ func _ready() -> void:
 		options.add_item("Settings", "settings")
 		options.add_item("Controls", "controls")
 		# Offline single-player testing: unlocked, throwaway and isolated from online saves.
-		options.add_item("Single-player Test Mode", "debug")
+		options.add_item("Single Player", "debug")
 		# Local save restart is developer-only (see main.gd refresh_save_status).
 		restart_button = options.add_item("Restart Progress", "restart")
 		options.add_item("Back", "title")

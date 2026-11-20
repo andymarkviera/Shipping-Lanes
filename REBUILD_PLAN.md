@@ -1410,6 +1410,18 @@ song), `features/sky/day_night.gd`, `features/audio/game_music.gd`; protocol 310
 VERSION 3.1.0. Debug mode has NEXT TIME OF DAY. Linux headless checks pass
 (PROGRESS.md); Windows/Mac look, sound and frame time await Andy's playtest.
 
+**Patch 3.1.1 (November 20, 2026, issue #216):** 18-minute cycle (day 5 min,
+sunset 5, night 5, dawn 3), same wire protocol 31000, VERSION 3.1.1. Fixes the
+empty port card when docked online (the client view has no physics tick, which
+was the only place the port services were shown). `tools/port_menu_check.gd`
+guards it; it still needs adding to the Checks workflow (Andy's call).
+Also in 3.1.1 (PR #217): berth detection measures to the nearest of a port's
+three berths, not berth 1 (`ports_probe` checks every berth for every hull);
+an admin-only "debug" captain name (keys in `server-config.json` `admin_keys`)
+gives a server-side, never-saved overlay of infinite money and every ship;
+Options shows "Single Player" and the sprite fonts' punctuation is re-seated.
+New checks: `debug_captain_check.gd`, `menu_glyph_check.gd`.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge

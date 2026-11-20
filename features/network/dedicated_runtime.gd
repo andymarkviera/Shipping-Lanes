@@ -9,7 +9,7 @@ const Codec = preload("res://features/network/public_snapshot_codec.gd")
 const Relevance = preload("res://features/network/ship_relevance.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const DayNight = preload("res://features/sky/day_night.gd")
-# 3.1.0 adds the world clock to welcome/pong. 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
+# 3.1.0 adds the world clock to welcome/pong (3.1.1: same wire, 18-minute cycle). 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
 const PROTOCOL: int = 31000
 const MAX_PLAYERS: int = 8
 const INTERVAL: float = 0.05
@@ -120,6 +120,10 @@ var ping_elapsed: float = 0.0
 var rtt_ms: float = -1.0
 var ping_label: Label
 var name_layer: CanvasLayer
+# Patch 3.1.1 item 2 server state: admin player keys and kept-aside real saves.
+var config_path: String = ""
+var admin_keys: Array[String] = []
+var debug_real: Dictionary = {}
 
 func gameplay_payload_error(payload: Dictionary) -> String:
 	if payload.size() != 2 or not payload.get("action") is String or not payload.get("value") is String: return "BAD_PAYLOAD"
@@ -523,6 +527,7 @@ func _ready() -> void:
 		elif arg.begins_with("--captain="): cli_captain = arg.trim_prefix("--captain=")
 		elif arg.begins_with("--saves-dir="): saves_path = arg.trim_prefix("--saves-dir=")
 		elif arg.begins_with("--control-dir="): launcher.folder = arg.trim_prefix("--control-dir=")
+		elif arg.begins_with("--server-config="): config_path = arg.trim_prefix("--server-config=")
 	if not hosting and get_tree().has_meta(Connection.TARGET):
 		var target: Dictionary = get_tree().get_meta(Connection.TARGET)
 		get_tree().remove_meta(Connection.TARGET)
@@ -537,6 +542,8 @@ func _ready() -> void:
 		if not saves.open_store(saves_path):
 			fail(saves.error, 2)
 			return
+		# Patch 3.1.1 item 2: server-config.json sits beside the saves folder.
+		load_admin_keys(config_path if not config_path.is_empty() else saves_path.get_base_dir().path_join("server-config.json"))
 		get_tree().auto_accept_quit = false
 		world = GAME.instantiate()
 		world.runtime_role = "world"
@@ -759,7 +766,7 @@ func hello(version: int, captain: String, release: String = "", key: String = ""
 		if contexts.has(sender):
 			capture_player(sender)
 			teardown_players[sender] = true)
-	captains[sender] = clean
+	apply_captain(sender, clean)
 	context.cranes = world.cranes
 	context.docking.undock_seconds = 1.0
 	ships[id] = context.ship
@@ -780,6 +787,7 @@ func depart(sender: int) -> void:
 	var context: Node3D = contexts[sender]
 	capture_player(sender)
 	if not saves.checkpoint(): save_error()
+	debug_real.erase(sender)
 	player_keys.erase(sender)
 	context.docking.disconnect_owner(sender)
 	context.port.spawn_allocator.release(context.spawn_ticket)
@@ -840,6 +848,7 @@ func _physics_process(delta: float) -> void:
 			print("DEDICATED_TICK players=%d send_us=%d bytes_per_s=%d" % [contexts.size(), roundi(server_send_us), roundi(sent_bytes / report_elapsed)])
 			report_elapsed = 0.0
 			sent_bytes = 0
+		for sender: int in debug_real.keys(): tick_debug(sender)
 		world.docking.members.clear()
 		for sender: int in contexts:
 			var context: Node3D = contexts[sender]
@@ -1224,7 +1233,7 @@ func rename_captain(captain: String) -> void:
 	var clean: String = CaptainName.sanitize(captain)
 	if clean.is_empty(): return
 	last_rename[sender] = now
-	captains[sender] = clean
+	apply_captain(sender, clean)
 
 func load_install_key() -> bool:
 	var path: String = "user://dedicated_install.key"
@@ -1249,7 +1258,7 @@ func capture_player(sender: int) -> void:
 		context.heavy_jobs.update(context.ship)
 		context.reward_minor += context.heavy_jobs.reward_pending
 		context.heavy_jobs.reward_pending = 0
-	saves.players[player_keys[sender]] = {"captain": captains[sender], "voyage": SaveSnapshot.capture(context)}
+	saves.players[player_keys[sender]] = {"captain": captains[sender], "voyage": real_voyage(sender)}
 
 func checkpoint_players() -> void:
 	for sender: int in contexts: capture_player(sender)
@@ -1281,3 +1290,116 @@ func _exit_tree() -> void:
 	if peer != null: peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	session.free()
+
+# --- Patch 3.1.1 item 2: admin "debug" captain name ----------------------------
+## A captain renamed "debug" (any case) on an admin key gets infinite money and
+## every ship until renamed. It is a server-only overlay: the real money, fleet
+## and voyage are kept aside, and checkpoints only ever write those. The
+## nameplate still reads "debug". Admin keys are player keys (the sha256 of an
+## install key, the keys of "players" in saves/world.json) listed in an
+## "admin_keys" array in server-config.json. That file is never in the repo.
+## Anyone else named "debug" only gets the label.
+const DEBUG_NAME: String = "debug"
+const DEBUG_CREDITS_MINOR: int = 99999999900
+const DEBUG_RETRY_MS: int = 1000
+
+func load_admin_keys(path: String) -> void:
+	admin_keys.clear()
+	if path.is_empty() or not FileAccess.file_exists(path): return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not parsed is Dictionary or not parsed.get("admin_keys") is Array: return
+	for key: Variant in parsed.admin_keys:
+		if key is String and SaveStore.key_valid(key.strip_edges().to_lower()): admin_keys.append(key.strip_edges().to_lower())
+	if not admin_keys.is_empty(): print("DEDICATED_ADMINS keys=%d" % admin_keys.size())
+
+func is_admin(sender: int) -> bool:
+	return player_keys.has(sender) and admin_keys.has(String(player_keys[sender]).to_lower())
+
+func debug_active(sender: int) -> bool:
+	return debug_real.has(sender) and debug_real[sender].active
+
+## Every name change on the server goes through here.
+func apply_captain(sender: int, clean: String) -> void:
+	captains[sender] = clean
+	if not contexts.has(sender): return
+	var wants: bool = clean.to_lower() == DEBUG_NAME and is_admin(sender)
+	if wants and not debug_active(sender): start_debug(sender)
+	elif not wants and debug_active(sender): end_debug(sender)
+
+func start_debug(sender: int) -> void:
+	var context: Node3D = contexts[sender]
+	# A pending swap back (renamed away, still in a debug ship) keeps its real copy.
+	if not debug_real.has(sender):
+		debug_real[sender] = {"credits": context.reward_minor, "spent": context.spent_minor, "banked": context.banked_minor,
+			"fleet": context.fleet.duplicate(true), "ship": context.ship_kind, "voyage": SaveSnapshot.capture(context)}
+	debug_real[sender].active = true
+	for kind: String in Progression.SHIPS:
+		if not context.fleet.has(kind): context.fleet[kind] = {"fuel": 1.0, "condition": 1.0}
+	context.reward_minor = DEBUG_CREDITS_MINOR
+	context.offer_notice = "Debug captain: infinite money and every ship until you rename."
+
+func end_debug(sender: int) -> void:
+	var context: Node3D = contexts[sender]
+	var real: Dictionary = debug_real[sender]
+	real.active = false
+	real.retry_at = 0
+	context.reward_minor = real.credits
+	context.spent_minor = real.spent
+	context.banked_minor = real.banked
+	context.fleet = real.fleet.duplicate(true)
+	context.sell_kind = ""
+	context.offer_notice = "Debug off: your own money and ships are back."
+	return_real_ship(sender)
+
+## Puts the captain back in their own ship when the debug one is not theirs.
+## A job under way waits: the swap is retried until the job is finished.
+func return_real_ship(sender: int) -> void:
+	var context: Node3D = contexts[sender]
+	var real: Dictionary = debug_real[sender]
+	if context.ship_kind == real.ship:
+		debug_real.erase(sender)
+		return
+	real.retry_at = Time.get_ticks_msec() + DEBUG_RETRY_MS
+	if context.loading.busy() or context.cranes_busy() or context.sink_seconds > 0.0 or not context.can_switch():
+		context.offer_notice = "Debug off. Finish or cancel this job to return to your own ship."
+		return
+	var previous: String = context.ship_kind
+	context.ship_kind = real.ship
+	context.heavy_mode = Progression.heavy_tier(real.ship) > 0
+	if not context.select_port(context.world_ports.find(context.port)):
+		context.ship_kind = previous
+		context.heavy_mode = Progression.heavy_tier(previous) > 0
+		return
+	context.ship.state.fuel_liters = float(real.voyage.fuel)
+	context.ship.state.condition = float(real.voyage.condition)
+	if is_instance_valid(world):
+		disable_tree(context.ship)
+		context.ship.set_physics_process(true)
+	replication.orders.erase("ship_%d" % sender)
+	debug_real.erase(sender)
+	context.offer_notice = "Debug off: back in your own %s." % Progression.SHIPS[real.ship].name
+
+func tick_debug(sender: int) -> void:
+	if not debug_real.has(sender): return
+	if not contexts.has(sender):
+		debug_real.erase(sender)
+		return
+	var real: Dictionary = debug_real[sender]
+	if real.active: contexts[sender].reward_minor = DEBUG_CREDITS_MINOR
+	elif Time.get_ticks_msec() >= int(real.get("retry_at", 0)): return_real_ship(sender)
+
+## What a checkpoint stores. Never the debug overlay: in the real ship, the live
+## voyage with the real money and fleet; in a debug ship, the voyage as it was
+## when debug began.
+func real_voyage(sender: int) -> Dictionary:
+	var context: Node3D = contexts[sender]
+	if not debug_real.has(sender): return SaveSnapshot.capture(context)
+	var real: Dictionary = debug_real[sender]
+	if context.ship_kind != real.ship: return real.voyage.duplicate(true)
+	var data: Dictionary = SaveSnapshot.capture(context)
+	data.credits = real.credits
+	data.spent = real.spent
+	data.banked = real.banked
+	data.fleet = real.fleet.duplicate(true)
+	data.ship = real.ship
+	return data

@@ -5,14 +5,19 @@ extends Node
 ## The look is painted last over the biome chain (polar_biome.gd overlays), so
 ## the desert, tropics, rain and ice keep their own colours and only get the
 ## sunset gold and the night blue on top. Repainted at 10 Hz, never per flake.
-const CYCLE_SECONDS: float = 2400.0
-## Phase starts as fractions of the cycle: day, sunset, night, dawn.
-const SUNSET_AT: float = 0.55
-const NIGHT_AT: float = 0.68
-const DAWN_AT: float = 0.92
+## Patch 3.1.1: an 18-minute cycle. Day 5 min, sunset 5, night 5, dawn 3.
+const CYCLE_SECONDS: float = 1080.0
+## Phase starts as fractions of the cycle: day (0), sunset, night, dawn.
+const SUNSET_AT: float = 300.0 / CYCLE_SECONDS
+const NIGHT_AT: float = 600.0 / CYCLE_SECONDS
+const DAWN_AT: float = 900.0 / CYCLE_SECONDS
 const REPAINT_SECONDS: float = 0.1
-## The sun's arc: rises at DAWN_AT, sets at the end of the sunset.
-const ARC: float = 1.0 - DAWN_AT + NIGHT_AT
+## How far along its arc (0..1) the sun is when the day and the sunset begin.
+## Each phase keeps the sun heights it had in 3.1.0, only its length changed.
+const ARC_DAY: float = 0.105
+const ARC_SUNSET: float = 0.829
+## Noon: the top of the arc, inside the day. Headless checks sit here.
+const NOON: float = SUNSET_AT * (0.5 - ARC_DAY) / (ARC_SUNSET - ARC_DAY)
 
 const SUNSET_TOP := Color(0.36, 0.30, 0.66)
 const SUNSET_HORIZON := Color(1.0, 0.56, 0.30)
@@ -58,7 +63,7 @@ static func cycle_at(seconds: float) -> float:
 	return fposmod(seconds, CYCLE_SECONDS) / CYCLE_SECONDS
 
 static func now() -> float:
-	return cycle_at(world_seconds()) if live else 0.3
+	return cycle_at(world_seconds()) if live else NOON
 
 ## Which song plays: dawn belongs to the day.
 static func song_at(t: float) -> String:
@@ -82,10 +87,18 @@ static func skip_phase() -> void:
 			break
 	clock_offset += (next - t) * CYCLE_SECONDS + 1.0
 
-## Sun height in degrees: -6 at the ends of its arc, 55 at noon (t = 0.3, the
-## old fixed sun: rotation -55, -30).
+## 0..1 along the sun's arc (dawn to the end of the sunset), above 1 at night.
+## Piecewise per phase, so dawn, day and sunset each cover their own stretch.
+static func arc_at(t: float) -> float:
+	if t >= NIGHT_AT and t < DAWN_AT: return 1.0 + (t - NIGHT_AT) / (DAWN_AT - NIGHT_AT)
+	if t >= DAWN_AT: return ARC_DAY * (t - DAWN_AT) / (1.0 - DAWN_AT)
+	if t < SUNSET_AT: return lerpf(ARC_DAY, ARC_SUNSET, t / SUNSET_AT)
+	return lerpf(ARC_SUNSET, 1.0, (t - SUNSET_AT) / (NIGHT_AT - SUNSET_AT))
+
+## Sun height in degrees: -6 at the ends of its arc, 55 at NOON (the old fixed
+## sun: rotation -55, -30).
 static func sun_elevation(t: float) -> float:
-	var u: float = fposmod(t - DAWN_AT, 1.0) / ARC
+	var u: float = arc_at(t)
 	return -6.0 + 61.0 * sin(PI * u) if u <= 1.0 else -30.0
 
 ## How much sunset gold (0..1) and night (0..1) is in the look.
@@ -124,7 +137,7 @@ func paint() -> void:
 	var sun_up: float = smoothstep(-4.0, 3.0, elevation)
 	var moon_up: float = smoothstep(NIGHT_AT, NIGHT_AT + 0.03, t) * (1.0 - smoothstep(DAWN_AT - 0.03, DAWN_AT, t))
 	if elevation > -4.0:
-		var u: float = fposmod(t - DAWN_AT, 1.0) / ARC
+		var u: float = minf(arc_at(t), 1.0)
 		sun.rotation_degrees = Vector3(-maxf(elevation, 2.0), lerpf(-110.0, 50.0, u), 0.0)
 		sun.light_energy = sun.light_energy * lerpf(1.0, 0.85, dusk) * sun_up
 	else:

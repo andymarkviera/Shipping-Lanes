@@ -155,6 +155,20 @@ func bollard_points() -> Array[Vector3]:
 func berth_id(index: int) -> String:
 	return berth.id if index == 0 else "%s_%02d" % [berth.id.trim_suffix("_01"), index + 1]
 
+## Patch 3.1.1: berth detection is per berth, not berth 1 only. Berths 2 and 3
+## lie 285 m and 570 m along the quay, so measuring to berth_anchor missed ships
+## arriving there. The index of the berth nearest a world point.
+func nearest_berth(point: Vector3) -> int:
+	var best: int = 0
+	for index: int in berth_anchors.size():
+		if point.distance_squared_to(berth_anchors[index].global_position) < point.distance_squared_to(berth_anchors[best].global_position): best = index
+	return best
+
+## Distance from a world point to the nearest berth centre of this port.
+func berth_distance(point: Vector3) -> float:
+	if berth_anchors.is_empty(): return INF
+	return point.distance_to(berth_anchors[nearest_berth(point)].global_position)
+
 ## The berth box in world space, as held clear of spawns while it is in use.
 func berth_bounds(index: int) -> AABB:
 	return berth_anchors[index].global_transform * AABB(-berth.envelope_m / 2, berth.envelope_m)

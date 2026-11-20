@@ -8205,3 +8205,64 @@ Issue #214; REBUILD_PLAN.md section 16. Status: implemented for draft review.
   `tools/day_night_check.gd` (27), polar/desert/tropical/rain biome checks,
   volcano, game ambience, play connection, `check_dedicated_split.py --prediction`.
 - Not verified: the look and sound on screen, Windows/Mac frame time.
+
+## Patch 3.1.1 — shorter day/night, docked port menu online (November 20, 2026)
+
+Issue #216. Status: implemented for draft review.
+- `features/sky/day_night.gd`: 18-minute cycle (day 5 min, sunset 5, night 5,
+  dawn 3). Songs change at the new phase starts; the server clock is unchanged
+  (same Unix time, same protocol 31000). The sun keeps its 3.1.0 height at each
+  phase boundary (piecewise arc), noon moved to `NOON` (headless fixed time).
+- Bug: docked online, the port card showed with nothing in it. The client view
+  runs with physics off (`dedicated_runtime.gd`), and `port_test.gd` only showed
+  the services row (CARGO/REFUEL/REPAIR/SHIPS, job cards) in `_physics_process`.
+  Now `show_services()` also runs from `_process` on a client. Not day/night.
+- New `tools/port_menu_check.gd`: real game scene built as an online client view,
+  docked by a snapshot-style member, checks the port card, services, job panel,
+  REFUEL/REPAIR/SHIPS on screen, a real mouse click reaching REFUEL, and the menu
+  hiding on undock. Without the fix 6 of 9 fail; with it 9/9 pass.
+- VERSION 3.1.0 → 3.1.1 (`play_connection.gd`, `server_package/check_runtime.py`).
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, every Stage 2
+  Checks command, `day_night_check.gd` (29), `port_menu_check.gd` (9),
+  `check_m1_voyage.gd`, `check_play_connection.py`.
+- Not done: adding `port_menu_check` to `.github/workflows/checks.yml`; workflow
+  edits are off-limits for this patch. Not verified: Windows play, a real online dock.
+
+### Patch 3.1.1 additions — berths, admin debug name, Single Player label
+
+Andy's PR #217 comment. VERSION stays 3.1.1; no workflow edits; gas/oil untouched.
+- Berths: every berth box is 64 × 290 m and already holds the largest hull
+  (38 × 276 m) plus margin. The fault was distance: the port pick (250 m),
+  "approaching" (150 m) and the Dock button measured to **berth 1 only**, and
+  berths 2 and 3 sit 285 m and 570 m along the quay. `test_port.gd` gains
+  `nearest_berth()` / `berth_distance()`; `docking_authority.gd` (new
+  `APPROACH_M`) and `port_test.gd` use them. `ports_probe` gains
+  `check_berth_detection()`: all 6 ports × 3 berths × every catalog hull — the
+  footprint fits the box, moored and arriving ships are detected at that berth,
+  and the authority reads "approaching", picks, docks and holds that berth.
+  The frozen online `public_physics_world.gd` was not changed.
+- Debug captain name (server-authoritative, `dedicated_runtime.gd`): an admin
+  renamed "debug" (any case) gets infinite money and every ship until renamed.
+  Admins are player keys (sha256 of the install key — the keys under `players`
+  in `saves/world.json`) listed in an `admin_keys` array in `server-config.json`
+  beside the saves folder (or `--server-config=`); that file is not in the repo.
+  The real money, fleet and voyage are kept aside and are all a checkpoint ever
+  writes; renaming restores them and, if a debug-only ship is being sailed,
+  swaps back to the captain's own ship once no job is under way. The nameplate
+  still reads "debug". Others named debug only get the label.
+  New `tools/debug_captain_check.gd` (21 checks).
+- Main menu > Options: "Single-player Test Mode" → "Single Player" (id `debug`).
+  Cause of the jank: the font baker put every glyph's bottom on the baseline,
+  so "-" drew like "_" and quotes sat low. The three `.fnt` files re-seat
+  - = + ~ < > ( ) [ ] { } | " ' ` ^ * _ , ; and `tools/bake_display_fonts.py`
+  does the same on a re-bake. New `tools/menu_glyph_check.gd` (57 checks): every
+  swirl label's glyphs exist in its sprite font, plus punctuation placement
+  (15 fail on the old fonts).
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, all Stage 2
+  commands, Stage 3 Python, Stage 4 report probes (`ports_probe` 598 checks),
+  `debug_captain_check`, `menu_glyph_check`, `port_menu_check`,
+  `day_night_check`, `display_fonts_check`, `check_m1_voyage`, `mooring_check`,
+  `debug_game_check`, `hangar_check`, `crane_check`, `check_snapshot_budget`,
+  `check_dedicated_split.py` (plain, `--prediction`, `--replication`).
+- Not verified: Windows play, a real online session with an admin key, the
+  re-seated punctuation on screen. The new checks are not in the Checks workflow.
