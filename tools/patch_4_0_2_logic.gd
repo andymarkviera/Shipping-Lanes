@@ -12,7 +12,11 @@ extends RefCounted
 ## gear-up landing is a belly landing (no crash) and a very hard one is a
 ## crash; the gear folds in GEAR_TRAVEL_S; the gear replicates; the
 ## Speedboat's and Jetty's stats are unchanged (the Jetty keeps its jet
-## flame where it was); old saves load; VERSION is 4.0.2.
+## flame where it was); the Jetty hovers over the water with its own downwash
+## spray, rooster tail and glow; Shift charges and fires its blaster boost
+## (about +60 % speed for 2.5 s, then a 6 s cooldown) with a huge fast-RGB
+## flame, a shock ring and a synthesised charge and blast sound; old saves
+## load; VERSION is 4.0.2.
 ## check_catalog.gd (in the Checks job) runs these; tools/patch_4_0_2_check.gd
 ## runs them too, then the game-scene checks (hangar, debug panel, nudge).
 const Progression = preload("res://features/game/progression.gd")
@@ -33,7 +37,11 @@ const Tropical = preload("res://features/toon/tropical_look.gd")
 const City = preload("res://features/toon/city_look.gd")
 const Chunky = preload("res://features/toon/chunky_look.gd")
 const STEP: float = 1.0 / 30.0
-const PARTS: Array[String] = ["version", "polar_relief", "plane_icons", "runways", "decorations", "bank_limit", "barrel_roll", "gear", "belly", "gear_look", "boats", "saves"]
+const Boost = preload("res://features/ships/jetty_boost.gd")
+const JettyFx = preload("res://features/toon/jetty_fx.gd")
+const JetFlame = preload("res://features/toon/jet_flame.gd")
+const Hud = preload("res://features/game/game_hud.gd")
+const PARTS: Array[String] = ["version", "polar_relief", "plane_icons", "runways", "decorations", "bank_limit", "barrel_roll", "gear", "belly", "gear_look", "boats", "jetty_hover", "jetty_boost", "jetty_blaster_look", "jetty_blaster_sound", "saves"]
 
 var checks: int = 0
 var failures: PackedStringArray = []
@@ -409,6 +417,271 @@ func boats() -> void:
 		if point.z < -jetty.hull_size_m.z * 0.45: stern = maxf(stern, absf(point.x))
 	expect(nose < stern * 0.3, "the Jetty is a long triangle: a pointed nose, a wide stern (%.2f vs %.2f m)" % [nose, stern])
 	jet.free()
+
+## A hull of one kind, ready to sail but outside the tree (no physics space:
+## advance_motion only, which never needs one with the rudder centred).
+func make_hull(kind: String) -> HandlingShip:
+	var hull: HandlingShip = HandlingShip.new()
+	hull.definition = Progression.definition(kind)
+	hull._ready()
+	hull.set_physics_process(true)
+	return hull
+
+func top_speed(definition: ShipDefinition) -> float:
+	return definition.forward_acceleration_mps2 / definition.linear_drag_per_second
+
+## Full ahead at top speed, bow along +Z.
+func full_ahead(hull: HandlingShip) -> void:
+	hull.command_throttle(1.0)
+	hull.actual_throttle = 1.0
+	hull.velocity = Vector3(0, 0, top_speed(hull.definition))
+
+## Follow-up: the Jetty hovers over the water (looks only). It is clear of the
+## swell all the time, higher at speed and in a blast, never "jumps", and the
+## other boats still sit in the water.
+func jetty_hover() -> void:
+	var definition: ShipDefinition = Progression.definition("small_jetty")
+	# A plain body in the tree, like small_boats_check (the motion reads global poses).
+	var body: CharacterBody3D = CharacterBody3D.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(body)
+	var motion: ShipVisualMotion = ShipVisualMotion.new()
+	motion.body = body
+	motion.quality = 2
+	motion.configure_hull(definition)
+	body.add_child(motion)
+	motion.set_process(false)
+	expect(motion.hovering() and motion.hover_m >= 1.5, "the Jetty hovers (%.1f m off the water at rest)" % motion.hover_m)
+	for kind: String in ["small_speedboat", "small_racer", "container", "bulk_2"]:
+		var other: ShipVisualMotion = ShipVisualMotion.new()
+		other.configure_hull(Progression.definition(kind))
+		expect(not other.hovering(), "the %s still floats in the water" % kind)
+		other.free()
+	var model: Node3D = Chunky.model("small_jetty", definition)
+	var keel: float = (model.get_node("Hull") as MeshInstance3D).mesh.get_aabb().position.y
+	model.free()
+	var step: float = 1.0 / 60.0
+	var top: float = top_speed(definition)
+	var clearance: float = INF
+	var rest: float = 0.0
+	var fast: float = 0.0
+	var airborne: bool = false
+	var finite: bool = true
+	for tick: int in range(20 * 60):
+		var t: float = tick * step
+		# 3 s at rest, then up to full speed over 5 s, a gentle turn now and then.
+		body.velocity = Vector3(0, 0, top * clampf((t - 3.0) / 5.0, 0.0, 1.0))
+		if tick % 600 == 0: body.rotation.y += 0.05
+		motion._process(step)
+		finite = finite and motion.position.is_finite() and motion.rotation.is_finite()
+		airborne = airborne or motion.airborne
+		var swell: float = OceanPresentation.swell_height(body.position.x, body.position.z, motion.elapsed, 2)
+		var tilt: float = absf(sin(motion.rotation.x)) * definition.hull_size_m.z * 0.5 + absf(sin(motion.rotation.z)) * definition.hull_size_m.x * 0.5
+		clearance = minf(clearance, motion.position.y + keel - tilt - swell)
+		if t >= 1.0 and t < 3.0: rest += motion.position.y / 120.0
+		if t >= 17.0: fast += motion.position.y / 180.0
+	expect(finite, "the hover stays finite")
+	expect(clearance > 0.3, "the Jetty's keel stays clear of the water at every moment (%.2f m at the lowest)" % clearance)
+	expect(not airborne and motion.longest_air_s == 0.0, "the Jetty floats, it never jumps the chop")
+	expect(fast > rest + 0.4, "it rides higher at full speed (%.2f m) than at rest (%.2f m)" % [fast, rest])
+	expect(motion.hover_height(1.0, 1.0, 0.0) > motion.hover_height(1.0, 0.0, 0.0) + 0.4, "and higher still in a blaster boost")
+	expect(absf(motion.rotation.x) <= ShipVisualMotion.HOVER_PITCH_LIMIT_RAD + 0.001 and absf(motion.rotation.z) <= ShipVisualMotion.HOVER_ROLL_LIMIT_RAD + 0.001, "its trim and lean stay calm")
+	expect(body.position.y == 0.0, "the body and its collider stay on the water plane")
+	body.free()
+
+## Follow-up: Shift's blaster boost on the Jetty. A charge, then about +60 %
+## speed for 2.5 s, then a 6 s cooldown; only the Jetty, never docked or dry.
+func jetty_boost() -> void:
+	var definition: ShipDefinition = Progression.definition("small_jetty")
+	expect(Boost.eligible(definition) and not Boost.eligible(Progression.definition("small_racer")) and not Boost.eligible(Progression.definition("small_speedboat")) and not Boost.eligible(Progression.definition("container")), "only the Jetty has the blaster")
+	expect(Boost.CHARGE_S >= 0.3 and Boost.CHARGE_S <= 1.0, "the blaster charges first (%.2f s)" % Boost.CHARGE_S)
+	expect(is_equal_approx(Boost.BLAST_S, 2.5) and is_equal_approx(Boost.COOLDOWN_S, 6.0) and is_equal_approx(Boost.SPEED_GAIN, 0.6), "+60 % for 2.5 s, 6 s cooldown")
+	var top: float = top_speed(definition)
+	expect(top * (1.0 + Boost.SPEED_GAIN) <= CollisionRules.SUPPORTED_SPEED_MPS, "the boosted Jetty (%.0f m/s) is inside the collision speed cap (%.0f m/s)" % [top * (1.0 + Boost.SPEED_GAIN), CollisionRules.SUPPORTED_SPEED_MPS])
+	var jet: HandlingShip = make_hull("small_jetty")
+	var twin: HandlingShip = make_hull("small_jetty")
+	full_ahead(jet)
+	full_ahead(twin)
+	expect(jet.boost.available() and jet.request_boost() and jet.boost.phase == "charge", "Shift on the Jetty starts the charge")
+	expect(not jet.request_boost(), "a second Shift while charging does nothing")
+	var step: float = 1.0 / 60.0
+	var phases: Array[String] = ["charge"]
+	var charge_gain: float = 0.0
+	var blast_s: float = 0.0
+	var boosted_s: float = 0.0
+	var middle: float = 0.0
+	var peak_speed: float = 0.0
+	var ready_at: float = -1.0
+	var refused_cooling: bool = false
+	var ratio: float = 1.0
+	for tick: int in range(12 * 60):
+		var t: float = (tick + 1) * step
+		jet.advance_motion(step)
+		twin.advance_motion(step)
+		ratio = jet.forward_speed() / maxf(twin.forward_speed(), 0.001)
+		var phase: String = jet.boost.phase
+		if phase != phases[-1]:
+			phases.append(phase)
+			if phase == "ready" and ready_at < 0.0: ready_at = t
+		if phase == "charge": charge_gain = maxf(charge_gain, ratio - 1.0)
+		if phase == "blast":
+			blast_s += step
+			if middle == 0.0 and jet.boost.clock >= Boost.BLAST_S * 0.5: middle = ratio
+		if ratio > 1.5: boosted_s += step
+		peak_speed = maxf(peak_speed, jet.velocity.length())
+		if absf(t - (Boost.CHARGE_S + Boost.BLAST_S + 1.0)) < step * 0.5: refused_cooling = not jet.request_boost() and jet.boost.phase == "cooldown"
+	expect(phases == ["charge", "blast", "cooldown", "ready"], "charge, blast, cooldown, ready (%s)" % ", ".join(phases))
+	expect(charge_gain < 0.001, "the charge itself adds no speed")
+	expect(middle > 1.55 and middle < 1.65, "the blast runs about 60 %% faster than the same Jetty without it (x%.3f)" % middle)
+	expect(absf(blast_s - Boost.BLAST_S) <= step * 1.5, "the blast lasts 2.5 s (%.2f s)" % blast_s)
+	expect(boosted_s >= Boost.BLAST_S - 0.4, "more than 50 %% faster for most of it (%.2f s)" % boosted_s)
+	expect(peak_speed <= CollisionRules.SUPPORTED_SPEED_MPS + 0.001 and peak_speed > top * 1.5, "the boosted top speed is reached and capped (%.0f m/s)" % peak_speed)
+	expect(absf(ratio - 1.0) < 0.002, "afterwards the Jetty is back to its own speed (x%.3f)" % ratio)
+	expect(refused_cooling, "Shift does nothing while the blaster cools down")
+	expect(absf(ready_at - (Boost.CHARGE_S + Boost.BLAST_S + Boost.COOLDOWN_S)) <= step * 1.5, "it is ready again 6 s after the blast (%.2f s after Shift)" % ready_at)
+	expect(jet.request_boost(), "then Shift fires it again")
+	# Docking during a blast ends it at once (it still cools down).
+	for tick: int in int((Boost.CHARGE_S + 0.5) / step): jet.advance_motion(step)
+	expect(jet.boost.phase == "blast", "the second blast is running")
+	jet.docked = true
+	jet.advance_motion(step)
+	expect(jet.boost.phase == "cooldown" and is_equal_approx(jet.boost.factor(), 1.0), "docking ends the blast and starts the cooldown")
+	expect(not jet.request_boost(), "a docked Jetty cannot boost")
+	var dry: HandlingShip = make_hull("small_jetty")
+	dry.state.fuel_liters = 0.0
+	expect(not dry.request_boost(), "a Jetty with an empty tank cannot boost")
+	var speedboat: HandlingShip = make_hull("small_speedboat")
+	full_ahead(speedboat)
+	expect(not speedboat.request_boost() and speedboat.boost.phase == "ready", "Shift does nothing on another boat")
+	# The HUD line, the key and the server action.
+	var hud_jet: HandlingShip = make_hull("small_jetty")
+	var lines: Array[String] = [Hud.blaster_text(hud_jet)]
+	hud_jet.request_boost()
+	lines.append(Hud.blaster_text(hud_jet))
+	hud_jet.boost.advance(Boost.CHARGE_S + 0.1)
+	lines.append(Hud.blaster_text(hud_jet))
+	hud_jet.boost.advance(Boost.BLAST_S + 1.0)
+	lines.append(Hud.blaster_text(hud_jet))
+	expect(lines == ["BLASTER READY", "BLASTER CHARGING...", "BLASTER BOOST!", "BLASTER 4.9 s"], "the HUD shows the blaster's state (%s)" % ", ".join(lines))
+	expect(Hud.blaster_text(speedboat) == "", "no blaster line on other boats")
+	expect(PlayerControls.BOOST_COMMAND == &"jetty_boost" and not InputPreferences.valid_key(KEY_SHIFT) and not InputPreferences.DEFAULT_BINDINGS.has("jetty_boost"), "Shift is a fixed key no binding can take")
+	var menu: GDScript = load("res://features/game/game_menu.gd")
+	expect(menu.FIXED_ROWS.has(["Jetty: blaster boost", "Shift"]), "Esc > Controls lists Shift for the blaster")
+	var runtime: GDScript = load("res://features/network/dedicated_runtime.gd")
+	expect(runtime.BOAT_ACTIONS.has("boost"), "online, the server's hull runs the boost (gameplay action \"boost\")")
+	for hull: HandlingShip in [jet, twin, dry, speedboat, hud_jet]: hull.free()
+
+## Follow-up: the hover and blaster looks. Downwash spray, a rooster tail and a
+## glow on the water under the Jetty; the rear thruster is kept; the charge
+## orb, then a huge fast-RGB flame and a shock ring.
+func jetty_blaster_look() -> void:
+	var definition: ShipDefinition = Progression.definition("small_jetty")
+	var model: Node3D = Chunky.model("small_jetty", definition)
+	var fx: Node3D = model.find_child("JettyFx", true, false) as Node3D
+	var thruster: Node3D = model.find_child("JetFlame", true, false) as Node3D
+	if not expect(fx != null and fx.get_script() == JettyFx, "the Jetty carries its hover and blaster effects"):
+		model.free()
+		return
+	expect(thruster != null, "and keeps its rear thruster flame")
+	fx._ready()
+	for label: String in ["Downwash", "RoosterTail", "Glow", "GlowLight", "BoostFlame", "ChargeOrb", "BlastRing", "BoostSound"]:
+		expect(fx.get_node_or_null(label) != null, "the Jetty's effects have %s" % label)
+	var keel: float = (model.get_node("Hull") as MeshInstance3D).mesh.get_aabb().position.y
+	expect(fx.downwash is CPUParticles3D and fx.downwash.position.y < keel - 0.5, "the downwash sprays on the water under the hovering hull")
+	expect(fx.rooster.position.z < -definition.hull_size_m.z * 0.5 and fx.rooster.direction.z < 0.0 and fx.rooster.direction.y > 0.0, "the rooster tail is thrown up and back behind the stern")
+	expect(fx.glow.position.y < keel and fx.glow_light.light_color.is_equal_approx(JettyFx.GLOW), "the teal glow lies on the water under it")
+	expect(fx.flame.position.is_equal_approx(thruster.position), "the blaster flame comes out of the rear thruster's nozzle")
+	var plain: Node3D = Chunky.model("small_speedboat", Progression.definition("small_speedboat"))
+	expect(plain.find_child("JettyFx", true, false) == null, "other boats have no Jetty effects")
+	plain.free()
+	var hull: HandlingShip = make_hull("small_jetty")
+	full_ahead(hull)
+	fx.ship = hull
+	var step: float = 1.0 / 60.0
+	fx.update_fx(step)
+	expect(fx.rooster.emitting and not fx.orb.visible and not fx.flame.visible and not fx.ring.visible, "cruising: the rooster tail flies, no blaster")
+	hull.request_boost()
+	for tick: int in int(Boost.CHARGE_S * 0.5 / step):
+		hull.advance_motion(step)
+		fx.update_fx(step)
+	expect(fx.orb.visible and not fx.flame.visible and fx.charges_heard == 1, "charging: the orb swells at the nozzle and the charge plays")
+	var ring_seen: bool = false
+	while hull.boost.phase == "charge":
+		hull.advance_motion(step)
+		fx.update_fx(step)
+		ring_seen = fx.ring.visible
+	expect(fx.blasts_heard == 1 and ring_seen, "the blast fires with its sound and a shock ring")
+	for tick: int in int(0.4 / step):
+		hull.advance_motion(step)
+		fx.update_fx(step)
+	var outer: MeshInstance3D = fx.flame_cones[0]
+	expect(fx.flame.visible and not fx.orb.visible and outer.scale.y > 3.0 * JetFlame.LENGTH_M, "a huge blaster flame (%.1f m, the thruster's is %.1f m)" % [outer.scale.y, JetFlame.LENGTH_M])
+	var buckets: Dictionary = {}
+	var fastest: float = 0.0
+	var last_hue: float = (fx.flame_paints[0] as StandardMaterial3D).albedo_color.h
+	for tick: int in int(0.5 / step):
+		hull.advance_motion(step)
+		fx.update_fx(step)
+		var hue: float = (fx.flame_paints[0] as StandardMaterial3D).albedo_color.h
+		buckets[int(hue * 6.0) % 6] = true
+		fastest = maxf(fastest, absf(angle_difference(last_hue * TAU, hue * TAU)) / TAU / step)
+		last_hue = hue
+	expect(buckets.size() == 6, "the flame runs through red, yellow, green, cyan, blue and magenta in half a second")
+	expect(fastest >= 2.0, "fast RGB (%.1f turns of the colour wheel a second)" % fastest)
+	expect(fx.glow_light.light_energy > 3.0, "the under-glow flares in the blast")
+	while hull.boost.phase == "blast":
+		hull.advance_motion(step)
+		fx.update_fx(step)
+	fx.update_fx(step)
+	expect(not fx.flame.visible and not fx.ring.visible and is_instance_valid(thruster) and thruster.get_parent() == model, "after the blast the flame is gone, the thruster stays")
+	# Online the presentation hull runs no physics: the effects move its clock.
+	var view_hull: HandlingShip = make_hull("small_jetty")
+	view_hull.set_physics_process(false)
+	fx.ship = view_hull
+	view_hull.request_boost()
+	for tick: int in int((Boost.CHARGE_S + 0.2) / step): fx.update_fx(step)
+	expect(view_hull.boost.phase == "blast" and fx.flame.visible, "online, the own presentation hull shows the blaster too")
+	model.free()
+	hull.free()
+	view_hull.free()
+
+func peak(samples: PackedByteArray, rate: int, from: float, to: float) -> float:
+	var top: float = 0.0
+	for index: int in range(int(from * rate), mini(int(to * rate), samples.size() >> 1)):
+		top = maxf(top, absf(samples.decode_s16(index * 2) / 32768.0))
+	return top
+
+func crossings(samples: PackedByteArray, rate: int, from: float, to: float) -> float:
+	var count: int = 0
+	var last: int = samples.decode_s16(int(from * rate) * 2)
+	for index: int in range(int(from * rate) + 1, mini(int(to * rate), samples.size() >> 1)):
+		var value: int = samples.decode_s16(index * 2)
+		if (value >= 0) != (last >= 0): count += 1
+		last = value
+	return count / (to - from)
+
+## Follow-up: the charged beam-cannon sound is made in code from sine, saw and
+## noise (no recorded audio): a rising charge whine, then a loud blast that
+## dies away.
+func jetty_blaster_sound() -> void:
+	var charge: AudioStreamWAV = JettyFx.charge_sound()
+	var blast: AudioStreamWAV = JettyFx.blast_sound()
+	expect(charge != null and blast != null and charge.format == AudioStreamWAV.FORMAT_16_BITS and blast.format == AudioStreamWAV.FORMAT_16_BITS, "the charge and the blast are 16-bit sounds")
+	expect(charge.resource_path.is_empty() and blast.resource_path.is_empty() and JettyFx.charge_sound() == charge and JettyFx.blast_sound() == blast, "both are made in code, once")
+	var source: String = (JettyFx as GDScript).source_code
+	expect(not source.contains(".wav\"") and not source.contains(".ogg") and not source.contains(".mp3") and source.contains("stream.data = samples"), "no recorded audio is loaded")
+	expect(absf(charge.get_length() - (Boost.CHARGE_S + 0.04)) < 0.01, "the charge lasts as long as the blaster charges (%.2f s)" % charge.get_length())
+	expect(blast.get_length() >= 1.5 and blast.get_length() <= 2.5, "the blast rings for about two seconds (%.2f s)" % blast.get_length())
+	var rate: int = charge.mix_rate
+	var length: float = charge.get_length()
+	var low: float = crossings(charge.data, rate, 0.02, 0.12)
+	var high: float = crossings(charge.data, rate, length - 0.14, length - 0.04)
+	expect(high > 2.0 * low, "the charge whine rises (%.0f -> %.0f crossings/s)" % [low, high])
+	expect(peak(charge.data, rate, length - 0.14, length - 0.04) > 2.0 * peak(charge.data, rate, 0.02, 0.12), "and swells as it fills")
+	var blast_length: float = blast.get_length()
+	var hit: float = peak(blast.data, blast.mix_rate, 0.0, 0.25)
+	expect(hit > 0.6, "the blast hits hard (peak %.2f)" % hit)
+	expect(peak(blast.data, blast.mix_rate, blast_length - 0.3, blast_length - 0.15) < hit * 0.35, "and dies away")
+	expect(peak(blast.data, blast.mix_rate, blast_length - 0.01, blast_length) < 0.05, "with no click at the end")
 
 ## Old saves: 4.0 and 4.0.1 progress rows still load.
 func saves() -> void:

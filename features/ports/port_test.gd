@@ -392,7 +392,9 @@ func _ready() -> void:
 		controls.command_requested.connect(func(action: StringName) -> void:
 			if action == &"map_toggle": globe_map.toggle()
 			# Patch 4.0.2 item 6: while flying, G is the landing gear (Aviation.on_command).
-			if action == &"cannon_salute" and runtime_role == "local" and not flying(): fire_salute())
+			if action == &"cannon_salute" and runtime_role == "local" and not flying(): fire_salute()
+			# Patch 4.0.2: Shift fires the Jetty's blaster boost (online: dedicated_runtime).
+			if action == PlayerControls.BOOST_COMMAND and runtime_role == "local": fire_boost())
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()
@@ -478,6 +480,12 @@ func _ready() -> void:
 
 ## Patch 2.9.1 item 4: the pirate ships' broadside. Looks and sound only; ships
 ## without guns do nothing. False when nothing fired (no guns, or cooling down).
+## Patch 4.0.2: the Jetty's Shift blaster boost. False when not on the Jetty,
+## flying, docked, the helm is not free or the blaster is charging or cooling.
+func fire_boost() -> bool:
+	if not is_instance_valid(ship) or flying(): return false
+	return ship.request_boost()
+
 func fire_salute() -> bool:
 	if not is_instance_valid(ship): return false
 	var cannons: Node = ship.find_child("Cannons", true, false)

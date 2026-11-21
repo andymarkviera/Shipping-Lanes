@@ -24,7 +24,7 @@ const KEY_ROWS: Array = [["Throttle up / down", "ship_throttle_up", "ship_thrott
 ## and Q / E yaw are optional extras. Patch 4.0.2: G lowers and raises the gear
 ## (it comes up on its own after take-off); a held A / D is a barrel roll.
 const FIXED_ROWS: Array = [["Plane: steer", "Move the mouse"], ["Plane: throttle", "W / S"],
-	["Plane: barrel roll, yaw", "Hold A / D, Q / E"], ["Plane: landing gear", "G"], ["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"],
+	["Plane: barrel roll, yaw", "Hold A / D, Q / E"], ["Plane: landing gear", "G"], ["Jetty: blaster boost", "Shift"], ["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"],
 	["Turn the world map", "Drag"], ["Menu", "Esc"]]
 
 func _ready() -> void:

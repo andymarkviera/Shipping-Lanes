@@ -8563,3 +8563,59 @@ rework and 4.1 gacha are out of scope.
   relief on screen (headless has no renderer); an online session with two
   players watching each other's gear. Note: with the gear up the runway assists
   (alignment, glide, flare) stay off, as they are for a plane set up to land.
+
+### Patch 4.0.2 follow-up — the Jetty hovers; Shift Blaster Boost (November 21, 2026)
+
+Andy's comment on PR #225. VERSION stays 4.0.2. No workflow edits. The gas, oil,
+refinery and cargo-fuel code is untouched.
+- Hover (looks only): `ShipVisualMotion` lifts the Jetty's hull 2.0 m off the
+  water at rest (keel about 0.9 m clear), up to 0.8 m more at full speed and
+  0.5 m more in a blast. It floats slowly, trims calmly, leans into turns and
+  follows only a third of the swell. It never "jumps". The body, collider,
+  camera and every stat stay as they were. The other boats are unchanged.
+- New `features/toon/jetty_fx.gd` ("JettyFx", built by `_dress_jetty` next to
+  the unchanged nozzle, ring and JetFlame). On the water under the hull it
+  draws "Downwash" (CPUParticles3D spray blown out flat), "RoosterTail" (a
+  plume up and back behind the stern that grows with speed) and "Glow" plus
+  "GlowLight" (a pulsing teal pool of light).
+- Blaster Boost: new `features/ships/jetty_boost.gd`. Every `HandlingShip`
+  has one; only the Jetty can fire it (`request_boost`). Shift starts a 0.6 s
+  charge, then the blast gives +60 % speed for 2.5 s (a 0.15 s kick in, a
+  0.35 s ease out), then a 6 s cooldown. Docking, an empty tank or the blast's
+  end cancels it. The speed is changed only in `advance_motion`. The local hull
+  does it offline. Online, the server's hull does it (gameplay action
+  `"boost"`). `CollisionRules.SUPPORTED_SPEED_MPS` is 520 → 830 m/s, which
+  covers the boosted 823 m/s.
+- Blaster looks: during the charge a "ChargeOrb" swells and spins through the
+  colours at the nozzle. On the blast a "BoostFlame" fires: three nested cones,
+  22 m long (4× the thruster's), cycling the colour wheel 3.2 times a second.
+  A "BlastRing" shock wave bursts off the stern and the under-glow flares.
+- Sound: `JettyFx.charge_sound()` and `blast_sound()` are built once in code
+  from sine, saw and noise. The charge is a whine rising three octaves, a
+  quickening flutter, a rising hum and a fizz. The blast is a falling boom, a
+  detuned saw zap diving from 1.8 kHz to 120 Hz, a roaring filtered-noise beam
+  and a throbbing rumble, soft-clipped. No recorded or copyrighted audio.
+- Input/HUD: Shift is a fixed key in `PlayerControls`
+  (`BOOST_COMMAND = &"jetty_boost"`). No binding can take it, so saved
+  bindings are untouched. Esc > Controls lists "Jetty: blaster boost — Shift".
+  On the Jetty the helm bar shows BLASTER READY / CHARGING... / BOOST! /
+  the cooldown in seconds.
+- Checks: `patch_4_0_2_logic.gd` adds the parts `jetty_hover`, `jetty_boost`,
+  `jetty_blaster_look` and `jetty_blaster_sound` (they run in check_catalog,
+  about 14 s). `patch_4_0_2_check.gd` (354 checks) adds two things: a boosted
+  Jetty at 823 m/s stops at a 0.1 m wall, and the game scene on the Jetty.
+  There, the hull hovers with its effects, Shift through PlayerControls
+  charges, the HUD says so, the blast fires (flame and sound), and a second
+  Shift is refused.
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts (282), boot,
+  every Stage 2 command, collision_probe, small_boats_check, patch_4_0_check,
+  patch_4_0_1_check, patch_4_0_2_check, ui_text_check, display_fonts_check,
+  hangar_check, debug_game_check, check_helm_keys, check_snapshot_budget,
+  globe_map_check, bulk/heavy ladder checks and cannon_salute_check.
+- Not run: Python was refused in this job, so `check_dedicated_split.py`
+  (plain, `--prediction`, `--replication`) and the Stage 3 Python checks did
+  not run after this change. The online boost path is not verified.
+- Not verified: Windows play; how the hover, particles, RGB flame and sound look
+  and sound (headless has no renderer or audio); other captains see the hover
+  but not another player's blaster flame (the speed is replicated, the looks
+  are not).

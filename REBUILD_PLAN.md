@@ -1471,8 +1471,13 @@ the markings are painted into it). Dunes, mesas, palms and towers are kept off
 every airfield. The polar cap has ridges and hills in the world, for the planes
 and on the globe. The minimap and globe show planes as planes. The Speedboat is
 a Marlin-style fishing boat and the Jetty a delta hull; their stats are
-unchanged. Checks: `tools/patch_4_0_2_check.gd`; the scene-free part also runs
-in `check_catalog.gd`. Waiting for Andy's Windows playtest.
+unchanged. Follow-up (Andy's comment on #225): the Jetty hovers above the water,
+with downwash spray, a rooster tail and an under-glow. Its rear thruster is kept.
+Shift fires its Blaster Boost: a 0.6 s charge, then a huge fast-RGB flame and a
+shock ring, +60 % speed for 2.5 s, then a 6 s cooldown. The charge and blast
+sounds are synthesised in code. The collision speed cap is 830 m/s. Checks:
+`tools/patch_4_0_2_check.gd`; the scene-free part also runs in
+`check_catalog.gd`. Waiting for Andy's Windows playtest.
 
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 

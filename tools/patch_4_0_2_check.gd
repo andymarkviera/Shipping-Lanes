@@ -9,9 +9,10 @@ extends SceneTree
 ## down"; a belly landing bills the repair (no crash, no explosion, the cargo
 ## kept); then a debug session: the Debug Menu shows the boat controls while
 ## sailing and the plane controls (picker, spawn, refuel, repair, gear,
-## readout) while flying.
+## readout) while flying; and the blaster-boosted Jetty stops at a thin wall.
 ## Run: godot --headless --path . --script res://tools/patch_4_0_2_check.gd
 const Logic = preload("res://tools/patch_4_0_2_logic.gd")
+const Progression = preload("res://features/game/progression.gd")
 const Airports = preload("res://features/planes/airports.gd")
 const Planes = preload("res://features/planes/plane_catalog.gd")
 const Jobs = preload("res://features/planes/plane_jobs.gd")
@@ -50,6 +51,7 @@ func run() -> void:
 	for label: String in logic.failures:
 		failures.append(label)
 		print("PATCH 4.0.2 FAILED: " + label)
+	await boost_wall()
 	var dir: DirAccess = DirAccess.open(FOLDER)
 	if dir != null:
 		for file: String in dir.get_files(): dir.remove(file)
@@ -167,6 +169,7 @@ func debug_session() -> void:
 	debug.toggle()
 	await settle()
 	expect(debug.panel_mode() == "boat" and debug.boat_box.visible and not debug.plane_box.visible, "sailing, the Debug Menu shows the boat controls")
+	await jetty_in_game(game, debug)
 	expect(await dock_anywhere(game), "the debug boat docks")
 	var air: Node = game.aviation
 	if not expect(air.switch_to_plane() and game.flying(), "the debug captain flies a plane"):
@@ -231,3 +234,76 @@ func finish() -> void:
 	if failures.is_empty(): print("PATCH_4_0_2_CHECK_PASS (%d checks)" % checks)
 	else: print("PATCH_4_0_2_CHECK_FAIL (%d of %d failed)" % [failures.size(), checks])
 	quit(0 if failures.is_empty() else 1)
+
+## Follow-up: the blaster-boosted Jetty (about 823 m/s, 13.7 m a tick) still
+## stops at a 0.1 m wall: move_and_slide sweeps the hull, nothing tunnels.
+func boost_wall() -> void:
+	var wall: StaticBody3D = StaticBody3D.new()
+	wall.collision_layer = CollisionRules.SHORE
+	var plate: CollisionShape3D = CollisionShape3D.new()
+	var box: BoxShape3D = BoxShape3D.new()
+	box.size = Vector3(40, 10, 0.1)
+	plate.shape = box
+	wall.add_child(plate)
+	wall.position = Vector3(5000, 0, 5200)
+	root.add_child(wall)
+	var jet: HandlingShip = HandlingShip.new()
+	jet.definition = Progression.definition("small_jetty")
+	CollisionRules.add_box_hull(jet, jet.definition.hull_size_m)
+	jet.position = Vector3(5000, 0, 5000)
+	root.add_child(jet)
+	await physics_frame
+	var top: float = jet.definition.forward_acceleration_mps2 / jet.definition.linear_drag_per_second
+	jet.command_throttle(1.0)
+	jet.actual_throttle = 1.0
+	jet.request_boost()
+	jet.boost.advance(HandlingShip.JETTY_BOOST.CHARGE_S + 0.3)
+	jet.boost_applied = jet.boost.factor()
+	jet.velocity = Vector3(0, 0, top * jet.boost_applied)
+	var fastest: float = 0.0
+	var touched: bool = false
+	var front: float = 0.0
+	for frame: int in 60:
+		await physics_frame
+		fastest = maxf(fastest, jet.velocity.length())
+		touched = touched or jet.get_slide_collision_count() > 0
+		front = maxf(front, jet.position.z + jet.definition.hull_size_m.z * 0.5)
+	expect(jet.boost.phase == "blast" and touched, "the boosted Jetty met the thin wall")
+	expect(front < 5200.0 - 0.04, "the boosted Jetty did not tunnel through a 0.1 m wall (bow %.2f m short)" % (5200.0 - front))
+	jet.free()
+	wall.free()
+
+## Follow-up, in the game scene: on the Jetty, the hull hovers with its
+## effects, and Shift (through PlayerControls) charges and fires the blaster.
+func jetty_in_game(game: Node, debug: CanvasLayer) -> void:
+	var previous: String = game.ship_kind
+	debug.swap("small_jetty")
+	await settle()
+	if not expect(game.ship_kind == "small_jetty", "the debug captain sails the Jetty"): return
+	var ship: HandlingShip = game.ship
+	expect(ship.assembly.visual.hovering() and ship.find_child("JettyFx", true, false) != null, "in the game the Jetty hovers with its effects")
+	var heard: Array[StringName] = []
+	var listen: Callable = func(action: StringName) -> void: heard.append(action)
+	game.controls.command_requested.connect(listen)
+	var key: InputEventKey = InputEventKey.new()
+	key.keycode = KEY_SHIFT
+	key.physical_keycode = KEY_SHIFT
+	key.pressed = true
+	game.controls.wait_for_release = false
+	game.controls.window_focused = true
+	game.controls._unhandled_input(key)
+	game.controls.command_requested.disconnect(listen)
+	expect(heard == [PlayerControls.BOOST_COMMAND], "Shift is the blaster command (%s)" % str(heard))
+	expect(ship.boost.phase == "charge", "Shift on the Jetty starts the blaster's charge")
+	await process_frame
+	await process_frame
+	expect(game.game_hud.blaster.visible and game.game_hud.blaster.text == "BLASTER CHARGING...", "the HUD says the blaster is charging (%s)" % game.game_hud.blaster.text)
+	for frame: int in int((HandlingShip.JETTY_BOOST.CHARGE_S + 0.3) * Engine.physics_ticks_per_second):
+		await physics_frame
+	await process_frame
+	var fx: Node = ship.find_child("JettyFx", true, false)
+	expect(ship.boost.phase == "blast" and fx.flame.visible and fx.blasts_heard == 1, "then the blast fires in the game, flame and sound")
+	expect(not game.fire_boost(), "Shift again does nothing until the cooldown is over")
+	debug.swap(previous)
+	await settle()
+	expect(game.ship_kind == previous, "and back to the debug boat")

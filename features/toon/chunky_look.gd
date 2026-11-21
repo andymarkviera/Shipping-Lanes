@@ -575,6 +575,7 @@ static func delta_hull_mesh(length: float, beam: float, keel: float, deck: float
 ## seats, twin tail fins and one big jet nozzle on the transom. The jet flame
 ## (JET_FLAME, toon cones that grow with the throttle) comes out of the nozzle.
 const JET_FLAME = preload("res://features/toon/jet_flame.gd")
+const JETTY_FX = preload("res://features/toon/jetty_fx.gd")
 static func _dress_jetty(root: Node3D, hull: MeshInstance3D, size: Vector3, cache: Dictionary) -> void:
 	var teal: Color = Color("1fb5a8")
 	var orange: Color = Color("ff8a2a")
@@ -615,6 +616,15 @@ static func _dress_jetty(root: Node3D, hull: MeshInstance3D, size: Vector3, cach
 	flame.name = "JetFlame"
 	flame.position = Vector3(0, deck - 0.1, aft - 0.88)
 	root.add_child(flame)
+	# Patch 4.0.2: the Jetty hovers (ShipVisualMotion lifts it): downwash spray,
+	# a rooster tail and an under-glow on the water, and the Shift blaster
+	# boost's charge orb, RGB flame, shock ring and sound at the same nozzle.
+	var fx: Node3D = JETTY_FX.new()
+	fx.name = "JettyFx"
+	fx.set("nozzle", flame.position)
+	fx.set("length_m", size.z)
+	fx.set("beam_m", beam)
+	root.add_child(fx)
 
 static func _tint(port: Node3D, label: String, colour: Color) -> void:
 	var mesh: MeshInstance3D = _mesh_of(port, label)

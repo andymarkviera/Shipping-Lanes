@@ -30,6 +30,16 @@ var salute: Label
 var salute_left: float = 0.0
 var instrument_warning: bool = false
 var ships_button: Button
+var blaster: Label
+
+## Patch 4.0.2: the Jetty's blaster line ("" for every other hull).
+static func blaster_text(ship: HandlingShip) -> String:
+	if ship == null or not HandlingShip.JETTY_BOOST.eligible(ship.definition): return ""
+	match ship.boost.phase:
+		"charge": return "BLASTER CHARGING..."
+		"blast": return "BLASTER BOOST!"
+		"cooldown": return "BLASTER %.1f s" % maxf(0.0, HandlingShip.JETTY_BOOST.COOLDOWN_S - ship.boost.clock)
+	return "BLASTER READY"
 
 func setup(scene: Node3D) -> void:
 	view = scene
@@ -103,6 +113,11 @@ func build_bar() -> void:
 	dock_hint = text(column, 14, PLAYFUL.CREAM)
 	DISPLAY.plain(dock_hint, Color("ff8a7a"), 14)
 	dock_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Patch 4.0.2: the Jetty's blaster boost state, under the helm bar.
+	blaster = text(column, 16, PLAYFUL.SUN)
+	DISPLAY.plain(blaster, Color("5ff2e0"), 16)
+	blaster.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	blaster.hide()
 
 func build_toast() -> void:
 	toast = PanelContainer.new()
@@ -251,6 +266,8 @@ func refresh(delta: float) -> void:
 	view.dock_button.visible = not air
 	dock_hint.text = str(status.get("message", "")) if near else ""
 	dock_hint.visible = near
+	blaster.text = "" if air else blaster_text(ship)
+	blaster.visible = not blaster.text.is_empty()
 	view.dock_button.tooltip_text = "" if not view.dock_button.disabled or docked else "Sail up to a berth and slow down."
 	# Patch 2.5 item 8: no key hints on the HUD. They live in Esc > CONTROLS.
 	# Notice: shows when it changes, then fades. Loading progress stays up.
