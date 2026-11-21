@@ -12,6 +12,10 @@ const Progression = preload("res://features/game/progression.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const Airports = preload("res://features/planes/airports.gd")
+## Patch 4.0.2 item 1: the polar cap's relief (the same as in the world).
+const POLAR_ICE = preload("res://features/toon/polar_ice.gd")
+## Patch 4.0.2 item 2: planes on the globe are small plane models.
+const Planes = preload("res://features/planes/plane_catalog.gd")
 const DRAG_RADIANS_PER_PIXEL: float = 0.006
 const ZOOM_NEAR: float = 1.6
 const ZOOM_FAR: float = 4.2
@@ -310,6 +314,7 @@ static func relief_mesh() -> ArrayMesh:
 					b = c
 					c = swap
 				indices.append_array([a, b, c])
+	polar_relief(verts, colours, indices)
 	if indices.is_empty(): return _relief
 	var normals: PackedVector3Array = PackedVector3Array()
 	normals.resize(verts.size())
@@ -330,6 +335,82 @@ static func relief_mesh() -> ArrayMesh:
 	arrays[Mesh.ARRAY_INDEX] = indices
 	_relief.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return _relief
+
+## Patch 4.0.2 item 1: the polar ice cap's relief on the globe (it was flat
+## white paint): every RELIEF_STEP_CELLS-th sample of the ice grid, raised
+## by the cliff, the snow rise and PolarIce.relief's ridges and hills, in
+## ice blue at the coast, snow on top and glacier blue on the ridges.
+## Appended to the land relief's arrays.
+## The globe's polar samples: every POLAR_STEP_CELLS-th of the ice grid.
+const POLAR_STEP_CELLS: int = 4
+
+static func polar_height(at: Vector2, depth: float) -> float:
+	# The ridges shrink towards the pole as the globe's meridians close in,
+	# so they keep their shape, and right at the pole the cap is level (no
+	# spike or pit where every meridian meets).
+	var shrink: float = absf(cos(lon_lat(Vector3(at.x, 0, at.y)).y))
+	var height: float = RELIEF_SEA
+	if depth > 0.0:
+		height = lerpf(RELIEF_SEA, RELIEF_SHORE + RELIEF_HILL, smoothstep(0.0, 30.0, depth))
+		height += smoothstep(30.0, POLAR_ICE.PLATEAU_FROM_M, depth) * RELIEF_HILL
+		height += POLAR_ICE.relief(at, depth) / POLAR_ICE.RIDGE_M * RELIEF_MOUNTAIN * shrink
+	return lerpf(RELIEF_SHORE + RELIEF_HILL * 2.0, height, clampf(shrink * 6.0, 0.0, 1.0))
+
+static func polar_colour(at: Vector2, depth: float) -> Color:
+	var colour: Color = Color("9ed5ea").lerp(SNOW, smoothstep(10.0, 40.0, depth))
+	return colour.lerp(POLAR_ICE.GLACIER, smoothstep(0.35, 0.75, POLAR_ICE.relief(at, depth) / POLAR_ICE.RIDGE_M) * 0.8)
+
+## World X/Z of polar ice grid sample (i, j) (as PolarIce.band_meshes).
+static func polar_spot(i: int, j: int) -> Vector2:
+	var grid: Dictionary = Progression.polar_ice()
+	var cell: float = grid.cell
+	var edge: float = Progression.WRAP_CENTRE.z + (0.5 if j < int(grid.half) else -0.5) * Progression.WRAP_M
+	return Vector2(Progression.WRAP_CENTRE.x - Progression.WRAP_M / 2 + (i + 0.5) * cell, edge + (j - int(grid.half) + 0.5) * cell)
+
+static func polar_relief(verts: PackedVector3Array, colours: PackedColorArray, indices: PackedInt32Array) -> void:
+	var grid: Dictionary = Progression.polar_ice()
+	if grid.is_empty(): return
+	var count: Vector2i = grid.count
+	var depth: PackedFloat32Array = grid.depth
+	var half: int = int(grid.half)
+	var columns: int = count.x / POLAR_STEP_CELLS
+	var slot: Dictionary = {}
+	# Rows from each half's own edge-side end, so neither skips its pole row.
+	var rows: Array[int] = []
+	for j: int in range(half - 1, -1, -POLAR_STEP_CELLS): rows.push_front(j)
+	var south_rows: Array[int] = []
+	for j: int in range(half, count.y, POLAR_STEP_CELLS): south_rows.append(j)
+	for pass_rows: Array[int] in [rows, south_rows]:
+		for row: int in pass_rows.size() - 1:
+			polar_row(pass_rows[row], pass_rows[row + 1], columns, slot, verts, colours, indices)
+
+static func polar_row(j: int, k: int, columns: int, slot: Dictionary, verts: PackedVector3Array, colours: PackedColorArray, indices: PackedInt32Array) -> void:
+	var grid: Dictionary = Progression.polar_ice()
+	var count: Vector2i = grid.count
+	var depth: PackedFloat32Array = grid.depth
+	for column: int in columns:
+		var cells: Array[Vector2i] = [Vector2i(column, j), Vector2i((column + 1) % columns, j), Vector2i((column + 1) % columns, k), Vector2i(column, k)]
+		var land: bool = false
+		for corner: Vector2i in cells: land = land or depth[corner.y * count.x + corner.x * POLAR_STEP_CELLS] > 0.0
+		if not land: continue
+		var ids: Array[int] = []
+		for corner: Vector2i in cells:
+			if not slot.has(corner):
+				var d: float = depth[corner.y * count.x + corner.x * POLAR_STEP_CELLS]
+				var at: Vector2 = polar_spot(corner.x * POLAR_STEP_CELLS, corner.y)
+				slot[corner] = verts.size()
+				verts.append(on_globe(Vector3(at.x, 0, at.y)) * (1.0 + polar_height(at, d)))
+				colours.append(polar_colour(at, d).srgb_to_linear())
+			ids.append(int(slot[corner]))
+		for triangle: Array in [[ids[0], ids[1], ids[2]], [ids[0], ids[2], ids[3]]]:
+			var a: int = triangle[0]
+			var b: int = triangle[1]
+			var c: int = triangle[2]
+			if (verts[b] - verts[a]).cross(verts[c] - verts[a]).dot(verts[a]) > 0.0:
+				var swap: int = b
+				b = c
+				c = swap
+			indices.append_array([a, b, c])
 
 func _ready() -> void:
 	layer = 8
@@ -600,7 +681,10 @@ func draw_course(destination: Dictionary) -> void:
 ## Patch 2.9.1 item 5: every boat the map shows, the player's own first.
 func ship_entries() -> Array[Dictionary]:
 	var bow: Vector3 = view.ship.global_basis.z
-	var entries: Array[Dictionary] = [{"kind": str(view.get("ship_kind")), "position": view.ship.global_position, "heading": atan2(bow.x, bow.z)}]
+	# Patch 4.0.2 item 2: flying, the own marker is the plane, not the laid-up boat.
+	var own: String = str(view.get("ship_kind"))
+	if view.has_method("flying") and view.flying(): own = str(view.aviation.plane_kind)
+	var entries: Array[Dictionary] = [{"kind": own, "position": view.ship.global_position, "heading": atan2(bow.x, bow.z)}]
 	entries.append_array(other_ships)
 	entries.append_array(view.other_ships)
 	return entries
@@ -660,6 +744,9 @@ func build_boat(model: Node3D, kind: String) -> void:
 	for old: Node in model.get_children():
 		model.remove_child(old)
 		old.free()
+	if Planes.PLANES.has(kind):
+		build_plane(model, kind)
+		return
 	var size: Vector3 = boat_size(kind)
 	var family: String = boat_family(kind)
 	var beam: float = clampf(size.x / size.z * 1.5, 0.2, 0.36)
@@ -695,6 +782,25 @@ func build_boat(model: Node3D, kind: String) -> void:
 	model.set_meta("kind", kind)
 	# Bigger hulls draw bigger, between 0.6 and 2 times the starter's.
 	model.set_meta("length", BOAT_LENGTH * clampf(sqrt(size.z / 64.0), 0.6, 2.0))
+
+## Patch 4.0.2 item 2: a plane on the globe (own or another captain's): a
+## small top-down plane, one unit long like the boats, nose along +Z, in the
+## plane's colour with a sun-yellow wing tip trim, lifted a little off the
+## globe so it reads as flying.
+func build_plane(model: Node3D, kind: String) -> void:
+	var colour: Color = Color(str(Planes.PLANES[kind].colour))
+	var fighter: bool = str(Planes.PLANES[kind].engines) == "afterburner"
+	boat_part(model, box(Vector3(0.12, 0.1, 0.9)), colour, Vector3(0, 0.12, 0))
+	boat_part(model, box(Vector3(0.9 if not fighter else 0.62, 0.05, 0.18 if not fighter else 0.3)), colour, Vector3(0, 0.12, 0.06 if not fighter else -0.08))
+	boat_part(model, box(Vector3(0.36, 0.04, 0.1)), colour, Vector3(0, 0.14, -0.4))
+	boat_part(model, box(Vector3(0.04, 0.16, 0.12)), PLAYFUL.SUN, Vector3(0, 0.22, -0.4))
+	for side: float in [-1.0, 1.0]:
+		boat_part(model, box(Vector3(0.1, 0.06, 0.12)), PLAYFUL.SUN, Vector3(side * (0.42 if not fighter else 0.3), 0.13, 0.06 if not fighter else -0.16))
+	model.set_meta("kind", kind)
+	model.set_meta("length", BOAT_LENGTH * 1.3)
+
+static func is_plane(kind: String) -> bool:
+	return Planes.PLANES.has(kind)
 
 ## Draws the entries: each a model of its own kind, sitting on the globe at its
 ## position with the bow along its heading. Models are pooled; spares and boats

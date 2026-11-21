@@ -1458,6 +1458,27 @@ are fixed. Checks: `tools/patch_4_0_1_check.gd`; the scene-free part also runs i
 `check_catalog.gd`. The plane HUD rework is next. Waiting for Andy's Windows
 playtest.
 
+**Patch 4.0.2 (November 21, 2026, issue #224):** VERSION 4.0.2. Andy's second
+plane playtest. No upside-down: the mouse aim banks at most 60° (Fighter 75°)
+and the pitch is held inside 60°. Only a held A / D rolls past the limit (a
+barrel roll); let go and it rolls back. The gear is manual again (G), with a
+"Press G — Gear down" nudge and a chime near a runway. It comes up on its own
+after take-off. A gear-up landing is a belly landing with a repair bill, not a
+crash. Every plane has folding legs, wheels and doors (1.5 s), replicated. A 3D
+plane hangar (extends the boat hangar) opens from Planes. The debug panel follows
+the vehicle. The runway z-fighting is fixed (the grass is cut away under it, and
+the markings are painted into it). Dunes, mesas, palms and towers are kept off
+every airfield. The polar cap has ridges and hills in the world, for the planes
+and on the globe. The minimap and globe show planes as planes. The Speedboat is
+a Marlin-style fishing boat and the Jetty a delta hull; their stats are
+unchanged. Follow-up (Andy's comment on #225): the Jetty hovers above the water,
+with downwash spray, a rooster tail and an under-glow. Its rear thruster is kept.
+Shift fires its Blaster Boost: a 0.6 s charge, then a huge fast-RGB flame and a
+shock ring, +60 % speed for 2.5 s, then a 6 s cooldown. The charge and blast
+sounds are synthesised in code. The collision speed cap is 830 m/s. Checks:
+`tools/patch_4_0_2_check.gd`; the scene-free part also runs in
+`check_catalog.gd`. Waiting for Andy's Windows playtest.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge

@@ -21,6 +21,7 @@ var window_focused: bool = true
 ## The window outlives scenes: these keep the Mac display setup to once per run.
 static var hidpi_sized: bool = false
 static var applied_fullscreen: int = -1
+const BOOST_COMMAND: StringName = &"jetty_boost"
 const PAN_ZOOM: float = 0.35
 const PAN_TURN: float = 40.0
 
@@ -216,3 +217,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			command_requested.emit(StringName(action))
 			get_viewport().set_input_as_handled()
 			return
+	# Patch 4.0.2: Shift is the Jetty's blaster boost (a fixed key, like the
+	# plane's mouse; no binding can take Shift, see InputPreferences.valid_key).
+	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_SHIFT or event.physical_keycode == KEY_SHIFT):
+		command_requested.emit(BOOST_COMMAND)
+		get_viewport().set_input_as_handled()

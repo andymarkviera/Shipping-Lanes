@@ -120,7 +120,8 @@ func flight() -> void:
 		# turns the plane: the coordinated turn.
 		m.basis = cruise.basis
 		m.velocity = m.basis.z * Planes.stall_speed(kind) * 1.6
-		for frame: int in 90: m.step({"throttle": 0.7, "roll": 0.0, "pitch": Flight.LEVEL_INPUT + 0.01}, STEP)
+		# (Patch 4.0.2: the gear is the player's; G raised it here.)
+		for frame: int in 90: m.step({"throttle": 0.7, "roll": 0.0, "pitch": Flight.LEVEL_INPUT + 0.01, "gear": 0.0}, STEP)
 		expect(absf(angle_difference(m.heading(), 0.4)) > 0.05, "%s: a held bank turns the plane (coordinated)" % kind)
 		expect(not m.gear_down, "%s: the gear is up in cruise" % kind)
 		# Too slow: the wing stalls and the assist lowers the nose until it flies.

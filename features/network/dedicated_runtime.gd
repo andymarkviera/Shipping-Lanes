@@ -18,7 +18,7 @@ const PlaneLook = preload("res://features/planes/plane_look.gd")
 var air_replicas: Dictionary = {}
 ## Patch 4.0 item 15: boat actions are refused while a captain flies, plane
 ## actions while they sail; the plane's own rules (Aviation) do the rest.
-const BOAT_ACTIONS: Array[String] = ["dock", "cancel_dock", "accept", "cancel_load", "abandon", "deliver", "refuel", "repair", "recover", "ship", "sell", "lower", "raise", "salute"]
+const BOAT_ACTIONS: Array[String] = ["dock", "cancel_dock", "accept", "cancel_load", "abandon", "deliver", "refuel", "repair", "recover", "ship", "sell", "lower", "raise", "salute", "boost"]
 const PLANE_ACTIONS: Array[String] = ["plane_switch", "boat_switch", "plane_buy", "plane_select", "plane_refuel", "plane_repair", "plane_accept", "plane_deliver"]
 const MAX_PLAYERS: int = 8
 const INTERVAL: float = 0.05
@@ -169,6 +169,9 @@ func execute_gameplay(sender: int, payload: Dictionary) -> String:
 		adopt_hull(sender)
 		return "OK" if done else "OUT_OF_RANGE"
 	match payload.action:
+		"boost":
+			# Patch 4.0.2: the server's hull is the one whose speed the boost changes.
+			if not context.ship.request_boost(): return "OUT_OF_RANGE"
 		"salute":
 			if not Progression.PIRATE_KINDS.has(context.ship_kind) or now - int(last_salute.get(sender, -5000)) < 5000: return "OUT_OF_RANGE"
 			last_salute[sender] = now
@@ -755,8 +758,13 @@ func _ready() -> void:
 func client_command(action: StringName) -> void:
 	if action == &"pause": view.game_menu.open()
 	if action == &"horn": view.helm.feedback.sound_horn(view.controls.input_allowed())
+	# Patch 4.0.2 item 6: while flying, G is the landing gear (Aviation.on_command).
+	if action == &"cannon_salute" and view.flying(): return
 	if action == &"cannon_salute" and view.controls.input_allowed(): send_gameplay("salute")
 	if action == &"cannon_salute": send_gameplay("salute")
+	# Patch 4.0.2: Shift asks the server for the Jetty's blaster boost; the own
+	# presentation hull starts its looks and sound at once (JettyFx runs its clock).
+	if action == PlayerControls.BOOST_COMMAND and not view.flying() and view.ship.request_boost(): send_gameplay("boost")
 
 static func disable_tree(node: Node) -> void:
 	node.set_process(false)
@@ -981,7 +989,8 @@ func _physics_process(delta: float) -> void:
 				# Patch 4.0: a flying captain's helm flies the plane (Aviation.tick).
 				var live: bool = not order.is_empty() and Time.get_ticks_msec() - order.at <= TIMEOUT_MS
 				owner_context.aviation.order = {"throttle": float(order.throttle) if live else 0.0, "pitch": float(order.get("pitch", 0.0)) if live else 0.0,
-					"roll": float(order.rudder) if live else 0.0, "yaw": float(order.lateral) if live else 0.0}
+					"roll": float(order.rudder) if live else 0.0, "yaw": float(order.lateral) if live else 0.0,
+					"gear": float(order.get("gear", -1.0)) if live else -1.0}
 				continue
 			if order.is_empty() or Time.get_ticks_msec() - order.at > TIMEOUT_MS:
 				ship.zero_throttle()
@@ -1110,7 +1119,10 @@ func send_helm(command: float, rudder: float, lateral: float) -> void:
 	sequence += 1
 	var payload: Dictionary = {"throttle": command, "rudder": rudder, "lateral": lateral, "sent_ms": Time.get_ticks_msec()}
 	# Patch 4.0: a plane's helm also sends the pitch.
-	if is_instance_valid(view) and view.flying(): payload.pitch = float(view.aviation.order.pitch)
+	if is_instance_valid(view) and view.flying():
+		payload.pitch = float(view.aviation.order.pitch)
+		# Patch 4.0.2 item 6: and the gear lever.
+		payload.gear = float(view.aviation.order.get("gear", 1.0))
 	helm_input.rpc_id(1, ShipActions.make_request(session.epoch, multiplayer.get_unique_id(), entity, "helm", sequence, payload))
 
 @rpc("authority", "call_remote", "unreliable_ordered", 2)

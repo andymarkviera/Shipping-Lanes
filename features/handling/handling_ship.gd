@@ -22,6 +22,12 @@ var simulation_paused: bool = false
 var pause_reason: String = ""
 var docked: bool = false
 var condition_affects_propulsion: bool = false
+## Patch 4.0.2: the Jetty's Shift blaster boost (features/ships/jetty_boost.gd).
+## Every hull has one; only the Jetty can trigger it. boost_applied is the
+## speed multiplier already in velocity (the last tick's factor).
+const JETTY_BOOST = preload("res://features/ships/jetty_boost.gd")
+var boost: JETTY_BOOST = JETTY_BOOST.new()
+var boost_applied: float = 1.0
 
 func propulsion_condition_factor() -> float:
 	if not condition_affects_propulsion: return 1.0
@@ -29,6 +35,13 @@ func propulsion_condition_factor() -> float:
 
 func helm_available() -> bool:
 	return not simulation_paused and not docked
+
+## Patch 4.0.2: Shift on the Jetty. Starts the charge; false when this hull has
+## no blaster, the helm is not available, the tank is empty or it is cooling down.
+func request_boost() -> bool:
+	if not JETTY_BOOST.eligible(definition) or not helm_available(): return false
+	if state == null or state.fuel_liters <= 0: return false
+	return boost.trigger()
 
 func refuel(amount_liters: float) -> float:
 	if velocity.length() > 0.05 or absf(commanded_throttle) > 0.001 or absf(actual_throttle) > 0.001 or absf(lateral_order) > 0.001:
@@ -108,7 +121,11 @@ func advance_motion(delta: float) -> void:
 		yaw_rate = 0
 		rudder = 0
 	advance_engine(delta)
+	if docked or state.fuel_liters <= 0: boost.cancel()
+	boost.advance(delta)
 	var local_velocity: Vector3 = basis.inverse() * velocity
+	# Patch 4.0.2: the hull's own speed, without the boost already in velocity.
+	local_velocity.z /= boost_applied
 	var requested_side: float = lateral_order * clampf(1.0 - absf(local_velocity.z) / definition.thruster_cutoff_speed_mps, 0.0, 1.0)
 	var fuel_fraction: float = fuel.consume(delta, actual_throttle, requested_side, false, docked)
 	var effectiveness: float = clampf(absf(local_velocity.z) / definition.rudder_full_effect_speed_mps, 0.0, 1.0)
@@ -124,6 +141,9 @@ func advance_motion(delta: float) -> void:
 	var side_acceleration: float = -lateral_order * definition.thruster_acceleration_mps2 * thruster_effect * fuel_fraction
 	local_velocity.x = local_velocity.x * exp(-lateral_drag * delta) + side_acceleration / lateral_drag * (1.0 - exp(-lateral_drag * delta))
 	local_velocity.y = 0.0
+	# Patch 4.0.2: the blaster boost scales the speed ahead while it holds.
+	boost_applied = boost.factor()
+	local_velocity.z *= boost_applied
 	velocity = (basis * local_velocity).limit_length(CollisionRules.SUPPORTED_SPEED_MPS)
 	if stopping_assist_active():
 		velocity = velocity.move_toward(Vector3.ZERO, definition.neutral_stop_deceleration_mps2 * delta)

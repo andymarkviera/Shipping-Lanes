@@ -100,6 +100,35 @@ func configure_hull(definition: ShipDefinition) -> void:
 	if jump_lift > 0.0:
 		pitch_limit_rad = maxf(pitch_limit_rad, JUMP_PITCH_LIMIT_RAD)
 		roll_limit_rad = maxf(roll_limit_rad, JUMP_ROLL_LIMIT_RAD)
+	hover_m = HOVER_REST_M if JETTY_BOOST.eligible(definition) else 0.0
+
+## Patch 4.0.2: the Jetty hovers. The hull rises HOVER_REST_M off the water at
+## rest (its keel about 0.9 m clear), up to HOVER_SPEED_M higher at full speed
+## and HOVER_BLAST_M more in a blast, with a slow float, a calm trim and a lean
+## into turns; it follows the swell only softly. Presentation only, like the rest of this node: the body, collider and
+## camera stay on the water plane. JettyFx draws the downwash under it.
+const JETTY_BOOST = preload("res://features/ships/jetty_boost.gd")
+const HOVER_REST_M: float = 2.0
+const HOVER_SPEED_M: float = 0.8
+const HOVER_BLAST_M: float = 0.5
+const HOVER_SWELL_SHARE: float = 0.35
+const HOVER_PITCH_LIMIT_RAD: float = deg_to_rad(6.0)
+const HOVER_ROLL_LIMIT_RAD: float = deg_to_rad(14.0)
+var hover_m: float = 0.0
+
+func hovering() -> bool:
+	return hover_m > 0.0
+
+## 0..1: the body's blaster boost now (0 without one).
+func blast() -> float:
+	if not is_instance_valid(body): return 0.0
+	var boost: Variant = body.get("boost")
+	if not boost is RefCounted or not (boost as RefCounted).has_method("blast"): return 0.0
+	return float((boost as RefCounted).call("blast"))
+
+## The height of the hull above the swell under it for one speed share and blast.
+func hover_height(pace: float, boost_share: float, clock: float) -> float:
+	return hover_m + HOVER_SPEED_M * clampf(pace, 0.0, 1.0) + HOVER_BLAST_M * clampf(boost_share, 0.0, 1.0) + 0.12 * sin(clock * 2.3) + 0.05 * sin(clock * 5.1 + 0.7)
 
 func set_visual_load(fraction: float) -> void:
 	if is_finite(fraction):
@@ -148,7 +177,18 @@ func _process(delta: float) -> void:
 	var pitch: float = swell_pitch + (sin(clock * 0.55) * deg_to_rad(0.5) + sin(clock * 1.9) * deg_to_rad(1.4) * pace - SPEED_TRIM_RAD * speed_fraction) * strength * pitch_scale
 	var roll: float = swell_roll + (sin(clock * 0.73 + 0.8) * deg_to_rad(1.2) * (1.0 + 1.5 * pace) * strength + lean * TURN_LEAN_RAD) * roll_scale
 	heave_m = clampf(heave_m, -MAX_HEAVE_M, MAX_HEAVE_M)
-	plane = smoothstep(0.15, 0.6, speed_fraction) if plane_trim_rad > 0.0 else 0.0
+	if hovering():
+		# Patch 4.0.2: a hover hull floats over the water, never touches it.
+		var share: float = blast()
+		plane = smoothstep(0.15, 0.6, speed_fraction) if plane_trim_rad > 0.0 else 0.0
+		heave_m = swell_heave * HOVER_SWELL_SHARE + hover_height(pace, share, clock)
+		position.y = heave_m - load_sink_m * 0.2
+		var float_pitch: float = swell_pitch * HOVER_SWELL_SHARE + sin(clock * 1.7) * deg_to_rad(0.6) - plane_trim_rad * 0.6 * plane - deg_to_rad(2.5) * share
+		var float_roll: float = swell_roll * HOVER_SWELL_SHARE + sin(clock * 1.3 + 0.4) * deg_to_rad(0.8) + lean * TURN_LEAN_RAD * 1.8
+		rotation.x = clampf(float_pitch, -HOVER_PITCH_LIMIT_RAD, HOVER_PITCH_LIMIT_RAD)
+		rotation.z = clampf(float_roll, -HOVER_ROLL_LIMIT_RAD, HOVER_ROLL_LIMIT_RAD)
+		return
+	plane =smoothstep(0.15, 0.6, speed_fraction) if plane_trim_rad > 0.0 else 0.0
 	pitch -= plane_trim_rad * plane
 	var plane_lift: float = sin(plane_trim_rad * plane) * half_length * 0.45
 	if jump_lift > 0.0 and step > 0.0:

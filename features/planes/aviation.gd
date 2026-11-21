@@ -26,6 +26,7 @@ const Levels = preload("res://features/game/levels.gd")
 const Progression = preload("res://features/game/progression.gd")
 const DISPLAY = preload("res://features/ui/display_fonts.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
+const PlaneHangar = preload("res://features/planes/plane_hangar.gd")
 ## Patch 4.0 item 12: below this height above the ground, away from airports,
 ## the low-altitude warning sounds; LOW_GRACE_S in a row costs LOW_FINE_MINOR.
 const SAFE_AGL_M: float = 150.0
@@ -56,6 +57,15 @@ const AIM_CURVE: float = 1.6
 ## the nearest airport); only the view waits, and the captain's controls are
 ## held at idle meanwhile so the parked plane stays where the server put it.
 const CRASH_VIEW_S: float = 4.0
+## Patch 4.0.2 item 6: a belly landing (gear up, not too hard) bills this
+## share of a rebuild at once, instead of a crash.
+const BELLY_REPAIR_PERCENT: int = 35
+## The gear nudge: within GEAR_NUDGE_M of a runway's threshold (either end),
+## below GEAR_NUDGE_AGL_M and descending, with the gear up: "Press G — Gear
+## down", pulsing, and one short chime.
+const GEAR_NUDGE_M: float = 2000.0
+const GEAR_NUDGE_AGL_M: float = 300.0
+const GEAR_NUDGE_SINK_MPS: float = 0.3
 
 var view: Node3D
 var planes: Dictionary = {}
@@ -66,8 +76,18 @@ var job_id: String = ""
 var model: RefCounted
 ## The captain's latest inputs: throttle 0..1 (negative = wheel brakes),
 ## pitch, roll, yaw in -1..1.
-var order: Dictionary = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0}
+var order: Dictionary = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "gear": 1.0}
 var lever: float = 0.0
+## Patch 4.0.2 item 6: the gear lever (1 down, 0 up), toggled by G; sent
+## with the helm. The model moves the gear when it changes.
+var gear_order: float = 1.0
+## The gear nudge is showing, and its chime has played for this approach.
+var nudge: bool = false
+var nudge_chimed: bool = false
+var belly_landings: int = 0
+## Patch 4.0.2 item 7: the planes hangar (features/planes/plane_hangar.gd).
+var hangar: CanvasLayer
+var nudge_label: Label
 ## The mouse aim this frame (mouse_aim), for the reticle.
 var aim: Vector2 = Vector2.ZERO
 ## The smoothed mouse aim (read_local_input).
@@ -251,7 +271,9 @@ func start_plane(index: int) -> void:
 	warning = false
 	lever = 0.0
 	aim_smooth = Vector2.ZERO
-	order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0}
+	gear_order = 1.0
+	nudge_chimed = false
+	order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "gear": 1.0}
 	follow_boat()
 
 ## The parked boat stays under the plane (sea level, upright) so the sea and
@@ -414,12 +436,14 @@ func deliver() -> bool:
 func tick(delta: float) -> void:
 	if not flying(): return
 	if role() == "local": read_local_input(delta)
-	var input: Dictionary = {"throttle": maxf(0.0, float(order.throttle)), "brake": maxf(0.0, -float(order.throttle)) / 0.6,
-		"pitch": order.pitch, "roll": order.roll, "yaw": order.yaw}
+	var input: Dictionary = flight_input()
 	var touched: bool = model.on_ground
 	var sink: float = -model.velocity.y
 	model.step(input, delta)
-	if not touched and model.on_ground and sink > FIRM_SINK_MPS and not model.crashed:
+	if role() == "local": sync_gear()
+	if model.belly_landed and not model.crashed:
+		belly_landing()
+	elif not touched and model.on_ground and sink > FIRM_SINK_MPS and not model.crashed:
 		# A firm landing costs some condition (repaired at an airport).
 		planes[plane_kind].condition = maxf(0.05, condition() - (sink - FIRM_SINK_MPS) * 0.05)
 	if model.crashed:
@@ -429,6 +453,56 @@ func tick(delta: float) -> void:
 	check_low(delta)
 	follow_boat()
 	planes[plane_kind].fuel = clampf(model.fuel_l / maxf(1.0, float(plane_entry().fuel_l)), 0.0, 1.0)
+
+## The model's input from the captain's order (the helm frame on the server).
+func flight_input() -> Dictionary:
+	return {"throttle": maxf(0.0, float(order.throttle)), "brake": maxf(0.0, -float(order.throttle)) / 0.6,
+		"pitch": order.pitch, "roll": order.roll, "yaw": order.yaw, "gear": float(order.get("gear", -1.0))}
+
+## Patch 4.0.2 item 6: G. Flips the gear lever against what the gear is now
+## (so it always does what the gear shows). Not on the ground.
+func toggle_gear() -> bool:
+	if not flying() or model.on_ground or in_crash_view(): return false
+	gear_order = 0.0 if model.gear_down else 1.0
+	order.gear = gear_order
+	say("Gear %s." % ("down" if gear_order > 0.5 else "up"))
+	return true
+
+## The lever follows the gear when the gear moved on its own (on the ground,
+## after take-off), so the next G always toggles what is shown.
+func sync_gear() -> void:
+	if model == null: return
+	if model.gear_auto_up or model.on_ground:
+		gear_order = 1.0 if model.gear_down else 0.0
+		order.gear = gear_order
+
+## Patch 4.0.2 item 6: a belly landing. A hard landing, not a crash: the
+## repair bill (BELLY_REPAIR_PERCENT, capped by the wallet) is charged now,
+## the cargo stays aboard and the plane slides to a stop.
+func belly_landing() -> void:
+	var bill: int = mini(Planes.repair_minor(plane_kind, BELLY_REPAIR_PERCENT), int(view.reward_minor))
+	view.pay(bill)
+	belly_landings += 1
+	say("Belly landing! The gear was up. Repair bill %s credits." % credits(bill))
+
+## Patch 4.0.2 item 6: whether the "Press G — Gear down" nudge shows: gear
+## up, in the air, descending, below GEAR_NUDGE_AGL_M and within
+## GEAR_NUDGE_M of either threshold of a runway.
+func gear_nudge() -> bool:
+	if not flying() or model.on_ground or model.gear_down or in_crash_view(): return false
+	if model.agl_m > GEAR_NUDGE_AGL_M or model.velocity.y > -GEAR_NUDGE_SINK_MPS: return false
+	return near_threshold(model.position) < GEAR_NUDGE_M
+
+## Metres from a position to the nearest runway threshold (either end of any runway).
+static func near_threshold(position: Vector3) -> float:
+	var best: float = INF
+	for entry: Dictionary in Airports.all():
+		var axis: Vector3 = Vector3(sin(entry.heading), 0, cos(entry.heading))
+		for end: float in [-1.0, 1.0]:
+			var flat: Vector3 = Progression.short_way(entry.at + axis * end * float(entry.length) * 0.5 - position)
+			flat.y = 0.0
+			best = minf(best, flat.length())
+	return best
 
 ## Patch 4.0 item 12: low flying away from an airport warns, then fines.
 func check_low(delta: float) -> void:
@@ -486,12 +560,29 @@ func read_local_input(delta: float) -> void:
 		lever = 0.0
 		aim = Vector2.ZERO
 		aim_smooth = Vector2.ZERO
-		order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0}
+		order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "gear": gear_order}
 		return
 	var steer: Vector2 = aim_to_plane(aim, model.full_bank() if model != null else 0.0)
-	order = {"throttle": lever, "pitch": clampf(steer.y, -1.0, 1.0),
-		"roll": clampf(steer.x * AIM_ROLL + controls.steering_axis(), -1.0, 1.0),
-		"yaw": clampf(steer.x * AIM_YAW + controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"), -1.0, 1.0)}
+	order = steer_order(steer, controls.steering_axis(), controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"))
+
+## Patch 4.0.2 item 5: the order from the mouse aim (in the plane's frame),
+## the roll keys (A / D, -1..1) and the yaw keys, with the bank and pitch
+## limits (FlightModel.limit_aim): the mouse never banks past the limit nor
+## loops; only a held roll key rolls past it (a barrel roll).
+func steer_order(steer: Vector2, roll_keys: float, yaw_keys: float) -> Dictionary:
+	var roll: float = clampf(steer.x * AIM_ROLL + roll_keys, -1.0, 1.0)
+	var pitch: float = clampf(steer.y, -1.0, 1.0)
+	var aim_yaw: float = steer.x * AIM_YAW
+	if model != null:
+		var limited: Vector2 = model.limit_aim(roll, pitch, absf(roll_keys) > 0.05)
+		# The aim's coordinating yaw eases off with its roll at the limit (in a
+		# steep dive a yaw would carry the bank on past it).
+		if absf(roll) > 0.001 and signf(limited.x) == signf(roll): aim_yaw *= clampf(limited.x / roll, 0.0, 1.0)
+		elif absf(roll) > 0.001: aim_yaw = 0.0
+		roll = limited.x
+		pitch = limited.y
+	return {"throttle": lever, "pitch": pitch, "roll": roll,
+		"yaw": clampf(aim_yaw + yaw_keys, -1.0, 1.0), "gear": gear_order}
 
 ## Patch 4.0.1 item 2: a softer response near the centre (small offsets give
 ## small commands), full deflection unchanged at the edge.
@@ -604,12 +695,12 @@ func apply_state(data: Dictionary) -> void:
 ## Client prediction, one physics step: the same physics as the server.
 func predict(delta: float, sequence: int) -> void:
 	if not flying(): return
-	var input: Dictionary = {"throttle": maxf(0.0, float(order.throttle)), "brake": maxf(0.0, -float(order.throttle)) / 0.6,
-		"pitch": order.pitch, "roll": order.roll, "yaw": order.yaw}
+	var input: Dictionary = flight_input()
 	history.append({"seq": sequence, "input": input, "dt": delta})
 	while history.size() > 240: history.pop_front()
 	previous = model.transform()
 	model.step(input, delta)
+	sync_gear()
 	if model.crashed:
 		model.crashed = false
 		model.velocity = Vector3.ZERO
@@ -621,13 +712,18 @@ func reconcile(own: Dictionary) -> void:
 	if not flying() or not own.has("air"): return
 	server_state = own
 	var shown: Vector3 = model.position + offset
-	while not history.is_empty() and int(history[0].seq) <= int(own.ack): history.pop_front()
+	var acked_lever: float = model.gear_lever
+	while not history.is_empty() and int(history[0].seq) <= int(own.ack): acked_lever = float(history.pop_front().input.get("gear", acked_lever))
 	model.position = Vector3(own.position.x, own.air.altitude, own.position.z)
 	model.basis = own.air.basis
 	model.velocity = Vector3(own.velocity.x, own.air.vy, own.velocity.z)
 	model.engine = own.engine
 	model.fuel_l = own.fuel
 	model.on_ground = own.air.ground
+	# Patch 4.0.2 item 6: the server's gear, and the lever it last saw.
+	model.gear_down = bool(own.air.get("gear", model.gear_down))
+	model.on_belly = model.on_ground and not model.gear_down
+	model.gear_lever = acked_lever
 	model.crashed = false
 	for step: Dictionary in history:
 		model.step(step.input, step.dt)
@@ -671,6 +767,17 @@ func setup_presentation() -> void:
 	engine_player.volume_db = -20.0
 	add_child(engine_player)
 	build_ui()
+	# Patch 4.0.2 item 6: G (the key the pirate ships' salute uses) is the gear while flying.
+	if is_instance_valid(view.controls) and not view.controls.command_requested.is_connected(on_command):
+		view.controls.command_requested.connect(on_command)
+	# Patch 4.0.2 item 7: the planes hangar, opened by the Planes buttons.
+	hangar = PlaneHangar.new()
+	hangar.view = view
+	hangar.aviation = self
+	add_child(hangar)
+
+func on_command(action: StringName) -> void:
+	if action == &"cannon_salute" and flying() and view.controls.input_allowed(): toggle_gear()
 
 ## Airports keep to their copy nearest the camera, like the icebergs.
 func place_airports(around: Vector3) -> void:
@@ -860,6 +967,18 @@ func build_ui() -> void:
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(banner)
 	banner.hide()
+	# Patch 4.0.2 item 6: the gear nudge, under the warning banner.
+	nudge_label = Label.new()
+	nudge_label.name = "GearNudge"
+	DISPLAY.plain(nudge_label, PLAYFUL.SUN, 30)
+	nudge_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	nudge_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	nudge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nudge_label.offset_top = 180
+	nudge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nudge_label.text = "Press G — Gear down"
+	layer.add_child(nudge_label)
+	nudge_label.hide()
 	# The arcade aim reticle (at the cursor) and the flight-direction marker
 	# (where the plane is actually going).
 	marks = FlightMarks.new()
@@ -887,7 +1006,12 @@ class FlightMarks extends Control:
 			draw_line(path - Vector2(8, 0), path - Vector2(20, 0), green, 2.0, true)
 			draw_line(path - Vector2(0, 8), path - Vector2(0, 16), green, 2.0, true)
 
+## Patch 4.0.2 item 7: Planes opens the 3D planes hangar (the old list menu
+## stays as the fallback when the hangar is missing).
 func open_menu() -> void:
+	if is_instance_valid(hangar):
+		hangar.open()
+		return
 	menu.show()
 	view.controls.set_menu_open(true)
 	refresh_menu()
@@ -961,6 +1085,14 @@ func refresh_ui() -> void:
 				var take: Button = view.button(line, "Accept", accept.bind(str(row.id)))
 				take.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if menu.visible: refresh_menu()
+	# Patch 4.0.2 item 6: the gear nudge, pulsing, with one chime per approach.
+	nudge = gear_nudge()
+	if nudge and not nudge_chimed:
+		nudge_chimed = true
+		if view.has_method("play_sound"): view.play_sound("chime")
+	elif not nudge and (not flying() or model.gear_down or model.on_ground or model.agl_m > GEAR_NUDGE_AGL_M * 1.3): nudge_chimed = false
+	nudge_label.visible = nudge
+	if nudge: nudge_label.modulate.a = 0.55 + 0.45 * (0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.008))
 	banner.visible = flying() and (warning or model.stalled)
 	if banner.visible:
 		var flash: bool = int(Time.get_ticks_msec() / 300) % 2 == 0

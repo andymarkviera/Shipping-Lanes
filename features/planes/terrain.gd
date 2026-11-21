@@ -3,11 +3,14 @@ extends RefCounted
 ## world X/Z. It follows the drawn world: the beach shelf and green hills of
 ## the land (TOON_COAST), the runways and their airfields (level at
 ## Airports.RUNWAY_Y, no hill inside an airport's footprint), the polar
-## ice cap rising to its snow plateau, the icebergs and the volcano. All from
+## ice cap rising to its snow plateau and (Patch 4.0.2) its ridges and hills, the icebergs and the volcano. All from
 ## baked data, so client and server agree. Sea level is 0.
 const Progression = preload("res://features/game/progression.gd")
 const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const Airports = preload("res://features/planes/airports.gd")
+## Patch 4.0.2 item 1: the cap's ridges and hills (the same relief the ice
+## mesh and the globe draw).
+const POLAR_ICE = preload("res://features/toon/polar_ice.gd")
 const ICE_PLATEAU_M: float = 46.0
 
 ## {height, surface}: surface is "sea", "land", "runway", "airfield" (the flat
@@ -30,7 +33,7 @@ static func sample(at: Vector3) -> Dictionary:
 			surface = "land"
 	var ice: float = Progression.ice_depth(flat)
 	if ice > 0.0:
-		var top: float = minf(ICE_PLATEAU_M, 9.0 + ice * 0.16)
+		var top: float = minf(ICE_PLATEAU_M, 9.0 + ice * 0.16) + POLAR_ICE.relief(flat, ice)
 		if top > height:
 			height = top
 			surface = "ice"

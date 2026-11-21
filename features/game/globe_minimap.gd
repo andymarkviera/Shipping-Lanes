@@ -16,6 +16,8 @@ const SAND: Color = Color("f1dfa4")
 const Airports = preload("res://features/planes/airports.gd")
 ## Patch 4.0 item D14: the airport colour, as on the M globe.
 const AIRPORT_RED: Color = Color("e8504a")
+## Patch 4.0.2 item 2: planes (own and other captains') are plane silhouettes.
+const Planes = preload("res://features/planes/plane_catalog.gd")
 var view: Node3D
 var clock: float = 0.0
 
@@ -193,11 +195,17 @@ func _draw() -> void:
 		if not visible_on(point): continue
 		var dot: Vector2 = on_disc(point, radius)
 		var direction: Vector2 = Vector2(-sin(entry.heading), -cos(entry.heading))
+		if icon_for(str(entry.get("kind", ""))) == "plane":
+			draw_plane(dot, direction, 0.8, Color.WHITE)
+			continue
 		draw_circle(dot, 4.0, PLAYFUL.INK)
 		draw_circle(dot, 2.5, Color.WHITE)
 		draw_line(dot, dot + direction * 7, Color.WHITE, 2, true)
 	var bow: Vector3 = view.ship.global_basis.z
 	var forward: Vector2 = Vector2(-bow.x, -bow.z).normalized() if Vector2(bow.x, bow.z).length() > 0.0001 else Vector2.UP
+	if own_icon(view) == "plane":
+		draw_plane(middle, forward, 1.2, PLAYFUL.SUN)
+		return
 	var side: Vector2 = Vector2(-forward.y, forward.x)
 	# Patch 2.2: the arrow grows with the hull, up to twice the starter's.
 	var grow: float = clampf(sqrt(view.ship.definition.hull_size_m.z / 64.0), 1.0, 2.0)
@@ -206,3 +214,32 @@ func _draw() -> void:
 	var hull: PackedVector2Array = PackedVector2Array([middle + forward * 10, middle - forward * 6 + side * 6, middle - forward * 6 - side * 6])
 	draw_colored_polygon(hull, PLAYFUL.SUN)
 	draw_polyline(PackedVector2Array([hull[0], hull[1], hull[2], hull[0]]), PLAYFUL.INK, 2, true)
+
+## Patch 4.0.2 item 2: "plane" for a plane kind, "boat" for anything else.
+static func icon_for(kind: String) -> String:
+	return "plane" if Planes.PLANES.has(kind) else "boat"
+
+## The own marker: the plane while flying, the boat otherwise.
+static func own_icon(scene: Node) -> String:
+	if scene != null and scene.has_method("flying") and scene.flying(): return "plane"
+	return "boat"
+
+## The top-down plane silhouette (nose, wings, tailplane) round `at`,
+## pointing along `forward` (a unit screen direction), `grow` times the
+## base size, inked like the boat arrow.
+static func plane_outline(at: Vector2, forward: Vector2, grow: float) -> PackedVector2Array:
+	var f: Vector2 = forward.normalized() * grow
+	var s: Vector2 = Vector2(-f.y, f.x)
+	var shape: Array[Vector2] = [Vector2(0, 10), Vector2(1.6, 7), Vector2(1.6, 2.5), Vector2(9, -0.5), Vector2(9, -2.5), Vector2(1.6, -1.5),
+		Vector2(1.2, -6), Vector2(4.5, -8), Vector2(4.5, -9.5), Vector2(0, -8.5)]
+	var points: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in shape: points.append(at + f * point.y + s * point.x)
+	for index: int in range(shape.size() - 2, 0, -1): points.append(at + f * shape[index].y - s * shape[index].x)
+	return points
+
+func draw_plane(at: Vector2, forward: Vector2, grow: float, colour: Color) -> void:
+	var points: PackedVector2Array = plane_outline(at, forward, grow)
+	var closed: PackedVector2Array = points.duplicate()
+	closed.append(points[0])
+	if not Geometry2D.triangulate_polygon(points).is_empty(): draw_colored_polygon(points, colour)
+	draw_polyline(closed, PLAYFUL.INK, 2.0 if grow > 1.0 else 1.5, true)

@@ -64,13 +64,17 @@ func execute(sender: int, data: Variant) -> Dictionary:
 		# Patch 4.0: a flying captain's helm adds the pitch; its throttle is the
 		# plane's lever (0..1, below 0 the wheel brakes).
 		var flying: bool = world.has_method("entity_flying") and world.entity_flying(sender)
-		if payload.size() not in [4, 5] or (payload.size() == 5 and not payload.has("pitch")) or not payload.get("sent_ms") is int or payload.sent_ms < 0: return result(action_id, "BAD_PAYLOAD")
-		for key: String in (["throttle", "rudder", "lateral", "pitch"] if payload.size() == 5 else ["throttle", "rudder", "lateral"]):
+		# Patch 4.0.2 item 6: and the gear lever (0 up, 1 down).
+		if payload.size() not in [4, 5, 6] or (payload.size() >= 5 and not payload.has("pitch")) or (payload.size() == 6 and not payload.has("gear")) or not payload.get("sent_ms") is int or payload.sent_ms < 0: return result(action_id, "BAD_PAYLOAD")
+		var keys: Array[String] = ["throttle", "rudder", "lateral"]
+		if payload.size() >= 5: keys.append("pitch")
+		if payload.size() == 6: keys.append("gear")
+		for key: String in keys:
 			if not (payload.get(key) is float or payload.get(key) is int): return result(action_id, "BAD_PAYLOAD")
 			if not is_finite(payload[key]): return result(action_id, "NONFINITE")
 		var low: float = -1.0 if flying else -ship.definition.reverse_throttle_limit
 		var high: float = 1.0 if flying else ship.definition.forward_throttle_limit
-		if payload.throttle < low or payload.throttle > high or absf(payload.rudder) > 1 or absf(payload.lateral) > 1 or absf(float(payload.get("pitch", 0.0))) > 1:
+		if payload.throttle < low or payload.throttle > high or absf(payload.rudder) > 1 or absf(payload.lateral) > 1 or absf(float(payload.get("pitch", 0.0))) > 1 or float(payload.get("gear", 0.0)) < 0.0 or float(payload.get("gear", 0.0)) > 1.0:
 			return result(action_id, "OUT_OF_RANGE")
 	var id: String = data.entity
 	if not receipts.has(id):
@@ -99,7 +103,7 @@ func execute(sender: int, data: Variant) -> Dictionary:
 			response = result(action_id, "RATE_LIMITED")
 		else:
 			world.replication.orders[id] = {"seq": data.sequence, "throttle": float(payload.throttle),
-				"rudder": float(payload.rudder), "lateral": float(payload.lateral), "pitch": float(payload.get("pitch", 0.0)), "sent": payload.sent_ms, "at": now}
+				"rudder": float(payload.rudder), "lateral": float(payload.lateral), "pitch": float(payload.get("pitch", 0.0)), "gear": float(payload.get("gear", -1.0)), "sent": payload.sent_ms, "at": now}
 			response = result(action_id, "OK", 0, true)
 	cache[action_id] = {"request": data.duplicate(true), "result": response.duplicate(true)}
 	while cache.size() > RECEIPT_LIMIT: cache.erase(cache.keys()[0])

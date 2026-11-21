@@ -128,6 +128,9 @@ static func placements(blocks: Array, ports: Array[Vector2]) -> Dictionary:
 		var tall: float = 22.0 + pow(rng.randf(), 2.2) * 130.0
 		var colour: int = rng.randi_range(0, WALLS.size() - 1)
 		if not _clear_of_ports(at, ports) or not _on_land(at, blocks, 30.0): continue
+		# Patch 4.0.2 item 4: no tower on an airfield.
+		# (Loaded here: airports.gd preloads this script for its city test.)
+		if not load("res://features/planes/airports.gd").clear_of_airfields(at, maxf(wide, deep)): continue
 		if Rain.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
 		if pick < 0.06 and cranes.size() < MAX_CRANES:
 			cranes.append(Transform3D(Basis(Vector3.UP, rng.randf_range(0, TAU)), Vector3(at.x, 0, at.y)))

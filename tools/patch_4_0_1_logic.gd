@@ -42,7 +42,8 @@ static func run_all() -> PackedStringArray:
 
 func version() -> void:
 	var connection: GDScript = load("res://features/network/play_connection.gd")
-	expect(connection.VERSION == "4.0.1", "VERSION is 4.0.1 (%s)" % connection.VERSION)
+	# Patch 4.0.2: later patches move VERSION on; 4.0.1 or newer.
+	expect(connection.VERSION.naturalnocasecmp_to("4.0.1") >= 0, "VERSION is 4.0.1 or later (%s)" % connection.VERSION)
 
 ## Item 1: hands off (no pitch or roll), a banked, climbing plane rolls gently
 ## wings-level and settles into level flight; any command fades it out.
@@ -206,7 +207,9 @@ func airfields() -> void:
 					faces += 1
 					up = up and out.y > 0.0
 				else: up = up and out.y > 0.0
-			up = up and faces == 2 and absf(top + field.position.y - Airports.RUNWAY_Y) < 0.01
+			# Patch 4.0.2 item 3: the top is cut round the runway and the apron
+			# (more than two faces) and stands Look.FIELD_DROP_M below the runway.
+			up = up and faces >= 2 and absf(top + field.position.y - (Airports.RUNWAY_Y - Look.FIELD_DROP_M)) < 0.01
 		expect(up, "%s: the airfield ground faces up (grass, not a black slab)" % entry.name)
 		node.free()
 
