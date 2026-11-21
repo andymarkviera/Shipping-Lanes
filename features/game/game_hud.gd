@@ -31,6 +31,12 @@ var salute_left: float = 0.0
 var instrument_warning: bool = false
 var ships_button: Button
 var blaster: Label
+## Patch 4.0.3 addendum: flying, the same throttle slider shows the plane's
+## lever from 0 to 100% (no reverse), marked 0% / 50% / 100%.
+const BOAT_MARKS: Array[String] = ["R", "N", "D"]
+const PLANE_MARKS: Array[String] = ["0%", "50%", "100%"]
+var plane_mode: bool = false
+var marks: Array[Label] = []
 
 ## Patch 4.0.2: the Jetty's blaster line ("" for every other hull).
 static func blaster_text(ship: HandlingShip) -> String:
@@ -96,8 +102,9 @@ func build_bar() -> void:
 	throttle.add_child(slider)
 	var letters: HBoxContainer = HBoxContainer.new()
 	throttle.add_child(letters)
-	for letter: String in ["R", "N", "D"]:
+	for letter: String in BOAT_MARKS:
 		var mark: Label = text(letters, 18, PLAYFUL.CREAM)
+		marks.append(mark)
 		mark.text = letter
 		mark.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mark.horizontal_alignment = [HORIZONTAL_ALIGNMENT_LEFT, HORIZONTAL_ALIGNMENT_CENTER, HORIZONTAL_ALIGNMENT_RIGHT][letters.get_child_count() - 1]
@@ -160,12 +167,28 @@ func arrange_port_card() -> void:
 	view.jobs_panel.add_child(cards)
 	view.jobs_panel.move_child(cards, 0)
 
+## Patch 4.0.3 addendum: the throttle slider's range and marks follow the
+## craft: -1..1 with R / N / D on a boat, 0..1 with 0% / 50% / 100% flying.
+func set_plane_mode(air: bool) -> void:
+	if air == plane_mode: return
+	plane_mode = air
+	slider.set_block_signals(true)
+	slider.min_value = 0.0 if air else -1.0
+	slider.set_block_signals(false)
+	var words: Array[String] = PLANE_MARKS if air else BOAT_MARKS
+	for index: int in marks.size(): marks[index].text = words[index]
+
 func slider_order(value: float) -> float:
 	var tuning: ShipDefinition = view.ship.definition
 	return value * (tuning.forward_throttle_limit if value >= 0.0 else tuning.reverse_throttle_limit)
 
 ## The slider is a real control: drag or click it to set the engine order.
 func order(value: float) -> void:
+	# Patch 4.0.3 addendum: flying, the slider is the plane's throttle lever
+	# (0-100%, no reverse); Shift / Ctrl move the same lever.
+	if plane_mode:
+		if is_instance_valid(view.get("aviation")): view.aviation.lever = clampf(value, 0.0, 1.0)
+		return
 	if not is_instance_valid(view.ship) or not view.ship.helm_available(): return
 	if view.runtime_role == "client":
 		view.network_runtime.throttle = 0.0 if absf(value) < 0.06 else slider_order(value)
@@ -180,33 +203,58 @@ func rebuild_cards() -> void:
 		old.queue_free()
 	var from: String = view.port.definition.display_name
 	for job: Dictionary in view.job_cards:
-		var card: PanelContainer = PanelContainer.new()
-		card.add_theme_stylebox_override("panel", PLAYFUL.box(PLAYFUL.DEEP, PLAYFUL.INK, 12, 2, 8))
-		cards.add_child(card)
-		var row: HBoxContainer = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		card.add_child(row)
-		var art: Control = Control.new()
-		art.custom_minimum_size = Vector2(58, 44)
-		art.draw.connect(draw_cargo.bind(art, str(job.kind), int(job.count)))
-		row.add_child(art)
-		var words: VBoxContainer = VBoxContainer.new()
-		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		words.custom_minimum_size.x = 210
-		row.add_child(words)
-		var what: Label = text(words, 18)
-		DISPLAY.plain(what, Color.WHITE, 18)
-		what.text = str(job.what)
-		var route: Label = text(words, 13, PLAYFUL.CREAM)
-		DISPLAY.plain(route, PLAYFUL.CREAM, 13)
-		route.text = "%s → %s" % [from, job.to]
-		# Patch 3.2: the amount is gold in the same plain bold face, one size.
-		var pay: Label = text(row, PAY_PX, PLAYFUL.SUN)
-		DISPLAY.plain(pay, PLAYFUL.SUN, PAY_PX)
-		pay.text = "+%.2f" % (int(job.pay) / 100.0)
-		pay.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var accept: Button = view.button(row, "Accept", take.bind(str(job.id)))
-		accept.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		job_card(cards, str(job.kind), int(job.count), str(job.what), "%s → %s" % [from, job.to], "", int(job.pay), take.bind(str(job.id)))
+
+## Patch 4.0.3 item 6: one job card, shared by the boat and the plane job
+## boards: the cargo picture, what, the route, an optional trip line (the
+## plane board's km, minutes and fuel), the gold pay and Accept. The edge
+## lights up gold under the mouse.
+func job_card(parent: Node, kind: String, count: int, what_text: String, route_text: String, trip_text: String, pay_minor: int, action: Callable) -> PanelContainer:
+	var card: PanelContainer = PanelContainer.new()
+	card.name = "JobCard"
+	var rest: StyleBoxFlat = PLAYFUL.box(PLAYFUL.DEEP, PLAYFUL.INK, 12, 2, 8)
+	var lit: StyleBoxFlat = PLAYFUL.box(PLAYFUL.DEEP, PLAYFUL.SUN, 12, 2, 8)
+	card.add_theme_stylebox_override("panel", rest)
+	card.set_meta("rest_style", rest)
+	card.set_meta("hover_style", lit)
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
+	card.mouse_entered.connect(func() -> void: card.add_theme_stylebox_override("panel", lit))
+	card.mouse_exited.connect(func() -> void: card.add_theme_stylebox_override("panel", rest))
+	parent.add_child(card)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	card.add_child(row)
+	var art: Control = Control.new()
+	art.name = "CargoArt"
+	art.custom_minimum_size = Vector2(58, 44)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.draw.connect(draw_cargo.bind(art, kind, count))
+	row.add_child(art)
+	var words: VBoxContainer = VBoxContainer.new()
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words.custom_minimum_size.x = 210
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(words)
+	var what: Label = text(words, 18)
+	DISPLAY.plain(what, Color.WHITE, 18)
+	what.text = what_text
+	var route: Label = text(words, 13, PLAYFUL.CREAM)
+	DISPLAY.plain(route, PLAYFUL.CREAM, 13)
+	route.text = route_text
+	if not trip_text.is_empty():
+		var trip: Label = text(words, 13, PLAYFUL.CREAM)
+		DISPLAY.plain(trip, PLAYFUL.CREAM, 13)
+		trip.name = "Trip"
+		trip.text = trip_text
+	# Patch 3.2: the amount is gold in the same plain bold face, one size.
+	var pay: Label = text(row, PAY_PX, PLAYFUL.SUN)
+	DISPLAY.plain(pay, PLAYFUL.SUN, PAY_PX)
+	pay.name = "Pay"
+	pay.text = "+%.2f" % (pay_minor / 100.0)
+	pay.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var accept: Button = view.button(row, "Accept", action)
+	accept.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return card
 
 func take(id: String) -> void:
 	view.selected_offer = id
@@ -218,6 +266,22 @@ func draw_cargo(art: Control, kind: String, count: int) -> void:
 	if kind == "bulk":
 		art.draw_colored_polygon(PackedVector2Array([Vector2(2, floor_y), Vector2(20, floor_y - 26), Vector2(34, floor_y - 18), Vector2(42, floor_y - 30), Vector2(56, floor_y)]), Color("c9a063"))
 		art.draw_polyline(PackedVector2Array([Vector2(2, floor_y), Vector2(20, floor_y - 26), Vector2(34, floor_y - 18), Vector2(42, floor_y - 30), Vector2(56, floor_y), Vector2(2, floor_y)]), PLAYFUL.INK, 2, true)
+		return
+	# Patch 4.0.3 item 6: passengers are a row of little people, packages a
+	# pile of brown parcels.
+	if kind == "pax":
+		for index: int in clampi(count, 1, 5):
+			var x: float = 8.0 + index * 10.0
+			art.draw_circle(Vector2(x, floor_y - 24), 4.0, BOX_COLOURS[index % BOX_COLOURS.size()].lightened(0.3))
+			art.draw_rect(Rect2(x - 4, floor_y - 19, 8, 19), BOX_COLOURS[index % BOX_COLOURS.size()])
+			art.draw_rect(Rect2(x - 4, floor_y - 19, 8, 19), PLAYFUL.INK, false, 1.5)
+		return
+	if kind == "pkg":
+		for index: int in clampi(floori(count / 4.0), 1, 10):
+			var parcel: Rect2 = Rect2(4 + (index % 5) * 10, floor_y - 12 - floori(index / 5.0) * 13, 9, 12)
+			art.draw_rect(parcel, Color("c08a52"))
+			art.draw_rect(parcel, PLAYFUL.INK, false, 1.5)
+			art.draw_line(parcel.position + Vector2(4.5, 0), parcel.position + Vector2(4.5, 12), PLAYFUL.INK, 1.0)
 		return
 	if kind == "heavy":
 		art.draw_rect(Rect2(8, floor_y - 30, 42, 30), Color("9fb2c4"))
@@ -254,13 +318,17 @@ func refresh(delta: float) -> void:
 	knots.text = "%d kn" % roundi(shown_speed_mps * 3600.0 / 1852.0)
 	# Patch 4.0: flying, the bar shows airspeed, height and throttle instead.
 	var air: bool = view.has_method("flying") and view.flying()
-	slider.get_parent().visible = not air
+	set_plane_mode(air)
 	knots.custom_minimum_size.x = 300 if air else 92
 	if air: knots.text = view.aviation.helm_text()
 	var commanded: float = ship.commanded_throttle
-	if not dragging:
-		slider.set_value_no_signal(commanded / maxf(0.01, ship.definition.forward_throttle_limit if commanded >= 0.0 else ship.definition.reverse_throttle_limit))
-	slider.editable = ship.helm_available()
+	if air:
+		if not dragging: slider.set_value_no_signal(clampf(float(view.aviation.lever), 0.0, 1.0))
+		slider.editable = true
+	else:
+		if not dragging:
+			slider.set_value_no_signal(commanded / maxf(0.01, ship.definition.forward_throttle_limit if commanded >= 0.0 else ship.definition.reverse_throttle_limit))
+		slider.editable = ship.helm_available()
 	var status: Dictionary = view.dock_status
 	var near: bool = state in ["underway", "approaching"] and status.get("code", "") in ["SPEED", "BLOCKED"] and not air
 	view.dock_button.visible = not air

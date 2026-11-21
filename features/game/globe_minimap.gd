@@ -14,8 +14,9 @@ const METRES_PER_RADIAN: float = Progression.WRAP_M / TAU
 ## Patch 2.5 item 1B: beach colour round the land on the minimap and globe.
 const SAND: Color = Color("f1dfa4")
 const Airports = preload("res://features/planes/airports.gd")
-## Patch 4.0 item D14: the airport colour, as on the M globe.
-const AIRPORT_RED: Color = Color("e8504a")
+## Patch 4.0.3 item 3: the port icon's pier and crane, as on the M globe.
+const PIER: Color = Color("f4ead2")
+const CRANE: Color = Color("e8504a")
 ## Patch 4.0.2 item 2: planes (own and other captains') are plane silhouettes.
 const Planes = preload("res://features/planes/plane_catalog.gd")
 var view: Node3D
@@ -164,14 +165,13 @@ func _draw() -> void:
 				var point: Vector2 = from.lerp(to, step / float(dots))
 				if visible_on(point): draw_circle(on_disc(point, radius), 1.8, PLAYFUL.SUN)
 			from = to
+	# Patch 4.0.3 item 3: each port as a small pier with a crane.
 	for port: Node3D in view.world_ports:
 		var point: Vector2 = sphere_point(port.berth_anchor.global_position, ship)
 		if not visible_on(point): continue
-		var dot: Vector2 = on_disc(point, radius)
-		draw_circle(dot, 5.5, PLAYFUL.INK)
-		draw_circle(dot, 3.5, PLAYFUL.SUN if port == view.port else Color.WHITE)
+		draw_port(on_disc(point, radius), PLAYFUL.SUN if port == view.port else PIER)
 	# Patch 4.0 item D14: each airport as a short runway bar along its heading
-	# with a red middle, unlike the round port dots.
+	# (Patch 4.0.3 item 3: just the runway, no red mark).
 	for airport: Dictionary in Airports.all():
 		var point: Vector2 = sphere_point(airport.at, ship)
 		if not visible_on(point): continue
@@ -179,7 +179,6 @@ func _draw() -> void:
 		var along: Vector2 = Vector2(-sin(airport.heading), -cos(airport.heading)) * 5.0
 		draw_line(dot - along, dot + along, PLAYFUL.INK, 5.0, true)
 		draw_line(dot - along * 0.8, dot + along * 0.8, Color("c9ced6"), 2.5, true)
-		draw_circle(dot, 1.8, AIRPORT_RED)
 	if not destination.is_empty():
 		# A destination over the horizon sits on the rim, in the direction to sail.
 		var goal: Vector2 = on_disc(goal_at, radius)
@@ -214,6 +213,17 @@ func _draw() -> void:
 	var hull: PackedVector2Array = PackedVector2Array([middle + forward * 10, middle - forward * 6 + side * 6, middle - forward * 6 - side * 6])
 	draw_colored_polygon(hull, PLAYFUL.SUN)
 	draw_polyline(PackedVector2Array([hull[0], hull[1], hull[2], hull[0]]), PLAYFUL.INK, 2, true)
+
+## Patch 4.0.3 item 3: a port's icon round `at`: an inked pier deck (north
+## up, `deck` colour) and a crane, a tower with its boom out over the water.
+func draw_port(at: Vector2, deck: Color) -> void:
+	var pier: Rect2 = Rect2(at + Vector2(-2.5, -6.0), Vector2(5.0, 12.0))
+	draw_rect(pier.grow(1.5), PLAYFUL.INK)
+	draw_rect(pier, deck)
+	draw_line(at + Vector2(0.5, 3.0), at + Vector2(0.5, -9.0), PLAYFUL.INK, 3.5, true)
+	draw_line(at + Vector2(-5.5, -8.5), at + Vector2(2.5, -8.5), PLAYFUL.INK, 3.5, true)
+	draw_line(at + Vector2(0.5, 3.0), at + Vector2(0.5, -9.0), CRANE, 1.8, true)
+	draw_line(at + Vector2(-5.5, -8.5), at + Vector2(2.5, -8.5), CRANE, 1.8, true)
 
 ## Patch 4.0.2 item 2: "plane" for a plane kind, "boat" for anything else.
 static func icon_for(kind: String) -> String:

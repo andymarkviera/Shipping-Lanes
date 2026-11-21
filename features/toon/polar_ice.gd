@@ -45,6 +45,13 @@ const RELIEF_FROM_M: float = 150.0
 const RELIEF_FULL_M: float = 250.0
 const RIDGE_M: float = 74.0
 const HILL_M: float = 16.0
+## Patch 4.0.3 item 2: on the globe the world's north/south edge is the
+## pole, where every meridian meets, so the ridges (waves along X) would
+## become spokes. The relief fades out from POLE_RELIEF_M to POLE_FLAT_M off
+## the edge: the cap is level snow right through the pole (where the polar
+## runways stand), in the world, for the planes and on the globe alike.
+const POLE_FLAT_M: float = 450.0
+const POLE_RELIEF_M: float = 1100.0
 ## A ridge face steeper than this (normal Y) is drawn as blue glacier ice.
 const STEEP_NORMAL_Y: float = 0.8
 const GLACIER: Color = Color("bfe3f1")
@@ -73,7 +80,7 @@ static func snow_height(depth: float, at: Vector2, harbour: float) -> float:
 ## Patch 4.0.2 item 1: metres of ridge and hill above the snow at `at`,
 ## `depth` metres in from the ice's coast (0 near the coast and the ports).
 static func relief(at: Vector2, depth: float) -> float:
-	var fade: float = smoothstep(RELIEF_FROM_M, RELIEF_FULL_M, depth)
+	var fade: float = smoothstep(RELIEF_FROM_M, RELIEF_FULL_M, depth) * smoothstep(POLE_FLAT_M, POLE_RELIEF_M, pole_gap(at))
 	if fade <= 0.0: return 0.0
 	var a: float = 1.0 - absf(sin(at.x * TURN * 23.0 + at.y * TURN * 9.0 + 1.3 * sin(at.y * TURN * 5.0)))
 	var b: float = 1.0 - absf(sin(at.y * TURN * 19.0 - at.x * TURN * 14.0 + 0.7 + 1.1 * sin(at.x * TURN * 6.0)))
@@ -81,6 +88,11 @@ static func relief(at: Vector2, depth: float) -> float:
 	var hills: float = 0.5 + 0.5 * sin(at.x * TURN * 57.0 + at.y * TURN * 21.0) * sin(at.y * TURN * 49.0 - at.x * TURN * 17.0 + 2.1)
 	var massif: float = 0.6 + 0.4 * sin(at.x * TURN * 4.0 + 0.4) * sin(at.y * TURN * 3.0 + 1.0)
 	return fade * (ridge * RIDGE_M * massif + hills * HILL_M)
+
+## Patch 4.0.3 item 2: metres from `at` (X, Z) to the world's north/south
+## edge (either side of it): how far from the pole on the globe.
+static func pole_gap(at: Vector2) -> float:
+	return absf(wrapf(at.y - (Progression.WRAP_CENTRE.z + Progression.WRAP_M / 2.0), -Progression.WRAP_M / 2.0, Progression.WRAP_M / 2.0))
 
 ## TOON_COAST.harbour_weight, asked only near a port.
 static func harbour_at(at: Vector2, ports: Array[Vector2]) -> float:

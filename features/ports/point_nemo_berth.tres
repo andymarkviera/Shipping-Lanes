@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BerthDefinition" load_steps=2 format=3]
+[ext_resource type="Script" path="res://features/catalog/berth_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "berth_point_nemo_01"
+display_name = "Point Nemo Berth 1"
+port_id = "port_point_nemo"
+cargo_type_ids = Array[String](["cargo_test_container", "cargo_test_industrial"])
+position_m = Vector3(0, 0, 95.0)
+heading_degrees = 0.0
+envelope_m = Vector3(64, 30, 290)
+service_ids = Array[String](["container_transfer", "heavy_transfer", "refuel", "repair", "ship_catalog"])

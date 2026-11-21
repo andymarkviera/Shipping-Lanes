@@ -13,6 +13,7 @@ const GLASS: Color = Color("24405e")
 const TARMAC: Color = Color("4a4f5c")
 const STRIPE: Color = Color("f2efe2")
 const GRASS_BANK: Color = Color("6f9a5a")
+const SNOW_BANK: Color = Color("eef6fa")
 ## Patch 4.0.2 item 6: the landing gear. It folds up into its wells in
 ## GEAR_TRAVEL_S seconds (the nose leg forward, the mains inward), the well
 ## doors swinging open while it moves. Grey legs with a silver oleo, black
@@ -398,7 +399,9 @@ static func airport(index: int) -> Node3D:
 	root.rotation.y = entry.heading
 	var length: float = entry.length
 	var width: float = entry.width
-	var top: float = Airports.RUNWAY_Y
+	# Patch 4.0.3 item 8: the runway's own height (a polar one stands on the ice).
+	var top: float = float(entry.at.y)
+	var polar: bool = Airports.polar(index)
 	# The airfield (Patch 4.0.1 item 7): one grassy embankment over the whole
 	# footprint (runway, apron, terminal and a margin), level at the runway's
 	# height, so no hill pokes through. Its faces point outward.
@@ -406,15 +409,16 @@ static func airport(index: int) -> Node3D:
 	# and is cut away under the runway and the apron, which are solid tarmac
 	# slabs with their markings painted into the runway's own top (no stripe
 	# boxes lying on it): no two surfaces overlap, so nothing flickers.
-	var inland: Vector2 = Airports.land_side(Vector2(entry.at.x, entry.at.z), Vector2(sin(entry.heading), cos(entry.heading)))
-	var side: float = 1.0 if Vector2(cos(entry.heading), -sin(entry.heading)).dot(inland) > 0.0 else -1.0
+	# The inland side (where the terminal stands), as Airports worked it out.
+	var side: float = float(entry.side)
 	var span: Vector2 = Airports.field_across(index)
 	var holes: Array[Rect2] = [runway_rect(width, length), apron_rect(width, side)]
 	var bank: MeshInstance3D = MeshInstance3D.new()
 	bank.name = "Airfield"
 	bank.mesh = _bank_mesh(span.x, span.y, Airports.field_half_length(index), top + 3.0 - FIELD_DROP_M, holes)
 	bank.position = Vector3(0, -3.0, 0)
-	bank.material_override = _paint(GRASS_BANK, cache)
+	# Patch 4.0.3 item 8: a snowfield on the polar ice instead of grass.
+	bank.material_override = _paint(SNOW_BANK if polar else GRASS_BANK, cache)
 	root.add_child(bank)
 	var runway: MeshInstance3D = MeshInstance3D.new()
 	runway.name = "Runway"

@@ -120,7 +120,19 @@ func run() -> void:
 		var along: Vector3 = Vector3(sin(airport.heading), 0, cos(airport.heading)) * airport.length * 0.5
 		var highest: float = maxf(GlobeMap.ground(airport.at), maxf(GlobeMap.ground(airport.at + along), GlobeMap.ground(airport.at - along)))
 		expect(pin.position.normalized().distance_to(GlobeMap.on_globe(airport.at)) < 0.001 and pin.position.length() > highest + 0.004, airport.name + " is marked above the land relief")
-		expect(pin.get_child_count() >= 3 and absf(pin.basis.y.normalized().dot(GlobeMap.on_globe(airport.at)) - 1.0) < 0.001, airport.name + " marker is a runway glyph standing upright")
+		# Patch 4.0.3 item 3: the runway only (tarmac and its centre stripe), no plane.
+		expect(pin.get_child_count() == 2 and absf(pin.basis.y.normalized().dot(GlobeMap.on_globe(airport.at)) - 1.0) < 0.001, airport.name + " marker is a runway glyph standing upright, without the red plane")
+	# Patch 4.0.3 item 3: every port is a small pier with a crane, upright,
+	# about the runway's size; the port the ship is at is sun yellow.
+	var piers: bool = map.port_paint.size() == map.port_markers.size()
+	for index: int in map.port_markers.size():
+		var icon: Node3D = map.port_markers[index]
+		var berth: Vector3 = game.world_ports[index].berth_anchor.global_position
+		piers = piers and icon.get_child_count() >= 5 and absf(icon.basis.y.normalized().dot(GlobeMap.on_globe(berth)) - 1.0) < 0.001
+		var reach: float = 0.0
+		for piece: Node in icon.get_children(): reach = maxf(reach, (piece as MeshInstance3D).mesh.get_aabb().size.length())
+		piers = piers and reach > 0.04 and reach < 0.12
+	expect(piers, "Every port is a small pier-and-crane icon, upright, the runway's size")
 	# Patch 2.5 item 1B: the dotted course follows the sea route round the land.
 	var goal: Vector3 = game.world_ports[2].berth_anchor.global_position
 	var route: Array[Vector3] = Progression.course(game.ship.global_position, goal, 2)

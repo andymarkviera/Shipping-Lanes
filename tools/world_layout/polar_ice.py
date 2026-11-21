@@ -9,10 +9,11 @@ and backs its quay; the South Pole port keeps an ice island behind its quay
 of it). Neither port moves.
 
 Bent round what must stay: both ports' berths, approach and heavy drop area
-are open water; the two sea routes that cross the edge (Needle Gut to the
-southern lane, and the pole-to-pole run) stay open as leads through the ice,
-and a third lead is cut in the east; the sea lanes' points, the land and
-Ember Isle keep their sea room. Icebergs the ice would swallow are moved to
+are open water; the sea lanes' points, the land and Ember Isle keep their sea
+room. Patch 4.0.3 item 2: on the globe the edge is both poles, so the cap is
+solid ice for POLE_SOLID_M either side of it, all the way round: no lead
+crosses the edge any more (they showed as open wedges and streaks running
+into the pole, and a channel a ship could sail through). Icebergs the ice would swallow are moved to
 the nearest open polar water.
 
 Writes:
@@ -52,6 +53,8 @@ CAP_M = 800.0
 CAP_NOISE_M = 560.0
 CAP_MAX_M = 1300.0
 LEAD_HALF_M = 165.0
+# Patch 4.0.3 item 2: solid ice this far either side of the edge (the poles).
+POLE_SOLID_M = 800.0
 BERG_GAP_M = 190.0
 # Patch 3.2: the North Pole port sits in an ice field reached only through
 # narrow winding straits (each also a run of sea-lane points in progression.gd).
@@ -93,7 +96,8 @@ def bake(geo, glaciers=()):
     lanes = [(x, up(z)) for x, z in geo['lanes']]
     land = [(r[0], up(r[1]), r[2], r[3]) for r in geo['land']]
     land = [r for r in land if r[1] + r[3] > edge_n - HALF * CELL - 500.0 and r[1] < edge_n + HALF * CELL + 500.0]
-    leads = [((680.0, 3550.0), (-2600.0, up(-4800.0))), ((2400.0, 3550.0), (south[0], up(south[2] - geo['gate'])))]
+    # Patch 4.0.3 item 2: no leads across the edge (it is the pole on the globe).
+    leads = []
     # Patch 3.2: a natural glacier tongue from the cap backs the South Pole
     # quay (it replaces the old rectangular island).
     # It spills off Hearthland's south coast, clear of the lead and the route.
@@ -132,6 +136,8 @@ def bake(geo, glaciers=()):
         wobble = periodic(fine, x, z, 420.0, 3, x0)
         reach = CAP_M + CAP_NOISE_M * periodic(coast, x, z, 1150.0, 4, x0) + 190.0 * wobble
         reach = min(reach, CAP_MAX_M)
+        # Patch 4.0.3 item 2: the pole itself is always under the cap.
+        if s < POLE_SOLID_M: return True
         if not northern:
             # The South Pole port's approach and drop area reach far south.
             away = max(0.0, south[0] - 1050.0 - x, x - (south[0] + 150.0))
@@ -557,8 +563,19 @@ def preview(geo, baked, bergs):
     Path('polar_ice_preview.ppm').write_bytes(b'P6 %d %d 255\n' % (NX, NZ) + b''.join(rows))
 
 
+# Patch 4.0.3 item 7: the ice is planned round the six ports it was first
+# baked with, so adding a port (Point Nemo, far from the poles) leaves the
+# baked ice, glaciers and icebergs exactly as they are.
+BAKE_LANES = 46
+BAKE_PORTS = ['port_brindle_quay', 'port_slatewater_works', 'port_cinder_point', 'port_gannet_light', 'port_north_pole', 'port_south_pole']
+
+
 def main():
     geo = tb.game_world(tb.load())
+    geo['world'] = [p for p in geo['world'] if p['id'] in BAKE_PORTS]
+    geo['nemo'] = []
+    # (And round the sea lanes it was baked with: Patch 4.0.3 added one by Point Nemo.)
+    geo['lanes'] = geo['lanes'][:BAKE_LANES]
     baked = plan(geo)
     found = problems(geo, baked)
     if found: raise SystemExit('polar ice rejected: ' + '; '.join(found))

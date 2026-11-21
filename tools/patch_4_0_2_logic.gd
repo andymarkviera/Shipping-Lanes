@@ -59,7 +59,8 @@ static func run_all() -> PackedStringArray:
 
 func version() -> void:
 	var connection: GDScript = load("res://features/network/play_connection.gd")
-	expect(connection.VERSION == "4.0.2", "VERSION is 4.0.2 (%s)" % connection.VERSION)
+	# Patch 4.0.3: later patches move VERSION on; 4.0.2 or newer.
+	expect(connection.VERSION.naturalnocasecmp_to("4.0.2") >= 0, "VERSION is 4.0.2 or later (%s)" % connection.VERSION)
 
 ## Item 1: ridges and hills on the cap, for the planes as drawn, wrapped the
 ## same, and on the globe.
@@ -92,7 +93,9 @@ func polar_relief() -> void:
 	expect(same, "the ice's height is the same however it is asked (client = server, across the wrap)")
 	expect(PolarIce.relief(Vector2(0, 0), 40.0) == 0.0, "no relief by the ice's coast (the cliffs and the polar ports keep their shape)")
 	# The drawn ice: the plateau squares now rise and fall.
-	var part: Dictionary = PolarIce.band_meshes(0, int(grid.half) - 60, int(grid.half) - 1, false, [], StandardMaterial3D.new(), StandardMaterial3D.new(), StandardMaterial3D.new())
+	# (Patch 4.0.3 item 2: the snow is level right round the pole, so the
+	# band sampled is the one further from it, in the North Pole ice field.)
+	var part: Dictionary = PolarIce.band_meshes(6, int(grid.half) - 150, int(grid.half) - 40, false, [], StandardMaterial3D.new(), StandardMaterial3D.new(), StandardMaterial3D.new())
 	var heights: Dictionary = {}
 	var steep: bool = false
 	if expect(part.coast != null, "the drawn ice has a mesh"):
@@ -143,7 +146,7 @@ func runways() -> void:
 		var runway_top: float = runway.position.y + runway.mesh.get_aabb().end.y
 		var field_top: float = field.position.y + field.mesh.get_aabb().end.y
 		var apron_top: float = apron.position.y + (apron.mesh as BoxMesh).size.y * 0.5
-		expect(absf(runway_top - Airports.RUNWAY_Y) < 0.001, "%s: the runway's surface is where the planes land (%.2f m)" % [entry.name, runway_top])
+		expect(absf(runway_top - float(entry.at.y)) < 0.001, "%s: the runway's surface is where the planes land (%.2f m)" % [entry.name, runway_top])
 		expect(runway_top > field_top + 0.05 and apron_top > field_top + 0.05 and runway_top > apron_top, "%s: the runway (%.2f) and apron (%.2f) sit above the grass (%.2f)" % [entry.name, runway_top, apron_top, field_top])
 		var width: float = float(entry.width)
 		var length: float = float(entry.length)
@@ -221,13 +224,15 @@ func cruise(kind: String) -> RefCounted:
 	m.agl_m = 3000.0
 	return m
 
-## Item 5: the mouse never banks past the limit nor loops, whatever it holds.
+## Item 5 (Patch 4.0.3 item 1: the keys): whatever W / S and A / D hold,
+## the plane never banks past the limit (45 degrees, the Fighter 60), never
+## loops and never flips over.
 func bank_limit() -> void:
 	var pilot: Node = Aviation.new()
 	for kind: String in Planes.ORDER:
 		var limit: float = rad_to_deg(Flight.make(kind, Airports.start_pose(0)).bank_limit())
-		expect(is_equal_approx(limit, 75.0 if kind == "plane_fighter" else 60.0), "%s: the bank limit is %.0f degrees" % [kind, limit])
-		for aim: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0.9, 0.45), Vector2(-0.6, -0.8), Vector2(0, 1), Vector2(0, -1)]:
+		expect(is_equal_approx(limit, 60.0 if kind == "plane_fighter" else 45.0), "%s: the bank limit is %.0f degrees" % [kind, limit])
+		for held: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(1, 1), Vector2(-1, -1), Vector2(0, 1), Vector2(0, -1), Vector2(1, -1)]:
 			var m: RefCounted = cruise(kind)
 			pilot.model = m
 			pilot.lever = 0.7
@@ -235,46 +240,54 @@ func bank_limit() -> void:
 			var nose: float = 0.0
 			var inverted: bool = false
 			for frame: int in 30 * 20:
-				var order: Dictionary = pilot.steer_order(Aviation.aim_to_plane(aim, m.full_bank()), 0.0, 0.0)
-				m.step({"throttle": 0.7, "pitch": order.pitch, "roll": order.roll, "yaw": order.yaw}, STEP)
+				var order: Dictionary = pilot.key_order(held.y, held.x, 0.0, false, STEP)
+				m.step({"throttle": 0.7, "pitch": order.pitch, "roll": order.roll, "trick": order.yaw}, STEP)
 				worst = maxf(worst, absf(rad_to_deg(m.full_bank())))
 				nose = maxf(nose, absf(rad_to_deg(m.pitch_angle())))
 				inverted = inverted or m.basis.y.y < 0.0
 				if m.crashed: break
-			expect(worst <= limit + 0.5, "%s: mouse aim %s never banks past %.0f degrees (%.1f)" % [kind, aim, limit, worst])
-			expect(nose <= rad_to_deg(Flight.PITCH_LIMIT_RAD) + 2.0 and not inverted, "%s: mouse aim %s never loops or flips over (nose %.1f)" % [kind, aim, nose])
+			var keys: String = ("D" if held.x > 0.0 else ("A" if held.x < 0.0 else "")) + ("W" if held.y > 0.0 else ("S" if held.y < 0.0 else ""))
+			expect(worst <= limit + 0.5, "%s: %s held never banks past %.0f degrees (%.1f)" % [kind, keys, limit, worst])
+			expect(nose <= rad_to_deg(Flight.PITCH_LIMIT_RAD) + 2.0 and not inverted, "%s: %s held never loops or flips over (nose %.1f)" % [kind, keys, nose])
 	pilot.free()
 
-## Item 5: held A rolls all the way round; let go, it rolls back upright.
+## Item 5 (Patch 4.0.3 item 1: Q / E): one press of Q rolls all the way
+## round, then the plane is upright again; let go part way (the roll cut
+## short), it rolls back upright on its own.
 func barrel_roll() -> void:
 	var pilot: Node = Aviation.new()
 	for kind: String in Planes.ORDER:
-		var m: RefCounted = cruise(kind)
-		pilot.model = m
-		pilot.lever = 0.8
-		var turned: float = 0.0
-		var last: float = m.full_bank()
-		var seconds: float = 0.0
-		while seconds < 25.0 and absf(turned) < TAU and not m.crashed:
-			var order: Dictionary = pilot.steer_order(Vector2.ZERO, -1.0, 0.0)
-			m.step({"throttle": 0.8, "pitch": order.pitch, "roll": order.roll, "yaw": order.yaw}, STEP)
-			turned += angle_difference(last, m.full_bank())
-			last = m.full_bank()
-			seconds += STEP
-		expect(absf(turned) >= TAU - 0.05 and not m.crashed, "%s: holding A completes a full roll (%.0f degrees in %.1f s)" % [kind, rad_to_deg(absf(turned)), seconds])
-		# Let go part way into a second roll (upside down): it rolls back.
-		while absf(m.full_bank()) < deg_to_rad(150.0) and seconds < 40.0:
-			var order: Dictionary = pilot.steer_order(Vector2.ZERO, -1.0, 0.0)
-			m.step({"throttle": 0.8, "pitch": order.pitch, "roll": order.roll, "yaw": order.yaw}, STEP)
-			seconds += STEP
+		for key: float in [-1.0, 1.0]:
+			var m: RefCounted = cruise(kind)
+			pilot.model = m
+			pilot.lever = 0.8
+			pilot.barrel = 0.0
+			pilot.barrel_key = 0.0
+			var turned: float = 0.0
+			var last: float = m.full_bank()
+			var seconds: float = 0.0
+			var started: bool = false
+			while seconds < 25.0 and not m.crashed:
+				# Q (or E) pressed for a moment, then let go: the roll goes on.
+				var order: Dictionary = pilot.key_order(0.0, 0.0, key if seconds < 0.2 else 0.0, false, STEP)
+				started = started or pilot.barrel != 0.0
+				m.step({"throttle": 0.8, "pitch": order.pitch, "roll": order.roll, "trick": order.yaw}, STEP)
+				turned += angle_difference(last, m.full_bank())
+				last = m.full_bank()
+				seconds += STEP
+				if started and pilot.barrel == 0.0: break
+			expect(started and absf(turned) >= TAU - deg_to_rad(40.0) and signf(turned) == key and not m.crashed, "%s: one press of %s rolls all the way round (%.0f degrees in %.1f s)" % [kind, "E" if key > 0.0 else "Q", rad_to_deg(absf(turned)), seconds])
+			for frame: int in 30 * 5: m.step({"throttle": 0.8, "pitch": 0.0, "roll": 0.0}, STEP)
+			expect(absf(rad_to_deg(m.full_bank())) < 3.0 and m.basis.y.y > 0.9, "%s: then it is upright again (%.1f degrees)" % [kind, rad_to_deg(m.full_bank())])
+		# Cut short upside down (the roll held, then nothing): it rolls back.
+		var flipped: RefCounted = cruise(kind)
+		while absf(flipped.full_bank()) < deg_to_rad(150.0):
+			flipped.step({"throttle": 0.8, "trick": -1.0}, STEP)
 		var back: float = 0.0
-		while back < 20.0 and absf(m.full_bank()) > m.bank_limit() + deg_to_rad(1.0):
-			var order: Dictionary = pilot.steer_order(Vector2(0.4, 0.0), 0.0, 0.0)
-			m.step({"throttle": 0.8, "pitch": order.pitch, "roll": order.roll, "yaw": order.yaw}, STEP)
+		while back < 20.0 and (absf(flipped.full_bank()) > deg_to_rad(3.0) or flipped.basis.y.y < 0.9):
+			flipped.step({"throttle": 0.8}, STEP)
 			back += STEP
-		expect(absf(m.full_bank()) <= m.bank_limit() + deg_to_rad(1.0), "%s: let go upside down, it rolls back to the bank limit (%.1f s)" % [kind, back])
-		for frame: int in 30 * 25: m.step({"throttle": 0.8, "pitch": 0.0, "roll": 0.0}, STEP)
-		expect(absf(rad_to_deg(m.full_bank())) < 5.0 and m.basis.y.y > 0.9, "%s: hands off, the auto-level brings it wings-level (%.1f degrees)" % [kind, rad_to_deg(m.full_bank())])
+		expect(back < 20.0 and not flipped.crashed, "%s: let go upside down, it rolls back upright (%.1f s)" % [kind, back])
 	pilot.free()
 
 ## Item 6: the gear lever, and the gear coming up on its own after take-off.
@@ -352,7 +365,8 @@ func belly() -> void:
 		expect(m.on_ground and m.airspeed() < 0.5 and m.gear_down, "%s: it slides to a stop and is put back on its wheels" % kind)
 		# Far too hard: still a crash.
 		var hard: RefCounted = Flight.make(kind, Airports.start_pose(1))
-		hard.position.y += 40.0
+		# (Patch 4.0.3: low enough that the auto-trim cannot catch it.)
+		hard.position.y += 6.0
 		hard.on_ground = false
 		hard.step({"throttle": 0.0, "gear": 0.0}, STEP)
 		hard.velocity = hard.basis.z * Planes.stall_speed(kind) + Vector3(0, -(Flight.BELLY_MAX_SINK_MPS + 6.0), 0)

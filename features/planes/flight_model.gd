@@ -28,9 +28,16 @@ extends RefCounted
 ## up on its own after take-off (climbing, above GEAR_RETRACT_AGL_M); a
 ## landing with the gear up is a belly landing (a hard landing and a repair
 ## bill, not a crash) unless it sinks faster than BELLY_MAX_SINK_MPS.
-## Item 5: no upside-down flight. limit_aim keeps the mouse aim inside
-## bank_limit() (60 degrees, the Fighter 75) and the pitch inside
-## PITCH_LIMIT_RAD; only a held roll key (A / D) rolls past it.
+## Item 5: no upside-down flight: the bank stays inside bank_limit() and
+## the pitch inside PITCH_LIMIT_RAD.
+## Patch 4.0.3 item 1 (Andy: mouse aim is too complex): keyboard flying. The
+## input is the keys, and the model flies the plane from them, the same on
+## the server and the client. "pitch" (W +1 / S -1) raises or lowers the nose;
+## released, the auto-trim holds the altitude the plane levels off at
+## (hold_altitude). "roll" (D +1 / A -1) banks to bank_limit() (45 degrees,
+## the Fighter 60) for a coordinated turn; released, it rolls level. "trick"
+## (E +1 / Q -1, held by Aviation for one whole turn) is a barrel roll: the
+## only way past the bank limit. "brake" in the air is the air brake.
 ## On the ground the gear rolls on a runway: nose-wheel steering, brakes,
 ## rolling friction, and the nose can rotate at the plane's rotate speed.
 ## Touching anything but a runway, or a runway too hard, too steep, with too
@@ -67,17 +74,47 @@ const BELLY_MAX_SINK_MPS: float = 12.0
 const BELLY_FRICTION: float = 0.45
 ## The belly rests this share of the gear height above the ground.
 const BELLY_HEIGHT: float = 0.35
-## Patch 4.0.2 item 5: the mouse aim's bank limit (BANK_LIMIT_DEG, the
-## Fighter jet's FIGHTER_BANK_LIMIT_DEG) and pitch limit; near the bank
-## limit the roll command eases off (BANK_GAIN per second of margin; the
-## pitch's LIMIT_GAIN), past it the plane rolls back to it.
-const BANK_LIMIT_DEG: float = 60.0
-const FIGHTER_BANK_LIMIT_DEG: float = 75.0
+## Patch 4.0.2 item 5, Patch 4.0.3 item 1: the bank limit (BANK_LIMIT_DEG,
+## the Fighter jet's FIGHTER_BANK_LIMIT_DEG) and the pitch limit (the nose
+## command eases off LIMIT_GAIN per second of margin, aimed PITCH_SOFT_RAD
+## inside it, and past it the nose is turned back).
+const BANK_LIMIT_DEG: float = 45.0
+const FIGHTER_BANK_LIMIT_DEG: float = 60.0
 const PITCH_LIMIT_RAD: float = deg_to_rad(60.0)
 const PITCH_SOFT_RAD: float = deg_to_rad(6.0)
 const LIMIT_GAIN: float = 4.0
-const BANK_GAIN: float = 8.0
-const BANK_SOFT_RAD: float = deg_to_rad(3.0)
+## Patch 4.0.3 item 1: A / D bank towards the limit at ROLL_GAIN per second
+## of bank error (at most the plane's roll rate); a barrel roll turns at
+## least BARREL_DPS. A key counts as held above KEY_HELD.
+const ROLL_GAIN: float = 2.5
+## Stall protection in a turn: A / D bank only as far as the wing can carry
+## (the load of the bank at most 1 / TURN_LIFT_SHARE of what the wing lifts
+## at this speed), never less than TURN_MIN_DEG; past the limit by less than
+## BANK_SNAP_RAD the bank is held at the limit.
+const TURN_LIFT_SHARE: float = 0.75
+const TURN_MIN_DEG: float = 15.0
+const BANK_SNAP_RAD: float = deg_to_rad(20.0)
+const BARREL_DPS: float = 120.0
+const KEY_HELD: float = 0.05
+## The auto-trim: with W / S released the flight path eases level (at
+## TRIM_GAIN per radian, at most PATH_RATE of the pitch rate); once the
+## climb or sink is under HOLD_CAPTURE_MPS that altitude is held, returning
+## to it at HOLD_GAIN metres a second per metre off (at most HOLD_MAX_MPS).
+const TRIM_GAIN: float = 3.0
+const PATH_TRIM: float = 0.6
+const PATH_TRIM_MAX_RAD: float = deg_to_rad(8.0)
+## W / S hold a climb (or a descent) this steep; the nose turns at most
+## PATH_RATE of the plane's pitch rate.
+const CLIMB_PATH_DEG: float = 15.0
+const FIGHTER_CLIMB_PATH_DEG: float = 30.0
+const PATH_RATE: float = 0.5
+const CLIMB_SLOW: float = 1.15
+const CLIMB_FAST: float = 1.5
+const HOLD_CAPTURE_MPS: float = 1.5
+const HOLD_GAIN: float = 0.25
+const HOLD_MAX_MPS: float = 6.0
+## Space in the air: the air brake's extra drag coefficient.
+const AIR_BRAKE_CD: float = 0.06
 ## Arcade: the controls keep this share of their authority however slow.
 const ARCADE_AUTHORITY: float = 0.3
 ## The nose-up command fades out over the last few degrees before the stall.
@@ -91,20 +128,14 @@ const RUNWAY_ASSIST_AGL_M: float = 320.0
 const RUNWAY_ASSIST_OUT_M: float = 3000.0
 const RUNWAY_DRIFT_MPS: float = 12.0
 const RUNWAY_DRIFT_ACCEL: float = 3.5
-## Patch 4.0.1 item 1: the auto-level. It works at full strength with no
-## pitch or roll command and fades out by LEVEL_INPUT of either; it rolls at
-## LEVEL_ROLL_GAIN x the bank (at most LEVEL_ROLL_MAX_DPS) and pitches the
-## flight path towards level at LEVEL_PITCH_GAIN (at most LEVEL_PITCH_MAX_DPS).
-const LEVEL_INPUT: float = 0.12
-const LEVEL_ROLL_GAIN: float = 0.9
-const LEVEL_ROLL_MAX_DPS: float = 28.0
-const LEVEL_PITCH_GAIN: float = 0.7
-const LEVEL_PITCH_MAX_DPS: float = 6.0
 ## In the landing configuration (gear down, throttle below LANDING_LEVER),
-## hands off holds a gentle glide (GLIDE_RAD down) instead of level flight,
-## so a hands-off final settles onto the runway.
+## the auto-trim holds a gentle glide (GLIDE_RAD down) instead of an
+## altitude, so a hands-off final settles onto the runway.
 const LANDING_LEVER: float = 0.5
 const GLIDE_RAD: float = deg_to_rad(3.0)
+const GLIDE_AIM_M: float = 150.0
+const GLIDE_FIX_GAIN: float = 0.004
+const GLIDE_FIX_RAD: float = deg_to_rad(2.0)
 ## Patch 4.0.1 item 2: the auto-flare. Gear down, below FLARE_AGL_M and
 ## sinking faster than FLARE_SINK_MPS, the sink eases towards it (ground
 ## effect and a gentle nose-up) by the time the wheels touch.
@@ -145,6 +176,9 @@ var gear_height_m: float = 1.5
 ## plane has just left the ground (the gear comes up once it climbs away),
 ## and this step's events: the gear came up on its own, a belly landing.
 var gear_lever: float = -1.0
+## Patch 4.0.3 item 1: the altitude the auto-trim holds (NAN: none yet; it
+## is taken once the plane levels off after W / S are released).
+var hold_altitude: float = NAN
 var climbing_out: bool = false
 var gear_auto_up: bool = false
 var belly_landed: bool = false
@@ -180,6 +214,7 @@ func place(pose: Transform3D) -> void:
 	on_belly = false
 	gear_auto_up = false
 	belly_landed = false
+	hold_altitude = NAN
 
 func copy_from(other: RefCounted) -> void:
 	if other.kind != kind: setup(other.kind)
@@ -195,6 +230,7 @@ func copy_from(other: RefCounted) -> void:
 	crashed = other.crashed
 	crash_reason = other.crash_reason
 	gear_lever = other.gear_lever
+	hold_altitude = other.hold_altitude
 	climbing_out = other.climbing_out
 	on_belly = other.on_belly
 
@@ -234,39 +270,46 @@ func apply_gear(lever_in: float) -> void:
 		gear_auto_up = true
 		climbing_out = false
 
-## Patch 4.0.2 item 5: the mouse aim's bank limit, radians.
+## Patch 4.0.2 item 5, Patch 4.0.3 item 1: the bank limit, radians (A / D
+## bank to it and never past it).
 func bank_limit() -> float:
 	return deg_to_rad(FIGHTER_BANK_LIMIT_DEG if str(p.get("engines", "")) == "afterburner" else BANK_LIMIT_DEG)
 
-## Patch 4.0.2 item 5: the aim (roll, pitch commands, -1..1) limited so the
-## plane never banks past bank_limit() nor pitches past PITCH_LIMIT_RAD;
-## past either, it is turned back. `keys_roll` (A or D held): an intentional
-## roll, so no bank limit (a barrel roll); the pitch limit still holds, so
-## no loop over onto the back.
-func limit_aim(roll_in: float, pitch_in: float, keys_roll: bool) -> Vector2:
-	var bank: float = full_bank()
-	var rate: float = maxf(deg_to_rad(float(p.roll_dps)), 0.1)
-	var roll: float = clampf(roll_in, -1.0, 1.0)
-	if not keys_roll and not on_ground:
-		# Aimed a few degrees inside the limit (BANK_SOFT_RAD): in a steep dive
-		# the coordinating yaw can carry the bank on a little.
-		var limit: float = bank_limit() - BANK_SOFT_RAD
-		# Towards the limit the command eases off as the margin closes; past
-		# it the plane rolls back (toward wings level) to the limit.
-		roll = clampf(clampf(roll, (-limit - bank) * BANK_GAIN / rate, (limit - bank) * BANK_GAIN / rate), -1.0, 1.0)
+## Patch 4.0.3 item 1: how far A / D bank now: the bank limit, less when
+## slow (the stall protection), so a turn never stalls the wing.
+func turn_bank() -> float:
+	if stalled or angle_of_attack > deg_to_rad(float(p.stall_deg)) - STALL_MARGIN_RAD: return deg_to_rad(TURN_MIN_DEG)
+	var ratio: float = Planes.stall_speed(kind) / maxf(velocity.length(), 1.0)
+	var carried: float = acos(clampf(ratio * ratio / TURN_LIFT_SHARE, 0.0, 1.0))
+	return clampf(carried, deg_to_rad(TURN_MIN_DEG), bank_limit())
+
+## Patch 4.0.3 item 1: 0..1, how much of a climb the speed allows: none
+## under CLIMB_SLOW x the stall speed, all of it from CLIMB_FAST x.
+func climb_share() -> float:
+	return clampf((velocity.length() / Planes.stall_speed(kind) - CLIMB_SLOW) / (CLIMB_FAST - CLIMB_SLOW), 0.0, 1.0)
+
+## Patch 4.0.3 item 1: how steep W climbs and S descends, radians.
+func climb_path() -> float:
+	return deg_to_rad(FIGHTER_CLIMB_PATH_DEG if str(p.get("engines", "")) == "afterburner" else CLIMB_PATH_DEG)
+
+## Patch 4.0.2 item 5: the nose command (W / S, -1..1) limited so the plane
+## never pitches past PITCH_LIMIT_RAD (no loop over onto its back); past
+## it, the nose is turned back.
+func limit_pitch(pitch_in: float) -> float:
 	var pitch: float = clampf(pitch_in, -1.0, 1.0)
-	if not on_ground:
-		# The nose-up command (in the plane's frame) raises the nose by cos(bank).
-		var raise: float = pitch * cos(bank)
-		var nose: float = pitch_angle()
-		var p_rate: float = maxf(deg_to_rad(float(p.pitch_dps)), 0.1)
-		# It aims a few degrees inside the limit (PITCH_SOFT_RAD), so the stall
-		# assist's push and the turn never carry the nose past it.
-		var soft: float = PITCH_LIMIT_RAD - PITCH_SOFT_RAD
-		if raise > 0.0 and nose > soft - 0.3: pitch *= clampf((soft - nose) * LIMIT_GAIN / p_rate / absf(raise), 0.0, 1.0)
-		elif raise < 0.0 and nose < -soft + 0.3: pitch *= clampf((nose + soft) * LIMIT_GAIN / p_rate / absf(raise), 0.0, 1.0)
-		if absf(nose) > soft and absf(cos(bank)) > 0.2: pitch = clampf(-signf(nose) * signf(cos(bank)) * ((absf(nose) - soft) * LIMIT_GAIN / p_rate + 0.15), -1.0, 1.0)
-	return Vector2(roll, pitch)
+	if on_ground: return pitch
+	var bank: float = full_bank()
+	# The nose-up command (in the plane's frame) raises the nose by cos(bank).
+	var raise: float = pitch * cos(bank)
+	var nose: float = pitch_angle()
+	var p_rate: float = maxf(deg_to_rad(float(p.pitch_dps)), 0.1)
+	# It aims a few degrees inside the limit (PITCH_SOFT_RAD), so the stall
+	# assist's push and the turn never carry the nose past it.
+	var soft: float = PITCH_LIMIT_RAD - PITCH_SOFT_RAD
+	if raise > 0.0 and nose > soft - 0.3: pitch *= clampf((soft - nose) * LIMIT_GAIN / p_rate / absf(raise), 0.0, 1.0)
+	elif raise < 0.0 and nose < -soft + 0.3: pitch *= clampf((nose + soft) * LIMIT_GAIN / p_rate / absf(raise), 0.0, 1.0)
+	if absf(nose) > soft and absf(cos(bank)) > 0.2: pitch = clampf(-signf(nose) * signf(cos(bank)) * ((absf(nose) - soft) * LIMIT_GAIN / p_rate + 0.15), -1.0, 1.0)
+	return pitch
 
 ## The runway alignment assist (a yaw rate, radians per second): gear down,
 ## low and nearly lined up with the nearest runway (either end), the nose is
@@ -293,7 +336,7 @@ func final_approach() -> Dictionary:
 	var best_score: float = INF
 	for index: int in list.size():
 		var entry: Dictionary = list[index]
-		var local: Vector3 = Progression.short_way(position - entry.at)
+		var local: Vector3 = Airports.local_to(entry.at, position)
 		if absf(local.x) > 5000.0 or absf(local.z) > 5000.0: continue
 		var axis: Vector3 = Vector3(sin(entry.heading), 0, cos(entry.heading))
 		if Vector3(basis.z.x, 0, basis.z.z).dot(axis) < 0.0: axis = -axis
@@ -320,16 +363,41 @@ func runway_drift(dt: float) -> void:
 	var want: float = clampf(-float(final.across) * 0.1, -RUNWAY_DRIFT_MPS, RUNWAY_DRIFT_MPS)
 	velocity += side * clampf(want - lateral, -RUNWAY_DRIFT_ACCEL * dt, RUNWAY_DRIFT_ACCEL * dt)
 
-## The flight path the auto-level settles on: level, or in the landing
-## configuration a gentle glide that eases into the flare's sink.
-func level_path(lever: float) -> float:
-	if not gear_down or lever >= LANDING_LEVER: return 0.0
-	if agl_m < FLARE_AGL_M: return -asin(clampf(FLARE_SINK_MPS / maxf(velocity.length(), 1.0), 0.0, 0.2))
-	return -GLIDE_RAD
+## Patch 4.0.3 item 1: the flight path the auto-trim flies with W / S
+## released. In the landing configuration a gentle glide that eases into the
+## flare's sink; otherwise level until the climb or sink is under
+## HOLD_CAPTURE_MPS, then back to that altitude (hold_altitude).
+func trim_path(lever: float) -> float:
+	var speed: float = maxf(velocity.length(), 1.0)
+	if gear_down and lever < LANDING_LEVER:
+		hold_altitude = NAN
+		if agl_m < FLARE_AGL_M: return -asin(clampf(FLARE_SINK_MPS / speed, 0.0, 0.2))
+		# Patch 4.0.3 item 1: on a final approach the glide eases onto the
+		# 3 degree slope to the touchdown zone (GLIDE_AIM_M past the
+		# threshold), up to GLIDE_FIX_RAD steeper or shallower.
+		var final: Dictionary = final_approach()
+		if not final.is_empty():
+			var entry: Dictionary = Airports.all()[int(final.airport)]
+			var to_go: float = -float(entry.length) * 0.5 + GLIDE_AIM_M - float(final.along)
+			if to_go > 0.0:
+				var slope_y: float = float(entry.at.y) + gear_height_m + to_go * tan(GLIDE_RAD)
+				return -GLIDE_RAD + clampf((slope_y - position.y) * GLIDE_FIX_GAIN, -GLIDE_FIX_RAD, GLIDE_FIX_RAD)
+		return -GLIDE_RAD
+	if is_nan(hold_altitude):
+		if absf(velocity.y) >= HOLD_CAPTURE_MPS: return 0.0
+		hold_altitude = position.y
+	var climb: float = clampf((hold_altitude - position.y) * HOLD_GAIN, -HOLD_MAX_MPS, HOLD_MAX_MPS)
+	return asin(clampf(climb / speed, -0.3, 0.3))
 
-## How much the auto-level works (1 hands off, 0 with any real command).
-static func level_weight(pitch_in: float, roll_in: float) -> float:
-	return clampf(1.0 - maxf(absf(pitch_in), absf(roll_in)) / LEVEL_INPUT, 0.0, 1.0)
+## Patch 4.0.3 item 1: the angle of attack whose lift carries the plane
+## along its path at this speed and bank (inside the stall margin).
+func trim_alpha(bank: float) -> float:
+	var stall: float = deg_to_rad(float(p.stall_deg)) - STALL_MARGIN_RAD
+	var q: float = 0.5 * air_density(position.y) * velocity.length_squared()
+	if q < 1.0: return stall
+	var need: float = float(p.mass_kg) * GRAVITY * cos(path_angle()) / (q * float(p.wing_m2) * maxf(cos(bank), 0.3))
+	need -= (FLAP_LIFT + FLAP_LIFT_IDLE * (1.0 - engine)) if flaps else 0.0
+	return clampf((need - float(p.cl0)) / maxf(float(p.cl_alpha), 0.1), -0.05, stall)
 
 ## Flight path angle (radians, climbing positive).
 func path_angle() -> float:
@@ -349,15 +417,17 @@ func lift_coefficient(alpha: float) -> float:
 		cl = peak * maxf(0.35, 1.0 - (absf(alpha) - stall) / 0.35)
 	return cl + ((FLAP_LIFT + FLAP_LIFT_IDLE * (1.0 - engine)) if flaps else 0.0)
 
-## One fixed step. `input`: throttle 0..1 (the lever), pitch (+1 nose up),
-## roll (+1 right), yaw (+1 right) in -1..1, brake 0..1.
+## One fixed step. `input` (Patch 4.0.3 item 1, the keys): throttle 0..1
+## (the lever), pitch (W +1 nose up, S -1), roll (D +1 bank right, A -1),
+## trick (a barrel roll: E +1 right, Q -1 left), brake 0..1 (Space: the
+## wheel brakes, in the air the air brake), gear (the lever, 1 down).
 func step(input: Dictionary, dt: float) -> void:
 	crossed_pole = false
 	if crashed or dt <= 0.0: return
 	var lever: float = clampf(float(input.get("throttle", 0.0)), 0.0, 1.0) if fuel_l > 0.0 else 0.0
 	var pitch_in: float = clampf(float(input.get("pitch", 0.0)), -1.0, 1.0)
 	var roll_in: float = clampf(float(input.get("roll", 0.0)), -1.0, 1.0)
-	var yaw_in: float = clampf(float(input.get("yaw", 0.0)), -1.0, 1.0)
+	var trick: float = clampf(float(input.get("trick", 0.0)), -1.0, 1.0)
 	var brake: float = clampf(float(input.get("brake", 0.0)), 0.0, 1.0)
 	apply_gear(float(input.get("gear", -1.0)))
 	belly_landed = false
@@ -387,7 +457,7 @@ func step(input: Dictionary, dt: float) -> void:
 		var lift_share: float = SPOILER_LIFT if on_ground and lever < 0.2 else 1.0
 		if lift_dir.length_squared() > 0.000001: force += lift_dir.normalized() * q * area * cl * lift_share
 		var flap_drag: float = (FLAP_DRAG + FLAP_DRAG_IDLE * (1.0 - engine)) if flaps else 0.0
-		var cd: float = float(p.cd0) + float(p.induced_k) * cl * cl + (0.02 if gear_down else 0.0) + flap_drag + (0.12 if stalled else 0.0) + (0.08 if on_ground and lever < 0.2 else 0.0)
+		var cd: float = float(p.cd0) + float(p.induced_k) * cl * cl + (0.02 if gear_down else 0.0) + flap_drag + (0.12 if stalled else 0.0) + (0.08 if on_ground and lever < 0.2 else 0.0) + (AIR_BRAKE_CD * brake if not on_ground else 0.0)
 		force -= flow * q * area * cd
 		force -= right * q * area * 0.8 * beta
 	# Rotation. Control authority grows with airspeed (dynamic pressure).
@@ -398,33 +468,51 @@ func step(input: Dictionary, dt: float) -> void:
 	var yaw_rate: float = 0.0
 	var turn_rate: float = 0.0
 	if on_ground:
-		# Nose-wheel steering with either yaw or roll keys; rotate near take-off speed.
-		yaw_rate = -(yaw_in + roll_in) * deg_to_rad(30.0) * clampf(speed / 8.0, 0.0, 1.0) * clampf(1.0 - speed / 120.0, 0.3, 1.0)
+		# Nose-wheel steering with A / D; W rotates near take-off speed.
+		hold_altitude = NAN
+		yaw_rate = -roll_in * deg_to_rad(30.0) * clampf(speed / 8.0, 0.0, 1.0) * clampf(1.0 - speed / 120.0, 0.3, 1.0)
 		if along >= float(p.rotate_mps) * 0.9: pitch_rate = pitch_in * deg_to_rad(float(p.pitch_dps)) * 0.5 * authority
 		elif pitch_angle() > 0.0: pitch_rate = -deg_to_rad(4.0)
 	else:
-		# Arcade flight: the controls command rotation rates. Assists (Andy,
-		# November 20): roll and yaw are coordinated (the nose follows the
-		# turn a bank makes, sideslip is cancelled), the stall is recovered
-		# (the nose-up command fades out near the stall angle, a stalled wing
+		# Arcade flight (Patch 4.0.3 item 1: the keys). Assists (Andy,
+		# November 20): the turn is coordinated (the nose follows the turn a
+		# bank makes, sideslip is cancelled), the stall is recovered (the
+		# nose-up command fades out near the stall angle, a stalled wing
 		# lowers the nose until it flies again), the nose lines up with the
-		# runway on a final approach, and (Patch 4.0.1) hands off, the plane
-		# levels itself and the last metres of a landing flare on their own.
+		# runway on a final approach, the auto-trim holds the altitude (or a
+		# glide when set up to land) and the last metres of a landing flare
+		# on their own.
 		var reach: float = maxf(minf(authority, 1.0), ARCADE_AUTHORITY)
 		var bank: float = full_bank()
 		var stall_angle: float = deg_to_rad(float(p.stall_deg))
-		pitch_rate = pitch_in * deg_to_rad(float(p.pitch_dps)) * reach
-		roll_rate = roll_in * deg_to_rad(float(p.roll_dps)) * reach
-		# The auto-level (Patch 4.0.1 item 1): hands off, wings level and the
-		# flight path level (a gentle glide when set up to land), smoothly; any
-		# real pitch or roll command fades it right out.
-		var hands_off: float = level_weight(pitch_in, roll_in)
-		if hands_off > 0.0:
-			var level_roll: float = clampf(-bank * LEVEL_ROLL_GAIN, -deg_to_rad(LEVEL_ROLL_MAX_DPS), deg_to_rad(LEVEL_ROLL_MAX_DPS))
-			roll_rate += level_roll * hands_off * reach
-			if absf(bank) < deg_to_rad(50.0):
-				var level_pitch: float = clampf((level_path(lever) - path_angle()) * LEVEL_PITCH_GAIN, -deg_to_rad(LEVEL_PITCH_MAX_DPS), deg_to_rad(LEVEL_PITCH_MAX_DPS))
-				pitch_rate += level_pitch * hands_off * reach * cos(bank)
+		# W / S: climb or descend at a steady flight path (CLIMB_PATH_DEG, the
+		# Fighter's FIGHTER_CLIMB_PATH_DEG); released, the auto-trim holds the
+		# altitude (or the glide). Any press drops the held altitude.
+		var want_path: float = 0.0
+		if absf(pitch_in) > KEY_HELD:
+			hold_altitude = NAN
+			want_path = pitch_in * climb_path()
+		elif absf(bank) < deg_to_rad(80.0):
+			want_path = trim_path(lever)
+		# The stall protection: too slow, it climbs less (and not at all near
+		# the stall), so it never runs out of speed in a climb.
+		want_path = minf(want_path, climb_path() * climb_share())
+		if absf(pitch_in) > KEY_HELD or absf(bank) < deg_to_rad(80.0):
+			var most: float = deg_to_rad(float(p.pitch_dps)) * PATH_RATE
+			# The nose goes where the path wants plus the wing's angle for the
+			# lift that path needs (trim_alpha), so the path follows it calmly.
+			var nose_to: float = want_path + trim_alpha(bank) * cos(bank) + clampf((want_path - path_angle()) * PATH_TRIM, -PATH_TRIM_MAX_RAD, PATH_TRIM_MAX_RAD)
+			var turn_in: float = clampf((nose_to - pitch_angle()) * TRIM_GAIN, -most, most) / maxf(cos(bank), 0.5)
+			# Inside the pitch limit (no loop over onto the back).
+			pitch_rate = limit_pitch(turn_in / maxf(deg_to_rad(float(p.pitch_dps)), 0.01)) * deg_to_rad(float(p.pitch_dps)) * reach
+		var roll_max: float = deg_to_rad(float(p.roll_dps)) * reach
+		if absf(trick) > KEY_HELD:
+			# Q / E: the barrel roll, past the limit (Aviation holds it for one turn).
+			roll_rate = signf(trick) * deg_to_rad(maxf(float(p.roll_dps), BARREL_DPS)) * reach
+		else:
+			# A / D bank to the limit (less when slow: turn_bank), and roll
+			# level when released.
+			roll_rate = clampf((roll_in * turn_bank() - bank) * ROLL_GAIN, -roll_max, roll_max)
 		# The auto-flare (item 2): the last few metres, gear down, the wings
 		# level whatever the player holds, and a hard sink raises the nose.
 		var flare: float = flare_weight()
@@ -433,11 +521,19 @@ func step(input: Dictionary, dt: float) -> void:
 			roll_rate = lerpf(roll_rate, clampf(-bank * 2.0, -0.6, 0.6), flare)
 		var margin: float = angle_of_attack - (stall_angle - STALL_MARGIN_RAD)
 		if margin > 0.0 and pitch_rate > 0.0: pitch_rate *= clampf(1.0 - margin / STALL_MARGIN_RAD, 0.0, 1.0)
-		if stalled: pitch_rate -= deg_to_rad(float(p.pitch_dps)) * 0.6
-		yaw_rate = -yaw_in * deg_to_rad(float(p.yaw_dps)) * reach - beta * 1.5 * reach + runway_assist()
+		# (Patch 4.0.3: a wing stalled the other way, nose pushed too far
+		# down, has its nose raised.)
+		if stalled: pitch_rate -= signf(angle_of_attack) * deg_to_rad(float(p.pitch_dps)) * 0.6
+		yaw_rate = -beta * 1.5 * reach + runway_assist()
 		# The coordinated turn: the nose follows the turn the bank makes.
 		if absf(bank) < PI * 0.5: turn_rate = -GRAVITY * tan(clampf(bank, -1.25, 1.25)) / maxf(speed, float(p.rotate_mps))
 	basis = (Basis(Vector3.UP, turn_rate * dt) * basis * Basis(Vector3(1, 0, 0), -pitch_rate * dt) * Basis(Vector3(0, 0, 1), roll_rate * dt) * Basis(Vector3(0, 1, 0), yaw_rate * dt)).orthonormalized()
+	# Patch 4.0.3 item 1: outside a barrel roll the bank never passes the
+	# limit (a stalled wing or the sideslip's yaw could carry it a little
+	# past); a bigger bank (a barrel roll let go) rolls back on its own.
+	if not on_ground and absf(trick) <= KEY_HELD:
+		var over: float = absf(full_bank()) - bank_limit()
+		if over > 0.0 and over < BANK_SNAP_RAD: basis = (basis * Basis(Vector3(0, 0, 1), -signf(full_bank()) * over)).orthonormalized()
 	velocity += force / mass * dt
 	if not on_ground: runway_drift(dt)
 	# The auto-flare's cushion: the sink eases off before the wheels touch.

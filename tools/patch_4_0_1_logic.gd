@@ -45,10 +45,10 @@ func version() -> void:
 	# Patch 4.0.2: later patches move VERSION on; 4.0.1 or newer.
 	expect(connection.VERSION.naturalnocasecmp_to("4.0.1") >= 0, "VERSION is 4.0.1 or later (%s)" % connection.VERSION)
 
-## Item 1: hands off (no pitch or roll), a banked, climbing plane rolls gently
-## wings-level and settles into level flight; any command fades it out.
+## Item 1: hands off (no pitch or roll), a banked, climbing plane rolls
+## wings-level and settles into level flight. Patch 4.0.3 item 1: the keys
+## are the commands (W / S, A / D); released, the auto-trim takes over.
 func auto_level() -> void:
-	expect(Flight.level_weight(0.0, 0.0) == 1.0 and Flight.level_weight(0.0, Flight.LEVEL_INPUT) == 0.0 and Flight.level_weight(-0.5, 0.0) == 0.0, "the auto-level works hands off only")
 	for kind: String in Planes.ORDER:
 		var m: RefCounted = Flight.make(kind, Airports.start_pose(0))
 		m.on_ground = false
@@ -64,12 +64,12 @@ func auto_level() -> void:
 			last_bank = m.full_bank()
 		expect(not m.crashed and absf(rad_to_deg(m.full_bank())) < 2.0, "%s: hands off, the wings come level (%.1f deg)" % [kind, rad_to_deg(m.full_bank())])
 		expect(absf(rad_to_deg(m.path_angle())) < 1.5, "%s: hands off, it holds level flight (path %.1f deg)" % [kind, rad_to_deg(m.path_angle())])
-		expect(rad_to_deg(fastest) <= Flight.LEVEL_ROLL_MAX_DPS * 1.2 + 6.0, "%s: the auto-level is gentle (at most %.0f deg/s)" % [kind, rad_to_deg(fastest)])
-		# A held roll command is never fought: the plane rolls at its command.
+		expect(rad_to_deg(fastest) <= float(Planes.PLANES[kind].roll_dps) * 1.1, "%s: it rolls level no faster than its roll rate (%.0f deg/s)" % [kind, rad_to_deg(fastest)])
+		# A held D is never fought: the plane banks to the right at once.
 		m.basis = Basis(Vector3.UP, 0.4)
 		m.velocity = m.basis.z * Planes.stall_speed(kind) * 2.2
-		for frame: int in 15: m.step({"throttle": 0.6, "roll": 0.5}, STEP)
-		expect(rad_to_deg(m.full_bank()) > float(Planes.PLANES[kind].roll_dps) * 0.5 * 0.5 * 0.3 * 0.9, "%s: a held roll command rolls the plane (%.1f deg)" % [kind, rad_to_deg(m.full_bank())])
+		for frame: int in 15: m.step({"throttle": 0.6, "roll": 1.0}, STEP)
+		expect(rad_to_deg(m.full_bank()) > 3.0, "%s: a held D banks the plane (%.1f deg)" % [kind, rad_to_deg(m.full_bank())])
 
 ## Item 2: the sloppy pilot (tools/flight_autopilot.gd) lands and stops on
 ## the airfield, for every plane, at every airport, from two messy set-ups.
@@ -180,13 +180,14 @@ func airfields() -> void:
 				var spot: Vector3 = entry.at + along * a + side * c
 				var sample: Dictionary = Terrain.sample(spot)
 				worst_terrain = maxf(worst_terrain, float(sample.height))
-				flat = flat and sample.surface in ["runway", "airfield"] and absf(float(sample.height) - Airports.RUNWAY_Y) < 0.01
+				# (Patch 4.0.3 item 8: each at its own runway's height.)
+				flat = flat and sample.surface in ["runway", "airfield"] and absf(float(sample.height) - float(entry.at.y)) < 0.01
 				var depth: float = Progression.land_depth(Vector2(spot.x, spot.z))
 				if depth > TOON_COAST.SAND_FROM_M: worst_drawn = maxf(worst_drawn, maxf(TOON_COAST.sand_height(depth, 0.0), TOON_COAST.hill_height(depth)))
 				c += 8.0
 			a += 10.0
-		expect(flat and worst_terrain <= Airports.RUNWAY_Y + 0.01, "%s: the airfield is level and clear (highest %.1f m)" % [entry.name, worst_terrain])
-		expect(worst_drawn < Airports.RUNWAY_Y, "%s: no drawn hill rises above the runway inside the footprint (%.1f m)" % [entry.name, worst_drawn])
+		expect(flat and worst_terrain <= float(entry.at.y) + 0.01, "%s: the airfield is level and clear (highest %.1f m)" % [entry.name, worst_terrain])
+		expect(worst_drawn < float(entry.at.y), "%s: no drawn hill rises above the runway inside the footprint (%.1f m)" % [entry.name, worst_drawn])
 		var terminal: Vector3 = entry.terminal
 		expect(Airports.on_airfield(index, terminal) and Airports.on_airfield(index, Airports.start_pose(index).origin), "%s: the terminal and the start are on the airfield" % entry.name)
 		var node: Node3D = Look.airport(index)
@@ -209,8 +210,8 @@ func airfields() -> void:
 				else: up = up and out.y > 0.0
 			# Patch 4.0.2 item 3: the top is cut round the runway and the apron
 			# (more than two faces) and stands Look.FIELD_DROP_M below the runway.
-			up = up and faces >= 2 and absf(top + field.position.y - (Airports.RUNWAY_Y - Look.FIELD_DROP_M)) < 0.01
-		expect(up, "%s: the airfield ground faces up (grass, not a black slab)" % entry.name)
+			up = up and faces >= 2 and absf(top + field.position.y - (float(entry.at.y) - Look.FIELD_DROP_M)) < 0.01
+		expect(up, "%s: the airfield ground faces up (grass or snow, not a black slab)" % entry.name)
 		node.free()
 
 ## Old saves: a 4.0 progress row (a captain below the old level 10 with a

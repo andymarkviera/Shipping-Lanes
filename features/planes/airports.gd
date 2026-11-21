@@ -31,10 +31,51 @@ const FIELD_END_M: float = 60.0
 const FIELD_SEA_M: float = 30.0
 const FIELD_LAND_M: float = 95.0
 const NAMES: Array[String] = ["Brindle Field", "Slatewater Air", "Cinder Strip", "Gannet Aerodrome", "Ironreach Airfield", "Hearth Point Airport", "Kelp Field", "Ember Airstrip"]
+## Patch 4.0.3 item 8: the seed places the first SEEDED airports, as it
+## always did (so the others stay exactly where they were); then the FIXED
+## ones replace theirs. Andy moved two onto the polar ice caps, near the
+## poles: Cinder Strip (north) and Gannet Aerodrome, now South Runway (the
+## south cap's centre). Each keeps its index and ID, so saved planes, jobs
+## and job IDs still point at it (a plane saved there starts on the new
+## runway; a job to it is flown to the new place). On the globe the world's
+## north/south edge is the pole, so a polar runway lies east-west
+## POLE_RUNWAY_M from it, on the level snow round the pole (PolarIce.relief
+## fades out there), its surface POLAR_RUNWAY_Y: a hand above the cap's
+## plateau (PolarIce.PLATEAU_Y, 46 m), so the snowfield under it is a thin
+## step, like the grass round the others. `side`: which side of the runway
+## the terminal stands (away from the pole).
+const SEEDED: int = 6
+const POLE_RUNWAY_M: float = 300.0
+const POLAR_RUNWAY_Y: float = 46.6
+## Patch 4.0.3 item 7: and Point Nemo's runway (the seventh airport, one per
+## port), along its main islet (tools/world_layout/point_nemo.py), west of
+## it the port, at the land runways' height.
+const FIXED: Dictionary = {
+	2: {"name": "Cinder Strip", "x": 4400.0, "pole": 1.0, "heading": PI / 2.0, "side": 1.0},
+	3: {"name": "South Runway", "x": -250.0, "pole": -1.0, "heading": PI / 2.0, "side": -1.0},
+	6: {"name": "Point Nemo", "x": 6550.0, "z": -1610.0, "heading": 0.0, "side": -1.0},
+}
+## Patch 4.0.3 item 8: where the two moved airports stood before (their
+## runway middles), for the save checks and the history.
+const MOVED_FROM: Dictionary = {2: Vector3(3322.917, 19.5, -2200.0), 3: Vector3(-250.0, 19.5, -3410.714)}
 static var _cache: Array[Dictionary] = []
 
 static func count() -> int:
 	return Progression.WORLD.size()
+
+## Patch 4.0.3 item 8: `position` seen from `at` (a point inside the world,
+## like an airport's), for planes and airports: round the world east-west,
+## but never across the north/south edge (that is the pole; a plane flying
+## over it comes back on the same side, FlightModel.cross_pole). The same as
+## Progression.short_way everywhere but near the poles.
+static func local_to(at: Vector3, position: Vector3) -> Vector3:
+	var step: Vector3 = Progression.wrapped(position) - at
+	step.x = wrapf(step.x, -Progression.WRAP_M / 2, Progression.WRAP_M / 2)
+	return step
+
+## Whether airport `index` stands on a polar ice cap (a snow runway).
+static func polar(index: int) -> bool:
+	return bool(all()[index].get("polar", false))
 
 ## [{id, name, at (runway middle, Vector3 at RUNWAY_Y), heading (radians, +Z
 ## turned towards +X), length, width, terminal (Vector3), side (+1 or -1: the
@@ -48,7 +89,7 @@ static func all() -> Array[Dictionary]:
 	var placed: Array[Dictionary] = []
 	if ring.is_empty(): return _cache
 	var tries: int = 0
-	while placed.size() < count() and tries < 6000:
+	while placed.size() < mini(count(), SEEDED) and tries < 6000:
 		tries += 1
 		var spot: Vector2 = ring[rng.randi_range(0, ring.size() - 1)]
 		var heading: float = coast_heading(spot)
@@ -61,8 +102,26 @@ static func all() -> Array[Dictionary]:
 		var side: float = 1.0 if Vector2(cos(heading), -sin(heading)).dot(inland) > 0.0 else -1.0
 		placed.append({"id": "airport_%d" % placed.size(), "name": NAMES[placed.size() % NAMES.size()], "at": Vector3(spot.x, RUNWAY_Y, spot.y),
 			"heading": heading, "length": RUNWAY_M, "width": RUNWAY_WIDTH_M, "terminal": Vector3(terminal.x, RUNWAY_Y, terminal.y), "side": side})
+	for index: int in FIXED:
+		if index < placed.size(): placed[index] = fixed_entry(index)
+	for index: int in range(placed.size(), count()):
+		if FIXED.has(index): placed.append(fixed_entry(index))
 	_cache = placed
 	return _cache
+
+## Patch 4.0.3 item 8: a FIXED airport's entry, like a seeded one.
+static func fixed_entry(index: int) -> Dictionary:
+	var spec: Dictionary = FIXED[index]
+	var polar_cap: bool = spec.has("pole")
+	var edge: float = Progression.WRAP_CENTRE.z + float(spec.get("pole", 0.0)) * Progression.WRAP_M / 2.0
+	var spot: Vector2 = Vector2(float(spec.x), edge - float(spec.pole) * POLE_RUNWAY_M) if polar_cap else Vector2(float(spec.x), float(spec.z))
+	var height: float = POLAR_RUNWAY_Y if polar_cap else RUNWAY_Y
+	var heading: float = float(spec.heading)
+	var along: Vector2 = Vector2(sin(heading), cos(heading))
+	var inland: Vector2 = Vector2(cos(heading), -sin(heading)) * float(spec.side)
+	var terminal: Vector2 = spot + inland * (RUNWAY_WIDTH_M * 0.5 + 34.0) + along * 120.0
+	return {"id": "airport_%d" % index, "name": str(spec.name), "at": Vector3(spot.x, height, spot.y), "heading": heading,
+		"length": RUNWAY_M, "width": RUNWAY_WIDTH_M, "terminal": Vector3(terminal.x, height, terminal.y), "side": float(spec.side), "polar": polar_cap}
 
 ## The coast's direction at a spot: perpendicular to the land depth's slope.
 static func coast_heading(spot: Vector2) -> float:
@@ -112,7 +171,7 @@ static func nearest(position: Vector3) -> int:
 	var best_distance: float = INF
 	var list: Array[Dictionary] = all()
 	for index: int in list.size():
-		var distance: float = Progression.short_way(list[index].at - position).length()
+		var distance: float = local_to(list[index].at, position).length()
 		if distance < best_distance:
 			best_distance = distance
 			best = index
@@ -120,14 +179,14 @@ static func nearest(position: Vector3) -> int:
 
 ## Metres from a position to an airport's runway middle, the short way round.
 static func distance_to(index: int, position: Vector3) -> float:
-	var flat: Vector3 = Progression.short_way(all()[index].at - position)
+	var flat: Vector3 = local_to(all()[index].at, position)
 	flat.y = 0.0
 	return flat.length()
 
 ## Whether a world X/Z lies on airport `index`'s runway (in its rectangle).
 static func on_runway(index: int, position: Vector3, margin: float = 0.0) -> bool:
 	var entry: Dictionary = all()[index]
-	var local: Vector3 = Progression.short_way(position - entry.at)
+	var local: Vector3 = local_to(entry.at, position)
 	var along: float = local.x * sin(entry.heading) + local.z * cos(entry.heading)
 	var across: float = local.x * cos(entry.heading) - local.z * sin(entry.heading)
 	return absf(along) <= entry.length * 0.5 + margin and absf(across) <= entry.width * 0.5 + margin
@@ -147,7 +206,7 @@ static func field_half_length(index: int) -> float:
 ## Whether a world X/Z lies on airport `index`'s airfield (its whole footprint).
 static func on_airfield(index: int, position: Vector3, margin: float = 0.0) -> bool:
 	var entry: Dictionary = all()[index]
-	var local: Vector3 = Progression.short_way(position - entry.at)
+	var local: Vector3 = local_to(entry.at, position)
 	if absf(local.x) > 2000.0 or absf(local.z) > 2000.0: return false
 	var along: float = local.x * sin(entry.heading) + local.z * cos(entry.heading)
 	var across: float = local.x * cos(entry.heading) - local.z * sin(entry.heading)

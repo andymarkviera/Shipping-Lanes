@@ -72,6 +72,11 @@ func run() -> void:
 	# old saves, VERSION (tools/patch_4_0_2_check.gd adds the game scene).
 	for failure: String in load("res://tools/patch_4_0_2_logic.gd").run_all():
 		failures.append("Patch 4.0.2: " + failure)
+	# Patch 4.0.3: the keyboard flight (altitude hold, bank limit, brakes),
+	# every class's berth, the plane trips, the throttle widget, Point Nemo,
+	# the polar runways, VERSION (tools/patch_4_0_3_check.gd adds the scene).
+	for failure: String in load("res://tools/patch_4_0_3_logic.gd").run_all():
+		failures.append("Patch 4.0.3: " + failure)
 	for failure: String in failures:
 		push_error(failure)
 	print("CATALOG_CHECK_PASS" if failures.is_empty() else "CATALOG_CHECK_FAILED")

@@ -1479,6 +1479,21 @@ sounds are synthesised in code. The collision speed cap is 830 m/s. Checks:
 `tools/patch_4_0_2_check.gd`; the scene-free part also runs in
 `check_catalog.gd`. Waiting for Andy's Windows playtest.
 
+**Patch 4.0.3 (November 21, 2026, issue #226):** VERSION 4.0.3. Andy's playtest
+of 4.0.2. Flying is keyboard only: W / S climb and descend and the plane holds
+its altitude when released, A / D bank-turn (45°, Fighter 60°), Shift / Ctrl a
+throttle lever that stays put, Space brakes, Q / E barrel roll, G gear. The
+throttle shows in the boat's slider, 0–100 %. The polar caps are solid through
+the pole. The globe shows a runway for an airport and a pier with a crane for a
+port. Heavy lifters dock everywhere again (Cinder Point had no heavy service)
+and get one Lift / Drop button. The dock menu keeps the actions left and the
+shops (Ships, Planes) right. Plane jobs use the boat job cards, with km,
+minutes and fuel, and the globe shows the course. New: Point Nemo (islets, port,
+runway); Cinder Strip moved onto the north cap and Gannet Aerodrome became South
+Runway on the south cap (same IDs). Checks: `tools/patch_4_0_3_check.gd`; the
+scene-free part also runs in `check_catalog.gd`. Waiting for Andy's Windows
+playtest.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge
