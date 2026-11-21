@@ -21,6 +21,15 @@ const MIDDLE_INLAND_M: float = 320.0
 const PORT_CLEAR_M: float = 1100.0
 const AIRPORT_CLEAR_M: float = 1800.0
 const ICE_CLEAR_M: float = 250.0
+## Patch 4.0.1 item 7: the airfield, the flat, cleared footprint of an airport
+## (runway, apron, terminal and tower, plus a margin): FIELD_END_M past each
+## runway end, FIELD_SEA_M beyond the seaward edge and FIELD_LAND_M beyond the
+## inland edge (where the apron and terminal stand). Terrain.sample is level
+## at RUNWAY_Y over all of it (no hill pokes through), and plane_look draws it
+## as one grass embankment with the tarmac on top.
+const FIELD_END_M: float = 60.0
+const FIELD_SEA_M: float = 30.0
+const FIELD_LAND_M: float = 95.0
 const NAMES: Array[String] = ["Brindle Field", "Slatewater Air", "Cinder Strip", "Gannet Aerodrome", "Ironreach Airfield", "Hearth Point Airport", "Kelp Field", "Ember Airstrip"]
 static var _cache: Array[Dictionary] = []
 
@@ -28,7 +37,9 @@ static func count() -> int:
 	return Progression.WORLD.size()
 
 ## [{id, name, at (runway middle, Vector3 at RUNWAY_Y), heading (radians, +Z
-## turned towards +X), length, width, terminal (Vector3)}], one per port.
+## turned towards +X), length, width, terminal (Vector3), side (+1 or -1: the
+## inland side along the runway's across axis, (cos heading, -sin heading))}],
+## one per port.
 static func all() -> Array[Dictionary]:
 	if not _cache.is_empty(): return _cache
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -47,8 +58,9 @@ static func all() -> Array[Dictionary]:
 		var along: Vector2 = Vector2(sin(heading), cos(heading))
 		var inland: Vector2 = land_side(spot, along)
 		var terminal: Vector2 = spot + inland * (RUNWAY_WIDTH_M * 0.5 + 34.0) + along * 120.0
+		var side: float = 1.0 if Vector2(cos(heading), -sin(heading)).dot(inland) > 0.0 else -1.0
 		placed.append({"id": "airport_%d" % placed.size(), "name": NAMES[placed.size() % NAMES.size()], "at": Vector3(spot.x, RUNWAY_Y, spot.y),
-			"heading": heading, "length": RUNWAY_M, "width": RUNWAY_WIDTH_M, "terminal": Vector3(terminal.x, RUNWAY_Y, terminal.y)})
+			"heading": heading, "length": RUNWAY_M, "width": RUNWAY_WIDTH_M, "terminal": Vector3(terminal.x, RUNWAY_Y, terminal.y), "side": side})
 	_cache = placed
 	return _cache
 
@@ -119,6 +131,34 @@ static func on_runway(index: int, position: Vector3, margin: float = 0.0) -> boo
 	var along: float = local.x * sin(entry.heading) + local.z * cos(entry.heading)
 	var across: float = local.x * cos(entry.heading) - local.z * sin(entry.heading)
 	return absf(along) <= entry.length * 0.5 + margin and absf(across) <= entry.width * 0.5 + margin
+
+## Patch 4.0.1 item 7: the airfield's extent across the runway's axis, in the
+## runway's frame: [seaward edge, inland edge] (metres from the centre line,
+## positive towards (cos heading, -sin heading)), and along it (half length).
+static func field_across(index: int) -> Vector2:
+	var entry: Dictionary = all()[index]
+	var near: float = entry.width * 0.5 + FIELD_SEA_M
+	var far: float = entry.width * 0.5 + FIELD_LAND_M
+	return Vector2(-near, far) if float(entry.side) > 0.0 else Vector2(-far, near)
+
+static func field_half_length(index: int) -> float:
+	return float(all()[index].length) * 0.5 + FIELD_END_M
+
+## Whether a world X/Z lies on airport `index`'s airfield (its whole footprint).
+static func on_airfield(index: int, position: Vector3, margin: float = 0.0) -> bool:
+	var entry: Dictionary = all()[index]
+	var local: Vector3 = Progression.short_way(position - entry.at)
+	if absf(local.x) > 2000.0 or absf(local.z) > 2000.0: return false
+	var along: float = local.x * sin(entry.heading) + local.z * cos(entry.heading)
+	var across: float = local.x * cos(entry.heading) - local.z * sin(entry.heading)
+	var span: Vector2 = field_across(index)
+	return absf(along) <= field_half_length(index) + margin and across >= span.x - margin and across <= span.y + margin
+
+## Any airfield under a position, or -1.
+static func airfield_at(position: Vector3) -> int:
+	for index: int in all().size():
+		if on_airfield(index, position): return index
+	return -1
 
 ## Any runway under a position, or -1.
 static func runway_at(position: Vector3) -> int:

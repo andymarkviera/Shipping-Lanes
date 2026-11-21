@@ -4,6 +4,11 @@ extends RefCounted
 ## so a take-off and landing it manages proves the physics are flyable: climb
 ## out, fly to a fix five km before the destination runway, track the runway's
 ## centre line down a 3 degree glide path, flare, touch down and brake.
+## Patch 4.0.1 item 2: sloppy_start / sloppy_inputs fly the approach an
+## average player would: set up off the centre line, a little fast and high,
+## nearly lined up, then only coarse inputs (a rough turn towards the runway's
+## heading, throttle back, hands off the pitch, no flare, S to brake). The
+## assists (runway alignment, auto-level glide, auto-flare) do the rest.
 const Airports = preload("res://features/planes/airports.gd")
 const Planes = preload("res://features/planes/plane_catalog.gd")
 const Progression = preload("res://features/game/progression.gd")
@@ -94,3 +99,55 @@ func steer_ground(m: RefCounted, axis: Vector3) -> float:
 	var local: Vector3 = Progression.short_way(m.position - threshold())
 	var off: float = local.x * axis.z - local.z * axis.x
 	return clampf(-angle_difference(m.heading(), want) * 4.0 + off * 0.04, -1.0, 1.0)
+
+## Patch 4.0.1: an approach start for the sloppy pilot: `out_m` before the
+## runway's near end, `offset_m` off the centre line, `turn` radians off its
+## heading, `high_m` above a 3 degree path, at `fast` x the stall speed.
+func sloppy_start(m: RefCounted, out_m: float = 3000.0, offset_m: float = 90.0, turn: float = deg_to_rad(8.0), high_m: float = 25.0, fast: float = 1.4) -> void:
+	var entry: Dictionary = Airports.all()[destination]
+	var axis: Vector3 = runway_axis()
+	var side: Vector3 = Vector3(axis.z, 0, -axis.x)
+	var near_end: Vector3 = entry.at - axis * entry.length * 0.5
+	var at: Vector3 = near_end - axis * out_m + side * offset_m
+	at.y = Airports.RUNWAY_Y + m.gear_height_m + out_m * tan(deg_to_rad(3.0)) + high_m
+	m.position = at
+	m.basis = Basis(Vector3.UP, atan2(axis.x, axis.z) + turn) * Basis(Vector3(1, 0, 0), deg_to_rad(2.0))
+	m.velocity = m.basis.z * Planes.stall_speed(m.kind) * fast
+	m.on_ground = false
+	m.engine = 0.3
+	m.agl_m = at.y - Airports.RUNWAY_Y
+	phase = "sloppy"
+
+func sloppy_inputs(m: RefCounted) -> Dictionary:
+	var out: Dictionary = {"throttle": 0.25, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "brake": 0.0}
+	if m.on_ground: phase = "rollout"
+	if phase == "rollout":
+		# S held at idle: the brakes. No steering at all.
+		out.throttle = 0.0
+		out.brake = 1.0
+		return out
+	var entry: Dictionary = Airports.all()[destination]
+	var axis: Vector3 = runway_axis()
+	# A coarse turn towards the far end of the runway: a nudge of roll while
+	# the nose is more than 6 degrees off it, then hands off (the auto-level
+	# rolls it level); hands off altogether in the last 20 m.
+	var aim_at: Vector3 = Progression.short_way(entry.at + axis * entry.length * 0.5 - m.position)
+	var error: float = angle_difference(m.heading(), atan2(aim_at.x, aim_at.z))
+	# (A nudge that rolls about 9 degrees a second, whatever the plane.)
+	if absf(error) > deg_to_rad(6.0) and m.agl_m > 20.0: out.roll = -signf(error) * clampf(9.0 / float(m.p.roll_dps), 0.04, 0.3)
+	# Coarse pitch: a nudge down while well above a 3 degree path, a nudge
+	# up while well below it; hands off in between (and in the last 40 m).
+	var local: Vector3 = Progression.short_way(m.position - (entry.at - axis * entry.length * 0.5))
+	var to_go: float = -(local.x * axis.x + local.z * axis.z)
+	var path_m: float = Airports.RUNWAY_Y + maxf(to_go, 0.0) * tan(deg_to_rad(3.0))
+	if m.agl_m > 40.0:
+		if m.position.y > path_m + 40.0: out.pitch = -0.2
+		elif m.position.y < path_m - 40.0: out.pitch = 0.2
+	# Coarse throttle: a set approach power, more when slow, idle when fast,
+	# idle at the end.
+	var stall: float = Planes.stall_speed(m.kind)
+	out.throttle = 0.3
+	if m.airspeed() < stall * 1.1: out.throttle = 0.6
+	elif m.airspeed() > stall * 1.6: out.throttle = 0.0
+	if m.agl_m < 15.0: out.throttle = 0.0
+	return out

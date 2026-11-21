@@ -1,8 +1,9 @@
 extends RefCounted
 ## Patch 4.0 headless checks that need no scene: the boat lineup and the fishing
 ## boat's refund, the level curve, the airports, the plane jobs and the flight
-## model (lift and stall, arcade controls with no auto-level, the automatic
-## gear, a scripted take-off and landing for every plane, a crash).
+## model (lift and stall, arcade controls with the auto-level (back in
+## 4.0.1), the automatic gear, a scripted take-off and landing for every
+## plane, a crash).
 ## check_catalog.gd (in the Checks job) runs these; tools/patch_4_0_check.gd
 ## runs them too, then the game-scene checks.
 const Progression = preload("res://features/game/progression.gd")
@@ -63,7 +64,7 @@ func boats() -> void:
 func levels() -> void:
 	expect(Levels.level_for(0) == 1 and Levels.fresh_progress().xp == 0, "everyone starts at level 1 with 0 XP")
 	expect(Levels.level_for(Levels.xp_for_level(10)) == 10 and Levels.level_for(Levels.xp_for_level(10) - 1) == 9, "the level curve is consistent")
-	var deliveries: int = ceili(float(Levels.xp_for_level(Levels.PLANE_LEVEL)) / float(Levels.xp_for_pay(400000)))
+	var deliveries: int = ceili(float(Levels.xp_for_level(10)) / float(Levels.xp_for_pay(400000)))
 	expect(deliveries >= 20 and deliveries <= 80, "level 10 takes a few hours of normal deliveries (%d at 4,000 credits)" % deliveries)
 	expect(Levels.xp_for_pay(1000000) > Levels.xp_for_pay(100000) and Levels.xp_for_pay(0) == 0, "XP grows with the payout")
 	expect(Levels.award(100, 50) == 150 and Levels.award(100, -50) == 100, "award only adds")
@@ -87,6 +88,9 @@ func airports() -> void:
 func jobs() -> void:
 	for kind: String in Planes.ORDER:
 		var board: Array[Dictionary] = Jobs.board(0, Planes.PLANES[kind])
+		if int(Planes.PLANES[kind].capacity) <= 0:
+			expect(board.is_empty(), "%s carries no cargo and is offered no jobs (Patch 4.0.1)" % kind)
+			continue
 		expect(not board.is_empty(), "%s has plane jobs at the first airport" % kind)
 		for row: Dictionary in board:
 			expect(int(row.capacity) <= int(Planes.PLANES[kind].capacity) and int(row.origin) == 0 and int(row.destination) != 0, "%s: a job it can carry to another airport" % kind)
@@ -102,15 +106,21 @@ func flight() -> void:
 		expect(m.lift_coefficient(stall * 0.5) < m.lift_coefficient(stall) and m.lift_coefficient(stall + 0.2) < m.lift_coefficient(stall), "%s: lift grows to the stall, then falls away" % kind)
 		expect(Planes.top_speed(kind) > Planes.stall_speed(kind) * 1.6, "%s: top speed well above the stall" % kind)
 		expect(m.gear_down and m.on_ground and Airports.runway_at(m.position) == 0, "%s: parked on the runway, gear down" % kind)
-		# Hands off in a banked climb: the plane keeps its attitude (no auto-level).
+		# A held bank turns the plane (coordinated); hands off, the auto-level
+		# (back in Patch 4.0.1) rolls it gently wings-level (patch_4_0_1_logic).
 		var cruise: Transform3D = Transform3D(Basis(Vector3.UP, 0.4) * Basis(Vector3(1, 0, 0), -deg_to_rad(4.0)) * Basis(Vector3(0, 0, 1), deg_to_rad(30.0)), Vector3(0, 900, 0))
 		m.on_ground = false
 		m.basis = cruise.basis
 		m.position = Airports.all()[0].at + Vector3(0, 900, 0)
 		m.velocity = m.basis.z * Planes.stall_speed(kind) * 1.6
 		m.engine = 0.7
-		for frame: int in 90: m.step({"throttle": 0.7}, STEP)
-		expect(absf(rad_to_deg(m.full_bank()) - 30.0) < 2.0, "%s: hands off, the bank holds (%.1f deg, no auto-level)" % [kind, rad_to_deg(m.full_bank())])
+		for frame: int in 90: m.step({"throttle": 0.7, "roll": 0.0, "pitch": 0.0}, STEP)
+		expect(absf(rad_to_deg(m.full_bank())) < 30.0, "%s: hands off, the bank eases towards level (%.1f deg)" % [kind, rad_to_deg(m.full_bank())])
+		# With a hand on the stick (a light pull, so no auto-level) a held bank
+		# turns the plane: the coordinated turn.
+		m.basis = cruise.basis
+		m.velocity = m.basis.z * Planes.stall_speed(kind) * 1.6
+		for frame: int in 90: m.step({"throttle": 0.7, "roll": 0.0, "pitch": Flight.LEVEL_INPUT + 0.01}, STEP)
 		expect(absf(angle_difference(m.heading(), 0.4)) > 0.05, "%s: a held bank turns the plane (coordinated)" % kind)
 		expect(not m.gear_down, "%s: the gear is up in cruise" % kind)
 		# Too slow: the wing stalls and the assist lowers the nose until it flies.

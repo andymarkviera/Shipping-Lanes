@@ -8380,3 +8380,86 @@ oil, refinery and cargo-fuel code is untouched.
 - Not verified: Windows play, how the planes feel with a real mouse, the globe
   relief on screen (headless has no renderer), a real online session at plane
   and Jetty speeds.
+
+## Patch 4.0.1 — plane feel, crash cam, Fighter jet, turbofans, planes for all, airport ground (November 20, 2026)
+
+Issue #222 (Andy's first plane playtest). VERSION 4.0.0 → 4.0.1. No workflow
+edits. The gas, oil, refinery and cargo-fuel code is untouched. The HUD layout is
+unchanged; the plane HUD rework is the next patch.
+- 1, auto-level (flight_model.gd): hands off (no pitch or roll command), the
+  plane rolls gently wings-level (at most 28°/s) and pitches the flight path
+  towards level. When set up to land (gear down, throttle under half) it holds a
+  gentle 3° glide instead. It fades out completely at 0.12 of any pitch or roll
+  command, so it never fights the aim. The aim's dead zone keeps a centred cursor
+  at exactly zero.
+- 2, landing: the gear and flaps come down near an airport below 250 m when slow.
+  The flaps add more lift and drag as the throttle drops. In the last 9 m over
+  the airfield the auto-flare eases the sink to 2.5 m/s and levels the wings.
+  Touchdown now tolerates an 8.5 m/s sink (was 6), 30° of bank (was 20) and 10°
+  nose-down (was 6). Wear only starts above a 3.5 m/s sink. The runway assist
+  reaches 3 km out, ±25° and 450 m off the line. It also drifts the plane gently
+  onto the centre line, and it now tries every airport: the 4.0 version only
+  looked at the nearest runway middle, and the airports are 2–3 km apart. The
+  mouse aim is smoothed (0.14 s) and softer near the centre (aviation.gd). On the
+  wheels at idle the spoilers dump lift and add drag. The brakes (S at idle) are
+  stronger (1.1 g). The airfield grass beside a runway is landable and counts as
+  stopped at the airport.
+- 3, crash cam: the authority still bills, drops the cargo and parks the plane
+  at the nearest airport at once. The view (local play, and the online client
+  from `crashes`/`crash_at` in the plane state) holds on the wreck for
+  `CRASH_VIEW_S` = 4 s. During that time you see the explosion (fireball, smoke,
+  debris), and the camera orbits and pulls back. The laid-up boat (and so the
+  sea) stays at the wreck, the respawned plane is hidden and the controls are
+  held at idle. Then the view joins the plane. dedicated_runtime.gd places the
+  client's boat at `aviation.view_anchor()`.
+- 4, Fighter jet `plane_fighter` (3,000,000.00): top speed about 1,350 kn
+  (2.2× the Cargo jet, faster than the Jetty), roll 200°/s, pitch 55°/s, a 90 L
+  tank (about 7 min at full throttle), no cargo and no jobs. It is a grey swept
+  delta with twin fins, a bubble canopy and an afterburner (JET_FLAME) that grows
+  with the throttle. It appears in the Planes menu ("no cargo: for the joy of
+  flying") and the debug overlay. Snapshot: the plane motion frame's climb-rate
+  clamp is raised from ±500 to ±1500 m/s, so a full-speed dive is not clipped
+  (no rubber band). The frame size is unchanged.
+- 5, the Cargo jet's engines are turbofans (`"fan2"`): pylon-mounted nacelles
+  with an intake lip, a 12-blade front fan that spins with the throttle, a grey
+  core nozzle and a heat shimmer (alpha at most 0.1). There is no flame node.
+- 6, planes are open to everyone: `Levels.PLANE_UNLOCK_LEVEL` = 1 replaces
+  `PLANE_LEVEL` = 10. It is the one gate for buying and flying, on the client
+  and on the server (the server runs the same `aviation.unlocked()`). XP and
+  levels are unchanged.
+- 7, airport ground: the 4.0 embankment mesh had its top face wound
+  backwards. From above it was a back face and got culled, so the hills under
+  it showed through ("yellow blobs") and the toon ink shell drew a black slab.
+  Each airport now stands on one grass airfield whose faces all point outward.
+  The airfield is level at the runway height over the whole footprint (runway
+  and 60 m past each end, 30 m seaward, 95 m inland over the apron, terminal
+  and tower; `Airports.field_across/on_airfield/airfield_at`). Terrain.sample
+  is flat ("airfield") over all of it.
+- Checks: new `tools/patch_4_0_1_logic.gd`, run by `check_catalog.gd` in the
+  Checks job (about 5 s), and `tools/patch_4_0_1_check.gd` (123 checks: the
+  logic plus the game scene). They cover: the auto-level returns to
+  wings-level and level flight hands off and never stops a held roll; a sloppy
+  approach lands and stops for every plane at every airport, from two set-ups
+  (110–140 m off the line, 9–11° off heading, 15–25 m high, 1.4–1.5× stall,
+  coarse inputs, no flare); the crash view lasts 4 s, with the boat at the
+  wreck, the plane hidden and the controls idle, then the plane is shown; the
+  Fighter jet is ≥ 2× the Cargo jet and faster than every ship, takes no jobs
+  and replicates a full-speed dive; the Cargo jet has two fans and no flame; a
+  level-1 captain buys and flies a plane; no terrain is above the runway inside
+  any airport's footprint and the airfield faces up; 4.0 progress rows load;
+  VERSION is 4.0.1. `patch_4_0_logic.gd` and `patch_4_0_check.gd` now expect
+  the auto-level and the level-1 gate. A wider offline matrix of the same
+  sloppy pilot (4 planes × 6 airports × 6 set-ups, offsets up to 200 m and 12°)
+  landed all 144 flights.
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts (277), boot,
+  every Stage 2 command (check_catalog with the new logic, diagnostics, controls,
+  flow, starter and the twelve probes), `patch_4_0_check` (195), `patch_4_0_1_check`
+  (123), `check_snapshot_budget`, `small_boats_check`, `globe_map_check`, and
+  `check_dedicated_split.py` plain, `--prediction` and `--replication`. Python
+  Stage 3: compileall, the services unittests (76 OK), world_layout and
+  traversal budget pass. The `tools/public_handoff` suite has 4 import errors
+  because `psycopg` is not installed in this job; this is the same on main.
+- Not verified: Windows play, how it feels with a real mouse (smoothing, the
+  auto-level and landing were only flown by scripted pilots), the crash camera
+  and the new models on screen (headless has no renderer), and an online session
+  at Fighter speed.

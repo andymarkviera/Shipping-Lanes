@@ -61,6 +61,11 @@ func run() -> void:
 	# tools/patch_4_0_check.gd runs them too, plus the game-scene checks.
 	for failure: String in load("res://tools/patch_4_0_logic.gd").run_all():
 		failures.append("Patch 4.0: " + failure)
+	# Patch 4.0.1: auto-level, sloppy landings, the crash view, the Fighter jet,
+	# turbofans, the level-1 gate, flat airfields, old saves, VERSION
+	# (tools/patch_4_0_1_check.gd runs them too, plus the game-scene checks).
+	for failure: String in load("res://tools/patch_4_0_1_logic.gd").run_all():
+		failures.append("Patch 4.0.1: " + failure)
 	for failure: String in failures:
 		push_error(failure)
 	print("CATALOG_CHECK_PASS" if failures.is_empty() else "CATALOG_CHECK_FAILED")

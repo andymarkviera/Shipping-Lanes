@@ -1,7 +1,8 @@
 extends RefCounted
 ## Patch 4.0 item 10/12: what a plane can hit, as a height above the sea at a
 ## world X/Z. It follows the drawn world: the beach shelf and green hills of
-## the land (TOON_COAST), the runways (level at Airports.RUNWAY_Y), the polar
+## the land (TOON_COAST), the runways and their airfields (level at
+## Airports.RUNWAY_Y, no hill inside an airport's footprint), the polar
 ## ice cap rising to its snow plateau, the icebergs and the volcano. All from
 ## baked data, so client and server agree. Sea level is 0.
 const Progression = preload("res://features/game/progression.gd")
@@ -9,12 +10,16 @@ const TOON_COAST = preload("res://features/toon/toon_coast.gd")
 const Airports = preload("res://features/planes/airports.gd")
 const ICE_PLATEAU_M: float = 46.0
 
-## {height, surface}: surface is "sea", "land", "runway", "ice" or "rock".
+## {height, surface}: surface is "sea", "land", "runway", "airfield" (the flat
+## grass and apron round a runway, Patch 4.0.1), "ice" or "rock".
 static func sample(at: Vector3) -> Dictionary:
 	var spot: Vector3 = Progression.wrapped(Vector3(at.x, 0, at.z))
 	var flat: Vector2 = Vector2(spot.x, spot.z)
 	var runway: int = Airports.runway_at(spot)
 	if runway >= 0: return {"height": Airports.RUNWAY_Y, "surface": "runway", "runway": runway}
+	# Patch 4.0.1 item 7: the airfield around it is level and cleared too.
+	var field: int = Airports.airfield_at(spot)
+	if field >= 0: return {"height": Airports.RUNWAY_Y, "surface": "airfield", "runway": -1, "airport": field}
 	var height: float = 0.0
 	var surface: String = "sea"
 	var depth: float = Progression.land_depth(flat)

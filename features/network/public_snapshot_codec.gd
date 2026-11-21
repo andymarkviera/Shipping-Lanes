@@ -64,6 +64,8 @@ static func decode(bytes: PackedByteArray) -> Dictionary:
 ## Patch 4.0 item 15: format 4 adds the air block (FLAG_AIR) for planes: the
 ## altitude as a full float (a half was 2 m steps at cruise height), the whole
 ## attitude as a quaternion, the climb rate and the gear/ground/stall flags.
+## Patch 4.0.1 item 4: the climb rate is clamped at 1500 m/s (it was 500), so
+## the Fighter jet's full-speed dive (about 700 m/s) replicates unclipped.
 const MOTION_FORMAT: int = 4
 const MOTION_AIR: int = 16
 const FLAG_AIR: int = 2
@@ -161,7 +163,7 @@ static func put_air(bytes: PackedByteArray, at: int, air: Dictionary) -> void:
 	var turn: Quaternion = (air.basis as Basis).orthonormalized().get_rotation_quaternion()
 	var parts: Array[float] = [turn.x, turn.y, turn.z, turn.w]
 	for index: int in 4: bytes.encode_s16(at + 4 + index * 2, clampi(roundi(parts[index] * 32767.0), -32767, 32767))
-	bytes.encode_half(at + 12, clampf(float(air.vy), -500.0, 500.0))
+	bytes.encode_half(at + 12, clampf(float(air.vy), -1500.0, 1500.0))
 	bytes.encode_u8(at + 14, (1 if air.ground else 0) | (2 if air.gear else 0) | (4 if air.stall else 0))
 	bytes.encode_u8(at + 15, 0)
 
