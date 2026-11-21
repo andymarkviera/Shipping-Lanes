@@ -121,6 +121,9 @@ var services: VBoxContainer
 var jobs_panel: VBoxContainer
 var jobs_list: ItemList
 var heavy_controls: HBoxContainer
+## Patch 4.0.3 item 4: the heavy lifter's platform button (Lift / Drop).
+var lift_button: Button
+var cancel_pickup_button: Button
 var waypoint: Label3D
 ## Patch 2.2 item 1: container job cards shown at a port, biggest first.
 const JOB_BOARD_SIZE: int = 6
@@ -445,11 +448,11 @@ func _ready() -> void:
 	stack.add_child(receipt_label)
 	heavy_controls = HBoxContainer.new()
 	stack.add_child(heavy_controls)
-	button(heavy_controls, "Lower", func():
-		if not network_action("lower"): ship.request_height(Heavy.LOWERED))
-	button(heavy_controls, "Raise", func():
-		if not network_action("raise"): ship.request_height(Heavy.RAISED))
-	button(heavy_controls, "Cancel pickup", func(): end_current_job(false))
+	# Patch 4.0.3 item 4: one platform button, Drop (lower the deck) or Lift
+	# (raise it), shown whenever a heavy lifter is docked or on a job. Online
+	# it sends the same "lower" / "raise" actions as before.
+	lift_button = button(heavy_controls, "Drop", lift_or_drop)
+	cancel_pickup_button = button(heavy_controls, "Cancel pickup", func(): end_current_job(false))
 	if game_mode:
 		game_hud = preload("res://features/game/game_hud.gd").new()
 		layer.add_child(game_hud)
@@ -483,6 +486,20 @@ func _ready() -> void:
 ## without guns do nothing. False when nothing fired (no guns, or cooling down).
 ## Patch 4.0.2: the Jetty's Shift blaster boost. False when not on the Jetty,
 ## flying, docked, the helm is not free or the blaster is charging or cooling.
+## Patch 4.0.3 item 4: "Drop" while the deck is up (or rising), "Lift" while
+## it is down (or lowering).
+func lift_label() -> String:
+	if not is_instance_valid(ship) or not ship.has_method("request_height"): return "Drop"
+	return "Drop" if float(ship.get("deck_target")) > 0.0 else "Lift"
+
+## Patch 4.0.3 item 4: the platform button. Online: the existing "lower" /
+## "raise" gameplay actions (the server moves the deck).
+func lift_or_drop() -> bool:
+	if not is_instance_valid(ship) or not ship.has_method("request_height"): return false
+	var drop: bool = lift_label() == "Drop"
+	if network_action("lower" if drop else "raise"): return true
+	return ship.request_height(Heavy.LOWERED if drop else Heavy.RAISED)
+
 func fire_boost() -> bool:
 	if not is_instance_valid(ship) or flying(): return false
 	return ship.request_boost()
@@ -1311,7 +1328,10 @@ func _process(_delta: float) -> void:
 	abandon_button.visible = not bulk_active.is_empty() or (not heavy_mode and active.get("state") == "loaded")
 	abandon_button.text = "Confirm abandon — no payment" if not abandon_job_id.is_empty() and Time.get_ticks_msec() <= abandon_deadline else "Abandon cargo (no payment)"
 	if game_mode: abandon_button.text = "Confirm Abandon (No Pay)" if abandon_button.text.begins_with("Confirm") else "Abandon Cargo"
-	heavy_controls.visible = heavy_mode and not heavy_jobs.active.is_empty()
+	heavy_controls.visible = heavy_mode and (not heavy_jobs.active.is_empty() or docking.state(owner_id) == "docked") and is_instance_valid(ship) and ship.has_method("request_height")
+	if heavy_controls.visible:
+		lift_button.text = lift_label()
+		cancel_pickup_button.visible = not heavy_jobs.active.is_empty()
 	if not loading.busy() and offer_notice == "Accepted — loading your cargo.": offer_notice = loading.notice
 	if loading.busy(): loading_text.text = "Loading %.0f%% — please wait." % loading.progress_percent()
 	elif cranes_busy():

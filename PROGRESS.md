@@ -8619,3 +8619,78 @@ refinery and cargo-fuel code is untouched.
   and sound (headless has no renderer or audio); other captains see the hover
   but not another player's blaster flame (the speed is replicated, the looks
   are not).
+
+## Patch 4.0.3 — keyboard flight, polar seams, globe icons, heavy-lift dock, dock menu, plane jobs, Point Nemo, polar runways (November 21, 2026)
+
+Issue #226 (Andy's playtest of 4.0.2) and its addendum. VERSION 4.0.2 → 4.0.3.
+No workflow edits. The gas, oil, refinery and cargo-fuel code is untouched. The
+4.1 gacha is out of scope.
+- 1, keyboard-only flight: the mouse no longer steers (right-drag still orbits).
+  W / S climb and descend; released, the auto-trim levels off and holds the
+  altitude it captures. A / D bank to 45° (Fighter 60°) in a coordinated turn
+  and roll level when released. Shift / Ctrl move a throttle lever that stays
+  put. Space is the wheel brakes on the ground and the air brake in the air.
+  Q / E barrel roll; G gear (with the 4.0.2 nudge). Stall protection, the
+  pitch and bank limits, runway line-up, auto-flare and belly landings stay.
+  The help text and the scripted pilot (`flight_autopilot.gd`) use the keys.
+- 2, polar seams: the ice is rebaked solid 800 m either side of each pole,
+  with no lead crossing the world's edge; the cap relief levels off at the
+  pole, so the globe has no wedges or streaks.
+- 3, globe icons: airports are the runway only (no red plane); ports are a
+  small pier with a crane, on the globe and the minimap.
+- 4, heavy-lift docks: the cause was Cinder Point. Its berth offered no
+  `heavy_transfer` and took no industrial cargo (every other port did), so
+  every heavy lifter was refused there. Both records now offer it. The port
+  card shows one platform button whenever a heavy lifter is docked or on a
+  job: Drop (lowers the deck), then Lift (raises it). Online it sends the
+  existing `lower` / `raise` actions. Cancel pickup shows only with a job.
+- 5, dock menu: row 1 Refuel, Repair … Ships; row 2 Switch to Plane … Planes.
+  The actions are on the left and the two shops stack on the right.
+- 6, plane job board: the boat board's cards (`GameHud.job_card`, now shared):
+  a cargo picture (people for passengers, parcels for packages), the route,
+  a trip line (km, minutes at 80 % of top speed, litres of fuel at full
+  burn, `PlaneJobs.trip`), the gold pay and Accept. Both boards' cards get a
+  gold edge under the mouse. With a plane job aboard, the minimap and the
+  globe point at the job's airport and the globe draws the dotted course.
+- 7, Point Nemo: three islets (`tools/world_layout/point_nemo.py`), a port and
+  a runway, out in the empty ocean between Slatewater Works and Brindle Quay.
+- 8, polar runways: Cinder Strip is on the north cap; Gannet Aerodrome is
+  South Runway at the south cap's centre. Both keep their index and ID, so
+  saved planes and job IDs follow them.
+- Addendum, plane throttle: flying, the helm bar keeps the boat's throttle
+  slider in the same place and style, running 0 to 100 % (no reverse), marked
+  0% / 50% / 100%. Shift / Ctrl move it; dragging it sets the lever. Back on
+  a boat it is R / N / D again.
+- Checks: new `tools/patch_4_0_3_logic.gd` (631 checks), run by
+  `check_catalog.gd` in the Checks job (check_catalog about 20 s locally,
+  under the 30 s limit). It covers: released keys hold the altitude within
+  20 m for 30 s (level, and after W or S once the plane has levelled off);
+  A / D bank up to, never past, the limit, turn, and roll level; Space brakes;
+  the lever stays put; every port offers the container and heavy services,
+  takes both cargo types and fits every buyable hull; the trip estimates on
+  every board; Point Nemo; the polar runways; VERSION. New
+  `tools/patch_4_0_3_check.gd` (755 checks: the logic plus the game scene):
+  every buyable class docks at Cinder Point and every heavy lifter at every
+  port; docked, a heavy lifter shows Drop, which lowers the deck, then Lift,
+  which raises it, and no other class shows the button; the dock menu order
+  and right-hand column; the throttle slider flying (range, marks, both ways)
+  and back on a boat; the plane job cards (picture, trip, gold pay, hover
+  edge, Accept), and the globe's course to the job's airport.
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts (284), boot,
+  every Stage 2 command (units_probe, check_catalog, diagnostics_probe,
+  check_controls, check_flow, check_starter and the twelve probes),
+  patch_4_0_3_check, patch_4_0_check, patch_4_0_1_check, patch_4_0_2_check,
+  heavy_ladder_check, check_m1_voyage, world_land_check, globe_map_check,
+  ui_text_check, port_menu_check, hangar_check and the Stage 4 report probes
+  (ports_probe, collision_probe, composition_probe). Two old counts assumed
+  six ports and failed after Point Nemo; they now count the world's ports:
+  `ports_probe` (the restocked container jobs) and `check_m1_voyage` (the
+  ports after a reload).
+- Not run: Python was refused in this job, so Stage 3 (compileall, the
+  services unittests, world_layout tests, the traversal budget) did not run
+  locally; CI runs it.
+- Not verified: Windows play; how keyboard flight, the throttle slider and the
+  new cards feel and look (headless has no renderer); the altitude hold after
+  a long steep climb on a fast plane (the plane first levels off, which takes
+  some height: the check bounds the time, not the height); online Lift / Drop
+  with a real server.

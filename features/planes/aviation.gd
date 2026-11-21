@@ -896,8 +896,18 @@ func build_ui() -> void:
 	port_row.name = "PlaneRow"
 	view.services.add_child(port_row)
 	view.services.move_child(port_row, 1)
-	port_buttons.planes = view.button(port_row, "Planes", open_menu)
+	# Patch 4.0.3 item 5: the actions on the left (Refuel, Repair / Switch to
+	# Plane), the two shops stacked on the right (Ships over Planes).
 	port_buttons.switch = view.button(port_row, "Switch to Plane", switch_to_plane)
+	port_row.add_child(spacer("PlaneRowGap"))
+	port_buttons.planes = view.button(port_row, "Planes", open_menu)
+	var tabs: Node = view.refuel_button.get_parent()
+	for item: Node in tabs.get_children():
+		if item is Button and item.text == "Ships":
+			var gap: Control = spacer("ServiceRowGap")
+			tabs.add_child(gap)
+			tabs.move_child(gap, item.get_index())
+			break
 	# The Planes menu (like Ships): one row per plane with Buy or Select.
 	menu = PanelContainer.new()
 	PLAYFUL.dress(menu)
@@ -957,6 +967,15 @@ func build_ui() -> void:
 	marks.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(marks)
 	marks.hide()
+
+## Patch 4.0.3 item 5: an empty stretch that pushes the shops to the right.
+static func spacer(title: String) -> Control:
+	var gap: Control = Control.new()
+	gap.name = title
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gap.custom_minimum_size.x = 24
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return gap
 
 ## Patch 4.0 arcade HUD: a small winged circle where the flight path
 ## points (Patch 4.0.3: the mouse reticle is gone with the mouse aim).
@@ -1039,14 +1058,22 @@ func refresh_ui() -> void:
 			for old: Node in card_jobs.get_children():
 				card_jobs.remove_child(old)
 				old.queue_free()
+			# Patch 4.0.3 item 6: the boat board's cards (game_hud.job_card),
+			# with the trip: km, minutes at cruise and fuel.
 			for row: Dictionary in board:
+				var trip: Dictionary = Jobs.trip(str(row.id), plane_kind)
+				var trip_text: String = "%.1f km · %d min · %d L fuel" % [trip.km, trip.minutes, roundi(trip.fuel_l)] if not trip.is_empty() else ""
+				var route: String = "%s → %s" % [entry.name, Airports.all()[int(row.destination)].name]
+				if is_instance_valid(view.get("game_hud")):
+					view.game_hud.job_card(card_jobs, str(row.kind), int(row.quantity), str(row.title).capitalize(), route, trip_text, int(row.reward_minor), accept.bind(str(row.id)))
+					continue
 				var line: HBoxContainer = HBoxContainer.new()
 				line.add_theme_constant_override("separation", 10)
 				card_jobs.add_child(line)
 				var words: Label = Label.new()
 				DISPLAY.plain(words, Color.WHITE, 14)
 				words.custom_minimum_size.x = 250
-				words.text = "%s → %s\n+%s" % [row.title.capitalize(), Airports.all()[int(row.destination)].name, credits(int(row.reward_minor))]
+				words.text = "%s\n%s\n+%s" % [route, trip_text, credits(int(row.reward_minor))]
 				line.add_child(words)
 				var take: Button = view.button(line, "Accept", accept.bind(str(row.id)))
 				take.size_flags_vertical = Control.SIZE_SHRINK_CENTER

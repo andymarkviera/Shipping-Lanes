@@ -366,7 +366,7 @@ func play() -> void:
 	var open_jobs: int = 0
 	for row: Dictionary in game.offers.list_at("port_brindle_quay"):
 		if row.state == "available" and row.id != job.id and game.offers.job_tier(row.id) == 1: open_jobs += 1
-	expect(game.world_ports.size() == 6 and open_jobs == 4, "Six ports, and four open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
+	expect(game.world_ports.size() == preload("res://features/game/progression.gd").WORLD.size() and open_jobs == 4, "Every port (Point Nemo too), and four open jobs at Brindle Quay again (%d ports, %d jobs)" % [game.world_ports.size(), open_jobs])
 	expect(game.voyage_hud.money.is_visible_in_tree() and game.voyage_hud.money.text == "%.2f credits" % (job.reward_minor / 100.0), "The money is shown on the game HUD (%s)" % game.voyage_hud.money.text)
 	expect(game.game_hud.cards.is_visible_in_tree() and game.game_hud.cards.get_child_count() == game.jobs_list.item_count and game.jobs_list.item_count > 0 and not game.jobs_list.visible, "Docked with no job: one card per offer (%d cards)" % game.game_hud.cards.get_child_count())
 	expect(not game.details.visible and not game.helm.gauge_display.visible, "Developer readouts are hidden in the game by default")

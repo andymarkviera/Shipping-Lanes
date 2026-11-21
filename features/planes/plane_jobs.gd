@@ -55,3 +55,17 @@ static func board(origin: int, plane: Dictionary) -> Array[Dictionary]:
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.reward_minor > b.reward_minor if a.reward_minor != b.reward_minor else a.id < b.id)
 	rows.resize(mini(rows.size(), BOARD_SIZE))
 	return rows
+
+## Patch 4.0.3 item 6: a job card's trip estimate for a plane: the leg in
+## km, the minutes at cruise (CRUISE_SHARE of top speed) and the fuel that
+## burns at full throttle for that long (litres, rounded up). {} when the
+## job or plane is unknown.
+const Planes = preload("res://features/planes/plane_catalog.gd")
+const CRUISE_SHARE: float = 0.8
+
+static func trip(id: String, kind: String) -> Dictionary:
+	var picked: Dictionary = job(id)
+	if picked.is_empty() or not Planes.PLANES.has(kind): return {}
+	var km: float = leg_km(int(picked.origin), int(picked.destination))
+	var seconds: float = km * 1000.0 / (Planes.top_speed(kind) * CRUISE_SHARE)
+	return {"km": km, "minutes": maxi(1, ceili(seconds / 60.0)), "fuel_l": ceilf(seconds * float(Planes.PLANES[kind].burn_lps))}

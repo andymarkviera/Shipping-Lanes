@@ -833,7 +833,10 @@ func check_container_visuals(preview: Node3D) -> void:
 	# Patch 2.1 item 3: four slots at each strait port (one to a pole), three at each pole.
 	# Patch 2.2 item 1: plus two jobs for each of container ships 2-5 at every port.
 	var tiered: int = offer_script.TIER_PREFIXES.size() * offer_script.TIER_SLOTS
-	verify(stock._offers.size() == 23 + tiered * preload("res://features/game/progression.gd").WORLD.size() and not stock._offers.has("container_game_0_0_0") and stock.view("container_game_0_1_0").state == "delivered" and stock.list_at("port_brindle_quay").size() == 5 + tiered and stock.list_at("port_north_pole").size() == 3 + tiered, "Restock withdraws untaken old jobs, keeps finished ones and offers bigger jobs at every port, polar ports included")
+	# Patch 4.0.3: counted over every port (Point Nemo adds three), plus the kept delivered job.
+	var slots: int = 1
+	for index: int in preload("res://features/game/progression.gd").WORLD.size(): slots += offer_script.game_slots(index)
+	verify(stock._offers.size() == slots + tiered * preload("res://features/game/progression.gd").WORLD.size() and not stock._offers.has("container_game_0_0_0") and stock.view("container_game_0_1_0").state == "delivered" and stock.list_at("port_brindle_quay").size() == 5 + tiered and stock.list_at("port_north_pole").size() == 3 + tiered, "Restock withdraws untaken old jobs, keeps finished ones and offers bigger jobs at every port, polar ports included")
 	verify(offer_script.loading_seconds(1) == 5.0 and offer_script.loading_seconds(3) == 15.0 and offer_script.loading_seconds(24) == 25.5, "Loading time grows with the load but a full ship loads in under half a minute")
 	verify(display.find_children("*", "CollisionObject3D", true, false).is_empty() and display.find_children("*", "CollisionShape3D", true, false).is_empty(), "Containers add no individual physics bodies or shapes")
 	verify(display.get_parent() == body.assembly.visual, "Container visuals follow the same bobbing/roll root as the hull")
