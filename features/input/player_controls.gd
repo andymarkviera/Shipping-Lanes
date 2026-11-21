@@ -145,6 +145,11 @@ func input_allowed() -> bool:
 func action_strength(action: StringName) -> float:
 	return Input.get_action_strength(action) if input_allowed() and InputMap.has_action(action) else 0.0
 
+## Patch 4.0.3 item 1: a fixed key held (the plane's Shift / Ctrl throttle),
+## through the same gate as the bound actions.
+func held_key(key: Key) -> float:
+	return 1.0 if input_allowed() and Input.is_physical_key_pressed(key) else 0.0
+
 func steering_axis() -> float:
 	return action_strength("ship_steer_right") - action_strength("ship_steer_left")
 

@@ -19,10 +19,11 @@ static func sample(at: Vector3) -> Dictionary:
 	var spot: Vector3 = Progression.wrapped(Vector3(at.x, 0, at.z))
 	var flat: Vector2 = Vector2(spot.x, spot.z)
 	var runway: int = Airports.runway_at(spot)
-	if runway >= 0: return {"height": Airports.RUNWAY_Y, "surface": "runway", "runway": runway}
+	# Patch 4.0.3 item 8: each runway at its own height (the polar ones on the ice).
+	if runway >= 0: return {"height": float(Airports.all()[runway].at.y), "surface": "runway", "runway": runway}
 	# Patch 4.0.1 item 7: the airfield around it is level and cleared too.
 	var field: int = Airports.airfield_at(spot)
-	if field >= 0: return {"height": Airports.RUNWAY_Y, "surface": "airfield", "runway": -1, "airport": field}
+	if field >= 0: return {"height": float(Airports.all()[field].at.y), "surface": "airfield", "runway": -1, "airport": field}
 	var height: float = 0.0
 	var surface: String = "sea"
 	var depth: float = Progression.land_depth(flat)

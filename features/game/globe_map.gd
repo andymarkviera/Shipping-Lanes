@@ -52,7 +52,9 @@ const SNOW: Color = Color("f7fbfd")
 const ASH: Color = Color("5a4a46")
 const LAVA: Color = Color("ff7a2e")
 const RUNWAY: Color = Color("3d4452")
-const AIRPORT_PLANE: Color = Color("e8504a")
+## Patch 4.0.3 item 3: the port icon's pier deck and crane.
+const PIER: Color = Color("f4ead2")
+const CRANE: Color = Color("e8504a")
 const RELIEF_SHADER: String = """
 shader_type spatial;
 render_mode unshaded, cull_back;
@@ -123,7 +125,11 @@ var boat_ink: StandardMaterial3D
 var goal_marker: MeshInstance3D
 var course_line: MeshInstance3D
 var course_dots: int = 0
-var port_markers: Array[MeshInstance3D] = []
+## Patch 4.0.3 item 3: each port is a small pier with a crane (a Node3D
+## holder); port_paint[index] is its deck paint, sun yellow for the port the
+## ship is at.
+var port_markers: Array[Node3D] = []
+var port_paint: Array[StandardMaterial3D] = []
 ## Patch 4.0 item D14: the land relief shell and one marker per airport.
 var relief: MeshInstance3D
 var airport_markers: Array[Node3D] = []
@@ -495,16 +501,13 @@ func build_relief() -> void:
 	relief.material_override = paint
 	spin.add_child(relief)
 
-## Patch 4.0 item D14: every airport as a small runway along its heading with a
-## red plane glyph over it and its name, unlike the round port markers. Each
-## stands on the land relief, lifted clear of it.
+## Patch 4.0 item D14: every airport as a small runway along its heading
+## and its name, unlike the ports. Each stands on the land relief, lifted
+## clear of it. Patch 4.0.3 item 3: just the runway (the red plane is gone).
 func build_airports() -> void:
 	var tarmac: StandardMaterial3D = flat(RUNWAY)
 	var stripe: StandardMaterial3D = flat(Color.WHITE)
-	var plane: StandardMaterial3D = flat(AIRPORT_PLANE)
-	var parts: Array = [[Vector3(0.024, 0.004, 0.1), Vector3.ZERO, tarmac], [Vector3(0.004, 0.005, 0.08), Vector3.ZERO, stripe],
-		[Vector3(0.008, 0.007, 0.042), Vector3(0, 0.022, 0), plane], [Vector3(0.044, 0.006, 0.011), Vector3(0, 0.022, 0.004), plane],
-		[Vector3(0.02, 0.006, 0.007), Vector3(0, 0.022, -0.017), plane]]
+	var parts: Array = [[Vector3(0.024, 0.004, 0.1), Vector3.ZERO, tarmac], [Vector3(0.004, 0.005, 0.08), Vector3.ZERO, stripe]]
 	for airport: Dictionary in Airports.all():
 		var world: Vector3 = airport.at
 		var up: Vector3 = on_globe(world)
@@ -535,6 +538,38 @@ func build_airports() -> void:
 		spin.add_child(name_tag)
 		airport_markers.append(holder)
 
+## Patch 4.0.3 item 3: a port's globe icon at a berth: a pale pier deck
+## along the quay (which runs north from the berth), a red crane (tower and
+## a boom out over the water) and two bollards, at the airport runway's
+## scale. Its deck paint is port_paint's last entry.
+func port_icon(berth: Vector3) -> Node3D:
+	var up: Vector3 = on_globe(berth)
+	var at: Vector2 = lon_lat(berth)
+	var east: Vector3 = Vector3(cos(at.x), 0, -sin(at.x))
+	var north: Vector3 = up.cross(east).normalized()
+	var holder: Node3D = Node3D.new()
+	holder.name = "PortIcon"
+	holder.basis = Basis(east, up, north)
+	holder.position = up * maxf(1.01, ground(berth) + MARKER_LIFT)
+	spin.add_child(holder)
+	var deck: StandardMaterial3D = flat(PIER)
+	var crane: StandardMaterial3D = flat(CRANE)
+	var ink: StandardMaterial3D = flat(PLAYFUL.INK)
+	# [size, position, paint]: the deck and its dark edge, the crane's legs,
+	# tower and boom, two bollards.
+	var parts: Array = [[Vector3(0.03, 0.005, 0.07), Vector3.ZERO, deck], [Vector3(0.034, 0.003, 0.074), Vector3(0, -0.002, 0), ink],
+		[Vector3(0.016, 0.004, 0.006), Vector3(0, 0.005, -0.008), crane], [Vector3(0.005, 0.034, 0.005), Vector3(0.004, 0.02, -0.008), crane],
+		[Vector3(0.038, 0.004, 0.004), Vector3(-0.006, 0.037, -0.008), crane], [Vector3(0.003, 0.004, 0.003), Vector3(-0.012, 0.005, 0.018), ink],
+		[Vector3(0.003, 0.004, 0.003), Vector3(-0.012, 0.005, 0.03), ink]]
+	for part: Array in parts:
+		var piece: MeshInstance3D = MeshInstance3D.new()
+		piece.mesh = box(part[0])
+		piece.position = part[1]
+		piece.material_override = part[2]
+		holder.add_child(piece)
+	port_paint.append(deck)
+	return holder
+
 ## A small toon marker stuck to the globe.
 func marker(mesh: Mesh, colour: Color, size: float) -> MeshInstance3D:
 	var node: MeshInstance3D = MeshInstance3D.new()
@@ -557,10 +592,10 @@ func open() -> void:
 	if port_markers.is_empty():
 		build_relief()
 		for port: Node3D in view.world_ports:
-			var dot: MeshInstance3D = marker(SphereMesh.new(), Color.WHITE, 0.035)
-			# Lifted clear of the raised land under it (Patch 4.0 item D14).
+			# Patch 4.0.3 item 3: a small pier with a crane, the runway's size.
 			var berth: Vector3 = port.berth_anchor.global_position
-			dot.position = on_globe(berth) * maxf(1.01, ground(berth) + MARKER_LIFT)
+			var dot: Node3D = port_icon(berth)
+			# Lifted clear of the raised land under it (Patch 4.0 item D14).
 			var name_tag: Label3D = Label3D.new()
 			name_tag.text = port.definition.display_name
 			name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -642,7 +677,7 @@ func _process(delta: float) -> void:
 	place()
 	show_ships(ship_entries())
 	for index: int in port_markers.size():
-		port_markers[index].material_override.albedo_color = PLAYFUL.SUN if view.world_ports[index] == view.port else Color.WHITE
+		port_paint[index].albedo_color = PLAYFUL.SUN if view.world_ports[index] == view.port else PIER
 	var destination: Dictionary = Navigation.target(view)
 	goal_marker.visible = not destination.is_empty()
 	if goal_marker.visible:

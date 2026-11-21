@@ -20,12 +20,13 @@ const KEY_ROWS: Array = [["Throttle up / down", "ship_throttle_up", "ship_thrott
 	["Engine to zero", "ship_throttle_zero"], ["Horn", "horn"],
 	["World map", "map_toggle"], ["Recenter camera", "camera_recenter"],
 	["Cannon salute (pirate ships)", "cannon_salute"]]
-## Patch 4.0 arcade planes: the mouse steers, W / S set the throttle; A / D roll
-## and Q / E yaw are optional extras. Patch 4.0.2: G lowers and raises the gear
-## (it comes up on its own after take-off); a held A / D is a barrel roll.
-const FIXED_ROWS: Array = [["Plane: steer", "Move the mouse"], ["Plane: throttle", "W / S"],
-	["Plane: barrel roll, yaw", "Hold A / D, Q / E"], ["Plane: landing gear", "G"], ["Jetty: blaster boost", "Shift"], ["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"],
-	["Turn the world map", "Drag"], ["Menu", "Esc"]]
+## Patch 4.0.3 item 1: planes fly on the keyboard only (the mouse no longer
+## steers): W / S climb and descend (released, it holds the altitude), A / D
+## turn, Shift / Ctrl the throttle, Space the brakes, Q / E a barrel roll and
+## G the gear (it comes up on its own after take-off).
+const FIXED_ROWS: Array = [["Plane: climb / descend", "W / S"], ["Plane: turn", "A / D"], ["Plane: throttle", "Shift / Ctrl"],
+	["Plane: brakes, air brake", "Space"], ["Plane: barrel roll", "Q / E"], ["Plane: landing gear", "G"], ["Jetty: blaster boost", "Shift"],
+	["Look around", "Hold right mouse"], ["Zoom", "Mouse wheel"], ["Turn the world map", "Drag"], ["Menu", "Esc"]]
 
 func _ready() -> void:
 	layer = 10

@@ -22,7 +22,8 @@ static func make_id(origin: int, destination: int, kind: String, quantity: int) 
 
 static func leg_km(origin: int, destination: int) -> float:
 	var list: Array[Dictionary] = Airports.all()
-	return Progression.short_way(list[destination].at - list[origin].at).length() / 1000.0
+	# Patch 4.0.3 item 8: the way a plane flies (never across the pole).
+	return Airports.local_to(list[origin].at, list[destination].at).length() / 1000.0
 
 ## A job from its ID, or {} if there is none.
 static func job(id: String) -> Dictionary:

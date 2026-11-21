@@ -343,6 +343,9 @@ def game_world(layout):
     centre = _floats(re.search(r'const WRAP_CENTRE: Vector3 = Vector3\(([^)]*)\)', source).group(1))
     return dict(
         land=rects('LAND'), ice=rects('ICE_SHELVES'), masses=masses, world=world, straits=straits,
+        # Patch 4.0.3 item 7: Point Nemo's islets (solid, but out in the open
+        # sea, so not held to the natural land's edge margin or landmasses).
+        nemo=rects('NEMO_LAND') if re.search(r'^const NEMO_LAND', source, re.M) else [],
         bergs=[tuple(_floats(m)) for m in re.findall(r'Vector3\(([^)]*)\)', _const_block(source, 'ICEBERGS'))],
         lanes=[tuple(_floats(m)) for m in re.findall(r'Vector2\(([^)]*)\)', _const_block(source, 'SEA_LANES'))],
         margin=number('LANE_MARGIN_M'), gate=number('GATE_M'), wrap=4000.0 * math.pi, centre=(centre[0], centre[2]))
@@ -379,7 +382,7 @@ def harbour(port):
 
 
 def obstacles(geo):
-    return geo['land'] + geo['ice'] + [harbour(p) for p in geo['world']] + [(x - r, z - r, 2 * r, 2 * r) for x, r, z in geo['bergs']]
+    return geo['land'] + geo.get('nemo', []) + geo['ice'] + [harbour(p) for p in geo['world']] + [(x - r, z - r, 2 * r, 2 * r) for x, r, z in geo['bergs']]
 
 
 def clear_line(geo, a, b, margin=None):
@@ -429,9 +432,9 @@ def game_world_failures(layout, geo=None):
     """Patch 2.5 item 1A: every disagreement in the game's own world, as text."""
     bad, plan = [], layout['game_world']
     geo = geo or game_world(layout)
-    solid = lambda point: any(_inside(point, r) for r in geo['land'] + geo['ice'])
+    solid = lambda point: any(_inside(point, r) for r in geo['land'] + geo.get('nemo', []) + geo['ice'])
     overlaps = lambda area: any(r[0] < area[0] + area[2] and area[0] < r[0] + r[2] and r[1] < area[1] + area[3] and area[1] < r[1] + r[3]
-                                for r in geo['land'] + geo['ice'])
+                                for r in geo['land'] + geo.get('nemo', []) + geo['ice'])
     half_wrap = geo['wrap'] / 2 - plan['edge_margin_m']
     # Patch 2.9.1 item 6: the land only; the polar ice cap lies along the
     # north/south edge itself.

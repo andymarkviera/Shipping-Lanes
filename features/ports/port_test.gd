@@ -2,7 +2,8 @@ extends Node3D
 const PORTS: Array[PackedScene] = [preload("res://features/ports/brindle_quay.tscn"), preload("res://features/ports/slatewater_works.tscn")]
 ## M4, the game only: two more ports, and (Patch 2.1 item 3) the two polar
 ## ports. Positions come from Progression.WORLD.
-const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn"), preload("res://features/ports/north_pole.tscn"), preload("res://features/ports/south_pole.tscn")]
+## Patch 4.0.3 item 7: and Point Nemo, out in the big empty ocean.
+const GAME_PORTS: Array[PackedScene] = [preload("res://features/ports/cinder_point.tscn"), preload("res://features/ports/gannet_light.tscn"), preload("res://features/ports/north_pole.tscn"), preload("res://features/ports/south_pole.tscn"), preload("res://features/ports/point_nemo.tscn")]
 const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const TOON_LOOK = preload("res://features/toon/toon_look.gd")
 const TOON_COAST = preload("res://features/toon/toon_coast.gd")
@@ -550,6 +551,10 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 ## toon coast in 1 km chunks (TOON_COAST.natural_chunk), each culled past
 ## LAND_RANGE_M and its surf past SURF_RANGE_M, so far land costs nothing.
 var natural_land: Node3D
+## Patch 4.0.3 item 7: Point Nemo's islets (collision and coast).
+var nemo_root: Node3D
+## Point Nemo's middle, the point its copies are placed by.
+const NEMO_ANCHOR: Vector3 = Vector3(6400, 0, -1300)
 func add_natural_land() -> void:
 	for mass: Array in Progression.LANDMASSES:
 		var body: StaticBody3D = StaticBody3D.new()
@@ -566,6 +571,26 @@ func add_natural_land() -> void:
 			collider.shape = shape
 			collider.position = Vector3(rect.get_center().x, 0, rect.get_center().y)
 			body.add_child(collider)
+	# Patch 4.0.3 item 7: Point Nemo's islets, solid the same way, under one
+	# "PointNemo" root that (like the icebergs) sits at its copy nearest the
+	# ship (place_nemo): it lies near the world's east-west edge.
+	nemo_root = Node3D.new()
+	nemo_root.name = "PointNemo"
+	add_child(nemo_root)
+	if not Progression.NEMO_LAND.is_empty():
+		var nemo_body: StaticBody3D = StaticBody3D.new()
+		nemo_body.name = "LandPointNemo"
+		nemo_body.position = Vector3(0, -2, 0)
+		nemo_body.collision_layer = CollisionRules.SHORE
+		nemo_body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+		nemo_root.add_child(nemo_body)
+		for rect: Rect2 in Progression.NEMO_LAND:
+			var nemo_shape: BoxShape3D = BoxShape3D.new()
+			nemo_shape.size = Vector3(rect.size.x, 12, rect.size.y)
+			var nemo_collider: CollisionShape3D = CollisionShape3D.new()
+			nemo_collider.shape = nemo_shape
+			nemo_collider.position = Vector3(rect.get_center().x, 0, rect.get_center().y)
+			nemo_body.add_child(nemo_collider)
 	for key: String in ["land0", "land1", "desert1", "tropic1", "city1"]:
 		if land_paint.has(key): continue
 		var material: StandardMaterial3D = StandardMaterial3D.new()
@@ -585,25 +610,32 @@ func add_natural_land() -> void:
 	natural_land = Node3D.new()
 	natural_land.name = "NaturalLand"
 	add_child(natural_land)
-	var grid: Dictionary = Progression.natural_land()
+	# Patch 4.0.3 item 7: the natural land's chunks, then Point Nemo's ("Nemo").
+	for grid: Dictionary in Progression.land_grids():
+		add_land_chunks(grid, ports, top_paint, "" if grid == Progression.natural_land() else "Nemo")
+
+## The toon coast of one land grid in 1 km chunks (names prefixed `tag`;
+## Point Nemo's go under its root).
+func add_land_chunks(grid: Dictionary, ports: Array[Vector2], top_paint: Callable, tag: String) -> void:
+	var holder: Node3D = nemo_root if not tag.is_empty() and nemo_root != null else natural_land
 	var chunks: Vector2i = Vector2i(ceili((grid.count.x - 1) / float(TOON_COAST.CHUNK_CELLS)), ceili((grid.count.y - 1) / float(TOON_COAST.CHUNK_CELLS)))
 	for cj: int in chunks.y:
 		for ci: int in chunks.x:
-			var part: Dictionary = TOON_COAST.natural_chunk(ci, cj, ports, land_paint.land0, top_paint)
+			var part: Dictionary = TOON_COAST.natural_chunk(ci, cj, ports, land_paint.land0, top_paint, grid)
 			if part.coast != null:
 				var coast: MeshInstance3D = MeshInstance3D.new()
-				coast.name = "Coast%d_%d" % [ci, cj]
+				coast.name = "%sCoast%d_%d" % [tag, ci, cj]
 				coast.mesh = part.coast
 				coast.visibility_range_end = TOON_COAST.LAND_RANGE_M
-				natural_land.add_child(coast)
+				holder.add_child(coast)
 			if part.surf != null:
 				var foam: MeshInstance3D = MeshInstance3D.new()
-				foam.name = "Surf%d_%d" % [ci, cj]
+				foam.name = "%sSurf%d_%d" % [tag, ci, cj]
 				foam.mesh = part.surf
 				foam.material_override = surf_paint
 				foam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				foam.visibility_range_end = TOON_COAST.SURF_RANGE_M
-				natural_land.add_child(foam)
+				holder.add_child(foam)
 
 ## Patch 2.1 item 3: a chunky toon iceberg, solid like land. A pale ice band at
 ## the waterline, a white body and one or two white peaks, each a few-sided
@@ -655,11 +687,28 @@ func add_iceberg(index: int) -> void:
 ## cap's chunks follow the ship the same way.
 func place_icebergs() -> void:
 	if polar_ice != null: POLAR_ICE.place(polar_ice, ship.global_position)
+	place_nemo()
 	for index: int in icebergs.size():
 		var entry: Vector3 = Progression.ICEBERGS[index]
 		var at: Vector3 = Progression.nearest(Vector3(entry.x, 0, entry.z), ship.global_position)
 		at.y = 0.0
 		if icebergs[index].position.distance_to(at) > 1.0: icebergs[index].position = at
+
+## Patch 4.0.3 item 7: Point Nemo lies a few hundred metres from the world's
+## east-west edge, so (like the icebergs and the polar ice) its islets and
+## its port sit at their copy nearest the ship: a ship that crosses the edge
+## beside it still sees it, and touches it. The copy only changes as the
+## ship crosses the edge, far from the quay. The server never moves it (its
+## ships are always inside the world's edges, where Point Nemo is).
+func place_nemo() -> void:
+	if nemo_root == null or runtime_role == "server": return
+	var shift: Vector3 = Progression.nearest(NEMO_ANCHOR, ship.global_position) - NEMO_ANCHOR
+	shift.y = 0.0
+	if nemo_root.position.distance_to(shift) > 1.0: nemo_root.position = shift
+	var index: int = Progression.port_index("port_point_nemo")
+	if index >= 0 and index < world_ports.size():
+		var at: Vector3 = Progression.WORLD[index].at + shift
+		if world_ports[index].position.distance_to(at) > 1.0: world_ports[index].position = at
 
 ## Port Test services are free. The game charges (M2).
 func free_note() -> String:

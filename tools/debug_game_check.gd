@@ -123,7 +123,7 @@ func run() -> void:
 		await settle()
 		var target: Node3D = game.world_ports[index]
 		expect(game.port == target and game.ship.global_position.distance_to(target.berth_anchor.global_position) < 1500.0, "quick travel to " + target.definition.display_name)
-	expect(game.world_ports.size() == 6, "six ports listed (polar included)")
+	expect(game.world_ports.size() == 7, "seven ports listed (polar and Point Nemo included)")
 	# 3. MAIN MENU throws the world away; the real save is unchanged.
 	game.leave()
 	expect(await wait_for(func(scene: Node) -> bool: return scene.name == "Main") != null, "debug game returned to the title")

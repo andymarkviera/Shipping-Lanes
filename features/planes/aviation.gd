@@ -38,18 +38,12 @@ const STOPPED_MPS: float = 2.0
 const LEVER_RATE: float = 0.6
 ## Patch 4.0.1 item 2: a touchdown sinking faster than this costs condition.
 const FIRM_SINK_MPS: float = 3.5
-## Arcade mouse aim: the cursor's reach (share of the screen's short side
-## from the centre to full deflection), its dead zone, and how much of the
-## sideways aim goes to roll and to the coordinating yaw.
-const AIM_REACH: float = 0.4
-const AIM_DEAD_ZONE: float = 0.06
-const AIM_ROLL: float = 1.6
-const AIM_YAW: float = 0.4
-## Patch 4.0.1 item 2: the mouse aim is smoothed (a low-pass over AIM_SMOOTH_S
-## seconds) and eased near the centre (AIM_CURVE), so small cursor moves give
-## gentle corrections and the plane does not twitch or overshoot.
-const AIM_SMOOTH_S: float = 0.14
-const AIM_CURVE: float = 1.6
+## Patch 4.0.3 item 1: Shift / Ctrl move the throttle lever this much a
+## second. A barrel roll (Q / E) that has not come round within BARREL_MAX_S
+## stops (the bank then rolls back the short way); it needs BARREL_AGL_M of
+## air under the plane.
+const BARREL_MAX_S: float = 6.0
+const BARREL_AGL_M: float = 40.0
 ## Patch 4.0.1 item 3: after a crash the camera stays on the wreck (the
 ## explosion, the fireball, smoke and debris, the camera slowly orbiting and
 ## pulling back) for CRASH_VIEW_S seconds before the respawned plane is shown.
@@ -74,8 +68,10 @@ var mode: String = "boat"
 var airport: int = 0
 var job_id: String = ""
 var model: RefCounted
-## The captain's latest inputs: throttle 0..1 (negative = wheel brakes),
-## pitch, roll, yaw in -1..1.
+## The captain's latest inputs (Patch 4.0.3 item 1, the keys): throttle
+## 0..1 (negative: Space, the brakes), pitch (W / S), roll (A / D) and yaw
+## (the barrel roll, Q / E) in -1..1, gear. The helm frame sends them as
+## they are; FlightModel flies the plane from them on both sides.
 var order: Dictionary = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "gear": 1.0}
 var lever: float = 0.0
 ## Patch 4.0.2 item 6: the gear lever (1 down, 0 up), toggled by G; sent
@@ -88,10 +84,13 @@ var belly_landings: int = 0
 ## Patch 4.0.2 item 7: the planes hangar (features/planes/plane_hangar.gd).
 var hangar: CanvasLayer
 var nudge_label: Label
-## The mouse aim this frame (mouse_aim), for the reticle.
-var aim: Vector2 = Vector2.ZERO
-## The smoothed mouse aim (read_local_input).
-var aim_smooth: Vector2 = Vector2.ZERO
+## Patch 4.0.3 item 1: the barrel roll under way (-1 left, +1 right, 0
+## none), whether it has passed upside down, its seconds, and whether Q / E
+## were held last frame (a roll starts on the press).
+var barrel: float = 0.0
+var barrel_over: bool = false
+var barrel_s: float = 0.0
+var barrel_key: float = 0.0
 ## Seconds of the crash view left (client and local), and the wreck.
 var crash_view_left: float = 0.0
 var crash_view_at: Vector3 = Vector3.ZERO
@@ -239,7 +238,7 @@ func switch_to_plane() -> bool:
 	lay_up_boat()
 	start_plane(airport)
 	view.bind_port()
-	say("Now flying your %s from %s. Throttle up (W), then move the mouse up to lift off at %d kn." % [plane_entry().name, Airports.all()[airport].name, roundi(float(plane_entry().rotate_mps) * 1.944)])
+	say("Now flying your %s from %s. Shift for full throttle, then W to lift off at %d kn." % [plane_entry().name, Airports.all()[airport].name, roundi(float(plane_entry().rotate_mps) * 1.944)])
 	return true
 
 func first_plane() -> String:
@@ -270,7 +269,8 @@ func start_plane(index: int) -> void:
 	low_seconds = 0.0
 	warning = false
 	lever = 0.0
-	aim_smooth = Vector2.ZERO
+	barrel = 0.0
+	barrel_key = 0.0
 	gear_order = 1.0
 	nudge_chimed = false
 	order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "gear": 1.0}
@@ -455,9 +455,10 @@ func tick(delta: float) -> void:
 	planes[plane_kind].fuel = clampf(model.fuel_l / maxf(1.0, float(plane_entry().fuel_l)), 0.0, 1.0)
 
 ## The model's input from the captain's order (the helm frame on the server).
+## Patch 4.0.3 item 1: the order's yaw is the barrel roll ("trick").
 func flight_input() -> Dictionary:
-	return {"throttle": maxf(0.0, float(order.throttle)), "brake": maxf(0.0, -float(order.throttle)) / 0.6,
-		"pitch": order.pitch, "roll": order.roll, "yaw": order.yaw, "gear": float(order.get("gear", -1.0))}
+	return {"throttle": maxf(0.0, float(order.throttle)), "brake": minf(1.0, maxf(0.0, -float(order.throttle)) / 0.6),
+		"pitch": order.pitch, "roll": order.roll, "trick": order.yaw, "gear": float(order.get("gear", -1.0))}
 
 ## Patch 4.0.2 item 6: G. Flips the gear lever against what the gear is now
 ## (so it always does what the gear shows). Not on the ground.
@@ -499,7 +500,7 @@ static func near_threshold(position: Vector3) -> float:
 	for entry: Dictionary in Airports.all():
 		var axis: Vector3 = Vector3(sin(entry.heading), 0, cos(entry.heading))
 		for end: float in [-1.0, 1.0]:
-			var flat: Vector3 = Progression.short_way(entry.at + axis * end * float(entry.length) * 0.5 - position)
+			var flat: Vector3 = -Airports.local_to(entry.at + axis * end * float(entry.length) * 0.5, position)
 			flat.y = 0.0
 			best = minf(best, flat.length())
 	return best
@@ -539,86 +540,57 @@ func crash() -> void:
 	model.fuel_l = maxf(fuel, float(plane_entry().fuel_l) * 0.25)
 	say("CRASH! %s%s Repair bill %s credits. Your plane is back at %s." % [reason, " Cargo lost." if lost else "", credits(bill), Airports.all()[home].name])
 
-## Patch 4.0 arcade controls (Andy, November 20): the plane steers towards the
-## mouse cursor; W / S move the throttle lever, which holds where it is left
-## (S at idle on the ground brakes). Optional A / D roll and Q / E yaw add on
-## top. The cursor's offset from the screen centre is turned from the camera's
-## level view into the plane's own frame, so the plane banks towards the
-## cursor and pulls: "steer towards it". Cursor centred: no command, so the
-## plane keeps its attitude (it never levels itself).
+## Patch 4.0.3 item 1 (Andy: keyboard only, no mouse aim). W / S climb and
+## descend (released, the plane holds its altitude); A / D turn (it banks
+## itself, up to the limit, and rolls level when released); Shift / Ctrl
+## move the throttle lever, which stays where it is set; Space is the wheel
+## brakes on the ground and the air brake in the air; Q / E a barrel roll;
+## G the gear (on_command). The mouse never steers (right-drag still looks
+## round). Space sends a negative throttle, as S at idle did before: the
+## server's helm frame and its checks are unchanged.
 func read_local_input(delta: float) -> void:
 	var controls: PlayerControls = view.controls
-	var axis: float = controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down")
-	lever = clampf(lever + axis * LEVER_RATE * delta, -0.6, 1.0)
+	var axis: float = controls.held_key(KEY_SHIFT) - controls.held_key(KEY_CTRL)
+	lever = clampf(lever + axis * LEVER_RATE * delta, 0.0, 1.0)
 	if controls.action_strength("ship_throttle_zero") > 0.0: lever = 0.0
-	if axis == 0.0 and lever < 0.0: lever = 0.0
-	var raw: Vector2 = shape_aim(mouse_aim()) if controls.input_allowed() else Vector2.ZERO
-	aim_smooth = smooth_aim(aim_smooth, raw, delta)
-	aim = aim_smooth
 	if in_crash_view():
 		# Watching the wreck: the respawned plane waits at idle.
 		lever = 0.0
-		aim = Vector2.ZERO
-		aim_smooth = Vector2.ZERO
+		barrel = 0.0
 		order = {"throttle": 0.0, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "gear": gear_order}
 		return
-	var steer: Vector2 = aim_to_plane(aim, model.full_bank() if model != null else 0.0)
-	order = steer_order(steer, controls.steering_axis(), controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left"))
+	var pitch: float = controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down")
+	var brake: bool = controls.action_strength("ship_brake") > 0.0
+	var roll_keys: float = controls.action_strength("ship_thruster_right") - controls.action_strength("ship_thruster_left")
+	order = key_order(pitch, controls.steering_axis(), roll_keys, brake, delta)
 
-## Patch 4.0.2 item 5: the order from the mouse aim (in the plane's frame),
-## the roll keys (A / D, -1..1) and the yaw keys, with the bank and pitch
-## limits (FlightModel.limit_aim): the mouse never banks past the limit nor
-## loops; only a held roll key rolls past it (a barrel roll).
-func steer_order(steer: Vector2, roll_keys: float, yaw_keys: float) -> Dictionary:
-	var roll: float = clampf(steer.x * AIM_ROLL + roll_keys, -1.0, 1.0)
-	var pitch: float = clampf(steer.y, -1.0, 1.0)
-	var aim_yaw: float = steer.x * AIM_YAW
-	if model != null:
-		var limited: Vector2 = model.limit_aim(roll, pitch, absf(roll_keys) > 0.05)
-		# The aim's coordinating yaw eases off with its roll at the limit (in a
-		# steep dive a yaw would carry the bank on past it).
-		if absf(roll) > 0.001 and signf(limited.x) == signf(roll): aim_yaw *= clampf(limited.x / roll, 0.0, 1.0)
-		elif absf(roll) > 0.001: aim_yaw = 0.0
-		roll = limited.x
-		pitch = limited.y
-	return {"throttle": lever, "pitch": pitch, "roll": roll,
-		"yaw": clampf(aim_yaw + yaw_keys, -1.0, 1.0), "gear": gear_order}
+## Patch 4.0.3 item 1: the order from the keys: pitch (W +1, S -1), turn (D
+## +1, A -1), roll keys (E +1, Q -1), brake (Space). A press of Q / E in the
+## air starts a barrel roll that is held for one whole turn (barrel_step).
+func key_order(pitch: float, turn: float, roll_keys: float, brake: bool, delta: float) -> Dictionary:
+	barrel_step(roll_keys, delta)
+	return {"throttle": -0.6 if brake else lever, "pitch": clampf(pitch, -1.0, 1.0), "roll": clampf(turn, -1.0, 1.0),
+		"yaw": barrel, "gear": gear_order}
 
-## Patch 4.0.1 item 2: a softer response near the centre (small offsets give
-## small commands), full deflection unchanged at the edge.
-static func shape_aim(raw: Vector2) -> Vector2:
-	var reach: float = raw.length()
-	if reach < 0.0001: return Vector2.ZERO
-	return raw / reach * pow(minf(reach, 1.0), AIM_CURVE)
-
-## Patch 4.0.1 item 2: the low-pass over the aim; snaps to centre exactly when
-## the cursor is centred and the smoothed aim is nearly there (so hands off
-## really is hands off and the auto-level takes over).
-static func smooth_aim(current: Vector2, target: Vector2, delta: float) -> Vector2:
-	var next: Vector2 = current.lerp(target, 1.0 - exp(-maxf(delta, 0.0) / AIM_SMOOTH_S))
-	if target == Vector2.ZERO and next.length() < 0.01: return Vector2.ZERO
-	return next
-
-## The cursor's offset from the screen centre, -1..1 each way (+x right,
-## +y up), with a small dead zone at the centre. Zero headless, while looking
-## around (right mouse held) or with the cursor on a button.
-func mouse_aim() -> Vector2:
-	if DisplayServer.get_name() == "headless" or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT): return Vector2.ZERO
-	var port: Viewport = get_viewport()
-	if port == null or port.gui_get_hovered_control() is BaseButton: return Vector2.ZERO
-	var size: Vector2 = port.get_visible_rect().size
-	if size.x < 2.0 or size.y < 2.0: return Vector2.ZERO
-	var off: Vector2 = (port.get_mouse_position() - size * 0.5) / (minf(size.x, size.y) * AIM_REACH)
-	off.y = -off.y
-	if off.length() > 1.0: off = off.normalized()
-	if off.length() < AIM_DEAD_ZONE: return Vector2.ZERO
-	return off * (off.length() - AIM_DEAD_ZONE) / (off.length() * (1.0 - AIM_DEAD_ZONE))
-
-## A screen offset seen from the level chase camera, in the plane's frame
-## (x: towards the plane's right wing, y: towards its canopy) at a bank
-## (right positive). Cursor right of a level plane: bank right and pull.
-static func aim_to_plane(screen: Vector2, bank: float) -> Vector2:
-	return Vector2(screen.x * cos(bank) - screen.y * sin(bank), screen.x * sin(bank) + screen.y * cos(bank))
+## Patch 4.0.3 item 1: the barrel roll. Starts on a press of Q (left) or E
+## (right) with BARREL_AGL_M of air below; rolls until the plane has been
+## upside down and is back within 30 degrees of level (or BARREL_MAX_S),
+## then lets go, and the bank goes back to what A / D ask.
+func barrel_step(roll_keys: float, delta: float) -> void:
+	var pressed: bool = absf(roll_keys) > 0.5 and absf(barrel_key) <= 0.5
+	barrel_key = roll_keys
+	if model == null or model.on_ground:
+		barrel = 0.0
+		return
+	if barrel == 0.0:
+		if pressed and model.agl_m > BARREL_AGL_M:
+			barrel = signf(roll_keys)
+			barrel_over = false
+			barrel_s = 0.0
+		return
+	barrel_s += delta
+	if absf(model.full_bank()) > deg_to_rad(150.0): barrel_over = true
+	if (barrel_over and absf(model.full_bank()) < deg_to_rad(30.0)) or barrel_s > BARREL_MAX_S: barrel = 0.0
 
 ## The client's own inputs this frame (it sends them with the helm frame).
 func client_input(delta: float) -> Dictionary:
@@ -874,9 +846,7 @@ func present(delta: float) -> void:
 	chase.look_at(pose.origin + pose.basis.z * length * 1.5, Vector3.UP)
 	if not chase.current: chase.make_current()
 	if is_instance_valid(marks):
-		var screen: Vector2 = get_viewport().get_visible_rect().size
 		marks.visible = not model.on_ground
-		marks.reticle = screen * 0.5 + Vector2(aim.x, -aim.y) * minf(screen.x, screen.y) * AIM_REACH
 		var ahead: Vector3 = pose.origin + (model.velocity.normalized() if model.airspeed() > 1.0 else pose.basis.z) * 400.0
 		marks.path_shown = not chase.is_position_behind(ahead)
 		if marks.path_shown: marks.path = chase.unproject_position(ahead)
@@ -979,8 +949,8 @@ func build_ui() -> void:
 	nudge_label.text = "Press G — Gear down"
 	layer.add_child(nudge_label)
 	nudge_label.hide()
-	# The arcade aim reticle (at the cursor) and the flight-direction marker
-	# (where the plane is actually going).
+	# The flight-direction marker (where the plane is actually going).
+	# Patch 4.0.3 item 1: no aim reticle (the mouse no longer steers).
 	marks = FlightMarks.new()
 	marks.name = "FlightMarks"
 	marks.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -988,17 +958,13 @@ func build_ui() -> void:
 	layer.add_child(marks)
 	marks.hide()
 
-## Patch 4.0 arcade HUD: a ring at the mouse cursor (where the plane is
-## steering) and a small winged circle where the flight path points.
+## Patch 4.0 arcade HUD: a small winged circle where the flight path
+## points (Patch 4.0.3: the mouse reticle is gone with the mouse aim).
 class FlightMarks extends Control:
-	var reticle: Vector2 = Vector2.ZERO
 	var path: Vector2 = Vector2.ZERO
 	var path_shown: bool = false
 
 	func _draw() -> void:
-		var ink: Color = Color(1.0, 0.95, 0.75, 0.9)
-		draw_arc(reticle, 14.0, 0.0, TAU, 32, ink, 2.0, true)
-		draw_circle(reticle, 2.0, ink)
 		if path_shown:
 			var green: Color = Color(0.55, 1.0, 0.6, 0.95)
 			draw_arc(path, 8.0, 0.0, TAU, 24, green, 2.0, true)
@@ -1110,6 +1076,9 @@ func describe() -> Dictionary:
 		result.next = "Land and stop at %s, then click Deliver." % destination.name
 	elif stopped_at() >= 0:
 		result.stage = "AT THE AIRPORT"
+	# Patch 4.0.3 item 1: the keys, while on the ground.
+	if model.on_ground and job_id.is_empty():
+		result.next = "Shift: full throttle. W past %d kn to lift off.\nA / D turn · W / S climb, descend · Space brakes · G gear" % roundi(float(plane_entry().rotate_mps) * 1.944)
 	if model.fuel_l < float(plane_entry().fuel_l) * 0.2: result.next += ("\n" if not result.next.is_empty() else "") + "Fuel is low. Land at an airport and click Refuel."
 	return result
 

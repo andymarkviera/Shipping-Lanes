@@ -76,7 +76,10 @@ class GameWorldTest(unittest.TestCase):
         self.assertEqual(budget.game_world_failures(self.layout), [])
 
     def test_source_is_read(self):
-        self.assertEqual(len(self.geo['world']), 6)
+        # Patch 4.0.3 item 7: Point Nemo is the seventh port.
+        self.assertEqual(len(self.geo['world']), 7)
+        self.assertEqual(self.geo['world'][6]['id'], 'port_point_nemo')
+        self.assertGreater(len(self.geo['nemo']), 10)
         self.assertEqual(self.geo['world'][0]['id'], 'port_brindle_quay')
         self.assertEqual(len(self.geo['straits']), 4)
         self.assertEqual(self.geo['masses'][-1][2], len(self.geo['land']))
@@ -85,25 +88,37 @@ class GameWorldTest(unittest.TestCase):
     def test_remix_keeps_ports_islands_and_route_budget(self):
         self.assertEqual({p['id'] for p in self.geo['world']}, {
             'port_brindle_quay', 'port_slatewater_works', 'port_cinder_point',
-            'port_gannet_light', 'port_north_pole', 'port_south_pole'})
+            'port_gannet_light', 'port_north_pole', 'port_south_pole', 'port_point_nemo'})
         for a, b in itertools.combinations(self.geo['world'], 2):
             apart = math.hypot(budget._short(a['at'][0] - b['at'][0], self.geo['wrap']),
                                budget._short(a['at'][2] - b['at'][2], self.geo['wrap']))
-            self.assertGreaterEqual(apart, 3800, (a['id'], b['id']))
+            # Patch 4.0.3 item 7: Point Nemo, placed by hand, keeps the 2.9
+            # rule: no other port in sight (port scenery is gone by 2200 m).
+            self.assertGreaterEqual(apart, 2300 if 'port_point_nemo' in (a['id'], b['id']) else 3800, (a['id'], b['id']))
         grid = json.loads(budget.read('features/world/natural_land.json'))
         self.assertEqual(grid['seed'], 3002)
         self.assertGreaterEqual(grid['new_isles'], 8)
         self.assertGreaterEqual(len(grid['outlines']), 24)
         self.assertEqual(sum(o['name'] == 'Palm Isles' for o in grid['outlines']), 3)
         self.assertLessEqual(len(self.geo['land']), 1100)  # bounded static collision/mesh work
-        self.assertEqual(self.layout['game_world']['max_route_m'], 11000)
+        self.assertEqual(self.layout['game_world']['bake_max_route_m'], 11000)
+        self.assertEqual(self.layout['game_world']['max_route_m'], 11500)
         self.assertEqual(self.geo['world'][4]['at'], [3700, 0, 4000])
         self.assertEqual(self.geo['world'][5]['at'], [-2300, 0, -4100])
 
     def test_lanes_wrap_the_short_way(self):
-        north, south = self.geo['world'][4]['at'], self.geo['world'][5]['at']
-        length, _ = budget.sea_route(self.geo, (north[0], north[2] - 450), (south[0], south[2] - 450))
-        self.assertLess(length, abs(north[2] - south[2]))
+        # East-west the world wraps: Brindle Quay and Slatewater Works are
+        # neighbours across the edge.
+        west, east = self.geo['world'][0]['at'], self.geo['world'][1]['at']
+        length, _ = budget.sea_route(self.geo, (west[0], west[2] - 450), (east[0], east[2] - 450))
+        self.assertLess(length, abs(east[0] - west[0]))
+
+    def test_poles_are_closed(self):
+        # Patch 4.0.3 item 2: the north/south edge is the pole on the globe,
+        # solid ice all the way round: no ship crosses it.
+        edge = self.geo['centre'][1] + self.geo['wrap'] / 2
+        for x in range(-5400, 7000, 250):
+            self.assertFalse(budget.clear_line(self.geo, (x, edge - 900), (x, edge + 900), 1.0), x)
 
     def test_disagreements_are_caught(self):
         def over_port(geo): geo['land'].append((-300.0, -600.0, 400.0, 400.0))

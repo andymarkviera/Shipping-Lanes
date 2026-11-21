@@ -45,12 +45,12 @@ func expect(condition: bool, label: String) -> bool:
 	return condition
 
 func solid(point: Vector2) -> bool:
-	for block: Rect2 in Progression.LAND + Progression.ICE_SHELVES:
+	for block: Rect2 in Progression.all_land() + Progression.ICE_SHELVES:
 		if block.has_point(point): return true
 	return false
 
 func overlaps_land(area: Rect2) -> bool:
-	for block: Rect2 in Progression.LAND + Progression.ICE_SHELVES:
+	for block: Rect2 in Progression.all_land() + Progression.ICE_SHELVES:
 		if block.intersects(area): return true
 	return false
 
@@ -104,7 +104,9 @@ func run() -> void:
 				from = corner
 			var length: float = route_length(Progression.gate(a), route)
 			longest = maxf(longest, length)
-			expect(clear and length < 11000.0, "%s reaches %s by sea (%.0f m, %d turns)" % [Progression.WORLD[a].id, Progression.WORLD[b].id, length, route.size() - 1])
+			# Patch 4.0.3 item 2: 11.5 km (world_layout.json max_route_m), the
+			# poles being closed.
+			expect(clear and length < 11500.0, "%s reaches %s by sea (%.0f m, %d turns)" % [Progression.WORLD[a].id, Progression.WORLD[b].id, length, route.size() - 1])
 	print("WORLD LAND longest port-to-port sea route %.0f m" % longest)
 	# Straits: each is a narrow cut a ship 5 (2.5 beams) fits through, with land
 	# close on both sides, and a sea lane runs down it.
@@ -248,14 +250,15 @@ func run() -> void:
 	var inside: bool = true
 	for block: Rect2 in Progression.ICE_SHELVES: inside = inside and world_box.encloses(block) and block.size.x <= wrap / Progression.ICE_COLUMNS + 0.1
 	expect(inside, "No ice block crosses an edge of the world")
-	# The cap lies along the whole edge on both sides, but for the leads; the
-	# blocks and the depth grid agree.
+	# Patch 4.0.3 item 2: the cap lies along the whole edge on both sides,
+	# solid right through the pole (no leads any more); the blocks and the
+	# depth grid agree.
 	var edge_z: float = Progression.WRAP_CENTRE.z + wrap / 2
 	for side: float in [-1.0, 1.0]:
 		var iced: int = 0
 		for step: int in 200:
 			if solid(Vector2(Progression.WRAP_CENTRE.x + (step / 200.0 - 0.5) * wrap + 7.0, edge_z - wrap * maxf(side, 0.0) + side * 40.0)): iced += 1
-		expect(iced >= 170 and iced < 200, "The ice cap covers the %s end of the world but for its leads (%d of 200)" % ["south" if side > 0.0 else "north", iced])
+		expect(iced == 200, "The ice cap covers the %s end of the world with no gap (%d of 200)" % ["south" if side > 0.0 else "north", iced])
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 2916
 	var agree: bool = true
@@ -267,9 +270,16 @@ func run() -> void:
 		if (d > 20.0 and not in_ice) or (d < -20.0 and in_ice): agree = false
 	expect(agree and is_equal_approx(Progression.ice_depth(Vector2(0, 0)), -300.0), "The ice depth grid and the solid blocks agree")
 	expect(is_equal_approx(Progression.ice_depth(Vector2(900, edge_z - 30)), Progression.ice_depth(Vector2(900 - wrap, edge_z - 30 + wrap))), "The ice is the same one world along")
-	# The leads: both sea routes that cross the edge run straight through.
-	var south_gate: Vector3 = Progression.gate(Progression.port_index("port_south_pole"))
-	expect(Progression.clear_line(Vector2(680, 3550), Vector2(-2600, -4800)) and Progression.clear_line(Vector2(2400, 3550), Vector2(south_gate.x, south_gate.z)), "The leads through the ice are open on both routes across the edge")
+	# Patch 4.0.3 item 2: no lead: nothing sails across the edge (the pole),
+	# anywhere round the world, and the ice is solid 750 m either side of it.
+	var closed: bool = true
+	var deep: bool = true
+	for step: int in 100:
+		var x: float = Progression.WRAP_CENTRE.x + (step / 100.0 - 0.5) * wrap + 11.0
+		closed = closed and not Progression.clear_line(Vector2(x, edge_z - 900.0), Vector2(x, edge_z + 900.0), 1.0)
+		for off: float in [-750.0, -400.0, -30.0, 30.0, 400.0, 750.0]: deep = deep and Progression.ice_depth(Vector2(x, edge_z + off)) > 0.0
+	expect(closed, "No ship can sail across the pole (the north/south edge)")
+	expect(deep, "The ice is solid 750 m either side of the pole all the way round")
 	# Both polar quays: deep ice behind them at quay height, sea in front.
 	for id: String in ["port_north_pole", "port_south_pole"]:
 		var place: Dictionary = Progression.WORLD[Progression.port_index(id)]

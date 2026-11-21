@@ -79,11 +79,16 @@ func airports() -> void:
 		var entry: Dictionary = first[index]
 		expect(Terrain.sample(entry.at).surface == "runway" and Airports.runway_at(Airports.start_pose(index).origin) == index, "%s: its runway is under the start" % entry.name)
 		for port: Dictionary in Progression.WORLD:
-			expect(Vector2(entry.at.x - port.at.x, entry.at.z - port.at.z).length() >= Airports.PORT_CLEAR_M, "%s stands clear of %s" % [entry.name, port.get("id", "a port")])
+			# Patch 4.0.3 item 7: Point Nemo's runway shares its small island
+			# with its port: clear of its quay and approach, not 1.1 km off.
+			var shared: bool = entry.name == "Point Nemo" and port.id == "port_point_nemo"
+			expect(Vector2(entry.at.x - port.at.x, entry.at.z - port.at.z).length() >= (500.0 if shared else Airports.PORT_CLEAR_M), "%s stands clear of %s" % [entry.name, port.get("id", "a port")])
 		var along: Vector3 = Vector3(sin(entry.heading), 0, cos(entry.heading))
 		for end: float in [-0.5, 0.5]:
 			var tip: Vector3 = entry.at + along * entry.length * end * 0.98
-			expect(Progression.land_depth(Vector2(tip.x, tip.z)) > 0.0 and Progression.ice_depth(Vector2(tip.x, tip.z)) < 0.0, "%s: the runway is on land, off the ice" % entry.name)
+			# Patch 4.0.3 item 8: the polar runways stand on the deep ice cap.
+			if Airports.polar(index): expect(Progression.ice_depth(Vector2(tip.x, tip.z)) > 200.0, "%s: the runway is on the polar ice cap" % entry.name)
+			else: expect(Progression.land_depth(Vector2(tip.x, tip.z)) > 0.0 and Progression.ice_depth(Vector2(tip.x, tip.z)) < 0.0, "%s: the runway is on land, off the ice" % entry.name)
 
 func jobs() -> void:
 	for kind: String in Planes.ORDER:
@@ -116,22 +121,25 @@ func flight() -> void:
 		m.engine = 0.7
 		for frame: int in 90: m.step({"throttle": 0.7, "roll": 0.0, "pitch": 0.0}, STEP)
 		expect(absf(rad_to_deg(m.full_bank())) < 30.0, "%s: hands off, the bank eases towards level (%.1f deg)" % [kind, rad_to_deg(m.full_bank())])
-		# With a hand on the stick (a light pull, so no auto-level) a held bank
-		# turns the plane: the coordinated turn.
+		# Patch 4.0.3 item 1: D held banks the plane and turns it: the
+		# coordinated turn.
 		m.basis = cruise.basis
 		m.velocity = m.basis.z * Planes.stall_speed(kind) * 1.6
 		# (Patch 4.0.2: the gear is the player's; G raised it here.)
-		for frame: int in 90: m.step({"throttle": 0.7, "roll": 0.0, "pitch": Flight.LEVEL_INPUT + 0.01, "gear": 0.0}, STEP)
-		expect(absf(angle_difference(m.heading(), 0.4)) > 0.05, "%s: a held bank turns the plane (coordinated)" % kind)
+		for frame: int in 90: m.step({"throttle": 0.7, "roll": 1.0, "pitch": 0.0, "gear": 0.0}, STEP)
+		expect(absf(angle_difference(m.heading(), 0.4)) > 0.05, "%s: a held D banks and turns the plane (coordinated)" % kind)
 		expect(not m.gear_down, "%s: the gear is up in cruise" % kind)
-		# Too slow: the wing stalls and the assist lowers the nose until it flies.
+		# Too slow: the wing stalls (or, Patch 4.0.3, the stall protection
+		# lowers the nose first) and the assist lowers the nose until it flies.
 		m.basis = Basis(Vector3(1, 0, 0), -deg_to_rad(40.0))
 		m.velocity = m.basis.z * Planes.stall_speed(kind) * 0.5
 		var stalled: bool = false
+		var lowered: bool = false
 		for frame: int in 30 * 25:
 			m.step({"throttle": 1.0, "pitch": 1.0}, STEP)
 			stalled = stalled or m.stalled
-		expect(stalled, "%s: it stalls when too slow" % kind)
+			lowered = lowered or m.pitch_angle() < deg_to_rad(30.0)
+		expect(stalled or lowered, "%s: too slow, it stalls or the protection lowers the nose" % kind)
 		expect(not m.stalled and not m.crashed, "%s: the stall assist recovers it" % kind)
 		# A scripted flight: take off, fly to the next airport, land and stop.
 		m = Flight.make(kind, Airports.start_pose(0))
@@ -157,11 +165,11 @@ func flight() -> void:
 		m.velocity = m.basis.z * 60.0
 		for frame: int in 60: m.step({"throttle": 0.5}, STEP)
 		expect(m.crashed and m.crash_reason.contains("sea"), "%s: flying into the sea is a crash" % kind)
-	# Arcade mouse aim: right of a level plane rolls right; at 90 degrees of
-	# bank the same cursor pulls; centred is nothing at all.
-	expect(Aviation.aim_to_plane(Vector2(1, 0), 0.0).is_equal_approx(Vector2(1, 0)), "cursor right of a level plane: bank right")
-	expect(Aviation.aim_to_plane(Vector2(1, 0), PI * 0.5).is_equal_approx(Vector2(0, 1)), "cursor right of a plane banked 90 degrees: pull")
-	expect(Aviation.aim_to_plane(Vector2.ZERO, 0.7) == Vector2.ZERO, "cursor centred: no command")
+	# Patch 4.0.3 item 1: the mouse aim is gone (tools/patch_4_0_3_logic.gd
+	# checks the keyboard scheme).
+	var probe: Node = Aviation.new()
+	expect(not probe.has_method("mouse_aim"), "the mouse no longer steers the plane")
+	probe.free()
 
 func saves() -> void:
 	# A 3.2 server save with a fishing boat loads; the boat is refunded.

@@ -231,8 +231,10 @@ static func _cell_cut(v: Array[float], iso: float) -> Array:
 ## One chunk of natural land: {"coast": ArrayMesh or null, "surf": ArrayMesh
 ## or null, "aabb": Rect2}. Surface materials come from `paint(cell centre)`,
 ## a Callable returning the hill-top material for a spot; `sand` is shared.
-static func natural_chunk(ci: int, cj: int, ports: Array[Vector2], sand: Material, paint: Callable) -> Dictionary:
-	var grid: Dictionary = Progression.natural_land()
+## Patch 4.0.3 item 7: `land` is the grid to draw (Point Nemo's has its
+## own); empty, the natural land's.
+static func natural_chunk(ci: int, cj: int, ports: Array[Vector2], sand: Material, paint: Callable, land: Dictionary = {}) -> Dictionary:
+	var grid: Dictionary = Progression.natural_land() if land.is_empty() else land
 	var count: Vector2i = grid.count
 	var depth: PackedFloat32Array = grid.depth
 	var cell: float = grid.cell

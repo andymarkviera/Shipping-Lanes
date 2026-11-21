@@ -352,10 +352,10 @@ def place_world(geo, layout, first=0, step=1, stats=None):
         legs = set()
         for a, b in itertools.combinations(gates, 2):
             length, path = tb.sea_route(trial, a, b)
-            if length is None or length > plan['max_route_m'] - 500: break
+            if length is None or length > plan.get('bake_max_route_m', plan['max_route_m']) - 500: break
             legs.update(zip(path, path[1:]))
         else: length = 0
-        if length is None or length > plan['max_route_m'] - 500:
+        if length is None or length > plan.get('bake_max_route_m', plan['max_route_m']) - 500:
             miss('no sea route' if length is None else 'route over budget'); continue
         # Ember Isle: open sea, off every port, route, isle and region.
         for vx, vz in rng.sample(vspots, len(vspots)):
@@ -373,6 +373,10 @@ def place_world(geo, layout, first=0, step=1, stats=None):
 def main():
     layout = tb.load()
     geo = tb.game_world(layout)
+    # Patch 4.0.3 item 7: Point Nemo is baked on its own (point_nemo.py); the
+    # natural land is placed and baked round the six ports it always was.
+    geo['world'] = [p for p in geo['world'] if p['id'] != 'port_point_nemo']
+    geo['nemo'] = []
     first = 0 if '--search' in sys.argv else PLACE_ATTEMPT
     skeleton0 = SKELETON_SRC
     for attempt, placed in place_world(geo, layout, first):
@@ -441,7 +445,9 @@ def baked_problem(geo, placed, baked):
 
 
 def layout_max(geo):
-    return tb.load()['game_world']['max_route_m']
+    # Patch 4.0.3: the land was baked against 11 km; the check allows more.
+    plan = tb.load()['game_world']
+    return plan.get('bake_max_route_m', plan['max_route_m'])
 
 
 def bake(geo, placed, skeleton0):
