@@ -8922,3 +8922,102 @@ scripts are added to all three presets' `export_files` in `export_presets.cfg`.
     temp folder the same way).
 - Left from the 4.0.4 notes (not part of #230): the minimap still redraws
   every frame, and `aviation.state()` still copies `planes`.
+
+## Patch 4.0.7 — arcade turns, real props, Jetty restyle, Jetty over land, Jetty water effects (November 21, 2026)
+
+Issue #234, draft PR #235. VERSION 4.0.6 → 4.0.7. No workflow edits. The gas,
+oil, refinery and cargo-fuel code is untouched. No save format change: the
+saved pose stays on the sea plane, so old saves load as before. Every existing
+`.gd.uid` is kept; the new scripts' `.uid` files were made by Godot's import.
+`features/ships/jetty_land.gd` is added to the presets' `export_files`.
+Reference images: `docs/reference/patch_4_0_7/` (from `patch-4-0-7-refs`).
+- 1, flight turning (`features/planes/flight_model.gd`). A / D now command the
+  heading rate (`turn_rate_cmd`): 23°/s at cruise (1.6× stall speed and up;
+  a share of it when slower), the Fighter 35°/s. It eases in over 0.3 s and
+  back out on release. The bank is the result of the turn (the bank that
+  turn would need, capped at 45°, Fighter 60°, less when slow). The wing's
+  lift, the angle of attack and the nose are worked out in the wings-level
+  frame, so the nose stays level and the altitude holds; the velocity turns
+  with the nose. A barrel roll, or a bank past 85° after one, flies the old
+  physical model. On the ground A / D steer the nose wheel as before. The
+  old turn was `g·tan(bank)/V`, about 4°/s at cruise.
+- 2, props and turbines (`features/planes/plane_look.gd`). The old blades
+  were rotated by their angle but offset along a different line, so two of
+  three made a V that missed the hub (the "arrow"). Now: the bush plane has a
+  2-blade prop and the turboprop two 4-blade props, each blade on its own
+  pivot evenly round the hub, pitched, tapered, with painted tips, a pointed
+  spinner and a back plate; props sit clear of the ground. The blur disc
+  shows only from 55 % RPM (at most 16 % opaque). The RPM spools after the
+  engine, and props and fans spin by it. Turbofans: a lip ring, 18 pitched
+  fan blades behind it, a spinner with a swirl mark, a core nozzle and a
+  pointed exhaust cone. The Fighter: a ring of nozzle petals and a throat
+  (`NozzleGlow`) that goes dull red → orange → white-hot in afterburner. The
+  same models are used in the plane hangar and in the world.
+- 3, the Jetty's look (`features/toon/chunky_look.gd`). The hydrofoil struts
+  and foils (the legs) are gone. New faceted wedge hull
+  (`wedge_hull_mesh`): a delta in plan, a Cybertruck-style straight ridge
+  line in profile, flat-shaded in brushed steel, gunmetal and black, metallic.
+  Black glass canopy, panel seams, steel strakes, angular fins, a steel and
+  black engine block. Small cool-white lights only: a bow tip, a light bar
+  across the stern and a running light on each fin. The under-glow is cool
+  white. The thruster, its flame and the hover and blaster effects are kept.
+  The keel is now 1.5 m clear of the water at rest.
+- 4, the Jetty over land (`features/ships/jetty_land.gd`, `handling_ship.gd`).
+  Land, Point Nemo, the polar ice and the icebergs join the `jetty_passable`
+  group; a Jetty hull takes a collision exception with each (the dedicated
+  server's wrap copies are split the same way). Instead it meets the shared
+  terrain (`features/planes/terrain.gd`, baked data, the same on the client
+  and the server): its body follows the ground's height (climbing to the
+  ground ahead quickly, settling smoothly, never below it), carried in its
+  velocity and pose, so the server's simulation, the client's prediction and
+  the snapshot (which already sends Y) agree. Slopes steeper than 35° stop it
+  (sliding along X or Z if that is clear), so cliffs, the ice cliffs, the
+  icebergs' flanks and mountains block, and a hard stop is an impact like the
+  shore. The volcano's cone and the bridges' piers stay solid bodies. The
+  land round each port's quay (260 m) blocks it from land (buildings and
+  cranes; no docking from land), and docking is refused while over land
+  ("Hover back onto the water to dock."). A runway, or its airfield, blocks
+  while a plane is on it or on final (`note_plane` in the planes' authority
+  tick, 5 s). The terrain now follows the drawn beach: before, the hill's
+  foot height (3.8 m) stood right at every waterline, a step no hover could
+  climb (planes' crash checks are unaffected). A save made over land keeps
+  the sea-level pose, so the format is unchanged; such a save starts at its
+  port on load (as for any pose inside land since Patch 2.9).
+- 5, the Jetty's water effects (`features/toon/jetty_fx.gd`), looks only.
+  Under the hover: a dark depression, two ripple rings running out, spray
+  mist. Moving: a tall rooster-tail plume (about eight hull lengths at full
+  speed), a wide V wake with a dark trench, heavy spray sheets off both sides,
+  all scaled by speed; near top speed (own Jetty only) speed lines and a FOV
+  kick of up to 7° (+5° in a blast, given back after). The blaster adds a big
+  white-hot burst and a flash. Over land: sand-brown dust, snow over ice,
+  grey over rock, and no water effects. All emitters are GPUParticles3D made
+  once per Jetty and reused; their materials, meshes and the soft puff
+  texture come from one shared pool. The water effects lie flat on the
+  water (heading only), not tilted with the hover. LOD by camera distance
+  (full to 260 m, thinning to 1.1 km, off beyond); other captains' Jetties
+  (`remote_replica`) run at 55 % and never touch this camera. Other captains
+  see the effects (each client draws them for the replica it sees).
+- Checks:
+  - `tools/patch_4_0_7_logic.gd` (159 checks, in `check_catalog.gd`): the
+    turn for every plane both ways (90° in 4.07 s, Fighter 2.72 s; altitude
+    within 2.3 m; ease-in; level on release), nose-wheel steering, W / S,
+    altitude hold, barrel roll, gear, throttle and brakes; the props, fans
+    and nozzle; the Jetty's look; the terrain rules (an island crossing found
+    by search, the volcano and an ice cliff block, port grounds, a runway
+    only while busy, the height follow); the effects (GPU, pooled, scaled by
+    speed, burst, dust and snow, remote LOD).
+  - `tools/patch_4_0_7_check.gd` (181 checks, not in CI): the game scene.
+    A real Jetty crosses an island from beach to beach (about 700 m, over an
+    18 m hill) under power, never under the ground, with spray then dust;
+    docking from land is refused there and a save there keeps the sea-level
+    pose. A speedboat sent the same way is stopped by the coast; the volcano
+    still stops the Jetty. The flying turboprop has two 4-blade props, and D
+    held through the real controls turns a plane 90° in under 5 s within
+    20 m of altitude.
+  - Old checks updated: `patch_4_0_3_logic.gd` adds up the heading change
+    (at the new rate the plane comes full circle in 15 s);
+    `patch_4_0_2_logic.gd` expects GPU particles. `patch_4_0_6_logic.gd`'s
+    turbulence part used the wall clock and failed whenever no storm had a
+    clear core that minute (it failed on the untouched baseline too); it now
+    moves the shared clock on a minute at a time, as `patch_4_0_6_check.gd`
+    does.

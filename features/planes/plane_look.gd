@@ -124,7 +124,7 @@ static func model(kind: String) -> Node3D:
 				nacelle.rotation.x = PI / 2.0
 				var exhaust: MeshInstance3D = _drum(body, body_r * 0.12, body_r * 0.16, chord * 0.3, Vector3(x + side * body_r * 0.3, engine_y + body_r * 0.1, length * 0.1 - chord * 0.2), INK, cache, 8)
 				exhaust.rotation.x = -PI / 2.0
-				_prop(props, Vector3(x, engine_y, length * 0.1 + chord * 0.8), minf(body_r * 1.5, engine_y * 0.85), 4, trim, cache)
+				_prop(props, Vector3(x, engine_y, length * 0.1 + chord * 0.8), minf(body_r * 1.5, engine_y * 0.85), 4, trim, cache, "Prop%d" % (0 if side < 0.0 else 1))
 		"fan2":
 			# Patch 4.0.1 item 5: turbofans, no flames. An under-wing nacelle on
 			# a pylon, a dark intake with a fan that spins with the throttle,
@@ -426,9 +426,9 @@ static func _prism(parent: Node3D, outline: Array, y: float, thick: float, colou
 const PROP_PITCH_RAD: float = 0.38
 const BLADE: Color = Color("2f333d")
 const BLADE_TIP: Color = Color("ffc940")
-static func _prop(parent: Node3D, at: Vector3, radius: float, blades: int, trim: Color, cache: Dictionary) -> void:
+static func _prop(parent: Node3D, at: Vector3, radius: float, blades: int, trim: Color, cache: Dictionary, label: String = "Prop0") -> void:
 	var hub: Node3D = Node3D.new()
-	hub.name = "Prop"
+	hub.name = label
 	hub.position = at
 	hub.set_meta("blades", blades)
 	parent.add_child(hub)

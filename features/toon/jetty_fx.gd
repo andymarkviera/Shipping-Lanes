@@ -224,7 +224,7 @@ func emitter(label: String, amount: int, life: float, material: ParticleProcessM
 
 func build() -> void:
 	# Downwash: flat spray mist blown out from under the whole hull.
-	downwash = emitter("Downwash", 110, 0.9, process("downwash", func(m: ParticleProcessMaterial) -> void:
+	downwash = emitter("Downwash", 140, 0.9, process("downwash", func(m: ParticleProcessMaterial) -> void:
 		m.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
 		m.emission_box_extents = Vector3(beam_m * 0.5, 0.05, length_m * 0.45)
 		m.direction = Vector3(0, 0.25, 0)
@@ -237,9 +237,9 @@ func build() -> void:
 		m.damping_max = 4.0
 		m.scale_min = 0.8
 		m.scale_max = 2.2
-		m.color_ramp = fade_ramp("mist", Color(1, 1, 1, 0.8), Color(0.9, 0.96, 1.0, 0.5))), puff_mesh(1.0))
+		m.color_ramp = fade_ramp("mist", Color(1, 1, 1, 0.8), Color(0.9, 0.96, 1.0, 0.5))), puff_mesh(1.8))
 	# Rooster tail: a tall plume up and back behind the stern (scaled by speed).
-	rooster = emitter("RoosterTail", 260, 1.5, process("rooster", func(m: ParticleProcessMaterial) -> void:
+	rooster = emitter("RoosterTail", 420, 1.5, process("rooster", func(m: ParticleProcessMaterial) -> void:
 		m.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
 		m.emission_sphere_radius = 0.5
 		m.direction = Vector3(0, 0.85, -1.0)
@@ -249,10 +249,10 @@ func build() -> void:
 		m.gravity = Vector3(0, -9.0, 0)
 		m.scale_min = 1.0
 		m.scale_max = 2.6
-		m.color_ramp = fade_ramp("plume", Color(1, 1, 1, 0.95), Color(0.88, 0.95, 1.0, 0.7))), puff_mesh(1.2))
+		m.color_ramp = fade_ramp("plume", Color(1, 1, 1, 0.95), Color(0.88, 0.95, 1.0, 0.7))), puff_mesh(2.6))
 	# Spray sheets off both sides, thrown out wide and flat.
 	for side: float in [-1.0, 1.0]:
-		var sheet: GPUParticles3D = emitter("SprayLeft" if side > 0.0 else "SprayRight", 140, 0.85, process("sheet_%d" % int(side), func(m: ParticleProcessMaterial) -> void:
+		var sheet: GPUParticles3D = emitter("SprayLeft" if side > 0.0 else "SprayRight", 220, 0.85, process("sheet_%d" % int(side), func(m: ParticleProcessMaterial) -> void:
 			m.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
 			m.emission_box_extents = Vector3(0.1, 0.05, length_m * 0.3)
 			m.direction = Vector3(side, 0.75, -0.45)
@@ -263,12 +263,12 @@ func build() -> void:
 			m.gravity = Vector3(0, -12.0, 0)
 			m.scale_min = 0.8
 			m.scale_max = 2.0
-			m.color_ramp = fade_ramp("sheet", Color(1, 1, 1, 0.9), Color(0.9, 0.96, 1.0, 0.6))), puff_mesh(1.0))
+			m.color_ramp = fade_ramp("sheet", Color(1, 1, 1, 0.9), Color(0.9, 0.96, 1.0, 0.6))), puff_mesh(2.0))
 		sheet.position = Vector3(side * beam_m * 0.5, 0, -length_m * 0.05)
 		if side > 0.0: spray_left = sheet
 		else: spray_right = sheet
 	# The blaster's white-hot burst (one shot, restarted on each blast).
-	burst = emitter("BoostBurst", 180, 0.75, process("burst", func(m: ParticleProcessMaterial) -> void:
+	burst = emitter("BoostBurst", 260, 0.75, process("burst", func(m: ParticleProcessMaterial) -> void:
 		m.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
 		m.emission_sphere_radius = 0.8
 		m.direction = Vector3(0, 0.2, -1.0)
@@ -280,7 +280,7 @@ func build() -> void:
 		m.gravity = Vector3.ZERO
 		m.scale_min = 1.5
 		m.scale_max = 4.5
-		m.color_ramp = fade_ramp("burst", Color(1, 1, 1, 1), Color(1.0, 0.93, 0.7, 0.9))), puff_mesh(1.4, true))
+		m.color_ramp = fade_ramp("burst", Color(1, 1, 1, 1), Color(1.0, 0.93, 0.7, 0.9))), puff_mesh(3.2, true))
 	burst.one_shot = true
 	burst.explosiveness = 0.95
 	burst.emitting = false
@@ -315,7 +315,7 @@ func build() -> void:
 	speed_lines.position = Vector3(0, 4.0, length_m * 1.5)
 	speed_lines.emitting = false
 	# Dust (or snow) kicked up over land.
-	dust = emitter("Dust", 170, 1.6, dust_process("sand", DUST_SAND), puff_mesh(1.6))
+	dust = emitter("Dust", 220, 1.6, dust_process("sand", DUST_SAND), puff_mesh(2.6))
 	dust.emitting = false
 	# The depression under the hover and its running ripple rings.
 	depression = MeshInstance3D.new()
@@ -351,8 +351,10 @@ func build() -> void:
 	add_child(wake)
 	# Glow: a light pool on the water under the hull.
 	var pool: PlaneMesh = PlaneMesh.new()
-	pool.size = Vector2(beam_m * 1.9, length_m * 1.05)
+	pool.size = Vector2(beam_m * 2.6, length_m * 1.2)
 	glow_paint = unshaded(Color(GLOW, 0.5), true)
+	# (Patch 4.0.7: a soft round pool, not a hard-edged rectangle.)
+	glow_paint.albedo_texture = puff_texture()
 	glow = MeshInstance3D.new()
 	glow.name = "Glow"
 	glow.mesh = pool
@@ -498,9 +500,8 @@ func _process(delta: float) -> void:
 ## Patch 4.0.7 item 5: the LOD share from the camera's distance (1 near, a
 ## part farther off, 0 past LOD_FAR_M), less for another captain's Jetty.
 func level_of_detail() -> float:
-	if not is_inside_tree(): return 1.0
-	var camera: Camera3D = get_viewport().get_camera_3d() if get_viewport() != null else null
 	var share: float = 1.0
+	var camera: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() and get_viewport() != null else null
 	if camera != null:
 		var distance: float = camera.global_position.distance_to(global_position)
 		share = 1.0 if distance < LOD_NEAR_M else (0.0 if distance > LOD_FAR_M else lerpf(0.45, 0.15, (distance - LOD_NEAR_M) / (LOD_FAR_M - LOD_NEAR_M)))
@@ -546,34 +547,35 @@ func update_fx(delta: float) -> void:
 	var shown: bool = detail > 0.0
 	# Hover: the mist, the depression and its ripples under the hull.
 	downwash.position = Vector3(0, water, 0)
+	lie_flat(downwash, Vector3.ONE)
 	downwash.emitting = shown and wet
 	downwash.amount_ratio = clampf(detail * (0.6 + 0.4 * blast), 0.05, 1.0)
 	depression.visible = shown and wet
 	depression.position = Vector3(0, water + 0.01, 0)
-	depression.scale = Vector3(beam_m * 1.6, 1.0, length_m * 0.9) * (1.0 + 0.06 * sin(clock * 4.3) + 0.25 * blast)
+	lie_flat(depression, Vector3(beam_m * 1.6, 1.0, length_m * 0.9) * (1.0 + 0.06 * sin(clock * 4.3) + 0.25 * blast))
 	for index: int in ripples.size():
 		var ripple: MeshInstance3D = ripples[index]
 		var age: float = fposmod(clock / RIPPLE_S + index * 0.5, 1.0)
 		ripple.visible = shown and wet and detail > 0.3
 		ripple.position = Vector3(0, water + 0.03, 0)
-		ripple.scale = Vector3(beam_m * (0.7 + 2.6 * age), 0.15, length_m * (0.45 + 0.9 * age))
+		lie_flat(ripple, Vector3(beam_m * (0.7 + 1.9 * age), 0.08, length_m * (0.45 + 0.6 * age)))
 		(ripple.material_override as StandardMaterial3D).albedo_color.a = 0.55 * (1.0 - age) * (1.0 - full * 0.6)
 	# Moving: the rooster-tail plume, the spray sheets and the V wake, all
 	# growing with speed (and more in a blast).
 	var grow: float = 0.45 + (PLUME_LENGTHS / 3.2 - 0.45) * full + 1.2 * blast
 	rooster.position = Vector3(0, water, -length_m * 0.5 - 0.6)
 	rooster.emitting = shown and wet and (speed > 0.04 or blast > 0.0)
-	rooster.scale = Vector3(0.8 + 1.4 * full + blast, 0.6 + 1.6 * full + blast, grow)
+	lie_flat(rooster, Vector3(0.8 + 1.4 * full + blast, 0.6 + 1.6 * full + blast, grow))
 	rooster.amount_ratio = clampf(detail * (0.35 + 0.65 * full), 0.05, 1.0)
 	for sheet: GPUParticles3D in [spray_left, spray_right]:
 		sheet.position.y = water
 		sheet.emitting = shown and wet and detail > 0.3 and speed > 0.08
-		sheet.scale = Vector3.ONE * (0.6 + 1.6 * full + 0.8 * blast)
+		lie_flat(sheet, Vector3.ONE * (0.6 + 1.6 * full + 0.8 * blast))
 		sheet.amount_ratio = clampf(detail * (0.3 + 0.7 * full), 0.05, 1.0)
 	wake.visible = shown and wet and speed > 0.02
-	wake.position = Vector3(0, water + 0.02, -length_m * 0.45)
+	wake.position = Vector3(0, water + 0.25, -length_m * 0.45)
 	var wake_length: float = length_m * (1.5 + (WAKE_LENGTHS - 1.5) * full + 3.0 * blast)
-	wake.scale = Vector3(wake_length * (0.9 + 0.3 * full), 1.0, wake_length)
+	lie_flat(wake, Vector3(wake_length * (0.9 + 0.3 * full), 1.0, wake_length))
 	# Over land: dust, or snow over the ice, kicked up instead.
 	dust.position = Vector3(0, water, -length_m * 0.2)
 	dust.emitting = shown and not wet
@@ -582,7 +584,7 @@ func update_fx(delta: float) -> void:
 		var kicked: ParticleProcessMaterial = dust_process(colour, DUST_SNOW if colour == "snow" else (DUST_ROCK if colour == "rock" else DUST_SAND))
 		if dust.process_material != kicked: dust.process_material = kicked
 		dust.amount_ratio = clampf(detail * (0.3 + 0.7 * full + 0.4 * blast), 0.05, 1.0)
-		dust.scale = Vector3.ONE * (0.8 + 1.2 * full)
+		lie_flat(dust, Vector3.ONE * (0.8 + 1.2 * full))
 	# The blaster's burst and its flash.
 	burst_age += step
 	burst_light.visible = burst_age < BURST_S
@@ -595,6 +597,7 @@ func update_fx(delta: float) -> void:
 	var pulse: float = 0.5 + 0.5 * sin(clock * 3.1)
 	var hot: float = maxf(charge, blast)
 	glow.position = Vector3(0, water + 0.02, 0)
+	lie_flat(glow, Vector3.ONE)
 	var glow_colour: Color = GLOW.lerp(rgb(clock * HUE_RATE), hot)
 	glow_paint.albedo_color = Color(glow_colour, 0.22 + 0.1 * pulse + 0.4 * hot)
 	glow_light.position = Vector3(0, water + 0.6, 0)
@@ -625,6 +628,16 @@ func update_fx(delta: float) -> void:
 		ring.scale = Vector3.ONE * (0.8 + 7.0 * t)
 		ring.position = nozzle + Vector3(0, 0, -0.6 - 5.0 * t)
 		ring_paint.albedo_color = Color(rgb(clock * HUE_RATE + 0.5), 0.9 * (1.0 - t))
+
+## Patch 4.0.7 item 5: the water-level effects lie flat on the water (or the
+## ground): they keep the hull's heading but not its hover pitch and roll
+## (a 100 m wake tilted by a few degrees would dive under the sea).
+func lie_flat(node: Node3D, size: Vector3) -> void:
+	node.scale = size
+	if not node.is_inside_tree(): return
+	var forward: Vector3 = global_basis.z
+	var heading: Basis = Basis(Vector3.UP, atan2(forward.x, forward.z))
+	node.global_transform = Transform3D(heading * Basis.from_scale(size), node.global_position)
 
 ## Patch 4.0.7 item 5: the big white-hot burst on the blast (reused emitter).
 func fire_burst() -> void:

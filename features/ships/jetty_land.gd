@@ -37,8 +37,8 @@ const STEP_TOLERANCE_M: float = 0.25
 ## The height follows the ground ahead (LOOKAHEAD_S of travel), climbing at
 ## CLIMB_RATE and settling at SETTLE_RATE (1 / seconds), never below it.
 const LOOKAHEAD_S: float = 0.15
-const CLIMB_RATE: float = 14.0
-const SETTLE_RATE: float = 4.0
+const CLIMB_RATE: float = 20.0
+const SETTLE_RATE: float = 12.0
 ## Land within this of a port's quay line (TOON_COAST's harbour) is port ground.
 const PORT_GROUNDS_M: float = 260.0
 ## Above the sea by more than this, the Jetty is over land (or ice).
@@ -106,14 +106,18 @@ static func blocked_step(from: Vector3, to: Vector3) -> String:
 	# (Already on port ground or a busy airfield, e.g. loaded there: it may leave.)
 	var inside_port: bool = previous > LAND_M and port_ground(from)
 	var start: Dictionary = Terrain.sample(from)
-	var inside_airport: int = int(start.runway) if start.surface == "runway" else int(start.get("airport", -1))
+	# On a runway already (it may leave it), or on an airport's airfield.
+	var on_runway: int = int(start.runway) if start.surface == "runway" else -1
+	var on_field: int = on_runway if on_runway >= 0 else int(start.get("airport", -1))
 	for index: int in range(1, count + 1):
 		var at: Vector3 = from + travel * (float(index) / count)
 		var below: Dictionary = Terrain.sample(at)
 		var height: float = maxf(float(below.height), 0.0)
 		if height - previous > steep * segment + STEP_TOLERANCE_M: return "slope"
-		var field: int = int(below.runway) if below.surface == "runway" else int(below.get("airport", -1))
-		if field >= 0 and field != inside_airport and runway_busy(field): return "runway"
+		# Onto a runway in use (from its own airfield too), or onto the
+		# airfield of an airport whose runway is in use.
+		if below.surface == "runway" and int(below.runway) != on_runway and runway_busy(int(below.runway)): return "runway"
+		if below.surface == "airfield" and int(below.airport) != on_field and runway_busy(int(below.airport)): return "runway"
 		if not inside_port and height > LAND_M and port_ground(at): return "port"
 		previous = height
 	return ""

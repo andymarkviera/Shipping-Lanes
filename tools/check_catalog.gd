@@ -92,6 +92,13 @@ func run() -> void:
 	# turbulence), VERSION (tools/patch_4_0_6_check.gd adds the game scene).
 	for failure: String in load("res://tools/patch_4_0_6_logic.gd").run_all():
 		failures.append("Patch 4.0.6: " + failure)
+	# Patch 4.0.7: the arcade coordinated turn (heading rate, bank as the
+	# result, altitude held, nose-wheel steering), real props, turbofans and
+	# the Fighter's nozzle, the Jetty without legs, over land (shared terrain,
+	# slope limit, port grounds, runways in use) and its pooled water effects,
+	# VERSION (tools/patch_4_0_7_check.gd adds the game scene).
+	for failure: String in load("res://tools/patch_4_0_7_logic.gd").run_all():
+		failures.append("Patch 4.0.7: " + failure)
 	# Patch 4.0.6 item 2: every save schema since 3.0 (local voyage versions
 	# 3-5, dedicated schemas 0-2), generated in code, opened by the real stores.
 	for failure: String in load("res://tools/save_migration_logic.gd").run_all():

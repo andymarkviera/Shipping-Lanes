@@ -583,10 +583,10 @@ static func delta_hull_mesh(length: float, beam: float, keel: float, deck: float
 ## JetFlame) and JettyFx (hover and blaster) stay where they were.
 const JET_FLAME = preload("res://features/toon/jet_flame.gd")
 const JETTY_FX = preload("res://features/toon/jetty_fx.gd")
-const JETTY_GUNMETAL: Color = Color("3b4048")
-const JETTY_BLACK: Color = Color("15171b")
-const JETTY_STEEL: Color = Color("8e959f")
-const JETTY_DARK: Color = Color("262a31")
+const JETTY_GUNMETAL: Color = Color("5d6672")
+const JETTY_BLACK: Color = Color("24272d")
+const JETTY_STEEL: Color = Color("b9c0c9")
+const JETTY_DARK: Color = Color("3a4049")
 const JETTY_LIGHT: Color = Color("e4f2ff")
 ## The keel's depth under the hull's origin: with the hover's lift
 ## (ShipVisualMotion.HOVER_REST_M) the keel rides about JettyLand.RIDE_M clear.
@@ -676,7 +676,7 @@ static func wedge_hull_mesh(length: float, beam: float, keel: float, deck: float
 	for t: float in stations:
 		var width: float = maxf(half * (1.0 - t), 0.02)
 		var z: float = (t - 0.5) * length
-		var ridge_rise: float = lerpf(0.42, 0.78, t / peak_t) if t <= peak_t else lerpf(0.78, 0.0, (t - peak_t) / (1.0 - peak_t))
+		var ridge_rise: float = lerpf(0.5, 0.95, t / peak_t) if t <= peak_t else lerpf(0.95, 0.0, (t - peak_t) / (1.0 - peak_t))
 		var edge: float = deck + 0.02 * t
 		var ridge: float = maxf(edge + ridge_rise, edge + 0.02)
 		var chine: float = lerpf(deck - 0.45, edge - 0.08, pow(t, 1.4))
