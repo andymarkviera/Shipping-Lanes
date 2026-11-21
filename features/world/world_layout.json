@@ -104,7 +104,7 @@
       "sea_gate": [-2.2, 1.85],
       "open_water_bearing_deg": 225.0,
       "max_class": "XL",
-      "services": ["container_transfer", "refuel", "repair"]
+      "services": ["container_transfer", "heavy_transfer", "refuel", "repair"]
     },
     "port_tallow_reach": {
       "display_name": "Tallow Reach",

@@ -8689,6 +8689,16 @@ No workflow edits. The gas, oil, refinery and cargo-fuel code is untouched. The
 - Not run: Python was refused in this job, so Stage 3 (compileall, the
   services unittests, world_layout tests, the traversal budget) did not run
   locally; CI runs it.
+- CI fix (after fcad7ce): Stage 3 failed with `test_cinder_point_is_placed_as_recorded`,
+  `test_layout_agrees` and `WORLD_LAYOUT_FAIL ... port_cinder_point: planned
+  services drop a recorded service`. Cinder Point's position was fine; the
+  planned services in `features/world/world_layout.json` were missing the
+  `heavy_transfer` that item 4 added to its port and berth records. Added it,
+  so the plan keeps every recorded service. Heavy hulls now also plan
+  Brindle–Cinder (5.6 km) and Slatewater–Cinder (6.7 km); the slowest, the
+  Heavy Lifter, needs about 16 min and 660 L of its 1,600 L limit, inside the
+  40 min / fuel limits. Python was refused in this job too, so this was
+  worked by hand from `traversal_budget.py` and checked by CI.
 - Not verified: Windows play; how keyboard flight, the throttle slider and the
   new cards feel and look (headless has no renderer); the altitude hold after
   a long steep climb on a fast plane (the plane first levels off, which takes
