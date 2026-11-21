@@ -28,6 +28,12 @@ var condition_affects_propulsion: bool = false
 const JETTY_BOOST = preload("res://features/ships/jetty_boost.gd")
 var boost: JETTY_BOOST = JETTY_BOOST.new()
 var boost_applied: float = 1.0
+## Patch 4.0.6 item 1: the game's hulls (and the client's prediction of its
+## own) feel the storms (features/sky/storms.gd): the engine pushes less.
+const STORMS = preload("res://features/sky/storms.gd")
+var weather: bool = false
+## 0..1: the storm at the hull as of the last tick (0 off the game's sea).
+var storm: float = 0.0
 
 func propulsion_condition_factor() -> float:
 	if not condition_affects_propulsion: return 1.0
@@ -133,7 +139,8 @@ func advance_motion(delta: float) -> void:
 	var target_yaw: float = -rudder * signf(local_velocity.z) * effectiveness * deg_to_rad(definition.max_turn_rate_degrees)
 	yaw_rate = move_toward(yaw_rate, target_yaw, deg_to_rad(definition.turn_acceleration_degrees) * delta)
 	turn_without_overlap(yaw_rate * delta)
-	var acceleration: float = actual_throttle * fuel_fraction * propulsion_condition_factor() * (definition.forward_acceleration_mps2 if actual_throttle >= 0.0 else definition.reverse_acceleration_mps2)
+	storm = STORMS.intensity_at(global_position if is_inside_tree() else position) if weather else 0.0
+	var acceleration: float = actual_throttle * fuel_fraction * propulsion_condition_factor() * STORMS.speed_factor(storm) * (definition.forward_acceleration_mps2 if actual_throttle >= 0.0 else definition.reverse_acceleration_mps2)
 	var drag: float = definition.linear_drag_per_second
 	local_velocity.z = local_velocity.z * exp(-drag * delta) + acceleration / drag * (1.0 - exp(-drag * delta))
 	var lateral_drag: float = definition.lateral_drag_per_second

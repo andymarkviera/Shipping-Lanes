@@ -52,6 +52,11 @@ const Progression = preload("res://features/game/progression.gd")
 const Terrain = preload("res://features/planes/terrain.gd")
 const Planes = preload("res://features/planes/plane_catalog.gd")
 const Airports = preload("res://features/planes/airports.gd")
+## Patch 4.0.6 item 1: storms shake planes (turbulence). From the position and
+## the shared clock only, so the server and the client's replay agree.
+const Storms = preload("res://features/sky/storms.gd")
+## No bumps this low (take-off, the flare): the gusts fade in up to here.
+const TURBULENCE_AGL_M: float = 40.0
 const GRAVITY: float = 9.81
 const SEA_RHO: float = 1.225
 const SCALE_HEIGHT_M: float = 8500.0
@@ -183,6 +188,8 @@ var climbing_out: bool = false
 var gear_auto_up: bool = false
 var belly_landed: bool = false
 var on_belly: bool = false
+## 0..1: the storm round the plane at the last step (Patch 4.0.6).
+var turbulence: float = 0.0
 
 static func make(plane_kind: String, pose: Transform3D, fuel: float = -1.0) -> RefCounted:
 	var model: RefCounted = new()
@@ -535,6 +542,13 @@ func step(input: Dictionary, dt: float) -> void:
 		var over: float = absf(full_bank()) - bank_limit()
 		if over > 0.0 and over < BANK_SNAP_RAD: basis = (basis * Basis(Vector3(0, 0, 1), -signf(full_bank()) * over)).orthonormalized()
 	velocity += force / mass * dt
+	# Patch 4.0.6 item 1: in a storm the air bumps the plane up and down and
+	# rocks its wings (the altitude hold and the roll-level work against it).
+	turbulence = 0.0 if on_ground else Storms.intensity_at(position) * clampf(agl_m / TURBULENCE_AGL_M, 0.0, 1.0)
+	if turbulence > 0.0:
+		var bump: Vector2 = Storms.gust(position, turbulence)
+		velocity.y += bump.x * dt
+		basis = (basis * Basis(Vector3(0, 0, 1), bump.y * dt)).orthonormalized()
 	if not on_ground: runway_drift(dt)
 	# The auto-flare's cushion: the sink eases off before the wheels touch.
 	var cushion: float = flare_weight()

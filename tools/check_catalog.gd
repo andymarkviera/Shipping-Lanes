@@ -87,6 +87,11 @@ func run() -> void:
 	# game scene; check_dedicated_split.py --errors a real server).
 	for failure: String in load("res://tools/patch_4_0_5_logic.gd").run_all():
 		failures.append("Patch 4.0.5: " + failure)
+	# Patch 4.0.6: storms at sea (seeded shared cells, sheltered harbours, the
+	# slow-down, the hull wear and its floor, the swell, lightning, a plane's
+	# turbulence), VERSION (tools/patch_4_0_6_check.gd adds the game scene).
+	for failure: String in load("res://tools/patch_4_0_6_logic.gd").run_all():
+		failures.append("Patch 4.0.6: " + failure)
 	for failure: String in failures:
 		push_error(failure)
 	print("CATALOG_CHECK_PASS" if failures.is_empty() else "CATALOG_CHECK_FAILED")
