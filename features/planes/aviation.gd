@@ -110,7 +110,10 @@ var chase_ready: bool = false
 var airport_nodes: Array[Node3D] = []
 var warn_player: AudioStreamPlayer
 var boom_player: AudioStreamPlayer
-var engine_player: AudioStreamPlayer
+## Patch 4.0.5 item 3: the plane's own engine sound (PlaneEngineSound), one
+## per plane kind, rebuilt when the plane changes.
+var engine_sound: Node3D
+const EngineSound = preload("res://features/planes/plane_engine_sound.gd")
 var seen_crashes: int = 0
 var last_crash_at: Vector3 = Vector3.ZERO
 var card: PanelContainer
@@ -239,7 +242,9 @@ func switch_to_plane() -> bool:
 	lay_up_boat()
 	start_plane(airport)
 	view.bind_port()
-	say("Now flying your %s from %s. Shift for full throttle, then W to lift off at %d kn." % [plane_entry().name, Airports.all()[airport].name, roundi(float(plane_entry().rotate_mps) * 1.944)])
+	# Patch 4.0.5 item 1: the controller's buttons when it was used last.
+	say("Now flying your %s from %s. %s for full throttle, then %s to lift off at %d kn." % [plane_entry().name, Airports.all()[airport].name,
+		Gamepad.pick("Shift", Gamepad.glyph("RT")), Gamepad.pick("W", "[L-stick] up"), roundi(float(plane_entry().rotate_mps) * 1.944)])
 	return true
 
 func first_plane() -> String:
@@ -551,7 +556,8 @@ func crash() -> void:
 ## server's helm frame and its checks are unchanged.
 func read_local_input(delta: float) -> void:
 	var controls: PlayerControls = view.controls
-	var axis: float = controls.held_key(KEY_SHIFT) - controls.held_key(KEY_CTRL)
+	# Patch 4.0.5 item 1: or a controller's RT / LT.
+	var axis: float = clampf(controls.held_key(KEY_SHIFT) - controls.held_key(KEY_CTRL) + controls.lever_axis(), -1.0, 1.0)
 	lever = clampf(lever + axis * LEVER_RATE * delta, 0.0, 1.0)
 	if controls.action_strength("ship_throttle_zero") > 0.0: lever = 0.0
 	if in_crash_view():
@@ -735,10 +741,6 @@ func setup_presentation() -> void:
 	boom_player.stream = Look.sound("boom")
 	boom_player.volume_db = -4.0
 	add_child(boom_player)
-	engine_player = AudioStreamPlayer.new()
-	engine_player.stream = HandlingFeedback.tone("engine")
-	engine_player.volume_db = -20.0
-	add_child(engine_player)
 	build_ui()
 	# Patch 4.0.2 item 6: G (the key the pirate ships' salute uses) is the gear while flying.
 	if is_instance_valid(view.controls) and not view.controls.command_requested.is_connected(on_command):
@@ -818,12 +820,12 @@ func present(delta: float) -> void:
 		crash_view_left = 0.0
 		if is_instance_valid(chase) and chase.current: view.camera.camera.make_current()
 		if is_instance_valid(warn_player) and warn_player.playing: warn_player.stop()
-		if is_instance_valid(engine_player) and engine_player.playing: engine_player.stop()
+		if is_instance_valid(engine_sound): engine_sound.silence()
 		if is_instance_valid(marks) and marks.visible: marks.hide()
 		return
 	if in_crash_view():
 		present_crash(delta)
-		if is_instance_valid(engine_player) and engine_player.playing: engine_player.stop()
+		if is_instance_valid(engine_sound): engine_sound.silence()
 		if is_instance_valid(warn_player) and warn_player.playing: warn_player.stop()
 		return
 	if is_instance_valid(plane_node): plane_node.visible = true
@@ -856,9 +858,15 @@ func present(delta: float) -> void:
 		marks.queue_redraw()
 	if warning and not warn_player.playing: warn_player.play()
 	elif not warning and warn_player.playing: warn_player.stop()
-	if not engine_player.playing: engine_player.play()
-	engine_player.pitch_scale = 0.7 + model.engine * 1.1 + (0.6 if str(Planes.PLANES[plane_kind].engines) in ["fan2", "afterburner"] else 0.0)
-	engine_player.volume_db = lerpf(-26.0, -12.0, model.engine)
+	# Patch 4.0.5 item 3: the engine's own sound, pitched by its RPM, the
+	# roar and the fighter's afterburner by the lever.
+	if is_instance_valid(engine_sound) and engine_sound.family != EngineSound.family_of(plane_kind):
+		engine_sound.queue_free()
+		engine_sound = null
+	if not is_instance_valid(engine_sound):
+		engine_sound = EngineSound.make(plane_kind, false)
+		add_child(engine_sound)
+	engine_sound.update(model.engine, lever)
 
 # --- UI ------------------------------------------------------------------------------
 
@@ -1092,6 +1100,8 @@ func refresh_ui() -> void:
 		if view.has_method("play_sound"): view.play_sound("chime")
 	elif not nudge and (not flying() or model.gear_down or model.on_ground or model.agl_m > GEAR_NUDGE_AGL_M * 1.3): nudge_chimed = false
 	nudge_label.visible = nudge
+	# Patch 4.0.5 item 1: Y on a controller (the key stays G).
+	if nudge: nudge_label.text = "Press %s — Gear down" % Gamepad.pick("G", Gamepad.glyph(JOY_BUTTON_Y))
 	if nudge: nudge_label.modulate.a = 0.55 + 0.45 * (0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.008))
 	banner.visible = flying() and (warning or model.stalled)
 	if banner.visible:
@@ -1113,6 +1123,10 @@ func describe() -> Dictionary:
 	# Patch 4.0.3 item 1: the keys, while on the ground.
 	if model.on_ground and job_id.is_empty():
 		result.next = "Shift: full throttle. W past %d kn to lift off.\nA / D turn · W / S climb, descend · Space brakes · G gear" % roundi(float(plane_entry().rotate_mps) * 1.944)
+		# Patch 4.0.5 item 1: the same, in controller buttons.
+		if Gamepad.pad_last:
+			result.next = "%s: full throttle. [L-stick] up past %d kn to lift off.\n[L-stick] turn, climb, descend · %s brakes · %s gear" % [Gamepad.glyph("RT"),
+				roundi(float(plane_entry().rotate_mps) * 1.944), Gamepad.glyph(JOY_BUTTON_X), Gamepad.glyph(JOY_BUTTON_Y)]
 	if model.fuel_l < float(plane_entry().fuel_l) * 0.2: result.next += ("\n" if not result.next.is_empty() else "") + "Fuel is low. Land at an airport and click Refuel."
 	return result
 

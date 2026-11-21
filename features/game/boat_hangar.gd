@@ -79,6 +79,8 @@ static func credits(minor: int) -> String:
 
 func _ready() -> void:
 	layer = 9
+	# Patch 4.0.5 item 1: the D-pad steps the ships here, not the menu cursor.
+	add_to_group(Gamepad.NAV_GROUP)
 	screen = Control.new()
 	screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	PLAYFUL.dress(screen)

@@ -113,8 +113,13 @@ func build_controls() -> void:
 func control_rows() -> Array:
 	return rows_for(controls.preferences)
 
+## The device the Controls list was drawn for (Patch 4.0.5 item 1).
+var shown_revision: int = -1
+
 ## Patch 2.7 item 3: the main menu's Options > Controls shows the same list.
 static func rows_for(preferences: InputPreferences) -> Array:
+	# Patch 4.0.5 item 1: after a controller was used, the list shows its buttons.
+	if Gamepad.pad_last: return Gamepad.control_rows()
 	var rows: Array = []
 	for entry: Array in KEY_ROWS:
 		var keys: Array = []
@@ -125,6 +130,7 @@ static func rows_for(preferences: InputPreferences) -> Array:
 	return rows
 
 func open_controls() -> void:
+	shown_revision = Gamepad.revision
 	for old: Node in controls_grid.get_children():
 		controls_grid.remove_child(old)
 		old.queue_free()
@@ -170,6 +176,12 @@ func open_settings() -> void:
 ## it the rest of the time (menu open, window just clicked, a key still held).
 ## Settings handles its own Esc first and comes back to this menu; Esc on the
 ## Controls screen comes back too.
+## The Controls list swaps between keys and controller buttons as the player
+## switches device (Patch 4.0.5 item 1).
+func _process(_delta: float) -> void:
+	if controls_panel.visible and shown_revision != Gamepad.revision:
+		open_controls()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo \
 			and (event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE):

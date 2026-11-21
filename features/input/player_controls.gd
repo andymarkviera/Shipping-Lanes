@@ -24,10 +24,19 @@ static var applied_fullscreen: int = -1
 const BOOST_COMMAND: StringName = &"jetty_boost"
 const PAN_ZOOM: float = 0.35
 const PAN_TURN: float = 40.0
+## Patch 4.0.5 item 1: the right stick turns the view this many "pixels" a
+## second at full tilt (the camera turns 0.005 rad per pixel, like the mouse).
+const PAD_LOOK_SPEED: float = 520.0
+## The controller's menu cursor (Patch 4.0.5 item 1).
+var pad_cursor: CanvasLayer
 
 func _ready() -> void:
 	load_preferences()
 	apply_preferences()
+	pad_cursor = preload("res://features/input/pad_cursor.gd").new()
+	pad_cursor.name = "PadCursor"
+	pad_cursor.controls = self
+	add_child(pad_cursor)
 	apply_display_scale()
 	if not get_window().dpi_changed.is_connected(apply_display_scale):
 		get_window().dpi_changed.connect(apply_display_scale)
@@ -115,6 +124,8 @@ func apply_preferences() -> void:
 		var drag: InputEventMouseButton = InputEventMouseButton.new()
 		drag.button_index = MOUSE_BUTTON_LEFT
 		InputMap.action_add_event("camera_orbit", drag)
+	# Patch 4.0.5 item 1: the controller, after the keys (the keys stay as bound).
+	Gamepad.apply_events()
 	AudioServer.set_bus_mute(0, preferences.master_volume == 0.0)
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(0.0001, preferences.master_volume)))
 	var ambience: Node = get_tree().root.get_node_or_null("MenuBeachAmbience")
@@ -153,6 +164,16 @@ func held_key(key: Key) -> float:
 func steering_axis() -> float:
 	return action_strength("ship_steer_right") - action_strength("ship_steer_left")
 
+## Patch 4.0.5 item 1: the controller's triggers, RT up and LT down: the
+## plane's throttle lever (as Shift / Ctrl) and, on a boat, the throttle order.
+func lever_axis() -> float:
+	return action_strength(Gamepad.LEVER_UP) - action_strength(Gamepad.LEVER_DOWN)
+
+## The right stick, for the camera (x right, y down), -1..1 each.
+func look_axis() -> Vector2:
+	return Vector2(action_strength(Gamepad.LOOK_RIGHT) - action_strength(Gamepad.LOOK_LEFT),
+		action_strength(Gamepad.LOOK_DOWN) - action_strength(Gamepad.LOOK_UP))
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		window_focused = false
@@ -161,19 +182,28 @@ func _notification(what: int) -> void:
 		window_focused = true
 		wait_for_release = true
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	var look: Vector2 = look_axis()
+	if look != Vector2.ZERO:
+		if preferences.invert_camera_y: look.y = -look.y
+		camera_turn_requested.emit(look * PAD_LOOK_SPEED * preferences.camera_sensitivity * delta)
 	if get_viewport().gui_get_focus_owner() != null:
 		wait_for_release = true
 		return
 	if not wait_for_release or menu_open or not window_focused:
 		return
-	for action: String in preferences.bindings.keys() + MOUSE_BINDINGS.keys():
-		if Input.is_action_pressed(action):
+	for action: String in preferences.bindings.keys() + MOUSE_BINDINGS.keys() + Gamepad.PAD_ONLY:
+		if InputMap.has_action(action) and Input.is_action_pressed(action):
 			return
 	wait_for_release = false
 
 ## F3 is the one developer toggle. Read here because every scene has a PlayerControls.
 func _input(event: InputEvent) -> void:
+	Gamepad.note(event)
+	if event is InputEventJoypadButton and event.pressed and pad_escape(event.button_index):
+		get_viewport().set_input_as_handled()
+		send_escape.call_deferred()
+		return
 	# Cmd+Q quits like the window's close button (the game scene saves first).
 	# Godot's Mac app menu normally turns Cmd+Q into that close request itself;
 	# this catches it if the key reaches the game instead.
@@ -186,6 +216,29 @@ func _input(event: InputEvent) -> void:
 			and not event.alt_pressed and not event.meta_pressed and not event.shift_pressed and not ApplicationMenu.friends_client():
 		DevMode.toggle(get_tree())
 		get_viewport().set_input_as_handled()
+
+## Patch 4.0.5 item 1: Menu (Start / Options) always works like Esc. B does
+## too in a menu, off the helm, or when a button has the keys; sailing, B is
+## the engine to zero (its InputMap event) instead.
+func pad_escape(button: int) -> bool:
+	if button == JOY_BUTTON_START: return true
+	if button != JOY_BUTTON_B: return false
+	return menu_open or not ship_context_active or get_viewport().gui_get_focus_owner() != null
+
+## A real Esc press and release, so every screen's own Esc handling runs
+## (the menus, the map, the hangars, Settings' "Escape cancels").
+## Once per frame, however many PlayerControls see the press.
+static var escape_frame: int = -1
+func send_escape() -> void:
+	if not is_inside_tree() or escape_frame == Engine.get_process_frames(): return
+	escape_frame = Engine.get_process_frames()
+	for down: bool in [true, false]:
+		var key: InputEventKey = InputEventKey.new()
+		key.keycode = KEY_ESCAPE
+		key.physical_keycode = KEY_ESCAPE
+		key.pressed = down
+		key.set_meta(Gamepad.SYNTHETIC, true)
+		get_viewport().push_input(key)
 
 ## Same path as the window's close button: scenes that save (port_test.gd) turn
 ## off auto_accept_quit and save in NOTIFICATION_WM_CLOSE_REQUEST.
@@ -217,8 +270,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		camera_motion_requested.emit(motion)
 		get_viewport().set_input_as_handled()
 		return
+	# Patch 4.0.5 item 1: the pad's X is the Jetty's blaster (as Shift); its
+	# InputMap event is also the plane's brakes (ship_brake, held).
+	if event is InputEventJoypadButton and event.pressed and event.button_index == Gamepad.BOOST_BUTTON:
+		command_requested.emit(BOOST_COMMAND)
 	for action: String in preferences.bindings.keys() + MOUSE_BINDINGS.keys():
 		if event.is_action_pressed(action) and not event.is_echo():
+			# A stick sends a stream of motions while held: one command per push.
+			if event is InputEventJoypadMotion and not Input.is_action_just_pressed(action): continue
 			command_requested.emit(StringName(action))
 			get_viewport().set_input_as_handled()
 			return

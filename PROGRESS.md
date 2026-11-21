@@ -8799,3 +8799,126 @@ audit was done fresh, file by file.
 - Consider running `patch_4_0_4_check` and `check_dedicated_split.py --flight`
   in CI. That needs a workflow edit, which only Andy or Hark can ask for, and
   the 30 s limit would need to cover the flight.
+
+## Patch 4.0.5 — controllers, crash and error reports, plane engine sounds (November 21, 2026)
+
+Issue #230. VERSION 4.0.4 → 4.0.5. No workflow edits. The gas, oil, refinery
+and cargo-fuel code is untouched. No save or settings format changes: old saves
+and `preferences.json` load as before. Every existing `.gd.uid` is kept; the new
+scripts' `.uid` files were made by Godot's import. The five new runtime
+scripts are added to all three presets' `export_files` in `export_presets.cfg`.
+- 1, controllers (`features/input/gamepad.gd`, `pad_cursor.gd`,
+  `player_controls.gd`). Godot reads Xbox and PlayStation pads through SDL's
+  standard layout. The pad's events are added to the same InputMap actions,
+  after the keys. The key bindings, their checks and Settings' rebinding are
+  untouched, and the pad layout is fixed.
+  - Boats: the left stick steers and moves the throttle order. RT / LT also
+    move it. LB / RB are the thrusters, A Interact, B engine to zero, X the
+    Jetty's blaster, Y the cannon salute, L3 the horn and R3 recenters the
+    camera. The right stick looks around, View opens the map and Menu
+    (Options) the Esc menu.
+  - Planes: the left stick climbs, descends and turns. RT / LT are the
+    throttle lever (Shift / Ctrl), LB / RB a barrel roll, X the brakes and Y
+    the gear.
+  - Menus: many of the game's buttons never take focus (so Esc always reaches
+    the menu), so a cursor ring (`pad_cursor.gd`) does not use focus. The
+    D-pad (or the left stick in a menu) moves it to the nearest button. A
+    clicks the button at its centre, as the mouse does, and left / right move
+    a slider. With a menu open, only its top layer counts.
+  - Screens that already use focus (the main menu list, Settings, popups)
+    keep Godot's own focus moves; A was added to `ui_accept`. The hangars step
+    with the D-pad themselves (`Gamepad.NAV_GROUP`).
+  - Menu, and B in a menu, send a real Esc press, so every screen's own Esc
+    handling runs. Sailing, the D-pad can put the ring on a HUD button while
+    the sticks keep steering; B hides it.
+  - Glyphs: whichever device was used last (`Gamepad.pad_last`) sets the
+    words. After a pad press, the helm notice, the game's hints, the plane's
+    take-off line and "Press [Y] — Gear down", and Esc > CONTROLS (it refreshes
+    on a switch) show pad buttons: `[A]`, `[RT]`, `[Menu]`, or `[Cross]`,
+    `[R2]`, `[Options]` on a PlayStation pad. These are text glyphs, not
+    images. A key press switches back to key names.
+- 2, crash and error reports (`features/network/error_reports.gd`,
+  `client_error_log.gd`, `dedicated_runtime.gd`, `boot.gd`).
+  - A Godot `Logger` catches every engine and script error (not warnings) with
+    its GDScript backtrace. A report holds only the version, the OS name and
+    version, the scene file, the message, the location and the stack.
+    `scrub` replaces the user and install folders, the OS user name, the
+    captain name, IPv4 / IPv6 addresses and e-mail addresses.
+  - Each report is capped (500-character message, 3,000-character stack,
+    4 KB). Repeats raise a count. The outbox (`user://crash_reports/outbox.json`)
+    keeps 20, and one run adds at most 40.
+  - A crash cannot run code, so each run writes `running.json` and a clean
+    exit removes it. If it is still there at the next start and the previous
+    Godot log has "Program crashed", that backtrace becomes a crash report.
+  - Online, the client sends one report every 3 s to the server
+    (`client_error_report`, joined captains only). The server checks it again:
+    known fields only, text only, cut and scrubbed, more than 8 KB refused. It
+    rate limits each captain (a burst of 5, then 1 every 3 s, at most 30 per
+    connection) and the whole server (600 an hour).
+  - The server writes one JSON line per report with the arrival time and no
+    peer, captain, key or address. The log is `<root>/logs/client_errors/
+    client_errors.log`, beside `<root>/saves`. For the packaged server that is
+    `C:\ShippingLanesServer\logs\client_errors\`; `--client-errors-dir=`
+    overrides it. It rotates at 1 MiB and keeps 5 files.
+  - Single-player reports wait in the outbox until the next online session.
+    There is no other upload.
+- 3, plane engine sounds (`features/planes/plane_engine_sound.gd`), made in
+  code (CC0, credited in `features/audio/CREDITS.md`). Each family is a
+  one-second seamless loop set:
+  - Bush prop: a 42 Hz piston firing buzz with a propeller beat.
+  - Regional turboprop: a 70 Hz four-blade hum with a turbine whine.
+  - Cargo jet: the turbofan's buzz-saw fan tone and whine, plus a roar layer.
+  - Fighter jet: turbine whine and roar, plus an afterburner rumble and
+    crackle above 85 % lever once the engine has spooled up.
+
+  The core is pitched by the engine's RPM (`model.engine`, which follows the
+  lever), and the roar rises with it. Your plane plays flat; it replaces the
+  boat engine tone the planes used. Other captains' planes play from the
+  plane (AudioStreamPlayer3D), with a doppler factor worked out from their
+  velocity and the camera's, clamped to 0.5–2.
+- Checks:
+  - `tools/patch_4_0_5_logic.gd` (in `check_catalog`): the pad layout and
+    dead zones, the keys unchanged, the glyphs (Xbox, PlayStation, swaps, the
+    Controls list), scrubbing, report caps and repeats, the outbox, the
+    Logger, crash detection from a fake log, and the server's limits, fields,
+    scrubbing and rotation. Also the engine loops (seamless, audible, four
+    families), pitch by RPM, the afterburner rule and doppler.
+  - `tools/patch_4_0_5_check.gd` (165 checks, about 12 s, not in CI): the
+    game scene driven by pad events through Input. It sails (stick, B,
+    triggers, right-stick camera), checks that W still works and the bindings
+    are the same, then opens the Esc menu with Menu. The ring reaches
+    CONTROLS, A opens it (it lists pad buttons), B goes back and A on RESUME
+    closes it. It puts the ring on the HUD while steering, flies (RT / LT
+    lever, the turboprop's sound rising, X brakes to a stop) and works the
+    main menu list with the D-pad, A and B.
+  - `python3 tools/check_dedicated_split.py --errors`
+    (`tools/dedicated_errors_check.gd`): a real UDP server and two clients.
+    Each client raises an error through the Logger with an address, an e-mail
+    and its captain name, then floods the server. The server's log holds only
+    scrubbed, known-field lines; the flood is rate limited and the oversized
+    report refused.
+- Passed (Linux, Godot 4.7.2 headless):
+  - The CI set: import, check_scripts, boot, Stage 2 (units_probe,
+    check_catalog in about 14 s, diagnostics_probe, check_controls,
+    check_flow, check_starter and the twelve probes), Stage 3 (compileall,
+    the services unittests, public_handoff with psycopg, world_layout tests,
+    traversal_budget) and the Stage 4 report probes.
+  - Also patch_4_0_check through patch_4_0_5_check, check_m1_voyage,
+    ui_text_check, display_fonts_check, hangar_check, debug_game_check,
+    check_helm_keys, check_snapshot_budget, globe_map_check, port_menu_check,
+    cannon_salute_check and check_title.
+  - `check_dedicated_split.py` plain, `--prediction`, `--replication`,
+    `--families`, `--flight` and `--errors`.
+- Not verified:
+  - A real controller on Windows. The checks send SDL-style pad events
+    through Input, and the PlayStation names come from the pad's reported
+    name.
+  - How the cursor ring and the engine sounds look and sound (headless has no
+    renderer or audio).
+  - A real native crash picked up from a Windows Godot log. The check uses a
+    log in Godot's crash format.
+  - The packaged server writing to `C:\ShippingLanesServer\logs\
+    client_errors` (worked out from its `--saves-dir`; the Linux check uses a
+    temp folder the same way).
+- Left from the 4.0.4 notes (not part of #230): the minimap still redraws
+  every frame, and `aviation.state()` still copies `planes`.

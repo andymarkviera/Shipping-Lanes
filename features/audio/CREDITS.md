@@ -29,3 +29,11 @@ Music (Patch 3.1), in `assets/audio/music/`: `day_Neon_Buoy.mp3` ("Neon Buoy"),
 `sunset_Sunlit_Current.mp3` ("Sunlit Current") and
 `night_The_Blackwater_Passage.mp3` ("The Blackwater Passage"). Credit:
 Andy Viera (original). Played by `game_music.gd`, one song per time of day.
+
+Plane engines (Patch 4.0.5), made in code by
+`features/planes/plane_engine_sound.gd` at run time; no files, recordings,
+samples or downloads. Bush prop (piston), Regional turboprop, Cargo jet
+(turbofan) and Fighter jet (turbine and afterburner) are each one-second
+22,050 Hz loops built from whole-cycle tones and filtered noise. The code and
+the sound it makes are dedicated to CC0 1.0 Universal under the same waiver
+above.
