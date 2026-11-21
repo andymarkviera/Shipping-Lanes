@@ -1353,7 +1353,7 @@ func _process(_delta: float) -> void:
 		waypoint.visible = true
 		navigation.text = "%s · %.0f m\n%s\n%s" % [waypoint.text, ship.global_position.distance_to(target), ship.alignment_hint() if not ship.attached else "At drop-off: stop, then Lower to deliver.", ship.notice]
 	else:
-		navigation.text = "RMB orbit · Wheel zoom · Esc menu"
+		navigation.text = Gamepad.swap("RMB orbit · Wheel zoom · Esc menu")
 		# The game: nothing here. The keys are listed in Esc > CONTROLS.
 		if game_mode: navigation.text = ""
 	if services.visible and not game_mode: navigation.text += "\nRefuel / repair: " + free_note()

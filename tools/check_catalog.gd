@@ -81,6 +81,12 @@ func run() -> void:
 	# cached plane parts, VERSION (tools/patch_4_0_4_check.gd adds the scene).
 	for failure: String in load("res://tools/patch_4_0_4_logic.gd").run_all():
 		failures.append("Patch 4.0.4: " + failure)
+	# Patch 4.0.5: the controller layout and glyphs, error and crash reports
+	# (scrubbing, caps, the server's rate limits and rotating log), the plane
+	# engine sounds and doppler, VERSION (tools/patch_4_0_5_check.gd adds the
+	# game scene; check_dedicated_split.py --errors a real server).
+	for failure: String in load("res://tools/patch_4_0_5_logic.gd").run_all():
+		failures.append("Patch 4.0.5: " + failure)
 	for failure: String in failures:
 		push_error(failure)
 	print("CATALOG_CHECK_PASS" if failures.is_empty() else "CATALOG_CHECK_FAILED")

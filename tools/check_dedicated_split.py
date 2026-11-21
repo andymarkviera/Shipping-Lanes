@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--families", action="store_true", help="check bulk and physical heavy jobs")
     parser.add_argument("--prediction", action="store_true", help="check own-hull prediction, ping and live rename (Patch 3.0.1)")
     parser.add_argument("--flight", action="store_true", help="check other captains' planes, gear, Jetty hover and blaster (Patch 4.0.4)")
+    parser.add_argument("--errors", action="store_true", help="check client error reports reach the server's rotating log, scrubbed and rate limited (Patch 4.0.5)")
     args = parser.parse_args()
     version = subprocess.check_output([args.godot, "--version"], text=True).strip()
     if not version.startswith("4.7.2."):
@@ -29,6 +30,8 @@ def main():
         probe, marker = "dedicated_prediction_check.gd", "DEDICATED_PREDICTION_PASS"
     if args.flight:
         probe, marker = "dedicated_flight_check.gd", "DEDICATED_FLIGHT_PASS"
+    if args.errors:
+        probe, marker = "dedicated_errors_check.gd", "DEDICATED_ERRORS_PASS"
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]

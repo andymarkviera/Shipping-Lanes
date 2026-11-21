@@ -101,7 +101,8 @@ func add_test_fuel() -> void:
 
 func _process(delta: float) -> void:
 	if is_instance_valid(ship) and not ship.simulation_paused: ship.pause_reason = ""
-	var text: String = reason()
+	# Patch 4.0.5 item 1: controller buttons in the wording after a pad was used.
+	var text: String = Gamepad.swap(reason())
 	# Short blocks (a button click, a save tick) pass without a flash.
 	blocked_seconds = blocked_seconds + delta if not text.is_empty() else 0.0
 	panel.visible = blocked_seconds >= HOLD_SECONDS

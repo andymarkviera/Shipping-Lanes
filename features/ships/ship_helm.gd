@@ -45,7 +45,8 @@ func _physics_process(delta: float) -> void:
 	if controls.action_strength("ship_throttle_zero") > 0:
 		ship.zero_throttle()
 	else:
-		ship.adjust_command(controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down"), delta)
+		# Patch 4.0.5 item 1: a controller's triggers (RT / LT) move the order too.
+		ship.adjust_command(clampf(controls.action_strength("ship_throttle_up") - controls.action_strength("ship_throttle_down") + controls.lever_axis(), -1.0, 1.0), delta)
 
 func _process(delta: float) -> void:
 	if is_instance_valid(ship) and is_instance_valid(controls):

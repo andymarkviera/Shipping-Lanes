@@ -1503,6 +1503,23 @@ captains now see a Jetty's blaster charge and blast. New checks:
 deliver) and `check_dedicated_split.py --flight` covers the online planes, gear,
 Jetty hover and blaster. Waiting for Andy's Windows playtest.
 
+**Patch 4.0.5 (November 21, 2026, issue #230):** VERSION 4.0.5. Xbox and
+PlayStation controllers for boats, planes and menus. The pad's events are added
+to the same actions as the keys, so key rebinding is untouched. A D-pad cursor
+reaches every on-screen button. Menu and B act as Esc. After a pad press the
+hints and the Controls list show pad buttons. The client now sends error and
+crash reports: version, OS, scene, message and stack, scrubbed of names,
+folders, IP addresses and e-mail addresses. A crash is picked up from the Godot
+log on the next launch. Reports wait in a capped outbox and go to the online
+server, which rate limits them and writes a rotating log in
+`<server>\logs\client_errors` (`C:\ShippingLanesServer\logs\client_errors`).
+Planes have synthesized engine sounds: prop, turboprop, turbofan, and the
+fighter's afterburner. They are pitched by RPM, and other captains' planes get
+a doppler shift. Checks: `tools/patch_4_0_5_check.gd` (the game scene, with pad
+events), `check_dedicated_split.py --errors` (a real server) and the scene-free
+part in `check_catalog.gd`. Waiting for Andy's Windows playtest with a real
+controller.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge

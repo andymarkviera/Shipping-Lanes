@@ -14,6 +14,7 @@ const PROTOCOL: int = 40000
 const Planes = preload("res://features/planes/plane_catalog.gd")
 const Levels = preload("res://features/game/levels.gd")
 const PlaneLook = preload("res://features/planes/plane_look.gd")
+const PlaneEngineSound = preload("res://features/planes/plane_engine_sound.gd")
 ## Patch 4.0: other captains' planes, drawn from their motion's air block.
 var air_replicas: Dictionary = {}
 ## Patch 4.0 item 15: boat actions are refused while a captain flies, plane
@@ -133,6 +134,12 @@ var name_layer: CanvasLayer
 var config_path: String = ""
 var admin_keys: Array[String] = []
 var debug_real: Dictionary = {}
+## Patch 4.0.5 item 2: the server's client error log, and the client's pace.
+var error_log = preload("res://features/network/client_error_log.gd").new()
+var error_send_elapsed: float = 0.0
+## Reports this client has handed to the server (for checks).
+var errors_sent: int = 0
+const ERROR_SEND_SECONDS: float = 3.0
 
 func gameplay_payload_error(payload: Dictionary) -> String:
 	if payload.size() != 2 or not payload.get("action") is String or not payload.get("value") is String: return "BAD_PAYLOAD"
@@ -563,12 +570,38 @@ func present_plane(id: String, state: Dictionary, a: Dictionary, b: Dictionary, 
 	var gear: float = clampf(float(Planes.PLANES[kind].length_m) * 0.12, 1.2, 4.5)
 	replica.node.global_transform = Transform3D(basis, near - basis.y * gear)
 	PlaneLook.animate(replica.node, b.engine, b.air.gear, delta)
+	# Patch 4.0.5 item 3: their engine, from their plane, with the doppler shift.
+	if not replica.has("sound"):
+		replica.sound = PlaneEngineSound.make(kind, true)
+		replica.node.add_child(replica.sound)
+	var source_velocity: Vector3 = Vector3(b.velocity.x, b.air.vy, b.velocity.z)
+	var listener: Dictionary = listener_motion(delta)
+	replica.sound.update(float(b.engine), clampf(float(b.get("throttle", b.engine)), 0.0, 1.0),
+		PlaneEngineSound.doppler(near, source_velocity, listener.position, listener.velocity))
 	replica.label.text = state.captain
 	var entry: Dictionary = replica.entry
 	entry.position = near
 	entry.heading = atan2(basis.z.x, basis.z.z)
 	entry.captain = state.captain
 	view.other_ships.append(entry)
+
+## Patch 4.0.5 item 3: where the ears are (the active camera) and how fast
+## they move, for the doppler shift. A jump (a world wrap, a respawn, a
+## camera switch) counts as standing still.
+var listener_at: Vector3 = Vector3.INF
+var listener_velocity: Vector3 = Vector3.ZERO
+var listener_frame: int = -1
+func listener_motion(delta: float) -> Dictionary:
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera == null: return {"position": Vector3.ZERO, "velocity": Vector3.ZERO}
+	var at: Vector3 = camera.global_position
+	if listener_frame != Engine.get_process_frames():
+		listener_frame = Engine.get_process_frames()
+		var step: Vector3 = at - listener_at if listener_at.is_finite() else Vector3.ZERO
+		var speed: Vector3 = step / maxf(delta, 0.001)
+		listener_velocity = listener_velocity.lerp(speed if speed.length() < 600.0 else Vector3.ZERO, 0.3)
+		listener_at = at
+	return {"position": at, "velocity": listener_velocity}
 
 func drop_air_replica(id: String) -> void:
 	air_replicas[id].node.queue_free()
@@ -643,6 +676,7 @@ func _ready() -> void:
 		elif arg.begins_with("--saves-dir="): saves_path = arg.trim_prefix("--saves-dir=")
 		elif arg.begins_with("--control-dir="): launcher.folder = arg.trim_prefix("--control-dir=")
 		elif arg.begins_with("--server-config="): config_path = arg.trim_prefix("--server-config=")
+		elif arg.begins_with("--client-errors-dir="): error_log.folder = arg.trim_prefix("--client-errors-dir=")
 	if not hosting and get_tree().has_meta(Connection.TARGET):
 		var target: Dictionary = get_tree().get_meta(Connection.TARGET)
 		get_tree().remove_meta(Connection.TARGET)
@@ -657,6 +691,8 @@ func _ready() -> void:
 		if not saves.open_store(saves_path):
 			fail(saves.error, 2)
 			return
+		# Patch 4.0.5 item 2: client error reports go to <root>/logs/client_errors.
+		if error_log.folder.is_empty(): error_log.folder = error_log.folder_for(saves_path)
 		# Patch 3.1.1 item 2: server-config.json sits beside the saves folder.
 		load_admin_keys(config_path if not config_path.is_empty() else saves_path.get_base_dir().path_join("server-config.json"))
 		get_tree().auto_accept_quit = false
@@ -681,6 +717,8 @@ func _ready() -> void:
 		# Patch 3.0.1 item 1: --captain= (tests) wins over the saved name.
 		captain_name = CaptainName.sanitize(cli_captain) if not cli_captain.is_empty() else CaptainName.load_saved()
 		if captain_name.is_empty(): captain_name = CaptainName.FALLBACK
+		# Patch 4.0.5 item 2: error reports never carry the captain's name.
+		ErrorReports.keep_private(captain_name)
 		view = GAME.instantiate()
 		view.runtime_role = "client"
 		view.network_runtime = self
@@ -908,6 +946,7 @@ func join_rejected(reason: String) -> void:
 func depart(sender: int) -> void:
 	if not hosting: return
 	pending_peers.erase(sender)
+	error_log.forget(sender)
 	if not contexts.has(sender): return
 	var context: Node3D = contexts[sender]
 	capture_player(sender)
@@ -1019,7 +1058,8 @@ func _physics_process(delta: float) -> void:
 	elif not entity.is_empty() and is_instance_valid(view):
 		if not view.ship.helm_available(): throttle = 0.0
 		var allowed: bool = view.controls.input_allowed() and view.ship.helm_available()
-		var axis: float = view.controls.action_strength("ship_throttle_up") - view.controls.action_strength("ship_throttle_down") if allowed else 0.0
+		# Patch 4.0.5 item 1: a controller's triggers move the order as the keys do.
+		var axis: float = clampf(view.controls.action_strength("ship_throttle_up") - view.controls.action_strength("ship_throttle_down") + view.controls.lever_axis(), -1.0, 1.0) if allowed else 0.0
 		throttle = HandlingShip.adjusted_order(throttle, axis, delta, view.ship.definition)
 		if allowed and view.controls.action_strength("ship_throttle_zero") > 0: throttle = 0.0
 		var steer_allowed: bool = view.controls.input_allowed()
@@ -1305,6 +1345,7 @@ func _process(_delta: float) -> void:
 		if ping_elapsed >= PING_SECONDS:
 			ping_elapsed = 0.0
 			ping.rpc_id(1, Time.get_ticks_msec())
+		send_error_reports(_delta)
 	if samples.is_empty(): return
 	var target: float = Time.get_ticks_msec() / 1000.0 - clock_offset - buffer_seconds
 	var ship: HandlingShip = view.ship
@@ -1352,6 +1393,28 @@ func _process(_delta: float) -> void:
 	view.place_icebergs()
 	present_world(target, _delta)
 
+# --- Patch 4.0.5 item 2: client error and crash reports ------------------------
+
+## One waiting report every ERROR_SEND_SECONDS (the server's own pace), once
+## this client has joined.
+func send_error_reports(delta: float) -> void:
+	error_send_elapsed += delta
+	if error_send_elapsed < ERROR_SEND_SECONDS: return
+	var reports: Node = ErrorReports.find(get_tree())
+	if reports == null: return
+	error_send_elapsed = 0.0
+	for report: Dictionary in reports.take(1):
+		client_error_report.rpc_id(1, report)
+		errors_sent += 1
+
+@rpc("any_peer", "call_remote", "reliable", 0)
+func client_error_report(report: Variant) -> void:
+	if not hosting: return
+	var sender: int = multiplayer.get_remote_sender_id()
+	# Only captains who have joined; the log never records who sent it.
+	if not contexts.has(sender): return
+	error_log.accept(sender, report)
+
 # --- Patch 3.0.1 item 2c: round-trip time -------------------------------------
 
 @rpc("any_peer", "call_remote", "unreliable", 1)
@@ -1381,6 +1444,7 @@ func open_name_dialog() -> void:
 	view.controls.set_menu_open(true)
 	name_layer.add_child(CaptainName.make_dialog(captain_name, func(chosen: String) -> void:
 		captain_name = chosen
+		ErrorReports.keep_private(chosen)
 		if not entity.is_empty():
 			status = "Connected · " + captain_name
 			rename_captain.rpc_id(1, captain_name)
