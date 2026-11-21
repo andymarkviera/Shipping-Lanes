@@ -13,6 +13,22 @@ const GLASS: Color = Color("24405e")
 const TARMAC: Color = Color("4a4f5c")
 const STRIPE: Color = Color("f2efe2")
 const GRASS_BANK: Color = Color("6f9a5a")
+## Patch 4.0.2 item 6: the landing gear. It folds up into its wells in
+## GEAR_TRAVEL_S seconds (the nose leg forward, the mains inward), the well
+## doors swinging open while it moves. Grey legs with a silver oleo, black
+## tyres on pale hubs.
+const GEAR_TRAVEL_S: float = 1.5
+const LEG: Color = Color("9aa1ad")
+const OLEO: Color = Color("d9dde3")
+const TYRE: Color = Color("23262e")
+const HUB: Color = Color("c9ccd4")
+## Patch 4.0.2 item 3: the airfield's grass top stands this far below the
+## runway's surface and has holes where the runway and the apron are, so
+## no two surfaces ever overlap (no z-fighting at any distance). The tarmac
+## slabs are SLAB_M thick; the apron's top is APRON_DROP_M below the runway's.
+const FIELD_DROP_M: float = 0.12
+const APRON_DROP_M: float = 0.04
+const SLAB_M: float = 1.2
 
 static func _paint(colour: Color, cache: Dictionary) -> StandardMaterial3D:
 	if not cache.has(colour):
@@ -57,6 +73,7 @@ static func model(kind: String) -> Node3D:
 	var cache: Dictionary = {}
 	var root: Node3D = Node3D.new()
 	root.name = "Plane"
+	root.set_meta("paint", str(p.colour))
 	var length: float = float(p.length_m)
 	var span: float = float(p.span_m)
 	var main: Color = Color(str(p.colour))
@@ -138,16 +155,60 @@ static func model(kind: String) -> Node3D:
 				shimmer.material_override = air
 				shimmer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				body.add_child(shimmer)
-	# Gear: struts and wheels down to y = 0.
-	var gear: Node3D = Node3D.new()
-	gear.name = "Gear"
-	root.add_child(gear)
-	for at: Vector3 in [Vector3(0, 0, length * 0.36), Vector3(-span * 0.08 - body_r, 0, -length * 0.02), Vector3(span * 0.08 + body_r, 0, -length * 0.02)]:
-		_box(gear, Vector3(0.18, gear_h, 0.18) * maxf(1.0, body_r * 0.6), Vector3(at.x, gear_h * 0.5, at.z), INK, cache)
-		var wheel: MeshInstance3D = _drum(gear, gear_h * 0.28, gear_h * 0.28, gear_h * 0.2, Vector3(at.x, gear_h * 0.28, at.z), INK, cache, 8)
-		wheel.rotation.z = PI / 2.0
+	# Gear (Patch 4.0.2 item 6): a nose leg and two mains, each folding into a well.
+	_gear(root, [Vector3(0, 0, length * 0.36), Vector3(-span * 0.08 - body_r, 0, -length * 0.02), Vector3(span * 0.08 + body_r, 0, -length * 0.02)],
+		gear_h, maxf(1.0, body_r * 0.6), kind in ["plane_jet", "plane_turboprop"], cache)
 	TOON_LOOK.apply(root)
 	return root
+
+## Patch 4.0.2 item 6: the landing gear under "Gear": one "Leg<n>" pivot per
+## leg at the top of its strut (the well), holding the strut, the silver
+## oleo, a torque link, the axle and the wheel(s) down to y = 0; a dark
+## "Well<n>" in the belly and a pair of "Door<n>" panels beside it. The
+## first leg is the nose leg. animate() folds them.
+static func _gear(root: Node3D, legs: Array, gear_h: float, thick: float, twin: bool, cache: Dictionary) -> void:
+	var gear: Node3D = Node3D.new()
+	gear.name = "Gear"
+	gear.set_meta("travel", 1.0)
+	root.add_child(gear)
+	var wheel_r: float = gear_h * 0.27
+	for index: int in legs.size():
+		var at: Vector3 = legs[index]
+		var nose: bool = index == 0
+		var pivot: Node3D = Node3D.new()
+		pivot.name = "Leg%d" % index
+		pivot.position = Vector3(at.x, gear_h, at.z)
+		pivot.set_meta("fold", Vector3(-PI * 0.5, 0, 0) if nose else Vector3(0, 0, -signf(at.x) * PI * 0.5))
+		gear.add_child(pivot)
+		var strut: float = gear_h - wheel_r
+		_box(pivot, Vector3(0.16, strut * 0.6, 0.16) * thick, Vector3(0, -strut * 0.3, 0), LEG, cache)
+		_drum(pivot, 0.06 * thick, 0.06 * thick, strut * 0.45, Vector3(0, -strut * 0.78, 0), OLEO, cache, 8)
+		var link: MeshInstance3D = _box(pivot, Vector3(0.05, strut * 0.3, 0.05) * thick, Vector3(0, -strut * 0.72, 0.09 * thick), LEG, cache)
+		link.rotation.x = 0.35
+		var pair: Array = [-1.0, 1.0] if twin else [0.0]
+		var axle_w: float = wheel_r * (1.5 if pair.size() > 1 else 0.6)
+		var axle: MeshInstance3D = _drum(pivot, 0.05 * thick, 0.05 * thick, axle_w, Vector3(0, -strut, 0), LEG, cache, 6)
+		axle.rotation.z = PI / 2.0
+		for offset: float in pair:
+			var x: float = offset * axle_w * 0.5
+			var tyre: MeshInstance3D = _drum(pivot, wheel_r, wheel_r, wheel_r * 0.7, Vector3(x, -strut, 0), TYRE, cache, 14)
+			tyre.rotation.z = PI / 2.0
+			var hub: MeshInstance3D = _drum(pivot, wheel_r * 0.5, wheel_r * 0.5, wheel_r * 0.76, Vector3(x, -strut, 0), HUB, cache, 10)
+			hub.rotation.z = PI / 2.0
+		# The well in the belly and its two doors (closed flush when the gear is up).
+		var well: MeshInstance3D = _box(gear, Vector3(wheel_r * 2.2, 0.08, (strut + wheel_r) * (1.0 if nose else 0.6)) if nose else Vector3((strut + wheel_r) * 0.9, 0.08, wheel_r * 2.4), Vector3(at.x, gear_h + 0.02, at.z), INK, cache)
+		well.name = "Well%d" % index
+		for side: float in [-1.0, 1.0]:
+			var hinge: Node3D = Node3D.new()
+			hinge.name = "Door%d%s" % [index, "L" if side < 0.0 else "R"]
+			hinge.position = Vector3(at.x + side * wheel_r * 1.15, gear_h - 0.01, at.z)
+			hinge.set_meta("side", side)
+			gear.add_child(hinge)
+			_box(hinge, Vector3(wheel_r * 1.1, 0.06, (strut + wheel_r) * (0.9 if nose else 0.55)), Vector3(-side * wheel_r * 0.55, 0, 0), main_door(root), cache)
+
+## The door paint: the plane's own colour (its fuselage's paint).
+static func main_door(root: Node3D) -> Color:
+	return Color(str(root.get_meta("paint", "c9ccd4")))
 
 ## Patch 4.0.1 item 5: a turbofan's front fan: a spinner and a ring of wide
 ## blades, spun about +Z by animate() like a prop hub.
@@ -173,6 +234,7 @@ static func _fighter(kind: String) -> Node3D:
 	var cache: Dictionary = {}
 	var root: Node3D = Node3D.new()
 	root.name = "Plane"
+	root.set_meta("paint", str(p.colour))
 	var length: float = float(p.length_m)
 	var span: float = float(p.span_m)
 	var main: Color = Color(str(p.colour))
@@ -219,13 +281,7 @@ static func _fighter(kind: String) -> Node3D:
 	flame.position = Vector3(0, y, -length * 0.4)
 	flame.scale = Vector3(body_r * 1.4, body_r * 1.4, body_r * 1.1)
 	body.add_child(flame)
-	var gear: Node3D = Node3D.new()
-	gear.name = "Gear"
-	root.add_child(gear)
-	for at: Vector3 in [Vector3(0, 0, length * 0.3), Vector3(-body_r * 1.6, 0, -length * 0.1), Vector3(body_r * 1.6, 0, -length * 0.1)]:
-		_box(gear, Vector3(0.16, gear_h, 0.16), Vector3(at.x, gear_h * 0.5, at.z), INK, cache)
-		var wheel: MeshInstance3D = _drum(gear, gear_h * 0.26, gear_h * 0.26, gear_h * 0.18, Vector3(at.x, gear_h * 0.26, at.z), INK, cache, 8)
-		wheel.rotation.z = PI / 2.0
+	_gear(root, [Vector3(0, 0, length * 0.3), Vector3(-body_r * 1.6, 0, -length * 0.1), Vector3(body_r * 1.6, 0, -length * 0.1)], gear_h, 1.0, false, cache)
 	TOON_LOOK.apply(root)
 	return root
 
@@ -309,7 +365,27 @@ static func animate(plane: Node3D, engine: float, gear_down: bool, delta: float)
 		var paint: StandardMaterial3D = (haze as MeshInstance3D).material_override as StandardMaterial3D
 		if paint != null: paint.albedo_color.a = 0.1 * clampf(engine, 0.0, 1.0) * (0.75 + 0.25 * sin(Time.get_ticks_msec() * 0.03))
 	var gear: Node3D = plane.get_node_or_null("Gear") as Node3D
-	if gear != null: gear.visible = gear_down
+	if gear != null: fold_gear(gear, gear_down, delta)
+
+## Patch 4.0.2 item 6: moves the gear's travel (1 down, 0 up) towards the
+## lever at 1 / GEAR_TRAVEL_S per second, folds each leg by it and swings
+## the well doors open while the gear is out or moving. A leg fully up is
+## hidden inside its closed well.
+static func fold_gear(gear: Node3D, down: bool, delta: float) -> float:
+	var travel: float = move_toward(float(gear.get_meta("travel", 1.0)), 1.0 if down else 0.0, maxf(delta, 0.0) / GEAR_TRAVEL_S)
+	if travel < 0.0001: travel = 0.0
+	elif travel > 0.9999: travel = 1.0
+	gear.set_meta("travel", travel)
+	var eased: float = travel * travel * (3.0 - 2.0 * travel)
+	for child: Node in gear.get_children():
+		var node: Node3D = child as Node3D
+		if child.name.begins_with("Leg"):
+			node.rotation = (child.get_meta("fold") as Vector3) * (1.0 - eased)
+			node.visible = travel > 0.0
+		elif child.name.begins_with("Door"):
+			# Open while there is any gear out; shut flush when it is fully up.
+			node.rotation.z = float(child.get_meta("side")) * deg_to_rad(80.0) * clampf(travel * 5.0, 0.0, 1.0)
+	return travel
 
 ## An airport: the runway on its embankment with centre-line and threshold
 ## stripes, a taxiway, a small terminal with a control tower and a windsock.
@@ -325,28 +401,36 @@ static func airport(index: int) -> Node3D:
 	var top: float = Airports.RUNWAY_Y
 	# The airfield (Patch 4.0.1 item 7): one grassy embankment over the whole
 	# footprint (runway, apron, terminal and a margin), level at the runway's
-	# height, so no hill pokes through. Its faces now point outward (the 4.0
-	# top faced down, so it was culled and its ink shell drew a black slab).
+	# height, so no hill pokes through. Its faces point outward.
+	# Patch 4.0.2 item 3: its grass top stands FIELD_DROP_M below the runway
+	# and is cut away under the runway and the apron, which are solid tarmac
+	# slabs with their markings painted into the runway's own top (no stripe
+	# boxes lying on it): no two surfaces overlap, so nothing flickers.
+	var inland: Vector2 = Airports.land_side(Vector2(entry.at.x, entry.at.z), Vector2(sin(entry.heading), cos(entry.heading)))
+	var side: float = 1.0 if Vector2(cos(entry.heading), -sin(entry.heading)).dot(inland) > 0.0 else -1.0
 	var span: Vector2 = Airports.field_across(index)
+	var holes: Array[Rect2] = [runway_rect(width, length), apron_rect(width, side)]
 	var bank: MeshInstance3D = MeshInstance3D.new()
 	bank.name = "Airfield"
-	bank.mesh = _bank_mesh(span.x, span.y, Airports.field_half_length(index), top + 3.0)
+	bank.mesh = _bank_mesh(span.x, span.y, Airports.field_half_length(index), top + 3.0 - FIELD_DROP_M, holes)
 	bank.position = Vector3(0, -3.0, 0)
 	bank.material_override = _paint(GRASS_BANK, cache)
 	root.add_child(bank)
-	_box(root, Vector3(width, 0.3, length), Vector3(0, top - 0.15, 0), TARMAC, cache)
-	var stripes: int = int(length / 60.0)
-	for index_stripe: int in stripes:
-		_box(root, Vector3(1.2, 0.05, 22.0), Vector3(0, top + 0.03, -length * 0.5 + 60.0 + index_stripe * 60.0 - 30.0), STRIPE, cache)
-	for end: float in [-1.0, 1.0]:
-		for bar: int in 6:
-			_box(root, Vector3(2.2, 0.05, 26.0), Vector3((bar - 2.5) * 4.5, top + 0.03, end * (length * 0.5 - 22.0)), STRIPE, cache)
+	var runway: MeshInstance3D = MeshInstance3D.new()
+	runway.name = "Runway"
+	runway.mesh = _runway_mesh(width, length)
+	runway.position = Vector3(0, top, 0)
+	var marked: StandardMaterial3D = StandardMaterial3D.new()
+	marked.albedo_texture = runway_texture()
+	marked.roughness = 0.9
+	runway.material_override = marked
+	root.add_child(runway)
 	# Taxiway and apron on the inland side, with the terminal and the tower.
-	var inland: Vector2 = Airports.land_side(Vector2(entry.at.x, entry.at.z), Vector2(sin(entry.heading), cos(entry.heading)))
-	var side: float = 1.0 if Vector2(cos(entry.heading), -sin(entry.heading)).dot(inland) > 0.0 else -1.0
-	_box(root, Vector3(26.0, 0.25, 160.0), Vector3(side * (width * 0.5 + 22.0), top - 0.1, 120.0), TARMAC, cache)
+	var apron_area: Rect2 = holes[1]
+	var apron: MeshInstance3D = _box(root, Vector3(apron_area.size.x, SLAB_M, apron_area.size.y), Vector3(apron_area.get_center().x, top - APRON_DROP_M - SLAB_M * 0.5, apron_area.get_center().y), TARMAC, cache)
+	apron.name = "Apron"
 	var terminal_x: float = side * (width * 0.5 + 34.0)
-	var terminal: MeshInstance3D = _box(root, Vector3(18.0, 8.0, 46.0), Vector3(terminal_x + side * 6.0, top + 4.0, 120.0), WHITE, cache)
+	var terminal: MeshInstance3D = _box(root, Vector3(18.0, 8.4, 46.0), Vector3(terminal_x + side * 6.0, top + 3.8, 120.0), WHITE, cache)
 	terminal.name = "Terminal"
 	_box(root, Vector3(19.0, 1.2, 47.0), Vector3(terminal_x + side * 6.0, top + 8.4, 120.0), Color("3d9be0"), cache)
 	for window: int in 5:
@@ -363,10 +447,85 @@ static func airport(index: int) -> Node3D:
 		(node as MeshInstance3D).visibility_range_end = 5200.0
 	return root
 
+## Patch 4.0.2 item 3: the runway's rectangle in the airport's frame
+## (x across, y along), and the apron's on the inland `side`.
+static func runway_rect(width: float, length: float) -> Rect2:
+	return Rect2(-width * 0.5, -length * 0.5, width, length)
+
+static func apron_rect(width: float, side: float) -> Rect2:
+	return Rect2(side * (width * 0.5 + 22.0) - 13.0, 40.0, 26.0, 160.0)
+
+## The runway's paint (one texture for every runway: they share a size):
+## tarmac, edge lines, the dashed centre line every 60 m and the six
+## threshold bars at each end. Across is U (RUNWAY_WIDTH_M), along is V.
+static var _runway_paint: ImageTexture
+static func runway_texture() -> ImageTexture:
+	if _runway_paint != null: return _runway_paint
+	var width: float = Airports.RUNWAY_WIDTH_M
+	var length: float = Airports.RUNWAY_M
+	var size: Vector2i = Vector2i(64, 1024)
+	var page: Image = Image.create(size.x, size.y, false, Image.FORMAT_RGB8)
+	page.fill(TARMAC)
+	var paint: Callable = func(x: float, z: float, w: float, l: float) -> void:
+		var a: Vector2i = Vector2i(floori((x - w * 0.5 + width * 0.5) / width * size.x), floori((z - l * 0.5 + length * 0.5) / length * size.y))
+		var b: Vector2i = Vector2i(ceili((x + w * 0.5 + width * 0.5) / width * size.x), ceili((z + l * 0.5 + length * 0.5) / length * size.y))
+		page.fill_rect(Rect2i(a, (b - a).max(Vector2i.ONE)), STRIPE)
+	for edge: float in [-1.0, 1.0]: paint.call(edge * (width * 0.5 - 1.2), 0.0, 0.7, length - 8.0)
+	for stripe: int in int(length / 60.0) - 1:
+		paint.call(0.0, -length * 0.5 + 90.0 + stripe * 60.0, 1.2, 22.0)
+	for end: float in [-1.0, 1.0]:
+		for bar: int in 6: paint.call((bar - 2.5) * 4.5, end * (length * 0.5 - 22.0), 2.2, 26.0)
+	page.generate_mipmaps()
+	_runway_paint = ImageTexture.create_from_image(page)
+	return _runway_paint
+
+## The runway slab: its painted top at y = 0 (UV across and along) and four
+## sides down to -SLAB_M (in plain tarmac, a spot of the paint with no line).
+static func _runway_mesh(width: float, length: float) -> ArrayMesh:
+	var tool: SurfaceTool = SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var w: float = width * 0.5
+	var l: float = length * 0.5
+	var corners: Array[Vector3] = [Vector3(-w, 0, -l), Vector3(w, 0, -l), Vector3(w, 0, l), Vector3(-w, 0, l)]
+	var uv: Callable = func(point: Vector3) -> Vector2: return Vector2((point.x + w) / width, (point.z + l) / length)
+	for triangle: Array in [[0, 2, 1], [0, 3, 2]]:
+		var a: Vector3 = corners[triangle[0]]
+		var b: Vector3 = corners[triangle[1]]
+		var c: Vector3 = corners[triangle[2]]
+		var normal: Vector3 = (c - a).cross(b - a)
+		if normal.y < 0.0:
+			var swap: Vector3 = b
+			b = c
+			c = swap
+		tool.set_normal(Vector3.UP)
+		for point: Vector3 in [a, b, c]:
+			tool.set_uv(uv.call(point))
+			tool.add_vertex(point)
+	for index: int in 4:
+		var a: Vector3 = corners[index]
+		var b: Vector3 = corners[(index + 1) % 4]
+		var down: Vector3 = Vector3(0, -SLAB_M, 0)
+		var outward: Vector3 = ((a + b) * 0.5).normalized()
+		for triangle: Array in [[a, b, b + down], [a, b + down, a + down]]:
+			var p0: Vector3 = triangle[0]
+			var p1: Vector3 = triangle[1]
+			var p2: Vector3 = triangle[2]
+			if (p2 - p0).cross(p1 - p0).dot(outward) < 0.0:
+				var swap: Vector3 = p1
+				p1 = p2
+				p2 = swap
+			tool.set_normal(outward)
+			for point: Vector3 in [p0, p1, p2]:
+				tool.set_uv(Vector2(0.25, 0.5))
+				tool.add_vertex(point)
+	return tool.commit()
+
 ## The airfield embankment: a flat top from x0 to x1 across and +-half_length
 ## along, `height` tall, its four sides sloping down to the ground. Every face
-## points outward (fronts clockwise, as _triangle makes them).
-static func _bank_mesh(x0: float, x1: float, half_length: float, height: float) -> ArrayMesh:
+## points outward (fronts clockwise, as _triangle makes them). Patch 4.0.2:
+## the top leaves out `holes` (rectangles, x across and y along), where the
+## runway and apron slabs stand.
+static func _bank_mesh(x0: float, x1: float, half_length: float, height: float, holes: Array[Rect2] = []) -> ArrayMesh:
 	var tool: SurfaceTool = SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var run: float = height * 1.4
@@ -380,8 +539,26 @@ static func _bank_mesh(x0: float, x1: float, half_length: float, height: float) 
 		outward = outward.normalized() + Vector3.UP * 0.7
 		_triangle(tool, bottom[index], upper[next], bottom[next], outward)
 		_triangle(tool, bottom[index], upper[index], upper[next], outward)
-	_triangle(tool, upper[0], upper[2], upper[1], Vector3.UP)
-	_triangle(tool, upper[0], upper[3], upper[2], Vector3.UP)
+	# The top, as a grid cut along every hole's edges, without the holes' cells.
+	var xs: Array[float] = [x0, x1]
+	var zs: Array[float] = [-half_length, half_length]
+	for hole: Rect2 in holes:
+		for x: float in [hole.position.x, hole.end.x]:
+			if x > x0 and x < x1 and not xs.has(x): xs.append(x)
+		for z: float in [hole.position.y, hole.end.y]:
+			if z > -half_length and z < half_length and not zs.has(z): zs.append(z)
+	xs.sort()
+	zs.sort()
+	for i: int in xs.size() - 1:
+		for j: int in zs.size() - 1:
+			var centre: Vector2 = Vector2((xs[i] + xs[i + 1]) * 0.5, (zs[j] + zs[j + 1]) * 0.5)
+			if holes.any(func(hole: Rect2) -> bool: return hole.has_point(centre)): continue
+			var a: Vector3 = Vector3(xs[i], height, zs[j])
+			var b: Vector3 = Vector3(xs[i + 1], height, zs[j])
+			var c: Vector3 = Vector3(xs[i + 1], height, zs[j + 1])
+			var d: Vector3 = Vector3(xs[i], height, zs[j + 1])
+			_triangle(tool, a, c, b, Vector3.UP)
+			_triangle(tool, a, d, c, Vector3.UP)
 	return tool.commit()
 
 ## Patch 4.0 item 12: the crash. A big toon explosion: a white flash, a

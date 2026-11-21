@@ -755,6 +755,8 @@ func _ready() -> void:
 func client_command(action: StringName) -> void:
 	if action == &"pause": view.game_menu.open()
 	if action == &"horn": view.helm.feedback.sound_horn(view.controls.input_allowed())
+	# Patch 4.0.2 item 6: while flying, G is the landing gear (Aviation.on_command).
+	if action == &"cannon_salute" and view.flying(): return
 	if action == &"cannon_salute" and view.controls.input_allowed(): send_gameplay("salute")
 	if action == &"cannon_salute": send_gameplay("salute")
 
@@ -981,7 +983,8 @@ func _physics_process(delta: float) -> void:
 				# Patch 4.0: a flying captain's helm flies the plane (Aviation.tick).
 				var live: bool = not order.is_empty() and Time.get_ticks_msec() - order.at <= TIMEOUT_MS
 				owner_context.aviation.order = {"throttle": float(order.throttle) if live else 0.0, "pitch": float(order.get("pitch", 0.0)) if live else 0.0,
-					"roll": float(order.rudder) if live else 0.0, "yaw": float(order.lateral) if live else 0.0}
+					"roll": float(order.rudder) if live else 0.0, "yaw": float(order.lateral) if live else 0.0,
+					"gear": float(order.get("gear", -1.0)) if live else -1.0}
 				continue
 			if order.is_empty() or Time.get_ticks_msec() - order.at > TIMEOUT_MS:
 				ship.zero_throttle()
@@ -1110,7 +1113,10 @@ func send_helm(command: float, rudder: float, lateral: float) -> void:
 	sequence += 1
 	var payload: Dictionary = {"throttle": command, "rudder": rudder, "lateral": lateral, "sent_ms": Time.get_ticks_msec()}
 	# Patch 4.0: a plane's helm also sends the pitch.
-	if is_instance_valid(view) and view.flying(): payload.pitch = float(view.aviation.order.pitch)
+	if is_instance_valid(view) and view.flying():
+		payload.pitch = float(view.aviation.order.pitch)
+		# Patch 4.0.2 item 6: and the gear lever.
+		payload.gear = float(view.aviation.order.get("gear", 1.0))
 	helm_input.rpc_id(1, ShipActions.make_request(session.epoch, multiplayer.get_unique_id(), entity, "helm", sequence, payload))
 
 @rpc("authority", "call_remote", "unreliable_ordered", 2)

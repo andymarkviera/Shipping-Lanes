@@ -68,7 +68,11 @@ func inputs(m: RefCounted) -> Dictionary:
 	if phase == "rollout":
 		out.brake = 1.0
 		out.roll = steer_ground(m, axis)
+		out.gear = 1.0
 		return out
+	# Patch 4.0.2 item 6: the gear is the pilot's: down (G) for the approach;
+	# it came up on its own after take-off.
+	if phase in ["join", "final"]: out.gear = 1.0
 	if phase == "final":
 		# Hold the centre line; ride the 3 degree glide path.
 		want = runway_heading - clampf(across * 0.003, -0.45, 0.45)
@@ -119,7 +123,7 @@ func sloppy_start(m: RefCounted, out_m: float = 3000.0, offset_m: float = 90.0, 
 	phase = "sloppy"
 
 func sloppy_inputs(m: RefCounted) -> Dictionary:
-	var out: Dictionary = {"throttle": 0.25, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "brake": 0.0}
+	var out: Dictionary = {"throttle": 0.25, "pitch": 0.0, "roll": 0.0, "yaw": 0.0, "brake": 0.0, "gear": 1.0}
 	if m.on_ground: phase = "rollout"
 	if phase == "rollout":
 		# S held at idle: the brakes. No steering at all.

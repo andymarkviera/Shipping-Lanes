@@ -154,6 +154,20 @@ static func on_airfield(index: int, position: Vector3, margin: float = 0.0) -> b
 	var span: Vector2 = field_across(index)
 	return absf(along) <= field_half_length(index) + margin and across >= span.x - margin and across <= span.y + margin
 
+## Patch 4.0.2 item 4: every decoration layer (dunes, mesas, palms, bushes,
+## towers) keeps this far off each airfield, plus its own reach.
+const DECOR_CLEAR_M: float = 40.0
+
+## Patch 4.0.2 item 4: whether a decoration centred at `at` (X, Z) that
+## reaches `reach` metres from its centre stays off every airfield, with
+## DECOR_CLEAR_M to spare. Seeded decoration layers call it, so nothing
+## stands on a runway, its apron or its grass, whatever the biome.
+static func clear_of_airfields(at: Vector2, reach: float = 0.0) -> bool:
+	var spot: Vector3 = Vector3(at.x, 0, at.y)
+	for index: int in all().size():
+		if on_airfield(index, spot, DECOR_CLEAR_M + maxf(reach, 0.0)): return false
+	return true
+
 ## Any airfield under a position, or -1.
 static func airfield_at(position: Vector3) -> int:
 	for index: int in all().size():

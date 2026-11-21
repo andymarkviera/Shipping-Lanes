@@ -204,7 +204,18 @@ static func _mooring_bitts(root: Node3D, kind: String, definition: ShipDefinitio
 		deck = 3.5
 		ends = {"Bow": [20.0 * size.z / 90.0, 12.0 * size.x / 24.0], "Stern": [-38.0 * size.z / 90.0, 12.0 * size.x / 24.0]}
 		inboard = 1.5 * size.x / 24.0
-	elif kind in ["small_racer", "small_jetty"]:
+	elif kind == "small_speedboat":
+		# Patch 4.0.2 item 9: the Marlin-style hull narrows to a sharp bow.
+		ends = {"Bow": [size.z * 0.22, size.x / 2.0 * 0.8], "Stern": [-size.z / 2.0 + 1.2, size.x / 2.0 * 0.92]}
+		inboard = 0.45
+	elif kind == "small_jetty":
+		# Patch 4.0.2 item 9: the Jetty's delta hull is narrow forward, wide aft.
+		s = 0.22
+		deck = 2.6 * size.y / 4.0 + 0.1
+		rail = deck
+		ends = {"Bow": [size.z * 0.02, size.x / 2.0 * 0.42], "Stern": [-size.z / 2.0 + 1.5, size.x / 2.0 * 0.85]}
+		inboard = 0.3
+	elif kind == "small_racer":
 		# Patch 2.9 item 5: small flush cleats on the racer's low, narrow deck.
 		# Patch 4.0 item 4: the Jetty shares the racer's low deck.
 		s = 0.22
@@ -229,7 +240,7 @@ static func _mooring_bitts(root: Node3D, kind: String, definition: ShipDefinitio
 
 ## Patch 2.4 item 8: the small boats, each in its own bright scheme. The offshore
 ## racer is a Cigarette-style powerboat (Patch 2.9 item 5, _dress_racer); the
-## speedboat is short with a windscreen, seats and an outboard; the fishing boat
+## speedboat is a Marlin-style offshore fishing boat (Patch 4.0.2, _dress_marlin); the fishing boat
 ## is chunky and cosy with a wheelhouse, mast and boom, net drum and buoys.
 static func _dress_small(root: Node3D, hull: MeshInstance3D, definition: ShipDefinition, kind: String, cache: Dictionary) -> void:
 	var size: Vector3 = definition.hull_size_m
@@ -243,19 +254,7 @@ static func _dress_small(root: Node3D, hull: MeshInstance3D, definition: ShipDef
 		"small_jetty":
 			_dress_jetty(root, hull, size, cache)
 		"small_speedboat":
-			var blue: Color = Color("2a9fd6")
-			hull.mesh = hull_mesh(size.z, size.x, -2.6 * s, deck, 3.5 * s, 0.8 * s, blue, Color("e8d9b5"))
-			# Windscreen, two seats, a stern bench and an outboard motor.
-			var screen: MeshInstance3D = _box(root, Vector3(size.x * 0.82, 0.55, 0.12), Vector3(0, deck + 0.42, size.z * 0.12), GLASS, cache)
-			screen.rotation.x = -0.5
-			_box(root, Vector3(size.x * 0.86, 0.1, 0.5), Vector3(0, deck + 0.68, size.z * 0.1), WHITE, cache)
-			for side: float in [-1.0, 1.0]:
-				_box(root, Vector3(0.6, 0.45, 0.6), Vector3(side * size.x * 0.2, deck + 0.22, -size.z * 0.05), WHITE, cache)
-				_box(root, Vector3(0.6, 0.6, 0.15), Vector3(side * size.x * 0.2, deck + 0.6, -size.z * 0.05 - 0.3), blue, cache)
-			_box(root, Vector3(size.x * 0.8, 0.4, 0.7), Vector3(0, deck + 0.2, aft + 1.0), WHITE, cache)
-			_box(root, Vector3(0.5, 0.9, 0.6), Vector3(0, deck + 0.35, aft - 0.15), INK, cache)
-			_box(root, Vector3(0.18, 1.0, 0.25), Vector3(0, deck - 0.5, aft - 0.2), INK, cache)
-			_box(root, Vector3(0.62, 0.2, 0.72), Vector3(0, deck + 0.85, aft - 0.15), WHITE, cache)
+			_dress_marlin(root, hull, size, cache)
 		_:
 			# The fishing boat.
 			var teal: Color = Color("2f8f83")
@@ -399,6 +398,178 @@ static func _dress_racer(root: Node3D, hull: MeshInstance3D, size: Vector3, cach
 		roundel.rotation.z = PI / 2.0
 		roundel.rotation.y = side * 0.05
 
+## Patch 4.0.2 item 9: a ~30 ft offshore walkaround hull in the Grady-White
+## Marlin style: a deep-V bottom, a sharp raised and flared bow (sheer
+## rising forward), high white topsides with a navy boot stripe, a navy
+## bottom, a bulwark round a flat deck and a flat transom. One smooth
+## surface so the ink outline has no gaps. keel < 0 < deck < rail.
+const MARLIN_NAVY: Color = Color("1f3b5c")
+const MARLIN_DECK: Color = Color("e9e4d6")
+const RAIL_STEEL: Color = Color("d9dde3")
+static func marlin_hull_mesh(length: float, beam: float, keel: float, deck: float, rail: float, sheer: float) -> ArrayMesh:
+	var surface: SurfaceTool = SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half_bands: Array[Color] = [WHITE, WHITE, WHITE, MARLIN_NAVY, WHITE, MARLIN_NAVY, MARLIN_NAVY]
+	var rings: Array[PackedVector3Array] = []
+	var stations: int = 30
+	for index: int in stations + 1:
+		var t: float = float(index) / stations
+		var bow: float = clampf((t - 0.55) / 0.45, 0.0, 1.0)
+		var width: float = maxf(beam / 2.0 * (1.0 - pow(bow, 1.8)) * lerpf(0.9, 1.0, clampf(t / 0.12, 0.0, 1.0)), 0.04)
+		var inner: float = maxf(width - 0.18, width * 0.6)
+		var top: float = rail + sheer * bow * bow
+		var chine: float = lerpf(0.15, rail * 0.55, pow(bow, 1.6))
+		var low: float = lerpf(keel, chine - 0.1, pow(bow, 1.4))
+		var z: float = (t - 0.5) * length
+		var ring: PackedVector3Array = PackedVector3Array()
+		var section: Array[Vector2] = [Vector2(inner, deck), Vector2(inner, top), Vector2(width, top), Vector2(width, top - 0.42), Vector2(width * 0.99, top - 0.56),
+			Vector2(width * 0.9, chine), Vector2(0.04, low)]
+		for point: Vector2 in section: ring.append(Vector3(-point.x, point.y, z))
+		for back: int in section.size():
+			var mirror: Vector2 = section[section.size() - 1 - back]
+			ring.append(Vector3(mirror.x, mirror.y, z))
+		rings.append(ring)
+	var count: int = rings[0].size()
+	for index: int in stations:
+		var a: PackedVector3Array = rings[index]
+		var b: PackedVector3Array = rings[index + 1]
+		for side: int in count - 1:
+			var band: int = side if side < 7 else count - 2 - side
+			surface.set_color(half_bands[clampi(band, 0, 6)].srgb_to_linear())
+			for corner: Vector3 in [a[side], b[side], b[side + 1], a[side], b[side + 1], a[side + 1]]:
+				surface.add_vertex(corner)
+		surface.set_smooth_group(1)
+		surface.set_color(MARLIN_DECK.srgb_to_linear())
+		for corner: Vector3 in [a[0], a[count - 1], b[count - 1], a[0], b[count - 1], b[0]]:
+			surface.add_vertex(corner)
+		surface.set_smooth_group(0)
+	# Flat transom, white with the navy stripe and bottom.
+	var stern: PackedVector3Array = rings[0]
+	for side: int in range(2, count - 3):
+		var band: int = side if side < 7 else count - 2 - side
+		surface.set_color(half_bands[clampi(band, 0, 6)].srgb_to_linear())
+		for corner: Vector3 in [Vector3(0, deck, stern[0].z), stern[side], stern[side + 1]]:
+			surface.add_vertex(corner)
+	surface.generate_normals()
+	surface.index()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 0.9
+	surface.set_material(material)
+	return surface.commit()
+
+## Patch 4.0.2 item 9: the Speedboat as a Grady-White Marlin-style offshore
+## fishing boat, chunky toon: the deep-V white hull with its raised bow, a
+## centre console with a raked windscreen under a white hard top on steel
+## T-top legs (rod holders along its back edge), a leaning post, bow rails
+## on stanchions, a forward cuddy hatch and twin white outboards on the
+## transom. Looks only; the size, stats and collider are the Speedboat's.
+static func _dress_marlin(root: Node3D, hull: MeshInstance3D, size: Vector3, cache: Dictionary) -> void:
+	var s: float = size.y / 4.0
+	var deck: float = 2.6 * s
+	var rail: float = 3.5 * s
+	var aft: float = -size.z / 2.0
+	var beam: float = size.x
+	hull.mesh = marlin_hull_mesh(size.z, beam, -2.4 * s, deck, rail, 0.55)
+	# Cuddy hatch on the foredeck and a bow anchor locker.
+	_box(root, Vector3(beam * 0.4, 0.18, 1.1), Vector3(0, deck + 0.09, size.z * 0.2), WHITE, cache)
+	_box(root, Vector3(beam * 0.32, 0.06, 0.8), Vector3(0, deck + 0.2, size.z * 0.2), GLASS, cache)
+	# Centre console with a raked windscreen and a dark dash.
+	var console_z: float = size.z * 0.02
+	_box(root, Vector3(beam * 0.42, 1.0, 1.0), Vector3(0, deck + 0.5, console_z), WHITE, cache)
+	_box(root, Vector3(beam * 0.38, 0.12, 0.5), Vector3(0, deck + 1.02, console_z - 0.1), INK, cache)
+	var screen: MeshInstance3D = _box(root, Vector3(beam * 0.44, 0.5, 0.06), Vector3(0, deck + 1.25, console_z + 0.38), GLASS, cache)
+	screen.rotation.x = -0.45
+	var wheel: MeshInstance3D = _drum(root, 0.16, 0.16, 0.05, Vector3(0, deck + 1.12, console_z - 0.38), INK, cache)
+	wheel.rotation.x = PI / 2.0 - 0.6
+	# The T-top: four steel legs, a white hard top with a navy edge, rod holders.
+	var top_y: float = deck + 2.35
+	for x: float in [-1.0, 1.0]:
+		for z: float in [-0.65, 0.55]:
+			_drum(root, 0.045, 0.045, top_y - deck, Vector3(x * beam * 0.2, deck + (top_y - deck) * 0.5, console_z + z), RAIL_STEEL, cache)
+	_box(root, Vector3(beam * 0.62, 0.14, 2.0), Vector3(0, top_y + 0.07, console_z - 0.05), WHITE, cache)
+	_box(root, Vector3(beam * 0.64, 0.06, 2.04), Vector3(0, top_y, console_z - 0.05), MARLIN_NAVY, cache)
+	for index: int in 5:
+		var rod: MeshInstance3D = _drum(root, 0.03, 0.03, 0.55, Vector3((index - 2) * beam * 0.11, top_y + 0.32, console_z - 1.02), RAIL_STEEL, cache)
+		rod.rotation.x = -0.35
+	# Leaning post with a cushion, and a cooler seat ahead of the console.
+	_box(root, Vector3(beam * 0.4, 0.75, 0.5), Vector3(0, deck + 0.38, console_z - 1.2), WHITE, cache)
+	_box(root, Vector3(beam * 0.42, 0.14, 0.55), Vector3(0, deck + 0.8, console_z - 1.2), MARLIN_NAVY, cache)
+	_box(root, Vector3(beam * 0.36, 0.5, 0.55), Vector3(0, deck + 0.25, console_z + 0.95), WHITE, cache)
+	# Bow rails: stanchions along the gunwale forward, a rail along their tops.
+	for side: float in [-1.0, 1.0]:
+		var posts: Array[Vector3] = []
+		for step: int in 5:
+			var t: float = 0.58 + step * 0.085
+			var bow: float = clampf((t - 0.55) / 0.45, 0.0, 1.0)
+			var half: float = beam / 2.0 * (1.0 - pow(bow, 1.8)) - 0.12
+			var y: float = rail + 0.55 * bow * bow
+			posts.append(Vector3(side * maxf(half, 0.05), y, (t - 0.5) * size.z))
+		for post: Vector3 in posts: _drum(root, 0.035, 0.035, 0.5, post + Vector3(0, 0.25, 0), RAIL_STEEL, cache)
+		for index: int in posts.size() - 1:
+			var a: Vector3 = posts[index] + Vector3(0, 0.5, 0)
+			var b: Vector3 = posts[index + 1] + Vector3(0, 0.5, 0)
+			var bar: MeshInstance3D = _box(root, Vector3(0.06, 0.06, a.distance_to(b)), (a + b) * 0.5, RAIL_STEEL, cache)
+			bar.basis = Basis.looking_at(b - a, Vector3.UP)
+	# Twin outboards on the transom: white cowlings, navy bands, dark legs.
+	for side: float in [-1.0, 1.0]:
+		var x: float = side * beam * 0.2
+		_box(root, Vector3(0.5, 0.75, 0.6), Vector3(x, deck + 0.15, aft - 0.3), WHITE, cache)
+		_box(root, Vector3(0.52, 0.12, 0.62), Vector3(x, deck - 0.12, aft - 0.3), MARLIN_NAVY, cache)
+		_box(root, Vector3(0.16, 1.3, 0.28), Vector3(x, deck - 0.85, aft - 0.34), INK, cache)
+		_box(root, Vector3(0.1, 0.18, 0.5), Vector3(x, deck - 1.5, aft - 0.3), INK, cache)
+
+## Patch 4.0.2 item 9: the Jetty's futuristic hull: a long, narrow delta
+## (a triangle in plan) with a needle nose at +Z and its widest at the
+## stern, a raised spine, sharp chines and a shallow V bottom, like a sci-fi
+## hydrofoil. Bands: deck, spine, edge stripe, side, chine, bottom.
+static func delta_hull_mesh(length: float, beam: float, keel: float, deck: float, colours: Array[Color]) -> ArrayMesh:
+	var surface: SurfaceTool = SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half: float = beam / 2.0
+	var rings: Array[PackedVector3Array] = []
+	var stations: int = 24
+	for index: int in stations + 1:
+		var t: float = float(index) / stations
+		# Straight delta edges, a touch of curve at the needle nose.
+		var width: float = maxf(half * pow(1.0 - t, 1.08), 0.015)
+		var top: float = deck + 0.1 * t
+		var spine: float = top + 0.22 * (1.0 - t) + 0.05
+		var chine: float = lerpf(0.25, top - 0.15, pow(t, 1.5))
+		var low: float = lerpf(keel, chine - 0.05, pow(t, 1.2))
+		var z: float = (t - 0.5) * length
+		var section: Array[Vector2] = [Vector2(0.0, spine), Vector2(width * 0.3, top + 0.06), Vector2(width, top - 0.04), Vector2(width * 0.98, top - 0.22),
+			Vector2(width * 0.9, chine), Vector2(0.0, low)]
+		var ring: PackedVector3Array = PackedVector3Array()
+		for point: Vector2 in section: ring.append(Vector3(-point.x, point.y, z))
+		for back: int in range(section.size() - 2, 0, -1): ring.append(Vector3(section[back].x, section[back].y, z))
+		rings.append(ring)
+	var count: int = rings[0].size()
+	for index: int in stations:
+		var a: PackedVector3Array = rings[index]
+		var b: PackedVector3Array = rings[index + 1]
+		for side: int in count:
+			var next: int = (side + 1) % count
+			var band: int = side if side < 5 else count - 1 - side
+			surface.set_color(colours[clampi(band, 0, colours.size() - 1)].srgb_to_linear())
+			for corner: Vector3 in [a[side], b[side], b[next], a[side], b[next], a[next]]:
+				surface.add_vertex(corner)
+	# Flat wide stern.
+	var stern: PackedVector3Array = rings[0]
+	var middle: Vector3 = Vector3(0, (deck + keel) * 0.5, stern[0].z)
+	for side: int in count:
+		var band: int = side if side < 5 else count - 1 - side
+		surface.set_color(colours[clampi(band, 0, colours.size() - 1)].srgb_to_linear())
+		for corner: Vector3 in [middle, stern[side], stern[(side + 1) % count]]:
+			surface.add_vertex(corner)
+	surface.generate_normals()
+	surface.index()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 0.9
+	surface.set_material(material)
+	return surface.commit()
+
 ## Patch 4.0 item 4: the Jetty, a jet boat in the style of the other small boats:
 ## the racer's long deep-V in teal, white and orange, a bubble canopy over two
 ## seats, twin tail fins and one big jet nozzle on the transom. The jet flame
@@ -411,25 +582,31 @@ static func _dress_jetty(root: Node3D, hull: MeshInstance3D, size: Vector3, cach
 	var deck: float = 2.6 * s
 	var aft: float = -size.z / 2.0
 	var beam: float = size.x
-	var colours: Array[Color] = [WHITE, INK, teal, orange, WHITE, INK]
-	hull.mesh = racer_hull_mesh(size.z, beam, -2.2 * s, deck, colours)
+	# Patch 4.0.2 item 9: a long futuristic delta hull (needle nose, wide
+	# stern) with a slim canopy, swept winglets and hydrofoil struts. The rear
+	# thruster (the nozzle, its ring and the jet flame) is exactly as before.
+	var colours: Array[Color] = [Color("e8f4f2"), teal, orange, WHITE, Color("3a3f4b"), INK]
+	hull.mesh = delta_hull_mesh(size.z, beam, -2.2 * s, deck, colours)
 	var top: float = deck + 0.12
-	# A teal spine down the foredeck and a white nose cap.
-	_box(root, Vector3(beam * 0.2, 0.08, size.z * 0.42), Vector3(0, top + 0.02, size.z * 0.2), teal, cache)
-	_box(root, Vector3(beam * 0.12, 0.1, 0.8), Vector3(0, top + 0.05, size.z * 0.42), orange, cache)
-	# Cockpit with two seats under a raked bubble canopy.
-	var cockpit_z: float = -size.z * 0.08
-	_box(root, Vector3(beam * 0.55, 0.06, size.z * 0.22), Vector3(0, top + 0.01, cockpit_z), Color("3a3f4b"), cache)
-	for z: float in [cockpit_z + 0.55, cockpit_z - 0.55]:
-		_box(root, Vector3(0.5, 0.2, 0.5), Vector3(0, top + 0.12, z), WHITE, cache)
-		_box(root, Vector3(0.5, 0.6, 0.14), Vector3(0, top + 0.4, z - 0.28), orange, cache)
-	var canopy: MeshInstance3D = _ball(root, beam * 0.3, 1.0, Vector3(0, top + 0.3, cockpit_z + 0.2), GLASS, cache)
-	canopy.scale = Vector3(1.0, 0.8, 2.6)
-	# Engine deck, twin swept tail fins and the jet nozzle on the transom.
-	_box(root, Vector3(beam * 0.7, 0.18, size.z * 0.18), Vector3(0, top + 0.06, aft + size.z * 0.12), INK, cache)
+	# A glowing teal line down the spine to the needle nose.
+	_box(root, Vector3(0.08, 0.06, size.z * 0.55), Vector3(0, top + 0.3, size.z * 0.12), Color("5ff2e0"), cache)
+	# A slim raked canopy over the tandem seats, aft of the middle.
+	var cockpit_z: float = -size.z * 0.14
+	var canopy: MeshInstance3D = _ball(root, beam * 0.16, 1.0, Vector3(0, top + 0.4, cockpit_z), GLASS, cache)
+	canopy.scale = Vector3(1.0, 0.7, 4.2)
+	_box(root, Vector3(beam * 0.34, 0.1, size.z * 0.2), Vector3(0, top + 0.22, cockpit_z), Color("3a3f4b"), cache)
+	# Swept winglets at the stern corners and twin hydrofoil struts with foils.
 	for side: float in [-1.0, 1.0]:
-		var fin: MeshInstance3D = _box(root, Vector3(0.12, 1.1, 1.2), Vector3(side * beam * 0.3, top + 0.6, aft + 0.9), teal, cache)
-		fin.rotation.x = 0.45
+		var wing: MeshInstance3D = _box(root, Vector3(0.1, 0.9, 1.4), Vector3(side * beam * 0.4, top + 0.45, aft + 0.8), teal, cache)
+		wing.rotation = Vector3(0.55, 0, side * -0.25)
+		_box(root, Vector3(0.12, 0.12, 0.9), Vector3(side * beam * 0.4, top + 0.95, aft + 0.5), orange, cache)
+		var strut: MeshInstance3D = _box(root, Vector3(0.08, 1.0, 0.3), Vector3(side * beam * 0.34, -0.2, aft + size.z * 0.18), INK, cache)
+		strut.rotation.z = side * 0.25
+		_box(root, Vector3(0.7, 0.06, 0.4), Vector3(side * beam * 0.4, -0.7, aft + size.z * 0.18), INK, cache)
+	_box(root, Vector3(0.06, 0.8, 0.3), Vector3(0, -0.4, size.z * 0.22), INK, cache)
+	_box(root, Vector3(0.6, 0.06, 0.34), Vector3(0, -0.8, size.z * 0.22), INK, cache)
+	# The engine deck the thruster mounts to.
+	_box(root, Vector3(beam * 0.62, 0.18, size.z * 0.14), Vector3(0, top + 0.06, aft + size.z * 0.1), INK, cache)
 	var nozzle: MeshInstance3D = _drum(root, 0.55, 0.42, 0.9, Vector3(0, deck - 0.1, aft - 0.35), INK, cache)
 	nozzle.rotation.x = PI / 2.0
 	var ring: MeshInstance3D = _drum(root, 0.6, 0.6, 0.12, Vector3(0, deck - 0.1, aft - 0.82), orange, cache)

@@ -32,6 +32,22 @@ const SNOW: Color = Color("f7fbfd")
 const PEAK: Color = Color("e6f2f8")
 ## One turn per trip round the world, so heights meet across every edge.
 const TURN: float = TAU / Progression.WRAP_M
+## Patch 4.0.2 item 1: the cap's relief. Icy ridges (sharp crests that wind
+## across the cap), rolling snow hills between them and a few big massifs,
+## rising from RELIEF_FROM_M in from the coast to full height on the
+## plateau (the baked depth tops out near 254 m, the plateau). Pure maths
+## (every frequency a whole number of turns round the world, so it meets
+## itself across every edge): the ice mesh, the planes' terrain
+## (features/planes/terrain.gd) and the M-map globe all use relief(), so the
+## client and the server see the same ice. The ships' ice colliders
+## (ICE_SHELVES) are unchanged.
+const RELIEF_FROM_M: float = 150.0
+const RELIEF_FULL_M: float = 250.0
+const RIDGE_M: float = 74.0
+const HILL_M: float = 16.0
+## A ridge face steeper than this (normal Y) is drawn as blue glacier ice.
+const STEEP_NORMAL_Y: float = 0.8
+const GLACIER: Color = Color("bfe3f1")
 
 ## Height of the cliff's top at `at` (X, Z): low shelves and tall cliffs.
 static func cliff_top(at: Vector2) -> float:
@@ -48,11 +64,23 @@ static func ice_height(depth: float, at: Vector2, harbour: float) -> float:
 static func snow_height(depth: float, at: Vector2, harbour: float) -> float:
 	var rise: float = smoothstep(SNOW_FROM_M, PLATEAU_FROM_M, depth)
 	var drift: float = 4.0 * sin(at.x * TURN * 31.0 + at.y * TURN * 12.0) * sin(at.y * TURN * 27.0 - at.x * TURN * 8.0)
-	var open: float = lerpf(cliff_top(at) + 0.6, PLATEAU_Y, rise) + sin(PI * rise) * drift
+	var open: float = lerpf(cliff_top(at) + 0.6, PLATEAU_Y, rise) + sin(PI * rise) * drift + relief(at, depth)
 	if harbour <= 0.0: return open
 	var hill: float = TOON_COAST.hill_height(depth)
 	if depth > TOON_COAST.HILL_TOP_M: hill = lerpf(TOON_COAST.HILL_TOP_Y, PLATEAU_Y, smoothstep(TOON_COAST.HILL_TOP_M, PLATEAU_FROM_M, depth))
 	return lerpf(open, hill, harbour)
+
+## Patch 4.0.2 item 1: metres of ridge and hill above the snow at `at`,
+## `depth` metres in from the ice's coast (0 near the coast and the ports).
+static func relief(at: Vector2, depth: float) -> float:
+	var fade: float = smoothstep(RELIEF_FROM_M, RELIEF_FULL_M, depth)
+	if fade <= 0.0: return 0.0
+	var a: float = 1.0 - absf(sin(at.x * TURN * 23.0 + at.y * TURN * 9.0 + 1.3 * sin(at.y * TURN * 5.0)))
+	var b: float = 1.0 - absf(sin(at.y * TURN * 19.0 - at.x * TURN * 14.0 + 0.7 + 1.1 * sin(at.x * TURN * 6.0)))
+	var ridge: float = pow(maxf(a, b), 3.0)
+	var hills: float = 0.5 + 0.5 * sin(at.x * TURN * 57.0 + at.y * TURN * 21.0) * sin(at.y * TURN * 49.0 - at.x * TURN * 17.0 + 2.1)
+	var massif: float = 0.6 + 0.4 * sin(at.x * TURN * 4.0 + 0.4) * sin(at.y * TURN * 3.0 + 1.0)
+	return fade * (ridge * RIDGE_M * massif + hills * HILL_M)
 
 ## TOON_COAST.harbour_weight, asked only near a port.
 static func harbour_at(at: Vector2, ports: Array[Vector2]) -> float:
@@ -75,6 +103,7 @@ static func build(ports: Array[Vector2], surf: Material) -> Node3D:
 	if grid.is_empty(): return root
 	var ice: StandardMaterial3D = paint(ICE)
 	var snow: StandardMaterial3D = paint(SNOW)
+	var glacier: StandardMaterial3D = paint(GLACIER)
 	var peak: CylinderMesh = CylinderMesh.new()
 	peak.bottom_radius = 1.0
 	peak.top_radius = 0.12
@@ -105,7 +134,7 @@ static func build(ports: Array[Vector2], surf: Material) -> Node3D:
 		var first: int = grid.half if south else 0
 		for band: int in BANDS:
 			var from: int = first + band * rows
-			var part: Dictionary = band_meshes(index % Progression.ICE_COLUMNS, from, mini(from + rows, mini(first + grid.half, grid.count.y - 1)), south, ports, ice, snow)
+			var part: Dictionary = band_meshes(index % Progression.ICE_COLUMNS, from, mini(from + rows, mini(first + grid.half, grid.count.y - 1)), south, ports, ice, snow, glacier)
 			if part.coast != null:
 				var coast: MeshInstance3D = MeshInstance3D.new()
 				coast.name = "Coast%d" % band
@@ -157,13 +186,15 @@ static func peaks(index: int, band: int, area: Rect2, ports: Array[Vector2]) -> 
 			var tall: float = rng.randf_range(30.0, 72.0) / (1.0 + step * 0.3)
 			if Progression.ice_depth(spot) < PEAK_INLAND_M: continue
 			if ports.any(func(port: Vector2) -> bool: return Vector2(port.x, clampf(spot.y, port.y - 60.0, port.y + 1000.0)).distance_to(spot) < PEAK_PORT_M): continue
-			spots.append(Transform3D(Basis.from_euler(Vector3(0, rng.randf() * TAU, 0)).scaled(Vector3(wide, tall, wide)), Vector3(spot.x, 24.0 + tall / 2, spot.y)))
+			# Patch 4.0.2 item 1: standing on the relief, not sunk in it.
+			var lift: float = relief(spot, Progression.ice_depth(spot))
+			spots.append(Transform3D(Basis.from_euler(Vector3(0, rng.randf() * TAU, 0)).scaled(Vector3(wide, tall, wide)), Vector3(spot.x, 24.0 + lift + tall / 2, spot.y)))
 	return spots
 
 ## One band of one column: sample rows `from` to `to` (the squares between
 ## them and the next row). {"coast": ArrayMesh or null, "surf": ArrayMesh or
 ## null, "area": Rect2}, in the chunk's own baked place.
-static func band_meshes(column: int, from: int, to: int, south: bool, ports: Array[Vector2], ice: Material, snow: Material) -> Dictionary:
+static func band_meshes(column: int, from: int, to: int, south: bool, ports: Array[Vector2], ice: Material, snow: Material, glacier: Material = null) -> Dictionary:
 	var grid: Dictionary = Progression.polar_ice()
 	var count: Vector2i = grid.count
 	var depth: PackedFloat32Array = grid.depth
@@ -177,25 +208,12 @@ static func band_meshes(column: int, from: int, to: int, south: bool, ports: Arr
 	var surf_uvs: PackedVector2Array = PackedVector2Array()
 	var row_end: int = (column + 1) * wide
 	for j: int in range(from, to):
-		# The flat plateau is one quad per run along the row.
-		var run_from: int = -1
-		for i: int in range(column * wide, row_end + 1):
-			var v: Array[float] = []
-			var flat: bool = false
-			if i < row_end:
-				var i0: int = j * count.x + i
-				var i1: int = j * count.x + (i + 1) % count.x
-				v = [depth[i0], depth[i1], depth[i1 + count.x], depth[i0 + count.x]]
-				flat = minf(minf(v[0], v[1]), minf(v[2], v[3])) >= PLATEAU_FROM_M
-			if run_from >= 0 and not flat:
-				var a: Vector2 = origin + Vector2(run_from, j) * cell
-				var b: Vector2 = origin + Vector2(i, j + 1) * cell
-				for corner: Vector2 in [a, Vector2(b.x, a.y), b, a, b, Vector2(a.x, b.y)]: snow_points.append(Vector3(corner.x, PLATEAU_Y, corner.y))
-				run_from = -1
-			if flat:
-				if run_from < 0: run_from = i
-				continue
-			if i >= row_end: continue
+		# Patch 4.0.2 item 1: the plateau is no longer one flat quad per run;
+		# every square carries the relief (ridges, hills), like the slopes.
+		for i: int in range(column * wide, row_end):
+			var i0: int = j * count.x + i
+			var i1: int = j * count.x + (i + 1) % count.x
+			var v: Array[float] = [depth[i0], depth[i1], depth[i1 + count.x], depth[i0 + count.x]]
 			var high: float = maxf(maxf(v[0], v[1]), maxf(v[2], v[3]))
 			if high <= CLIFF_M: continue
 			var low: float = minf(minf(v[0], v[1]), minf(v[2], v[3]))
@@ -235,7 +253,11 @@ static func band_meshes(column: int, from: int, to: int, south: bool, ports: Arr
 	if not ice_points.is_empty() or not snow_points.is_empty():
 		var mesh: ArrayMesh = ArrayMesh.new()
 		if not ice_points.is_empty(): TOON_COAST._add_surface(mesh, ice_points, ice)
-		if not snow_points.is_empty(): TOON_COAST._add_surface(mesh, snow_points, snow)
+		if not snow_points.is_empty():
+			# Steep ridge faces in blue glacier ice, the rest in snow.
+			var parts: Array[PackedVector3Array] = split_steep(snow_points)
+			if not parts[0].is_empty(): TOON_COAST._add_surface(mesh, parts[0], snow)
+			if not parts[1].is_empty(): TOON_COAST._add_surface(mesh, parts[1], glacier if glacier != null else ice)
 		result.coast = mesh
 	if not surf_points.is_empty():
 		var arrays: Array = []
@@ -250,6 +272,18 @@ static func band_meshes(column: int, from: int, to: int, south: bool, ports: Arr
 		surf.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		result.surf = surf
 	return result
+
+## Patch 4.0.2 item 1: [gentle triangles, steep triangles] of a triangle list.
+static func split_steep(points: PackedVector3Array) -> Array[PackedVector3Array]:
+	var gentle: PackedVector3Array = PackedVector3Array()
+	var steep: PackedVector3Array = PackedVector3Array()
+	for index: int in range(0, points.size() - 2, 3):
+		var normal: Vector3 = (points[index + 2] - points[index]).cross(points[index + 1] - points[index]).normalized()
+		# (Packed arrays are values: append to the one meant, not a copy.)
+		for corner: int in 3:
+			if absf(normal.y) < STEEP_NORMAL_Y: steep.append(points[index + corner])
+			else: gentle.append(points[index + corner])
+	return [gentle, steep]
 
 ## The way out to sea at `at`: down the depth grid's slope.
 static func seaward(at: Vector2) -> Vector2:

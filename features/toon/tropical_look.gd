@@ -12,6 +12,10 @@ const Chunky = preload("res://features/toon/chunky_look.gd")
 const Coast = preload("res://features/toon/toon_coast.gd")
 const Tropical = preload("res://features/sky/tropical_biome.gd")
 const Progression = preload("res://features/game/progression.gd")
+## Patch 4.0.2 item 4: no palm or bush on an airfield.
+const Airports = preload("res://features/planes/airports.gd")
+## A palm's crown reaches about this far from its foot.
+const PALM_REACH_M: float = 12.0
 const SEED: int = 2505
 ## The flat sand between the beach slope and the hill (toon_coast.gd).
 const BEACH_Y: float = 3.9
@@ -125,11 +129,17 @@ static func placements(blocks: Array, ports: Array[Vector2]) -> Dictionary:
 	for at: Vector2 in Progression.coast_ring(BEACH_IN_M, BEACH_PALM_M):
 		var jitter: Vector2 = Vector2(rng.randf_range(-2.5, 2.5), rng.randf_range(-2.5, 2.5))
 		if Coast.harbour_weight(at, ports) > 0.0 or not _spot_ok(at + jitter, ports): continue
-		_palm(rng, at + jitter, BEACH_Y, trunks, crowns)
+		# Patch 4.0.2 item 4: none on an airfield (after the draws, so the rest stay put).
+		var beach_palm: Array[Transform3D] = []
+		var beach_crown: Array[Transform3D] = []
+		_palm(rng, at + jitter, BEACH_Y, beach_palm, beach_crown)
+		if not Airports.clear_of_airfields(at + jitter, PALM_REACH_M): continue
+		trunks.append_array(beach_palm)
+		crowns.append_array(beach_crown)
 	for at: Vector2 in Progression.inland_spots(GROVE_M, Coast.HILL_TOP_M + 8.0, rng, 18.0):
 		var palm: bool = rng.randf() < 0.65
 		var wide: float = rng.randf_range(7, 13)
-		if not _spot_ok(at, ports): continue
+		if not _spot_ok(at, ports) or not Airports.clear_of_airfields(at, maxf(wide, PALM_REACH_M)): continue
 		if palm: _palm(rng, at, HILL_Y, trunks, crowns)
 		else: bushes.append(Transform3D(Basis(Vector3.UP, rng.randf_range(0, TAU)) * Basis.from_scale(Vector3(wide, wide * 0.6, wide * rng.randf_range(0.8, 1.3))), Vector3(at.x, HILL_Y - 0.5, at.y)))
 	if not any: return {}

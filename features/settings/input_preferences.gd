@@ -19,7 +19,7 @@ const LABELS: Dictionary = {
 	"ship_brake": "Brake command", "ship_throttle_zero": "Zero throttle",
 	"camera_recenter": "Recenter camera", "interact": "Interact", "map_toggle": "Map",
 	"horn": "Horn", "pause": "Menu",
-	"cannon_salute": "Cannon salute (pirate ships)",
+	"cannon_salute": "Cannon salute (pirate ships) / landing gear (planes)",
 }
 
 @export_range(0.0, 1.0) var master_volume: float = 0.8

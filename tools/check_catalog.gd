@@ -66,6 +66,12 @@ func run() -> void:
 	# (tools/patch_4_0_1_check.gd runs them too, plus the game-scene checks).
 	for failure: String in load("res://tools/patch_4_0_1_logic.gd").run_all():
 		failures.append("Patch 4.0.1: " + failure)
+	# Patch 4.0.2: polar relief, plane icons, runways above the grass, no
+	# decoration on airfields, the bank limit and barrel rolls, the manual
+	# gear (auto-retract, belly landings, the folding legs), the boats' stats,
+	# old saves, VERSION (tools/patch_4_0_2_check.gd adds the game scene).
+	for failure: String in load("res://tools/patch_4_0_2_logic.gd").run_all():
+		failures.append("Patch 4.0.2: " + failure)
 	for failure: String in failures:
 		push_error(failure)
 	print("CATALOG_CHECK_PASS" if failures.is_empty() else "CATALOG_CHECK_FAILED")

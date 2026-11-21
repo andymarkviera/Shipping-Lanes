@@ -22,8 +22,15 @@ extends RefCounted
 ## runway alignment reaches 3 km out and 25 degrees either side; on the wheels
 ## the spoilers dump lift at idle and the brakes (S at idle) stop it quickly.
 ## The airfield around a runway (Airports.airfield_at) is flat and landable.
-## The gear is automatic (gear_for): down near an airport when low and slow,
-## up after take-off.
+## Patch 4.0.2 item 6: the gear is the player's again. The input's "gear"
+## (1 down, 0 up) is a lever: the gear moves when the lever changes (G), so
+## the server and the client agree however many frames carry it. It comes
+## up on its own after take-off (climbing, above GEAR_RETRACT_AGL_M); a
+## landing with the gear up is a belly landing (a hard landing and a repair
+## bill, not a crash) unless it sinks faster than BELLY_MAX_SINK_MPS.
+## Item 5: no upside-down flight. limit_aim keeps the mouse aim inside
+## bank_limit() (60 degrees, the Fighter 75) and the pitch inside
+## PITCH_LIMIT_RAD; only a held roll key (A / D) rolls past it.
 ## On the ground the gear rolls on a runway: nose-wheel steering, brakes,
 ## rolling friction, and the nose can rotate at the plane's rotate speed.
 ## Touching anything but a runway, or a runway too hard, too steep, with too
@@ -50,11 +57,27 @@ const MAX_NOSE_DOWN_RAD: float = deg_to_rad(-10.0)
 const MAX_NOSE_UP_RAD: float = deg_to_rad(20.0)
 ## Rolling off a runway onto grass faster than this is a crash.
 const OFF_RUNWAY_MPS: float = 12.0
-## Automatic gear: down within GEAR_ZONE_M of an airport, below GEAR_AGL_M
-## and slower than GEAR_SPEED_FACTOR x the rotate speed; up otherwise.
-const GEAR_ZONE_M: float = 4200.0
-const GEAR_AGL_M: float = 250.0
-const GEAR_SPEED_FACTOR: float = 2.0
+## Patch 4.0.2 item 6: the gear comes up on its own after take-off, once
+## climbing faster than GEAR_RETRACT_CLIMB_MPS above GEAR_RETRACT_AGL_M.
+const GEAR_RETRACT_AGL_M: float = 30.0
+const GEAR_RETRACT_CLIMB_MPS: float = 0.5
+## A gear-up touchdown sinking faster than this is a crash; slower is a
+## belly landing: it slides to a stop on BELLY_FRICTION (g) and is billed.
+const BELLY_MAX_SINK_MPS: float = 12.0
+const BELLY_FRICTION: float = 0.45
+## The belly rests this share of the gear height above the ground.
+const BELLY_HEIGHT: float = 0.35
+## Patch 4.0.2 item 5: the mouse aim's bank limit (BANK_LIMIT_DEG, the
+## Fighter jet's FIGHTER_BANK_LIMIT_DEG) and pitch limit; near the bank
+## limit the roll command eases off (BANK_GAIN per second of margin; the
+## pitch's LIMIT_GAIN), past it the plane rolls back to it.
+const BANK_LIMIT_DEG: float = 60.0
+const FIGHTER_BANK_LIMIT_DEG: float = 75.0
+const PITCH_LIMIT_RAD: float = deg_to_rad(60.0)
+const PITCH_SOFT_RAD: float = deg_to_rad(6.0)
+const LIMIT_GAIN: float = 4.0
+const BANK_GAIN: float = 8.0
+const BANK_SOFT_RAD: float = deg_to_rad(3.0)
 ## Arcade: the controls keep this share of their authority however slow.
 const ARCADE_AUTHORITY: float = 0.3
 ## The nose-up command fades out over the last few degrees before the stall.
@@ -118,6 +141,14 @@ var angle_of_attack: float = 0.0
 var agl_m: float = 0.0
 var crossed_pole: bool = false
 var gear_height_m: float = 1.5
+## Patch 4.0.2 item 6: the last gear lever seen (-1 none yet), whether the
+## plane has just left the ground (the gear comes up once it climbs away),
+## and this step's events: the gear came up on its own, a belly landing.
+var gear_lever: float = -1.0
+var climbing_out: bool = false
+var gear_auto_up: bool = false
+var belly_landed: bool = false
+var on_belly: bool = false
 
 static func make(plane_kind: String, pose: Transform3D, fuel: float = -1.0) -> RefCounted:
 	var model: RefCounted = new()
@@ -145,6 +176,10 @@ func place(pose: Transform3D) -> void:
 	crashed = false
 	crash_reason = ""
 	agl_m = 0.0
+	climbing_out = false
+	on_belly = false
+	gear_auto_up = false
+	belly_landed = false
 
 func copy_from(other: RefCounted) -> void:
 	if other.kind != kind: setup(other.kind)
@@ -159,6 +194,9 @@ func copy_from(other: RefCounted) -> void:
 	stalled = other.stalled
 	crashed = other.crashed
 	crash_reason = other.crash_reason
+	gear_lever = other.gear_lever
+	climbing_out = other.climbing_out
+	on_belly = other.on_belly
 
 func transform() -> Transform3D:
 	return Transform3D(basis, position)
@@ -180,13 +218,55 @@ func bank_angle() -> float:
 func full_bank() -> float:
 	return atan2(basis.x.y, basis.y.y)
 
-## The automatic gear: down on the ground, and near an airport when low and
-## slow (a landing); up after take-off and everywhere else.
-func gear_for(height_agl: float, speed: float) -> bool:
-	if on_ground: return true
-	if height_agl >= GEAR_AGL_M or speed >= float(p.rotate_mps) * GEAR_SPEED_FACTOR: return false
-	var near: int = Airports.nearest(position)
-	return near >= 0 and Airports.distance_to(near, position) < GEAR_ZONE_M
+## Patch 4.0.2 item 6: the gear lever. A change of lever (G) moves the gear
+## in the air; on the ground it stays down (or, after a belly landing, up
+## until the plane stops). After take-off it comes up on its own.
+func apply_gear(lever_in: float) -> void:
+	gear_auto_up = false
+	if lever_in >= 0.0:
+		var want: float = 1.0 if lever_in >= 0.5 else 0.0
+		if want != gear_lever and not on_ground: gear_down = want > 0.5
+		gear_lever = want
+	if climbing_out and not on_ground and gear_down and agl_m > GEAR_RETRACT_AGL_M and velocity.y > GEAR_RETRACT_CLIMB_MPS:
+		# (The lever is left as it was: a late "down" from the same press
+		# never lowers it again; only a new press of G does.)
+		gear_down = false
+		gear_auto_up = true
+		climbing_out = false
+
+## Patch 4.0.2 item 5: the mouse aim's bank limit, radians.
+func bank_limit() -> float:
+	return deg_to_rad(FIGHTER_BANK_LIMIT_DEG if str(p.get("engines", "")) == "afterburner" else BANK_LIMIT_DEG)
+
+## Patch 4.0.2 item 5: the aim (roll, pitch commands, -1..1) limited so the
+## plane never banks past bank_limit() nor pitches past PITCH_LIMIT_RAD;
+## past either, it is turned back. `keys_roll` (A or D held): an intentional
+## roll, so no bank limit (a barrel roll); the pitch limit still holds, so
+## no loop over onto the back.
+func limit_aim(roll_in: float, pitch_in: float, keys_roll: bool) -> Vector2:
+	var bank: float = full_bank()
+	var rate: float = maxf(deg_to_rad(float(p.roll_dps)), 0.1)
+	var roll: float = clampf(roll_in, -1.0, 1.0)
+	if not keys_roll and not on_ground:
+		# Aimed a few degrees inside the limit (BANK_SOFT_RAD): in a steep dive
+		# the coordinating yaw can carry the bank on a little.
+		var limit: float = bank_limit() - BANK_SOFT_RAD
+		# Towards the limit the command eases off as the margin closes; past
+		# it the plane rolls back (toward wings level) to the limit.
+		roll = clampf(clampf(roll, (-limit - bank) * BANK_GAIN / rate, (limit - bank) * BANK_GAIN / rate), -1.0, 1.0)
+	var pitch: float = clampf(pitch_in, -1.0, 1.0)
+	if not on_ground:
+		# The nose-up command (in the plane's frame) raises the nose by cos(bank).
+		var raise: float = pitch * cos(bank)
+		var nose: float = pitch_angle()
+		var p_rate: float = maxf(deg_to_rad(float(p.pitch_dps)), 0.1)
+		# It aims a few degrees inside the limit (PITCH_SOFT_RAD), so the stall
+		# assist's push and the turn never carry the nose past it.
+		var soft: float = PITCH_LIMIT_RAD - PITCH_SOFT_RAD
+		if raise > 0.0 and nose > soft - 0.3: pitch *= clampf((soft - nose) * LIMIT_GAIN / p_rate / absf(raise), 0.0, 1.0)
+		elif raise < 0.0 and nose < -soft + 0.3: pitch *= clampf((nose + soft) * LIMIT_GAIN / p_rate / absf(raise), 0.0, 1.0)
+		if absf(nose) > soft and absf(cos(bank)) > 0.2: pitch = clampf(-signf(nose) * signf(cos(bank)) * ((absf(nose) - soft) * LIMIT_GAIN / p_rate + 0.15), -1.0, 1.0)
+	return Vector2(roll, pitch)
 
 ## The runway alignment assist (a yaw rate, radians per second): gear down,
 ## low and nearly lined up with the nearest runway (either end), the nose is
@@ -279,6 +359,8 @@ func step(input: Dictionary, dt: float) -> void:
 	var roll_in: float = clampf(float(input.get("roll", 0.0)), -1.0, 1.0)
 	var yaw_in: float = clampf(float(input.get("yaw", 0.0)), -1.0, 1.0)
 	var brake: float = clampf(float(input.get("brake", 0.0)), 0.0, 1.0)
+	apply_gear(float(input.get("gear", -1.0)))
+	belly_landed = false
 	engine = move_toward(engine, lever, ENGINE_RATE * dt)
 	fuel_l = maxf(0.0, fuel_l - float(p.burn_lps) * (0.08 + 0.92 * engine) * dt)
 	if fuel_l <= 0.0: engine = move_toward(engine, 0.0, ENGINE_RATE * dt * 2.0)
@@ -365,7 +447,7 @@ func step(input: Dictionary, dt: float) -> void:
 		forward = basis.z
 		var flat_forward: Vector3 = Vector3(forward.x, 0, forward.z).normalized()
 		var rolling: float = velocity.dot(flat_forward)
-		var friction: float = (0.02 + 1.1 * brake + (AIRFIELD_FRICTION if Terrain.sample(position).surface == "airfield" else 0.0)) * GRAVITY * dt
+		var friction: float = (0.02 + 1.1 * brake + (AIRFIELD_FRICTION if Terrain.sample(position).surface == "airfield" else 0.0) + (BELLY_FRICTION if on_belly else 0.0)) * GRAVITY * dt
 		rolling = move_toward(rolling, 0.0, friction) if absf(rolling) > friction else (0.0 if engine < 0.05 else rolling)
 		velocity = flat_forward * rolling + Vector3(0, maxf(velocity.y, 0.0), 0)
 	position += velocity * dt
@@ -404,11 +486,15 @@ func cross_pole(side: float) -> void:
 func contact() -> void:
 	var below: Dictionary = Terrain.sample(position)
 	var ground: float = float(below.height)
-	agl_m = position.y - gear_height_m - ground
-	gear_down = gear_for(agl_m, velocity.length())
+	var rest: float = gear_height_m * (BELLY_HEIGHT if on_belly else 1.0)
+	agl_m = position.y - rest - ground
 	flaps = gear_down and velocity.length() < float(p.rotate_mps) * 1.9
 	if agl_m > 0.05:
+		# A real lift-off (not a plane placed in the air): the gear comes up
+		# once it climbs away (apply_gear).
+		if on_ground and agl_m < 3.0: climbing_out = true
 		on_ground = false
+		on_belly = false
 		return
 	var sink: float = -velocity.y
 	var speed: float = velocity.length()
@@ -416,9 +502,14 @@ func contact() -> void:
 		if speed > OFF_RUNWAY_MPS or not on_ground or below.surface == "sea":
 			crash("Crashed into the %s." % ("sea" if below.surface == "sea" else ("ice" if below.surface == "ice" else "ground")))
 			return
+	var belly: bool = false
 	if not on_ground:
 		var fault: String = ""
-		if not gear_down: fault = "Landed with the gear up."
+		if not gear_down:
+			# Patch 4.0.2 item 6: a belly landing, unless it sinks extremely fast.
+			if sink > BELLY_MAX_SINK_MPS: fault = "Belly-flopped onto the runway far too hard."
+			elif absf(bank_angle()) > MAX_BANK_RAD: fault = "A wing hit the runway."
+			else: belly = true
 		elif sink > MAX_SINK_MPS: fault = "Hit the runway too hard."
 		elif absf(bank_angle()) > MAX_BANK_RAD: fault = "A wing hit the runway."
 		elif pitch_angle() < MAX_NOSE_DOWN_RAD: fault = "Nose-first into the runway."
@@ -426,9 +517,18 @@ func contact() -> void:
 		if not fault.is_empty():
 			crash(fault)
 			return
+	if belly:
+		on_belly = true
+		belly_landed = true
 	on_ground = true
+	climbing_out = false
+	# Stopped on its belly: the ground crew jack it onto its wheels.
+	if on_belly and velocity.length() < 1.0:
+		on_belly = false
+		gear_down = true
+	if not on_belly: gear_down = true
 	agl_m = 0.0
-	position.y = ground + gear_height_m
+	position.y = ground + gear_height_m * (BELLY_HEIGHT if on_belly else 1.0)
 	if velocity.y < 0.0: velocity.y = 0.0
 	# Wheels down: wings level, nose no lower than level.
 	var yaw: float = heading()

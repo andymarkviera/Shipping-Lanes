@@ -29,6 +29,14 @@ var panel: PanelContainer
 var readout: Label
 var notice: Label
 var travel_list: VBoxContainer
+## Patch 4.0.2 item 8: the panel's content follows the vehicle: the boat
+## controls while sailing, the plane controls while flying.
+var boat_box: VBoxContainer
+var plane_box: VBoxContainer
+var plane_readout: Label
+var plane_notice: Label
+const Planes = preload("res://features/planes/plane_catalog.gd")
+const Airports = preload("res://features/planes/airports.gd")
 
 ## True while the tree is in a debug session (set by the title's DEBUG button).
 static func active(tree: SceneTree) -> bool:
@@ -86,8 +94,12 @@ func _ready() -> void:
 	PLAYFUL.dress(panel)
 	panel.hide()
 	add_child(panel)
+	var both: VBoxContainer = VBoxContainer.new()
+	panel.add_child(both)
 	var stack: VBoxContainer = VBoxContainer.new()
-	panel.add_child(stack)
+	stack.name = "BoatDebug"
+	both.add_child(stack)
+	boat_box = stack
 	readout = Label.new()
 	DISPLAY.plain(readout, Color.WHITE, 16)
 	stack.add_child(readout)
@@ -107,6 +119,91 @@ func _ready() -> void:
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	notice.custom_minimum_size.x = 220
 	stack.add_child(notice)
+	build_plane_box(both)
+
+## Patch 4.0.2 item 8: the plane controls: an altitude / speed readout, a
+## plane picker, spawn at any airport, refuel, repair, the gear and a jump
+## to the nearest airport. Debug only (the local test world).
+func build_plane_box(parent: Node) -> void:
+	plane_box = VBoxContainer.new()
+	plane_box.name = "PlaneDebug"
+	parent.add_child(plane_box)
+	plane_readout = Label.new()
+	DISPLAY.plain(plane_readout, Color.WHITE, 16)
+	plane_box.add_child(plane_readout)
+	var picker: Label = Label.new()
+	picker.text = "Plane"
+	DISPLAY.plain(picker, PLAYFUL.SUN, 16)
+	plane_box.add_child(picker)
+	var row: HBoxContainer = HBoxContainer.new()
+	plane_box.add_child(row)
+	for kind: String in Planes.ORDER: add_button(row, str(Planes.PLANES[kind].name).get_slice(" ", 0), pick_plane.bind(kind))
+	var services: HBoxContainer = HBoxContainer.new()
+	plane_box.add_child(services)
+	add_button(services, "Refuel", plane_refuel)
+	add_button(services, "Repair", plane_repair)
+	add_button(services, "Gear", plane_gear)
+	add_button(plane_box, "Nearest Airport", nearest_airport)
+	add_button(plane_box, "Next Time of Day", func() -> void: preload("res://features/sky/day_night.gd").skip_phase())
+	var heading: Label = Label.new()
+	heading.text = "Spawn at Airport"
+	DISPLAY.plain(heading, PLAYFUL.SUN, 16)
+	plane_box.add_child(heading)
+	for index: int in Airports.count(): add_button(plane_box, Airports.all()[index].name, spawn_at.bind(index))
+	plane_notice = Label.new()
+	DISPLAY.plain(plane_notice, PLAYFUL.CREAM, 15)
+	plane_notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	plane_notice.custom_minimum_size.x = 220
+	plane_box.add_child(plane_notice)
+	plane_box.hide()
+
+## "plane" while flying, "boat" otherwise: which controls the panel shows.
+func panel_mode() -> String:
+	return "plane" if view.has_method("flying") and view.flying() else "boat"
+
+func air() -> Node:
+	return view.get("aviation")
+
+## Swap to another plane on the spot (parked at the nearest airport).
+func pick_plane(kind: String) -> void:
+	var aviation: Node = air()
+	if aviation == null or not aviation.flying(): return
+	if not aviation.planes.has(kind): aviation.planes[kind] = {"fuel": 1.0, "condition": 1.0}
+	aviation.store_plane()
+	aviation.job_id = ""
+	aviation.plane_kind = kind
+	aviation.start_plane(maxi(0, Airports.nearest(aviation.model.position)))
+	plane_notice.text = "Debug: now flying the %s." % Planes.PLANES[kind].name
+
+func spawn_at(index: int) -> void:
+	var aviation: Node = air()
+	if aviation == null or not aviation.flying(): return
+	aviation.store_plane()
+	aviation.start_plane(index)
+	plane_notice.text = "Debug: on the runway at %s." % Airports.all()[index].name
+
+func nearest_airport() -> void:
+	var aviation: Node = air()
+	if aviation == null or not aviation.flying(): return
+	spawn_at(maxi(0, Airports.nearest(aviation.model.position)))
+
+func plane_refuel() -> void:
+	var aviation: Node = air()
+	if aviation == null or not aviation.flying(): return
+	aviation.model.fuel_l = float(aviation.plane_entry().fuel_l)
+	aviation.store_plane()
+	plane_notice.text = "Debug: tank full."
+
+func plane_repair() -> void:
+	var aviation: Node = air()
+	if aviation == null or not aviation.flying(): return
+	aviation.planes[aviation.plane_kind].condition = 1.0
+	plane_notice.text = "Debug: condition 100%."
+
+func plane_gear() -> void:
+	var aviation: Node = air()
+	if aviation == null or not aviation.flying(): return
+	plane_notice.text = ("Debug: gear %s." % ("down" if aviation.gear_order > 0.5 else "up")) if aviation.toggle_gear() else "The gear stays down on the ground."
 
 func add_button(parent: Node, title: String, action: Callable) -> Button:
 	var node: Button = Button.new()
@@ -134,6 +231,16 @@ func _input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	if view.reward_minor < CREDITS_MINOR / 2: view.reward_minor = CREDITS_MINOR
+	# Patch 4.0.2 item 8: the panel shows the controls for the vehicle in use.
+	var flying: bool = panel_mode() == "plane"
+	if is_instance_valid(plane_box): plane_box.visible = flying
+	if is_instance_valid(boat_box): boat_box.visible = not flying
+	if flying:
+		var aviation: Node = air()
+		var m: RefCounted = aviation.model
+		plane_readout.text = "%s\n%d kn  ·  %d m up  ·  %d m above the sea\nGear %s  ·  Fuel %.0f%%" % [aviation.plane_entry().name, roundi(m.airspeed() * 1.944),
+			roundi(maxf(m.agl_m, 0.0)), roundi(m.position.y), "down" if m.gear_down else "up", 100.0 * m.fuel_l / maxf(1.0, float(aviation.plane_entry().fuel_l))]
+		return
 	if not is_instance_valid(view.ship): return
 	var definition: ShipDefinition = view.ship.definition
 	readout.text = "%s\n%.1f kn  ·  top %.1f kn\nFull speed in about %.0f s" % [

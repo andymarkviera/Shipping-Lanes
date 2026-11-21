@@ -391,7 +391,8 @@ func _ready() -> void:
 		add_child(globe_map)
 		controls.command_requested.connect(func(action: StringName) -> void:
 			if action == &"map_toggle": globe_map.toggle()
-			if action == &"cannon_salute" and runtime_role == "local": fire_salute())
+			# Patch 4.0.2 item 6: while flying, G is the landing gear (Aviation.on_command).
+			if action == &"cannon_salute" and runtime_role == "local" and not flying(): fire_salute())
 	navigation = Label.new()
 	stack.add_child(navigation)
 	services = VBoxContainer.new()

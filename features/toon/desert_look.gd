@@ -8,6 +8,8 @@ extends RefCounted
 const Chunky = preload("res://features/toon/chunky_look.gd")
 const Desert = preload("res://features/sky/desert_biome.gd")
 const Progression = preload("res://features/game/progression.gd")
+## Patch 4.0.2 item 4: no dune or mesa on an airfield (Airports.clear_of_airfields).
+const Airports = preload("res://features/planes/airports.gd")
 const SEED: int = 2504
 ## Hill tops are 18 m above the sea (toon_coast.gd HILL_TOP_Y).
 const GROUND_Y: float = 18.0
@@ -72,6 +74,7 @@ static func placements(blocks: Array, ports: Array[Vector2]) -> Dictionary:
 		var tall: float = rng.randf_range(5, 12)
 		if not _clear_of_ports(at, ports) or Desert.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
 		var basis: Basis = Basis(Vector3.UP, 0.6 + rng.randf_range(-0.25, 0.25)).scaled(Vector3(wide, tall, wide * rng.randf_range(1.8, 2.6)))
+		if not Airports.clear_of_airfields(at, wide * 1.3): continue
 		dunes.append(Transform3D(basis, Vector3(at.x, GROUND_Y - 1.0, at.y)))
 	# Mesas: flat-topped buttes in banded red rock, few and far between.
 	for at: Vector2 in Progression.inland_spots(MESA_SPACING_M, COAST_CLEAR_M, rng, 90.0):
@@ -80,6 +83,7 @@ static func placements(blocks: Array, ports: Array[Vector2]) -> Dictionary:
 		if Progression.land_depth(at) < COAST_CLEAR_M + radius * 1.6 or not _clear_of_ports(at, ports) or Desert.weight(Vector3(at.x, 0, at.y)) < 0.5: continue
 		var turn: float = rng.randf_range(0, TAU)
 		var stretch: float = rng.randf_range(1.0, 1.5)
+		if not Airports.clear_of_airfields(at, radius * stretch): continue
 		var y: float = GROUND_Y - 2.0
 		# Three bands, each a little narrower, then a pale cap.
 		for band: int in 4:
