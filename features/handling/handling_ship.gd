@@ -34,6 +34,19 @@ const STORMS = preload("res://features/sky/storms.gd")
 var weather: bool = false
 ## 0..1: the storm at the hull as of the last tick (0 off the game's sea).
 var storm: float = 0.0
+## Patch 4.0.7 item 4: the Jetty hovers over land (features/ships/jetty_land.gd).
+## hover_land: this hull does (the Jetty only). It passes through the bodies
+## in JETTY_LAND.PASSABLE (land, ice, icebergs), meets the shared terrain
+## instead (a slope limit, port grounds, runways in use) and rides at the
+## ground's height (its position's Y, replicated like the rest of the pose).
+## land_block: why the last step was stopped ("" when it was not);
+## terrain_hit_mps: the speed lost against the terrain that step (an impact).
+const JETTY_LAND = preload("res://features/ships/jetty_land.gd")
+var hover_land: bool = false
+var land_block: String = ""
+var terrain_hit_mps: float = 0.0
+var passable_seen: int = -1
+var passable_rids: Array[RID] = []
 
 func propulsion_condition_factor() -> float:
 	if not condition_affects_propulsion: return 1.0
@@ -82,6 +95,7 @@ func _ready() -> void:
 	max_slides = 6
 	platform_floor_layers = 0
 	platform_wall_layers = 0
+	hover_land = JETTY_BOOST.eligible(definition)
 
 func command_throttle(value: float) -> void:
 	if state != null and state.fuel_liters <= 0:
@@ -155,13 +169,55 @@ func advance_motion(delta: float) -> void:
 	if stopping_assist_active():
 		velocity = velocity.move_toward(Vector3.ZERO, definition.neutral_stop_deceleration_mps2 * delta)
 		if velocity == Vector3.ZERO: yaw_rate = 0
+	# (A hull outside the scene tree, e.g. a check's bare hull, has no world under it.)
+	if hover_land and is_inside_tree(): ride_terrain(delta)
 	if state.fuel_liters <= 0:
 		zero_throttle()
 		actual_throttle = 0
 		lateral_order = 0
 
+## Patch 4.0.7 item 4: the Jetty over land. The step ahead is checked
+## against the shared terrain (JETTY_LAND.blocked_step); when it is blocked
+## the hull slides along the X or the Z part alone if that is clear, or
+## stops (the speed lost is an impact, like hitting the shore). Then the
+## height eases to the ground's (velocity.y carries it, so move_and_slide,
+## the client's prediction and the snapshot all move it the same way).
+func ride_terrain(delta: float) -> void:
+	terrain_hit_mps = 0.0
+	land_block = ""
+	if not is_finite(delta) or delta <= 0.0: return
+	var at: Vector3 = global_position if is_inside_tree() else position
+	var flat: Vector3 = Vector3(velocity.x, 0, velocity.z)
+	var travel: Vector3 = flat * delta
+	land_block = JETTY_LAND.blocked_step(at, at + travel)
+	if not land_block.is_empty():
+		var kept: Vector3 = Vector3.ZERO
+		for part: Vector3 in [Vector3(travel.x, 0, 0), Vector3(0, 0, travel.z)]:
+			if part.length() > 0.001 and JETTY_LAND.blocked_step(at, at + part).is_empty() and part.length() > kept.length(): kept = part
+		var slid: Vector3 = kept / delta
+		terrain_hit_mps = (flat - slid).length()
+		velocity.x = slid.x
+		velocity.z = slid.z
+		travel = kept
+		if slid.length() < 0.01: yaw_rate = 0.0
+	velocity.y = (JETTY_LAND.follow_height(at, at.y, travel, delta) - at.y) / delta
+
+## Patch 4.0.7 item 4: the Jetty takes a collision exception with each body
+## in JETTY_LAND.PASSABLE (checked whenever the group's size changes).
+func pass_over_land() -> void:
+	if not hover_land or not is_inside_tree(): return
+	var count: int = get_tree().get_node_count_in_group(JETTY_LAND.PASSABLE)
+	if count == passable_seen: return
+	passable_seen = count
+	passable_rids.clear()
+	for node: Node in get_tree().get_nodes_in_group(JETTY_LAND.PASSABLE):
+		if node is PhysicsBody3D and node != self:
+			add_collision_exception_with(node)
+			passable_rids.append((node as PhysicsBody3D).get_rid())
+
 func _physics_process(delta: float) -> void:
 	if simulation_paused: return
+	pass_over_land()
 	advance_motion(delta)
 	var previous: Vector3 = position
 	var incoming_velocity: Vector3 = velocity
@@ -180,6 +236,11 @@ func _physics_process(delta: float) -> void:
 			impact_cooldowns[collider] = now + 1000
 		var normal: Vector3 = get_slide_collision(index).get_normal()
 		if velocity.dot(normal) < 0.0: velocity = velocity.slide(normal)
+	# Patch 4.0.7 item 4: the Jetty stopped by the terrain (a cliff) is hit
+	# like a shore, with the same cooldown (key 0: the terrain).
+	if not docked and terrain_hit_mps > harmless_impact_mps and not impact_cooldowns.has(0):
+		damage = maxi(damage, clampi(ceili(pow(terrain_hit_mps - harmless_impact_mps, 2) * impact_damage_bp_per_mps_squared), 1, 10000))
+		impact_cooldowns[0] = now + 1000
 	velocity = velocity.limit_length(speed_before)
 	distance_m += position.distance_to(previous)
 	ground_speed_mps = Vector2(position.x - previous.x, position.z - previous.z).length() / delta if delta > 0.0 else 0.0
@@ -197,7 +258,7 @@ func turn_without_overlap(angle: float) -> void:
 		query.shape = child.shape
 		query.transform = candidate * child.transform
 		query.collision_mask = collision_mask
-		query.exclude = [get_rid()]
+		query.exclude = [get_rid()] + passable_rids if hover_land else [get_rid()]
 		var radius: float = child.position.length()
 		if child.shape is BoxShape3D:
 			radius += child.shape.size.length() * 0.5

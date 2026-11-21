@@ -2,6 +2,7 @@ extends Node3D
 ## A shared authority cannot move ice to one viewer's nearest copy. Keep
 ## collision-only edge copies, built once, and a small pool for crossing hulls.
 const Progression = preload("res://features/game/progression.gd")
+const JETTY_LAND = preload("res://features/ships/jetty_land.gd")
 var hulls: Dictionary = {}
 var offsets: Array[Vector3] = []
 var bounds: AABB
@@ -22,6 +23,13 @@ func setup(world: Node3D) -> void:
 		copy.collision_layer = CollisionRules.SHORE
 		copy.collision_mask = CollisionRules.HULL
 		add_child(copy)
+		# Patch 4.0.7 item 4: copies of land and ice the Jetty passes over go
+		# in their own body, in the same group.
+		var passable: StaticBody3D = StaticBody3D.new()
+		passable.collision_layer = CollisionRules.SHORE
+		passable.collision_mask = CollisionRules.HULL
+		passable.add_to_group(JETTY_LAND.PASSABLE)
+		add_child(passable)
 		for source: CollisionShape3D in shapes:
 			var pose: Transform3D = source.global_transform
 			pose.origin += offset
@@ -29,7 +37,7 @@ func setup(world: Node3D) -> void:
 			var shape: CollisionShape3D = CollisionShape3D.new()
 			shape.shape = source.shape
 			shape.transform = pose
-			copy.add_child(shape)
+			(passable if source.get_parent().is_in_group(JETTY_LAND.PASSABLE) else copy).add_child(shape)
 			static_shapes += 1
 
 static func collect_shapes(node: Node, result: Array[CollisionShape3D]) -> void:

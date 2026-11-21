@@ -600,8 +600,10 @@ func jetty_blaster_look() -> void:
 	for label: String in ["Downwash", "RoosterTail", "Glow", "GlowLight", "BoostFlame", "ChargeOrb", "BlastRing", "BoostSound"]:
 		expect(fx.get_node_or_null(label) != null, "the Jetty's effects have %s" % label)
 	var keel: float = (model.get_node("Hull") as MeshInstance3D).mesh.get_aabb().position.y
-	expect(fx.downwash is CPUParticles3D and fx.downwash.position.y < keel - 0.5, "the downwash sprays on the water under the hovering hull")
-	expect(fx.rooster.position.z < -definition.hull_size_m.z * 0.5 and fx.rooster.direction.z < 0.0 and fx.rooster.direction.y > 0.0, "the rooster tail is thrown up and back behind the stern")
+	# (Patch 4.0.7 item 5: the sprays are pooled GPU particles now.)
+	expect(fx.downwash is GPUParticles3D and fx.downwash.position.y < keel - 0.5, "the downwash sprays on the water under the hovering hull")
+	var plume: ParticleProcessMaterial = fx.rooster.process_material as ParticleProcessMaterial
+	expect(fx.rooster.position.z < -definition.hull_size_m.z * 0.5 and plume.direction.z < 0.0 and plume.direction.y > 0.0, "the rooster tail is thrown up and back behind the stern")
 	expect(fx.glow.position.y < keel and fx.glow_light.light_color.is_equal_approx(JettyFx.GLOW), "the teal glow lies on the water under it")
 	expect(fx.flame.position.is_equal_approx(thruster.position), "the blaster flame comes out of the rear thruster's nozzle")
 	var plain: Node3D = Chunky.model("small_speedboat", Progression.definition("small_speedboat"))

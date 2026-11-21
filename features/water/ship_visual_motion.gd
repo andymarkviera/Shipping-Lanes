@@ -115,6 +115,10 @@ const HOVER_SWELL_SHARE: float = 0.35
 const HOVER_PITCH_LIMIT_RAD: float = deg_to_rad(6.0)
 const HOVER_ROLL_LIMIT_RAD: float = deg_to_rad(14.0)
 var hover_m: float = 0.0
+## Patch 4.0.7 item 4: 0..1, how much of the swell the hover follows (none
+## over land: the body is higher than LAND_RIDE_M there).
+const LAND_RIDE_M: float = 0.3
+var water_share: float = 1.0
 
 func hovering() -> bool:
 	return hover_m > 0.0
@@ -181,6 +185,13 @@ func _process(delta: float) -> void:
 		# Patch 4.0.2: a hover hull floats over the water, never touches it.
 		var share: float = blast()
 		plane = smoothstep(0.15, 0.6, speed_fraction) if plane_trim_rad > 0.0 else 0.0
+		# Patch 4.0.7 item 4: over land (the body rides the ground's height)
+		# there is no swell to follow; it fades back in over the water.
+		var wet: float = 1.0 if frame == null or frame.global_position.y < LAND_RIDE_M else 0.0
+		water_share = move_toward(water_share, wet, step * 2.0)
+		swell_heave *= water_share
+		swell_pitch *= water_share
+		swell_roll *= water_share
 		heave_m = swell_heave * HOVER_SWELL_SHARE + hover_height(pace, share, clock)
 		position.y = heave_m - load_sink_m * 0.2
 		var float_pitch: float = swell_pitch * HOVER_SWELL_SHARE + sin(clock * 1.7) * deg_to_rad(0.6) - plane_trim_rad * 0.6 * plane - deg_to_rad(2.5) * share

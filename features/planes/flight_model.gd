@@ -40,6 +40,17 @@ extends RefCounted
 ## only way past the bank limit. "brake" in the air is the air brake.
 ## On the ground the gear rolls on a runway: nose-wheel steering, brakes,
 ## rolling friction, and the nose can rotate at the plane's rotate speed.
+## Patch 4.0.7 item 1 (Andy: A / D barely turns): an arcade coordinated
+## turn. A / D now command the heading rate directly (turn_rate_cmd, about
+## TURN_DPS a second at cruise, the Fighter FIGHTER_TURN_DPS), easing in over
+## TURN_EASE_S and back to straight on release. The bank is the result of the
+## turn (the bank that turn would need, capped at turn_bank(): 45 degrees, the
+## Fighter 60). The wing's lift, the angle of attack and the nose are worked
+## out in the plane's wings-level frame (arcade_frame), so the nose stays
+## level and the altitude holds through the turn; the velocity turns with
+## the nose (no skid). A barrel roll (Q / E), or a bank past vertical, still
+## flies the full physical model as before. On the ground, A / D steer the
+## nose wheel.
 ## Touching anything but a runway, or a runway too hard, too steep, with too
 ## much bank or with the gear up, is a crash.
 ##
@@ -101,6 +112,17 @@ const TURN_MIN_DEG: float = 15.0
 const BANK_SNAP_RAD: float = deg_to_rad(20.0)
 const BARREL_DPS: float = 120.0
 const KEY_HELD: float = 0.05
+## Patch 4.0.7 item 1: the arcade turn. A / D turn the heading at TURN_DPS
+## (the Fighter FIGHTER_TURN_DPS) once the plane flies at TURN_FULL_SPEED x
+## its stall speed or faster; slower, a share of it (never under
+## TURN_SLOW_SHARE). The turn eases in (and out) over TURN_EASE_S. The arcade
+## frame is used while the bank is under ARCADE_BANK_RAD.
+const TURN_DPS: float = 23.0
+const FIGHTER_TURN_DPS: float = 35.0
+const TURN_FULL_SPEED: float = 1.6
+const TURN_SLOW_SHARE: float = 0.4
+const TURN_EASE_S: float = 0.3
+const ARCADE_BANK_RAD: float = deg_to_rad(85.0)
 ## The auto-trim: with W / S released the flight path eases level (at
 ## TRIM_GAIN per radian, at most PATH_RATE of the pitch rate); once the
 ## climb or sink is under HOLD_CAPTURE_MPS that altitude is held, returning
@@ -184,6 +206,9 @@ var gear_lever: float = -1.0
 ## Patch 4.0.3 item 1: the altitude the auto-trim holds (NAN: none yet; it
 ## is taken once the plane levels off after W / S are released).
 var hold_altitude: float = NAN
+## Patch 4.0.7 item 1: the heading rate A / D command now (radians a second,
+## left positive, as Basis(UP, angle) turns), eased towards the keys.
+var turn_rate_cmd: float = 0.0
 var climbing_out: bool = false
 var gear_auto_up: bool = false
 var belly_landed: bool = false
@@ -222,6 +247,7 @@ func place(pose: Transform3D) -> void:
 	gear_auto_up = false
 	belly_landed = false
 	hold_altitude = NAN
+	turn_rate_cmd = 0.0
 
 func copy_from(other: RefCounted) -> void:
 	if other.kind != kind: setup(other.kind)
@@ -238,6 +264,7 @@ func copy_from(other: RefCounted) -> void:
 	crash_reason = other.crash_reason
 	gear_lever = other.gear_lever
 	hold_altitude = other.hold_altitude
+	turn_rate_cmd = other.turn_rate_cmd
 	climbing_out = other.climbing_out
 	on_belly = other.on_belly
 
@@ -290,6 +317,32 @@ func turn_bank() -> float:
 	var carried: float = acos(clampf(ratio * ratio / TURN_LIFT_SHARE, 0.0, 1.0))
 	return clampf(carried, deg_to_rad(TURN_MIN_DEG), bank_limit())
 
+## Patch 4.0.7 item 1: the most heading rate A / D give now, radians a
+## second: TURN_DPS (the Fighter FIGHTER_TURN_DPS) from TURN_FULL_SPEED x the
+## stall speed up, a share of it when slower.
+func turn_rate_max() -> float:
+	var full: float = deg_to_rad(FIGHTER_TURN_DPS if str(p.get("engines", "")) == "afterburner" else TURN_DPS)
+	var share: float = clampf(velocity.length() / (Planes.stall_speed(kind) * TURN_FULL_SPEED), TURN_SLOW_SHARE, 1.0)
+	return full * share
+
+## Patch 4.0.7 item 1: the bank the commanded turn shows (right positive):
+## the bank a real coordinated turn at this speed would need, capped at
+## turn_bank() (the 45 / 60 degree limit, less when slow).
+func turn_bank_for(rate: float) -> float:
+	var need: float = atan(velocity.length() * absf(rate) / GRAVITY)
+	return -signf(rate) * minf(need, turn_bank())
+
+## Patch 4.0.7 item 1: true while the arcade turn flies the plane (in the
+## air, no barrel roll held, the wings within ARCADE_BANK_RAD of level).
+func arcade_turning(trick: float) -> bool:
+	return not on_ground and absf(trick) <= KEY_HELD and absf(full_bank()) < ARCADE_BANK_RAD and basis.y.y > 0.0
+
+## Patch 4.0.7 item 1: the plane's frame with the bank taken out (the nose
+## where it is, the wings level). The bank is the last turn in the basis
+## (about the nose), so this is exact.
+func arcade_frame() -> Basis:
+	return (basis * Basis(Vector3(0, 0, 1), -full_bank())).orthonormalized()
+
 ## Patch 4.0.3 item 1: 0..1, how much of a climb the speed allows: none
 ## under CLIMB_SLOW x the stall speed, all of it from CLIMB_FAST x.
 func climb_share() -> float:
@@ -302,10 +355,10 @@ func climb_path() -> float:
 ## Patch 4.0.2 item 5: the nose command (W / S, -1..1) limited so the plane
 ## never pitches past PITCH_LIMIT_RAD (no loop over onto its back); past
 ## it, the nose is turned back.
-func limit_pitch(pitch_in: float) -> float:
+func limit_pitch(pitch_in: float, bank: float = NAN) -> float:
 	var pitch: float = clampf(pitch_in, -1.0, 1.0)
 	if on_ground: return pitch
-	var bank: float = full_bank()
+	if is_nan(bank): bank = full_bank()
 	# The nose-up command (in the plane's frame) raises the nose by cos(bank).
 	var raise: float = pitch * cos(bank)
 	var nose: float = pitch_angle()
@@ -443,9 +496,15 @@ func step(input: Dictionary, dt: float) -> void:
 	if fuel_l <= 0.0: engine = move_toward(engine, 0.0, ENGINE_RATE * dt * 2.0)
 	var mass: float = float(p.mass_kg)
 	var area: float = float(p.wing_m2)
-	var forward: Vector3 = basis.z
-	var up: Vector3 = basis.y
-	var right: Vector3 = -basis.x
+	# Patch 4.0.7 item 1: in the arcade turn the wing works in the wings-level
+	# frame (the bank is only the look of the turn), so the lift stays up.
+	var arcade: bool = arcade_turning(trick)
+	var shown_bank: float = full_bank() if arcade else 0.0
+	var frame: Basis = arcade_frame() if arcade else basis
+	if not arcade: turn_rate_cmd = 0.0
+	var forward: Vector3 = frame.z
+	var up: Vector3 = frame.y
+	var right: Vector3 = -frame.x
 	var speed: float = velocity.length()
 	var rho: float = air_density(position.y)
 	var q: float = 0.5 * rho * speed * speed
@@ -490,7 +549,8 @@ func step(input: Dictionary, dt: float) -> void:
 		# glide when set up to land) and the last metres of a landing flare
 		# on their own.
 		var reach: float = maxf(minf(authority, 1.0), ARCADE_AUTHORITY)
-		var bank: float = full_bank()
+		# (Patch 4.0.7 item 1: in the arcade turn the pitch is flown wings level.)
+		var bank: float = 0.0 if arcade else full_bank()
 		var stall_angle: float = deg_to_rad(float(p.stall_deg))
 		# W / S: climb or descend at a steady flight path (CLIMB_PATH_DEG, the
 		# Fighter's FIGHTER_CLIMB_PATH_DEG); released, the auto-trim holds the
@@ -511,30 +571,48 @@ func step(input: Dictionary, dt: float) -> void:
 			var nose_to: float = want_path + trim_alpha(bank) * cos(bank) + clampf((want_path - path_angle()) * PATH_TRIM, -PATH_TRIM_MAX_RAD, PATH_TRIM_MAX_RAD)
 			var turn_in: float = clampf((nose_to - pitch_angle()) * TRIM_GAIN, -most, most) / maxf(cos(bank), 0.5)
 			# Inside the pitch limit (no loop over onto the back).
-			pitch_rate = limit_pitch(turn_in / maxf(deg_to_rad(float(p.pitch_dps)), 0.01)) * deg_to_rad(float(p.pitch_dps)) * reach
+			pitch_rate = limit_pitch(turn_in / maxf(deg_to_rad(float(p.pitch_dps)), 0.01), bank) * deg_to_rad(float(p.pitch_dps)) * reach
 		var roll_max: float = deg_to_rad(float(p.roll_dps)) * reach
 		if absf(trick) > KEY_HELD:
 			# Q / E: the barrel roll, past the limit (Aviation holds it for one turn).
 			roll_rate = signf(trick) * deg_to_rad(maxf(float(p.roll_dps), BARREL_DPS)) * reach
+		elif arcade:
+			# Patch 4.0.7 item 1: A / D command the heading rate, eased in over
+			# TURN_EASE_S and back out on release (wings-level flight in the
+			# last metres of a landing); the wings bank to the turn's bank.
+			var most_turn: float = turn_rate_max()
+			var goal: float = -roll_in * most_turn * (1.0 - flare_weight())
+			turn_rate_cmd = move_toward(turn_rate_cmd, goal, most_turn / TURN_EASE_S * dt)
+			roll_rate = clampf((turn_bank_for(turn_rate_cmd) - shown_bank) * ROLL_GAIN * 2.0, -roll_max, roll_max)
 		else:
 			# A / D bank to the limit (less when slow: turn_bank), and roll
-			# level when released.
+			# level when released (a bank past vertical, after a barrel roll).
 			roll_rate = clampf((roll_in * turn_bank() - bank) * ROLL_GAIN, -roll_max, roll_max)
 		# The auto-flare (item 2): the last few metres, gear down, the wings
 		# level whatever the player holds, and a hard sink raises the nose.
 		var flare: float = flare_weight()
 		if flare > 0.0:
 			if velocity.y < -FLARE_SINK_MPS * 1.5: pitch_rate += clampf((FLARE_PITCH_RAD - pitch_angle()) * 2.0, -0.2, 0.2) * flare
-			roll_rate = lerpf(roll_rate, clampf(-bank * 2.0, -0.6, 0.6), flare)
+			var level_by: float = shown_bank if arcade else bank
+			roll_rate = lerpf(roll_rate, clampf(-level_by * 2.0, -0.6, 0.6), flare)
 		var margin: float = angle_of_attack - (stall_angle - STALL_MARGIN_RAD)
 		if margin > 0.0 and pitch_rate > 0.0: pitch_rate *= clampf(1.0 - margin / STALL_MARGIN_RAD, 0.0, 1.0)
 		# (Patch 4.0.3: a wing stalled the other way, nose pushed too far
 		# down, has its nose raised.)
 		if stalled: pitch_rate -= signf(angle_of_attack) * deg_to_rad(float(p.pitch_dps)) * 0.6
 		yaw_rate = -beta * 1.5 * reach + runway_assist()
-		# The coordinated turn: the nose follows the turn the bank makes.
-		if absf(bank) < PI * 0.5: turn_rate = -GRAVITY * tan(clampf(bank, -1.25, 1.25)) / maxf(speed, float(p.rotate_mps))
-	basis = (Basis(Vector3.UP, turn_rate * dt) * basis * Basis(Vector3(1, 0, 0), -pitch_rate * dt) * Basis(Vector3(0, 0, 1), roll_rate * dt) * Basis(Vector3(0, 1, 0), yaw_rate * dt)).orthonormalized()
+		# The coordinated turn: the nose follows the turn the bank makes
+		# (Patch 4.0.7 item 1: in the arcade turn, the commanded rate).
+		if arcade: turn_rate = turn_rate_cmd
+		elif absf(bank) < PI * 0.5: turn_rate = -GRAVITY * tan(clampf(bank, -1.25, 1.25)) / maxf(speed, float(p.rotate_mps))
+	if arcade:
+		# Patch 4.0.7 item 1: turn and pitch the wings-level frame, then bank it
+		# by the turn's bank; the flight path turns with the nose.
+		var level: Basis = Basis(Vector3.UP, turn_rate * dt) * frame * Basis(Vector3(1, 0, 0), -pitch_rate * dt) * Basis(Vector3(0, 1, 0), yaw_rate * dt)
+		basis = (level.orthonormalized() * Basis(Vector3(0, 0, 1), shown_bank + roll_rate * dt)).orthonormalized()
+		velocity = Basis(Vector3.UP, turn_rate * dt) * velocity
+	else:
+		basis = (Basis(Vector3.UP, turn_rate * dt) * basis * Basis(Vector3(1, 0, 0), -pitch_rate * dt) * Basis(Vector3(0, 0, 1), roll_rate * dt) * Basis(Vector3(0, 1, 0), yaw_rate * dt)).orthonormalized()
 	# Patch 4.0.3 item 1: outside a barrel roll the bank never passes the
 	# limit (a stalled wing or the sideslip's yaw could carry it a little
 	# past); a bigger bank (a barrel roll let go) rolls back on its own.

@@ -133,6 +133,8 @@ static func build(ports: Array[Vector2], surf: Material) -> Node3D:
 		body.position = Vector3(0, -2, 0)
 		body.collision_layer = CollisionRules.SHORE
 		body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+		# Patch 4.0.7 item 4: the Jetty hovers over the ice (features/ships/jetty_land.gd).
+		body.add_to_group("jetty_passable")
 		chunk.add_child(body)
 		for block: int in range(Progression.ICE_CHUNKS[index][0], Progression.ICE_CHUNKS[index][1]):
 			var rect: Rect2 = Progression.ICE_SHELVES[block]

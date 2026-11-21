@@ -8,6 +8,15 @@ const Heavy = preload("res://features/handling/heavy_lifter.gd")
 const Progression = preload("res://features/game/progression.gd")
 const PORT_IDS = ["port_brindle_quay", "port_slatewater_works"]
 
+## Patch 4.0.7 item 4: the pose saved, on the sea plane. The Jetty rides at
+## the ground's height over land; saves keep their sea-level pose (and a
+## pose over land starts at the port, as Patch 2.9 item 6B does), so every
+## save stays the same format and old saves load unchanged.
+static func sea_pose(body: Node3D) -> Transform3D:
+	var pose: Transform3D = body.global_transform if body.is_inside_tree() else body.transform
+	pose.origin.y = 0.0
+	return pose
+
 static func capture(view: Node3D) -> Dictionary:
 	var body: HandlingShip = view.ship
 	var operations: Dictionary = body.state.operations.snapshot()
@@ -16,7 +25,7 @@ static func capture(view: Node3D) -> Dictionary:
 	if view.heavy_mode:
 		heavy = {"active": view.heavy_jobs.active.duplicate(true), "completed": view.heavy_jobs.completed.duplicate(true), "attached": body.attached, "height": body.deck_height, "target": body.deck_target, "payload_pose": floating_pose(body)}
 	var data: Dictionary = {"version": 2, "realm": "private_port_voyage_v1", "owner": "preview_captain", "heavy_mode": view.heavy_mode,
-		"port": view.world_ports.find(view.port), "pose": body.global_transform if body.is_inside_tree() else body.transform, "fuel": body.state.fuel_liters, "condition": body.state.condition,
+		"port": view.world_ports.find(view.port), "pose": sea_pose(body), "fuel": body.state.fuel_liters, "condition": body.state.condition,
 		"offers": view.offers._offers.duplicate(true), "clock": view.offers._now_ms, "manifest": body.state.manifest.lines(),
 		"operations": operations, "loading": view.loading.operation, "loading_offer": view.loading.offer_id, "sequence": view.loading.sequence,
 		"docked": view.docking.state(view.owner_id) == "docked", "heavy": heavy, "heavy_completed": view.heavy_jobs.completed.duplicate(true), "credits": view.reward_minor}
