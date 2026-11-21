@@ -19,7 +19,7 @@ const KEY_ROWS: Array = [["Throttle up / down", "ship_throttle_up", "ship_thrott
 	["Side thrusters", "ship_thruster_left", "ship_thruster_right"],
 	["Engine to zero", "ship_throttle_zero"], ["Horn", "horn"],
 	["World map", "map_toggle"], ["Recenter camera", "camera_recenter"],
-	["Cannon salute / plane gear", "cannon_salute"]]
+	["Cannon salute (pirate ships)", "cannon_salute"]]
 ## Patch 4.0 arcade planes: the mouse steers, W / S set the throttle; A / D roll
 ## and Q / E yaw are optional extras. Patch 4.0.2: G lowers and raises the gear
 ## (it comes up on its own after take-off); a held A / D is a barrel roll.

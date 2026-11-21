@@ -113,6 +113,8 @@ func refresh() -> void:
 	var p: Dictionary = Planes.PLANES[kind]
 	var has: bool = owned(kind)
 	var active: bool = kind == aviation.plane_kind and has
+	# The boat hangar's sprite lettering for the name.
+	if name_label.get_theme_font("font") != DISPLAY.font("white"): DISPLAY.apply(name_label, "white")
 	name_label.text = str(p.name).to_upper() + ("  · ACTIVE" if active else ("  · OWNED" if has else ""))
 	family_label.text = "Plane %d of %d   ·   Price %s credits%s" % [index + 1, kinds.size(), credits(int(p.price_minor)),
 		"" if aviation.unlocked() else "   ·   Planes unlock at level %d" % Levels.PLANE_UNLOCK_LEVEL]

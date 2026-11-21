@@ -378,7 +378,8 @@ func step(input: Dictionary, dt: float) -> void:
 	var cl: float = lift_coefficient(angle_of_attack)
 	stalled = not on_ground and absf(angle_of_attack) > deg_to_rad(float(p.stall_deg))
 	var force: Vector3 = Vector3(0, -GRAVITY * mass, 0)
-	force += forward * engine * float(p.thrust_n) * pow(rho / SEA_RHO, 0.7)
+	# (Sliding on its belly the engines give nothing: it cannot take off gear-up.)
+	force += forward * engine * float(p.thrust_n) * pow(rho / SEA_RHO, 0.7) * (0.0 if on_belly else 1.0)
 	if speed > 0.5:
 		var flow: Vector3 = velocity / speed
 		var lift_dir: Vector3 = right.cross(flow)

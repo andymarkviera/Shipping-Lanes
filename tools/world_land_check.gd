@@ -236,7 +236,8 @@ func run() -> void:
 					ice_surf = ice_surf and mesh.material_override == game.surf_paint and mesh.visibility_range_end > 0.0 and mesh.visibility_range_end <= 2000.0
 		expect(boxes == Progression.ICE_SHELVES.size() and boxes > 100, "Every block of the ice cap is solid (%d)" % boxes)
 		expect(ice_coasts >= 20 and ice_culled and ice_surf, "The ice coast is in %d bands, culled far away, with the land's surf" % ice_coasts)
-		expect(ice_paints.size() == 2 and not ice_paints.has(null), "The ice shares two materials: ice and snow")
+		# Patch 4.0.2 item 1: and the glacier ice on the steep ridge faces.
+		expect(ice_paints.size() == 3 and not ice_paints.has(null), "The ice shares three materials: ice, snow and glacier")
 		# Each chunk sits at its copy nearest the ship, across either edge.
 		POLAR_ICE.place(cap, Progression.WRAP_CENTRE + Vector3(wrap / 2 - 10, 0, wrap / 2 - 10))
 		var west_north: Node3D = cap.get_child(0)
@@ -275,7 +276,7 @@ func run() -> void:
 		var back: Vector2 = Vector2(place.at.x - float(place.drop_side) * 220.0, place.at.z + 150.0)
 		expect(Progression.ice_depth(back) > 60.0 and Progression.ice_depth(Vector2(place.at.x + float(place.drop_side) * 150.0, place.at.z)) < -60.0, "%s has ice behind its quay and sea at its berths" % id)
 		expect(absf(POLAR_ICE.ice_height(30.0, Vector2(place.at.x - float(place.drop_side) * 110.0, place.at.z + 150.0), 1.0) - TOON_COAST.SAND_TOP_Y) < 0.01, "%s ice meets the quay at deck height" % id)
-	expect(POLAR_ICE.ice_height(-2.0, Vector2.ZERO, 0.0) < -3.0 and POLAR_ICE.ice_height(10.0, Vector2.ZERO, 0.0) >= 5.0 and POLAR_ICE.snow_height(260.0, Vector2.ZERO, 0.0) == POLAR_ICE.PLATEAU_Y, "Ice cliffs rise from under the sea to a snow plateau")
+	expect(POLAR_ICE.ice_height(-2.0, Vector2.ZERO, 0.0) < -3.0 and POLAR_ICE.ice_height(10.0, Vector2.ZERO, 0.0) >= 5.0 and is_equal_approx(POLAR_ICE.snow_height(260.0, Vector2.ZERO, 0.0), POLAR_ICE.PLATEAU_Y + POLAR_ICE.relief(Vector2.ZERO, 260.0)), "Ice cliffs rise from under the sea to a snow plateau (with its Patch 4.0.2 ridges)")
 	# The maps: white on the globe atlas, pieces on the minimap.
 	var ice_block: Rect2 = Progression.ICE_SHELVES[0]
 	for block: Rect2 in Progression.ICE_SHELVES:

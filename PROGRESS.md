@@ -8463,3 +8463,103 @@ unchanged; the plane HUD rework is the next patch.
   auto-level and landing were only flown by scripted pilots), the crash camera
   and the new models on screen (headless has no renderer), and an online session
   at Fighter speed.
+
+## Patch 4.0.2 — no upside-down, manual gear + nudge, plane hangar, runway fixes, polar relief, new boat looks (November 21, 2026)
+
+Issue #224 (Andy's second plane playtest). VERSION 4.0.1 → 4.0.2. No workflow
+edits. The gas, oil, refinery and cargo-fuel code is untouched. The plane HUD
+rework and 4.1 gacha are out of scope.
+- 1, polar relief: `PolarIce.relief(at, depth)` (polar_ice.gd) adds icy ridges
+  (up to about 74 m), snow hills and massifs on the cap, fading in from 150 m
+  inside the ice coast. It is plain maths, with whole-turn frequencies, so it
+  meets itself across every world edge. The ice mesh draws every plateau square
+  with it (no more flat run quads); steep ridge faces are blue glacier ice; the
+  snow peaks stand on it. `Terrain.sample` (planes, client and server) adds the
+  same relief. The M-map globe gets a polar relief shell (every 4th ice sample),
+  levelled right at the pole. The ships' ice colliders (`ICE_SHELVES`) are
+  unchanged.
+- 2, planes on the maps: the minimap draws a top-down plane silhouette for the
+  own plane and for other captains' planes (`icon_for`, `own_icon`,
+  `plane_outline`). The globe's entries use the plane kind while flying and build
+  a small plane model (`build_plane`).
+- 3, runways: the airfield's grass top now stands 0.12 m below the runway and is
+  cut away under the runway and the apron. The runway is one solid slab, and its
+  markings (edge lines, a dashed centre line, threshold bars) are painted into its
+  own top as a mipmapped texture. Before, stripe boxes lay on it. No two surfaces
+  overlap, so nothing z-fights at any distance. The apron is a slab 4 cm below
+  the runway's surface. Plane physics is unchanged (runway and airfield at
+  `RUNWAY_Y`).
+- 4, decorations: `Airports.clear_of_airfields(at, reach)` keeps dunes, mesas,
+  palms, bushes and city towers 40 m plus their own reach off every airfield.
+  Each item's random draws still happen, so the rest of each layer stays where it
+  was. The hills were already clear (4.0.1).
+- 5, no upside-down: `FlightModel.limit_aim` (used by `Aviation.steer_order`)
+  keeps the mouse aim inside a 60° bank (Fighter 75°). It aims 3° inside the
+  limit and eases the roll off near it; past the limit it rolls back. The aim's
+  coordinating yaw eases off with the roll. Pitch is held inside 60° (aimed 6°
+  inside), so there are no loops. A held A / D is an intentional roll (no bank
+  limit; the pitch limit still holds). When the key is released the plane rolls
+  back to the limit, and hands off the 4.0.1 auto-level levels it. Root cause of
+  the flips: aiming below a banked plane rolled it further over ("steer towards
+  the cursor").
+- 6, manual gear: the model's input `"gear"` is a lever (1 down, 0 up). The gear
+  moves in the air when the lever changes, so a late "down" from before an
+  automatic retraction never lowers it again. On the ground it stays down. It
+  comes up on its own after a real lift-off, climbing above 30 m. G (the
+  salute key; while flying it is the gear, not the salute) toggles it. The helm
+  payload carries `gear` (ship_actions accepts 4, 5 or 6 fields). The server's
+  gear state was already in the motion frame and drives other players' models.
+  Gear-up touchdown: a belly landing (35 % repair bill now, capped by the wallet;
+  the cargo stays; it slides to a stop on 0.45 g and is put back on its wheels).
+  Over 12 m/s sink is still a crash. HUD nudge "Press G — Gear down" pulses
+  under the warning banner, with one chime, when gear up, descending, below
+  300 m and within 2 km of any runway threshold. Every plane has legs (strut,
+  silver oleo, torque link, axle, black tyres on pale hubs, twin wheels on the
+  jet and turboprop), a well and two doors per leg. The legs fold in 1.5 s, the
+  nose forward and the mains inward (`PlaneLook.fold_gear`). The 4.0.1 auto-gear
+  (`gear_for`) is gone. The scripted test pilot now lowers the gear for its
+  approach.
+- 7, plane hangar: `features/planes/plane_hangar.gd` extends the boat hangar
+  (same screen, layout, fonts, buttons and keys). It overrides only the plane
+  parts: an aircraft hangar (concrete floor, guide line, turntable, steel walls,
+  red arched trusses, doors open onto the apron), every plane on the turntable,
+  price / top speed / stall / fuel / capacity, Buy · Select · Fly through
+  Aviation's own actions. Both Planes buttons open it (the old list stays as a
+  fallback). It is in export_presets.cfg.
+- 8, debug panel: the Debug Menu shows the boat controls while sailing and, while
+  flying, a plane readout (speed, height, gear, fuel), a plane picker, Refuel,
+  Repair, Gear, Nearest Airport, Next Time of Day and Spawn at Airport.
+- 9, boats (looks only; stats, prices and hitboxes unchanged): the Speedboat is
+  a Grady-White Marlin-style walkaround. It has a deep-V white hull with a navy
+  boot stripe and a raised, flared bow, a centre console under a white hard top
+  on steel T-top legs with rod holders, a leaning post, bow rails and twin white
+  outboards. The Jetty is a long delta hull (needle nose, widest at the stern)
+  with a slim canopy, winglets and hydrofoil struts. Its nozzle, ring and
+  JetFlame are byte-for-byte the same code and position.
+- Checks: new `tools/patch_4_0_2_logic.gd` (220 checks), run by `check_catalog.gd`
+  in the Checks job (check_catalog about 13 s locally), and
+  `tools/patch_4_0_2_check.gd` (272 checks: the logic plus the game scene). The
+  game-scene part covers: Planes opens the hangar, it cycles and buys, and Fly
+  takes off; the minimap and globe show the plane; G in the air only; the nudge
+  shows only when it should; a belly landing bills, keeps the cargo and does not
+  explode; the debug panel switches and its plane buttons work. Updated to the new
+  design: `patch_4_0_logic` (G raises the gear in cruise), `patch_4_0_1_logic`
+  (the cut airfield top and VERSION ≥ 4.0.1) and `world_land_check` (three ice
+  materials; the plateau carries the relief).
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, every
+  Stage 2 command (units_probe, check_catalog, diagnostics_probe, check_controls,
+  check_flow, check_starter and the twelve probes), the Stage 4 report probes,
+  patch_4_0_check, patch_4_0_1_check, patch_4_0_2_check, ui_text_check,
+  display_fonts_check, small_boats_check, globe_map_check, hangar_check,
+  debug_game_check, cannon_salute_check, world_land_check, the polar, desert,
+  tropical and rain biome checks, volcano_check, map_remix_check,
+  port_menu_check, mooring_check, server_saves_check, check_helm_keys,
+  check_snapshot_budget, and `check_dedicated_split.py` plain, `--prediction`
+  and `--replication`. Python: compileall, the services unittests, world_layout
+  and the traversal budget. `play_connection_check` (empty service URL) and
+  `action_probe` (ENet port) print the same errors on main in this environment.
+- Not verified: Windows play; how the bank limit, barrel roll and gear nudge feel
+  with a real mouse and keyboard; the new models, hangar, runway paint and polar
+  relief on screen (headless has no renderer); an online session with two
+  players watching each other's gear. Note: with the gear up the runway assists
+  (alignment, glide, flare) stay off, as they are for a plane set up to land.
