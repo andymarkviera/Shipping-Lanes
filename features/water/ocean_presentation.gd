@@ -7,6 +7,9 @@ var elapsed: float = 0.0
 var ocean_material: ShaderMaterial
 ## Total distance the world has been wrapped (see shift).
 var swirl_origin: Vector2 = Vector2.ZERO
+## Patch 4.0.6 item 1: in a storm the swell is taller (Storms.swell, set by
+## storm_look.gd; the shader gets the same number as swell_scale).
+const Storms = preload("res://features/sky/storms.gd")
 
 ## Rolling swell height in metres above the still water. The ocean and foam
 ## shaders repeat these numbers, so a hull that reads this rides the drawn water.
@@ -15,7 +18,7 @@ static func swell_height(x: float, z: float, time: float, tier: int) -> float:
 	var height: float = 0.55 * sin(x * 0.040 + z * 0.026 + time * 0.55)
 	height += 0.28 * sin(z * 0.070 - x * 0.018 - time * 0.80)
 	if tier > 1: height += 0.10 * sin(x * 0.11 - z * 0.08 + time * 1.1)
-	return height
+	return height * Storms.swell
 
 func _ready() -> void:
 	ocean_material = ShaderMaterial.new()

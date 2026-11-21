@@ -133,6 +133,9 @@ var port_paint: Array[StandardMaterial3D] = []
 ## Patch 4.0 item D14: the land relief shell and one marker per airport.
 var relief: MeshInstance3D
 var airport_markers: Array[Node3D] = []
+## Patch 4.0.6 item 1: one dark disc per storm cell (storms.gd), on the globe.
+const Storms = preload("res://features/sky/storms.gd")
+var storm_markers: Array[MeshInstance3D] = []
 var zoom: float = 3.2
 var clock: float = 0.0
 
@@ -686,6 +689,34 @@ func _process(delta: float) -> void:
 		goal_marker.basis = Basis(side, goal_up, side.cross(goal_up)) * (0.06 + 0.012 * sin(clock * 4.0))
 		goal_marker.position = goal_up * 1.012
 	draw_course(destination)
+	show_storms()
+
+## Patch 4.0.6 item 1: the storms on the globe, sized as they are at sea.
+func show_storms() -> void:
+	if storm_markers.is_empty():
+		for index: int in Storms.CELLS:
+			var disc: CylinderMesh = CylinderMesh.new()
+			disc.top_radius = 1.0
+			disc.bottom_radius = 1.0
+			disc.height = 0.02
+			disc.radial_segments = 24
+			var cloud: MeshInstance3D = marker(disc, Color("4a5563"), 1.0)
+			cloud.name = "Storm%d" % index
+			var paint: StandardMaterial3D = cloud.material_override
+			paint.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			storm_markers.append(cloud)
+	var list: Array[Dictionary] = Storms.cells()
+	for index: int in storm_markers.size():
+		var cloud: MeshInstance3D = storm_markers[index]
+		var storm: Dictionary = list[index]
+		cloud.visible = Storms.enabled and storm.strength > 0.02
+		if not cloud.visible: continue
+		var up: Vector3 = on_globe(storm.center)
+		var side: Vector3 = up.cross(Vector3.FORWARD if absf(up.y) > 0.9 else Vector3.UP).normalized()
+		var size: float = storm.radius / Progression.WRAP_M * TAU
+		cloud.basis = Basis(side, up, side.cross(up)) * size
+		cloud.position = up * 1.018
+		(cloud.material_override as StandardMaterial3D).albedo_color = Color(0.29, 0.33, 0.39, 0.35 + 0.4 * storm.strength)
 
 ## The dotted course on the globe: from the ship along the sea route to the
 ## destination, each leg the short way round the world.

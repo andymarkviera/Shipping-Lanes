@@ -19,6 +19,9 @@ const PIER: Color = Color("f4ead2")
 const CRANE: Color = Color("e8504a")
 ## Patch 4.0.2 item 2: planes (own and other captains') are plane silhouettes.
 const Planes = preload("res://features/planes/plane_catalog.gd")
+## Patch 4.0.6 item 1: the storms, as grey clouds on the globe.
+const Storms = preload("res://features/sky/storms.gd")
+const STORM_GREY: Color = Color("4a5563")
 var view: Node3D
 var clock: float = 0.0
 
@@ -144,6 +147,7 @@ func _draw() -> void:
 	# Toon shading: a soft shadow on the lower right, a shine on the upper left.
 	draw_arc(middle, radius - 5, deg_to_rad(-10), deg_to_rad(100), 24, Color(PLAYFUL.INK, 0.16), 10, true)
 	draw_arc(middle, radius - 9, deg_to_rad(200), deg_to_rad(250), 12, Color(1, 1, 1, 0.45), 4, true)
+	draw_storms(ship, radius)
 	# Patch 2.1 item 3: icebergs as small white dots.
 	for berg: Vector3 in Progression.ICEBERGS:
 		var spot: Vector2 = sphere_point(Vector3(berg.x, 0, berg.z), ship)
@@ -216,6 +220,22 @@ func _draw() -> void:
 
 ## Patch 4.0.3 item 3: a port's icon round `at`: an inked pier deck (north
 ## up, `deck` colour) and a crane, a tower with its boom out over the water.
+## Patch 4.0.6 item 1: each raging storm as a dark cloud, its size on the
+## globe, with a lightning tick while it is strong.
+func draw_storms(ship: Vector3, radius: float) -> void:
+	if not Storms.enabled: return
+	for storm: Dictionary in Storms.cells():
+		if storm.strength <= 0.02: continue
+		var spot: Vector2 = sphere_point(storm.center, ship)
+		if not visible_on(spot): continue
+		var at: Vector2 = on_disc(spot, radius)
+		var reach: float = maxf(4.0, storm.radius / METRES_PER_RADIAN * radius * cos(minf(spot.length(), PI / 2)))
+		draw_circle(at, reach, Color(STORM_GREY, 0.45 * storm.strength))
+		draw_circle(at, reach * 0.6, Color(STORM_GREY.darkened(0.3), 0.5 * storm.strength))
+		if storm.strength > 0.6:
+			var bolt: PackedVector2Array = PackedVector2Array([at + Vector2(1, -5), at + Vector2(-2, 0), at + Vector2(1, 0), at + Vector2(-1, 5)])
+			draw_polyline(bolt, PLAYFUL.SUN, 1.5, true)
+
 func draw_port(at: Vector2, deck: Color) -> void:
 	var pier: Rect2 = Rect2(at + Vector2(-2.5, -6.0), Vector2(5.0, 12.0))
 	draw_rect(pier.grow(1.5), PLAYFUL.INK)

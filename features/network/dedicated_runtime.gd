@@ -9,6 +9,8 @@ const Codec = preload("res://features/network/public_snapshot_codec.gd")
 const Relevance = preload("res://features/network/ship_relevance.gd")
 const PLAYFUL = preload("res://features/ui/playful_theme.gd")
 const DayNight = preload("res://features/sky/day_night.gd")
+## Patch 4.0.6 item 1: the server owns the storms (seed and on/off) and sends them on join.
+const Storms = preload("res://features/sky/storms.gd")
 # 3.1.0 adds the world clock to welcome/pong (3.1.1: same wire, 18-minute cycle). 3.0.1 frames are wire-incompatible with 3.0.0 (binary motion + reliable status).
 const PROTOCOL: int = 40000
 const Planes = preload("res://features/planes/plane_catalog.gd")
@@ -710,6 +712,8 @@ func _ready() -> void:
 		world.minimap.free()
 		session.hosting = true
 		session.epoch = Crypto.new().generate_random_bytes(16).hex_encode()
+		# Patch 4.0.6 item 1: storms at sea, on for everyone on this server.
+		Storms.configure(Storms.DEFAULT_SEED, true)
 	else:
 		if not load_install_key():
 			fail("Cannot read or preserve this installation's captain identity", 2)
@@ -936,6 +940,7 @@ func hello(version: int, captain: String, release: String = "", key: String = ""
 	wrap.add_hull(id, context.ship)
 	session.roster[id] = {"peer_id": sender}
 	welcome.rpc_id(sender, PROTOCOL, session.epoch, id, DayNight.world_seconds())
+	storm_setup.rpc_id(sender, Storms.storm_seed, Storms.enabled)
 	print("DEDICATED_JOIN players=%d" % contexts.size())
 
 @rpc("authority", "call_remote", "reliable", 0)
@@ -985,6 +990,13 @@ func welcome(version: int, epoch: String, id: String, clock: float) -> void:
 	view.owner_id = multiplayer.get_unique_id()
 	view.docking.members.clear()
 	status = "Connected · " + captain_name
+
+## Patch 4.0.6 item 1: the server's storms. With the shared clock (welcome,
+## pong) every captain works out the same cells and the same bolts.
+@rpc("authority", "call_remote", "reliable", 0)
+func storm_setup(storm_seed: int, on: bool) -> void:
+	if hosting or multiplayer.get_remote_sender_id() != 1: return
+	Storms.configure(storm_seed, on)
 
 @rpc("any_peer", "call_remote", "unreliable_ordered", 1)
 func helm_input(request: Dictionary) -> void:
@@ -1255,6 +1267,8 @@ func make_ghost() -> void:
 	ghost = HandlingShip.new()
 	ghost.name = "PredictedHelm"
 	ghost.definition = view.ship.definition
+	# Patch 4.0.6 item 1: the prediction meets the same storms as the server.
+	ghost.weather = view.ship.weather
 	add_child(ghost)
 	ghost.set_physics_process(false)
 	ghost.collision_layer = 0
@@ -1513,6 +1527,7 @@ func shutdown_saves() -> void:
 
 func _exit_tree() -> void:
 	if not hosting: DayNight.clock_offset = 0.0
+	if not hosting: Storms.reset()
 	shutdown_saves()
 	if peer != null: peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()

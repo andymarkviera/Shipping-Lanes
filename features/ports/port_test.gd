@@ -11,6 +11,9 @@ const TOON_BRIDGE = preload("res://features/toon/toon_bridge.gd")
 const SKY_LOOK = preload("res://features/sky/sky_look.gd")
 const POLAR_BIOME = preload("res://features/sky/polar_biome.gd")
 const DAY_NIGHT = preload("res://features/sky/day_night.gd")
+## Patch 4.0.6 item 1: storms at sea (the rules) and their look (game only).
+const STORMS = preload("res://features/sky/storms.gd")
+const STORM_LOOK = preload("res://features/sky/storm_look.gd")
 const POLAR_ICE = preload("res://features/toon/polar_ice.gd")
 const DESERT_BIOME = preload("res://features/sky/desert_biome.gd")
 const DESERT_LOOK = preload("res://features/toon/desert_look.gd")
@@ -69,6 +72,8 @@ var bridges: Node3D
 var polar: Node
 ## Patch 3.1: the day/night cycle (game only).
 var day_night: Node
+## Patch 4.0.6 item 1: the storms' look, painted after the day/night (game only).
+var storm_look: Node
 ## Patch 2.5 item 4: the desert biome, painted over the polar look (game only).
 var desert: Node
 ## Patch 2.5 item 5: the tropical biome, painted over the polar and desert looks
@@ -273,6 +278,10 @@ func _ready() -> void:
 		day_night.name = "DayNight"
 		add_child(day_night)
 		day_night.setup(polar)
+		storm_look = STORM_LOOK.new()
+		storm_look.name = "StormLook"
+		add_child(storm_look)
+		storm_look.setup(polar, day_night)
 	var scenes: Array = PORTS.duplicate()
 	if game_mode:
 		scenes.append_array(GAME_PORTS)
@@ -882,10 +891,13 @@ func create_ship() -> HandlingShip:
 		var lifter: HandlingShip = preload("res://features/ships/heavy_lifter_01/heavy_runtime.tscn").instantiate()
 		# Patch 2.2 item 3: heavy-lift ships 2-5 sail the same runtime with their own record.
 		if game_mode and Progression.heavy_tier(ship_kind) > 0: lifter.definition = Progression.definition(ship_kind)
+		# Patch 4.0.6 item 1: the game's hulls feel the storms.
+		lifter.weather = game_mode
 		return lifter
 	var body: HandlingShip = preload("res://features/ships/starter_container_01/starter_runtime.tscn").instantiate()
 	# Patch 2.2 item 1: container ships 2-5 sail the same runtime with their own record.
 	if game_mode: body.definition = Progression.definition(ship_kind)
+	body.weather = game_mode
 	return body
 
 func select_port(index: int, restoring: bool = false) -> bool:
@@ -1200,6 +1212,7 @@ func shift_presentation(shift: Vector3) -> void:
 	ocean.shift(shift)
 	if polar != null: polar.shift(shift)
 	if rain != null: rain.shift(shift)
+	if storm_look != null: storm_look.shift(shift)
 
 func _physics_process(delta: float) -> void:
 	if runtime_role in ["client", "world"]: return
@@ -1232,6 +1245,9 @@ func _physics_process(delta: float) -> void:
 		heavy_jobs.completed.clear()
 		play_sound("chime")
 		refresh_jobs()
+	# Patch 4.0.6 item 1: underway in a storm the hull wears a little (never
+	# below Storms.WEAR_FLOOR). The authority only: local play, the server.
+	if game_mode and not flying(): storm_wear(delta)
 	if game_mode and ship.state.condition <= 0.0:
 		# Sunk: hold the ship for a moment under a banner, then recover it.
 		if sink_seconds <= 0.0:
@@ -1253,6 +1269,15 @@ func _physics_process(delta: float) -> void:
 	cancel_button.visible = current in ["docking", "undocking"]
 	readiness.text = "Berth: " + (current.capitalize() + ("…" if current != "docked" else "") if current in ["docking", "docked", "undocking"] else status.message)
 	show_services(current)
+
+## Patch 4.0.6 item 1: the storm's mild hull wear, while sailing free.
+func storm_wear(delta: float) -> void:
+	if ship.storm <= 0.0 or ship.simulation_paused or sink_seconds > 0.0: return
+	if docking.state(owner_id) not in ["underway", "approaching"]: return
+	var before: float = ship.state.condition
+	ship.state.condition = STORMS.worn(before, ship.storm, delta)
+	if ship.state.condition < before and before >= 0.9 and ship.state.condition < 0.9 and runtime_role == "local":
+		offer_notice = "The storm is wearing the hull (%.0f%%). Repair at a port." % (ship.state.condition * 100.0)
 
 ## The port services (CARGO, REFUEL, REPAIR, SHIPS and the job cards) show while
 ## docked. Patch 3.1.1: an online client's view has no physics tick, so _process
@@ -1277,6 +1302,7 @@ func _process(_delta: float) -> void:
 	if tropical != null: tropical.update(ship.global_position, _delta)
 	if rain != null: rain.update(ship.global_position, _delta)
 	if day_night != null: day_night.update(_delta)
+	if storm_look != null: storm_look.update(camera.camera.global_position, _delta)
 	if volcano != null: volcano.update(camera.camera.global_position, polar.sun)
 	# Patch 2.5 item 1B: the coast surf rides the same swell as the sea.
 	if surf_paint != null:

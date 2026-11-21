@@ -11,6 +11,8 @@ uniform vec2 swirl_origin = vec2(0.0);
 // Patch 2.5 item 6: rain rings on the water in the rainy city biome, 0..1.
 // Zero everywhere else, and then the rings cost nothing.
 uniform float rain_amount = 0.0;
+// Patch 4.0.6 item 1: the storm's bigger swell (OceanPresentation.swell_scale).
+uniform float swell_scale = 1.0;
 varying vec3 world_position;
 
 vec2 cell_point(vec2 cell) {
@@ -24,6 +26,7 @@ void vertex() {
 		VERTEX.y += 0.55 * sin(world.x * 0.040 + world.z * 0.026 + water_time * 0.55);
 		VERTEX.y += 0.28 * sin(world.z * 0.070 - world.x * 0.018 - water_time * 0.80);
 		if (quality > 1) VERTEX.y += 0.10 * sin(world.x * 0.11 - world.z * 0.08 + water_time * 1.1);
+		VERTEX.y *= swell_scale;
 	}
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
