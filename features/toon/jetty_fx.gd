@@ -29,6 +29,9 @@ const RING_S: float = 0.55
 const MIX_RATE: int = 22050
 static var _charge_sound: AudioStreamWAV
 static var _blast_sound: AudioStreamWAV
+## Patch 4.0.4 item 1: Jetty effects in the tree. The last one out lets the
+## two cached sounds go (held past exit, Godot reported them as leaked).
+static var _live: int = 0
 
 ## Where the nozzle is in the model (set by _dress_jetty before _ready).
 var nozzle: Vector3 = Vector3(0, 1.2, -6.9)
@@ -55,6 +58,15 @@ var ring_age: float = RING_S
 ## Counters for the checks.
 var charges_heard: int = 0
 var blasts_heard: int = 0
+
+func _enter_tree() -> void:
+	_live += 1
+
+func _exit_tree() -> void:
+	_live = maxi(0, _live - 1)
+	if _live == 0:
+		_charge_sound = null
+		_blast_sound = null
 
 func _ready() -> void:
 	var node: Node = get_parent()

@@ -76,7 +76,9 @@ func charge() -> float:
 func blast() -> float:
 	return (factor() - 1.0) / SPEED_GAIN
 
-## 0..1: how ready the next boost is (for the HUD).
-func readiness() -> float:
-	if phase == "cooldown": return clampf(clock / COOLDOWN_S, 0.0, 1.0)
-	return 1.0 if phase == "ready" else 0.0
+## Patch 4.0.4 item 4: boosts started so far, counting a charge under way
+## (it rises once per Shift, at the press). The server sends it in the
+## captain's status row; other clients start the replica's charge when it
+## rises, so its flame, glow and sound play for everyone.
+func uses() -> int:
+	return blasts + (1 if phase == "charge" else 0)

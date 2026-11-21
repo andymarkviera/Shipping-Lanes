@@ -355,14 +355,20 @@ static func _prop(parent: Node3D, at: Vector3, radius: float, cache: Dictionary)
 ## flame and the turbofans' faint heat shimmer with the engine (0..1); hides
 ## the gear when it is up.
 static func animate(plane: Node3D, engine: float, gear_down: bool, delta: float) -> void:
-	var props: Node = plane.find_child("Props", true, false)
-	if props != null:
+	# Patch 4.0.4 item 1: the moving parts are found once per model, not
+	# searched for every frame (own plane and every other captain's).
+	if not plane.has_meta("anim_parts"):
+		plane.set_meta("anim_parts", {"props": plane.find_child("Props", true, false),
+			"flames": plane.find_children("JetFlame", "", true, false), "haze": plane.find_children("HeatShimmer", "", true, false)})
+	var parts: Dictionary = plane.get_meta("anim_parts")
+	var props: Node = parts.props
+	if is_instance_valid(props):
 		for hub: Node in props.get_children():
 			var rate: float = (2.0 + 40.0 * engine) if hub.name.begins_with("Fan") else (6.0 + 60.0 * engine)
 			(hub as Node3D).rotation.z += delta * rate
-	for flame: Node in plane.find_children("JetFlame", "", true, false):
+	for flame: Node in parts.flames:
 		flame.set("power", engine)
-	for haze: Node in plane.find_children("HeatShimmer", "", true, false):
+	for haze: Node in parts.haze:
 		var paint: StandardMaterial3D = (haze as MeshInstance3D).material_override as StandardMaterial3D
 		if paint != null: paint.albedo_color.a = 0.1 * clampf(engine, 0.0, 1.0) * (0.75 + 0.25 * sin(Time.get_ticks_msec() * 0.03))
 	var gear: Node3D = plane.get_node_or_null("Gear") as Node3D

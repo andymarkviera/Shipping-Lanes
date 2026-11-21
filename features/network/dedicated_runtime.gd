@@ -272,7 +272,8 @@ func status_row(sender: int) -> Dictionary:
 		"docked": body.docked, "filled": body.assembly.container_visuals.filled,
 		"paused": body.simulation_paused, "pause_reason": body.pause_reason, "heavy": heavy,
 		"job": context.bulk_active if context.bulk_mode() else context.offers.active_job("preview_captain").get("id", ""),
-		"credits": context.reward_minor, "plane": context.aviation.plane_kind if context.flying() else ""}
+		"credits": context.reward_minor, "plane": context.aviation.plane_kind if context.flying() else "",
+		"boost": body.boost.uses()}
 
 ## Per-tick motion for one hull; quantized by the codec, shared by recipients.
 func motion_row(sender: int) -> Dictionary:
@@ -311,6 +312,8 @@ func own_motion(sender: int) -> Dictionary:
 		"rudder": ship.rudder, "lateral": ship.lateral_order,
 		"fuel": ship.state.fuel_liters, "condition": ship.state.condition}
 
+## Patch 4.0.4 item 1: no deep copies in here; send_frames keeps the one
+## deep copy it compares against, and the RPC serialises at once.
 func gameplay_state(context: Node3D) -> Dictionary:
 	# Presentation needs the live board, active cargo and last receipt, not the
 	# complete session journal. Keep network work bounded on long-running servers.
@@ -323,11 +326,11 @@ func gameplay_state(context: Node3D) -> Dictionary:
 	var records: Dictionary = {}
 	if context.loading.busy(): records[context.loading.operation] = context.ship.state.operations.record(context.loading.operation)
 	return {"kind": context.ship_kind, "port": context.world_ports.find(context.port),
-		"offers": offers.duplicate(true), "manifest": context.ship.state.manifest.lines(),
+		"offers": offers, "manifest": context.ship.state.manifest.lines(),
 		"operations": {"records": records}, "loading": context.loading.operation,
 		"loading_offer": context.loading.offer_id, "loading_notice": context.loading.notice,
 		"credits": context.reward_minor, "spent": context.spent_minor, "banked": context.banked_minor,
-		"fleet": context.fleet.duplicate(true), "bulk": context.bulk_active, "heavy": context.heavy_jobs.active.duplicate(true),
+		"fleet": context.fleet, "bulk": context.bulk_active, "heavy": context.heavy_jobs.active,
 		"notice": context.offer_notice, "abandon": context.abandon_job_id, "abandon_deadline": maxi(0, context.abandon_deadline - Time.get_ticks_msec()),
 		"sell": context.sell_kind, "sell_deadline": maxi(0, context.sell_deadline - Time.get_ticks_msec()),
 		"air": context.aviation.state()}
@@ -468,6 +471,12 @@ func present_world(target: float, _delta: float) -> void:
 			body.rudder = b.rudder
 			body.lateral_order = b.lateral
 			body.yaw_rate = lerpf(a.yaw_rate, b.yaw_rate, weight)
+			# Patch 4.0.4 item 4: another captain's blaster. A rise in their
+			# boost count starts this replica's charge; JettyFx runs its clock
+			# (the replica has no physics), so the orb, flame and sound play.
+			var fired: int = int(state.get("boost", 0))
+			if fired > int(replica.get("boost_seen", fired)) and body.boost.phase == "ready": body.boost.trigger()
+			replica.boost_seen = fired
 			var entry: Dictionary = replica.entry
 			entry.position = body.position
 			entry.heading = body.rotation.y
@@ -760,8 +769,8 @@ func client_command(action: StringName) -> void:
 	if action == &"horn": view.helm.feedback.sound_horn(view.controls.input_allowed())
 	# Patch 4.0.2 item 6: while flying, G is the landing gear (Aviation.on_command).
 	if action == &"cannon_salute" and view.flying(): return
+	# Patch 4.0.4 item 1: one salute per press (a second, ungated send fired it twice).
 	if action == &"cannon_salute" and view.controls.input_allowed(): send_gameplay("salute")
-	if action == &"cannon_salute": send_gameplay("salute")
 	# Patch 4.0.2: Shift asks the server for the Jetty's blaster boost; the own
 	# presentation hull starts its looks and sound at once (JettyFx runs its clock).
 	if action == PlayerControls.BOOST_COMMAND and not view.flying() and view.ship.request_boost(): send_gameplay("boost")

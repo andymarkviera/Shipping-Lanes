@@ -77,6 +77,10 @@ func run() -> void:
 	# the polar runways, VERSION (tools/patch_4_0_3_check.gd adds the scene).
 	for failure: String in load("res://tools/patch_4_0_3_logic.gd").run_all():
 		failures.append("Patch 4.0.3: " + failure)
+	# Patch 4.0.4: the HDG compass, the blaster's use count (replicated), the
+	# cached plane parts, VERSION (tools/patch_4_0_4_check.gd adds the scene).
+	for failure: String in load("res://tools/patch_4_0_4_logic.gd").run_all():
+		failures.append("Patch 4.0.4: " + failure)
 	for failure: String in failures:
 		push_error(failure)
 	print("CATALOG_CHECK_PASS" if failures.is_empty() else "CATALOG_CHECK_FAILED")
