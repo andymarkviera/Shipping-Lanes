@@ -9021,3 +9021,25 @@ Reference images: `docs/reference/patch_4_0_7/` (from `patch-4-0-7-refs`).
     clear core that minute (it failed on the untouched baseline too); it now
     moves the shared clock on a minute at a time, as `patch_4_0_6_check.gd`
     does.
+- Passed (Linux, Godot 4.7.2 headless):
+  - The CI set: import, check_scripts, boot, units_probe, check_catalog,
+    diagnostics_probe, check_controls, check_flow, check_starter and the
+    twelve Stage 2 probes. Stage 3 (Python) was not rerun: no Python changed.
+  - patch_4_0_check through patch_4_0_7_check, world_land_check,
+    volcano_check, small_boats_check, polar_biome_check, tropical_biome_check,
+    hangar_check, debug_game_check, debug_captain_check, check_m1_voyage,
+    globe_map_check, mooring_check, check_helm_keys and collision_probe.
+  - `check_dedicated_split.py` plain, `--flight`, `--prediction`,
+    `--replication`, `--families` and `--errors`. `--families` failed once
+    while run beside other Godot checks (a server exit) and passed when run
+    alone.
+  - Renders under Xvfb (OpenGL, software) of every plane at idle and at full
+    RPM, and of the Jetty at rest, at speed and in a blast. Seen by me, not yet
+    by Andy.
+- Not verified:
+  - Andy's Windows playtest: how the turn feels, the props, the Jetty's look,
+    crossing land in the real world and the effects at full speed (frame
+    rate on his GPU).
+  - Two real clients watching each other's Jetty cross land (the
+    `--flight` split covers the replicated hover and blaster on water).
+

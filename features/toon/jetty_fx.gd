@@ -16,7 +16,8 @@ extends Node3D
 ## are synthesised here from sine, saw and noise (no recorded audio).
 ##
 ## Patch 4.0.7 item 5 (Andy, issue #234): deliberately EXAGGERATED water
-## effects, to sell the Jetty as the fastest boat. Client-side looks only:
+## effects (in a hangar, with no hull, only the mist, the plume and the glow)
+## to sell the Jetty as the fastest boat. Client-side looks only:
 ## nothing here touches the hull's physics.
 ## - Under the hover: a dark "Depression" in the water, two "Ripple" rings
 ##   running out from it, and the spray mist ("Downwash").
@@ -545,18 +546,20 @@ func update_fx(delta: float) -> void:
 	detail = level_of_detail()
 	var wet: bool = ground == "water"
 	var shown: bool = detail > 0.0
+	# In a hangar (no hull) only the mist, a small plume and the glow show.
+	var open_water: bool = wet and is_instance_valid(ship)
 	# Hover: the mist, the depression and its ripples under the hull.
 	downwash.position = Vector3(0, water, 0)
 	lie_flat(downwash, Vector3.ONE)
 	downwash.emitting = shown and wet
 	downwash.amount_ratio = clampf(detail * (0.6 + 0.4 * blast), 0.05, 1.0)
-	depression.visible = shown and wet
+	depression.visible = shown and open_water
 	depression.position = Vector3(0, water + 0.01, 0)
 	lie_flat(depression, Vector3(beam_m * 1.6, 1.0, length_m * 0.9) * (1.0 + 0.06 * sin(clock * 4.3) + 0.25 * blast))
 	for index: int in ripples.size():
 		var ripple: MeshInstance3D = ripples[index]
 		var age: float = fposmod(clock / RIPPLE_S + index * 0.5, 1.0)
-		ripple.visible = shown and wet and detail > 0.3
+		ripple.visible = shown and open_water and detail > 0.3
 		ripple.position = Vector3(0, water + 0.03, 0)
 		lie_flat(ripple, Vector3(beam_m * (0.7 + 1.9 * age), 0.08, length_m * (0.45 + 0.6 * age)))
 		(ripple.material_override as StandardMaterial3D).albedo_color.a = 0.55 * (1.0 - age) * (1.0 - full * 0.6)
@@ -569,10 +572,10 @@ func update_fx(delta: float) -> void:
 	rooster.amount_ratio = clampf(detail * (0.35 + 0.65 * full), 0.05, 1.0)
 	for sheet: GPUParticles3D in [spray_left, spray_right]:
 		sheet.position.y = water
-		sheet.emitting = shown and wet and detail > 0.3 and speed > 0.08
+		sheet.emitting = shown and open_water and detail > 0.3 and speed > 0.08
 		lie_flat(sheet, Vector3.ONE * (0.6 + 1.6 * full + 0.8 * blast))
 		sheet.amount_ratio = clampf(detail * (0.3 + 0.7 * full), 0.05, 1.0)
-	wake.visible = shown and wet and speed > 0.02
+	wake.visible = shown and open_water and speed > 0.02
 	wake.position = Vector3(0, water + 0.25, -length_m * 0.45)
 	var wake_length: float = length_m * (1.5 + (WAKE_LENGTHS - 1.5) * full + 3.0 * blast)
 	lie_flat(wake, Vector3(wake_length * (0.9 + 0.3 * full), 1.0, wake_length))
