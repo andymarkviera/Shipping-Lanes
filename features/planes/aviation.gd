@@ -119,6 +119,7 @@ var card_info: Label
 var card_jobs: VBoxContainer
 var card_buttons: Dictionary = {}
 var shown_board: Array = []
+var board_key: String = ""
 var menu: PanelContainer
 var menu_rows: Dictionary = {}
 var menu_wallet: Label
@@ -768,8 +769,10 @@ func show_crash(at: Vector3) -> void:
 	# in_crash_view(): follow_boat in local play, the network runtime online.
 	var near: Vector3 = Progression.nearest(at, view.ship.global_position)
 	var blast: Node3D = Look.Explosion.new(clampf(float(Planes.PLANES.get(plane_kind, {"length_m": 10.0}).length_m) / 10.0, 1.0, 3.0))
+	# Patch 4.0.4 item 1: placed before it enters the tree, so its _ready
+	# seeds the debris from the wreck's place (every crash looked the same).
+	blast.position = near
 	view.add_child(blast)
-	blast.global_position = near
 	if is_instance_valid(boom_player): boom_player.play()
 	chase_ready = false
 
@@ -1049,12 +1052,16 @@ func refresh_ui() -> void:
 		card_buttons.boat.tooltip_text = boat_reason()
 		card_buttons.boat.disabled = not job_id.is_empty()
 		card_buttons.deliver.visible = not job_id.is_empty()
-		card_buttons.deliver.disabled = not deliver_reason().is_empty()
-		card_buttons.deliver.tooltip_text = deliver_reason()
-		var board: Array = Jobs.board(here, plane_entry()) if job_id.is_empty() else []
-		var ids: Array = board.map(func(row: Dictionary) -> String: return row.id)
-		if ids != shown_board:
-			shown_board = ids
+		var why: String = deliver_reason()
+		card_buttons.deliver.disabled = not why.is_empty()
+		card_buttons.deliver.tooltip_text = why
+		# Patch 4.0.4 item 1: the board only changes with the airport, the
+		# plane or the job aboard, so it is built then, not every frame.
+		var key: String = "%d|%s|%s" % [here, plane_kind, job_id]
+		if key != board_key:
+			board_key = key
+			var board: Array = Jobs.board(here, plane_entry()) if job_id.is_empty() else []
+			shown_board = board.map(func(row: Dictionary) -> String: return row.id)
 			for old: Node in card_jobs.get_children():
 				card_jobs.remove_child(old)
 				old.queue_free()
@@ -1112,6 +1119,8 @@ func describe() -> Dictionary:
 func instruments_line() -> String:
 	return "Fuel %.0f%%  ·  Condition %.0f%%" % [100.0 * model.fuel_l / maxf(1.0, float(plane_entry().fuel_l)), condition() * 100.0]
 
-## The helm bar's line while flying.
+## The helm bar's big figure while flying: the airspeed, as the boat shows
+## its speed (Patch 4.0.4 item 2: height, climb, heading, fuel, gear and the
+## throttle are on the instrument row, game_hud.refresh_flight).
 func helm_text() -> String:
-	return "%d kn · %d m · %d%%" % [roundi(model.airspeed() * 1.944), roundi(maxf(model.agl_m, 0.0)), roundi(maxf(0.0, float(order.throttle)) * 100.0)]
+	return "%d kn" % roundi(model.airspeed() * 3600.0 / 1852.0)

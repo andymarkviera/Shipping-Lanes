@@ -1295,7 +1295,9 @@ func _process(_delta: float) -> void:
 	switch_button.text = "Test container ship" if heavy_mode else "Test heavy loader"
 	switch_button.disabled = not can_switch()
 	offer_text.text = "Heavy-loader jobs" if heavy_mode else ("Bulk jobs" if bulk_mode() else "Container jobs")
-	refresh_ships()
+	# Patch 4.0.4 item 1: the game's Ships button opens the hangar, so its old
+	# list panel only needs refreshing while it is actually shown.
+	if ships_panel.visible or not game_mode: refresh_ships()
 	accept_button.tooltip_text = accept_reason()
 	accept_button.disabled = not accept_button.tooltip_text.is_empty()
 	refuel_button.text = "Refuel" if game_mode else "REFUEL"
@@ -1309,13 +1311,17 @@ func _process(_delta: float) -> void:
 	repair_button.disabled = loading.busy()
 	refuel_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Fill to %.0f L capacity; %s." % [ship.definition.fuel_capacity_liters, free_note()]
 	repair_button.tooltip_text = "Wait until loading finishes." if loading.busy() else "Restore condition to 100%; " + free_note() + "."
+	# Patch 4.0.4 item 1: the deliver reason is worked out once a frame.
+	var deliver_why: String = deliver_reason()
 	action_reason.text = accept_button.tooltip_text
-	if not bulk_active.is_empty() or (not heavy_mode and offers.active_job("preview_captain").get("state") == "loaded"): action_reason.text = deliver_reason()
+	if not bulk_active.is_empty() or (not heavy_mode and offers.active_job("preview_captain").get("state") == "loaded"): action_reason.text = deliver_why
 	action_reason.visible = not action_reason.text.is_empty()
 	deliver_button.visible = not heavy_mode
-	deliver_button.tooltip_text = deliver_reason()
+	deliver_button.tooltip_text = deliver_why
 	deliver_button.disabled = not deliver_button.tooltip_text.is_empty()
-	receipt_label.text = delivery.receipt_text(offers)
+	# Patch 4.0.4 item 1: the game hides the receipt (GameHud.refresh), so it
+	# is not rebuilt from every offer each frame there.
+	receipt_label.text = "" if game_mode else delivery.receipt_text(offers)
 	if heavy_mode:
 		receipt_label.text = ""
 		if not heavy_jobs.completed.is_empty():

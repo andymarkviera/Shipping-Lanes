@@ -45,7 +45,7 @@ func server_step() -> void:
 	if runtime.contexts.size() == 2 and not server_seen:
 		server_seen = true
 		ready_at = Time.get_ticks_msec()
-		check(runtime.world.world_ports.size() == 6, "all six ports")
+		check(runtime.world.world_ports.size() == runtime.Progression.WORLD.size(), "every port, Point Nemo too (%d)" % runtime.world.world_ports.size())
 		check(runtime.world.icebergs.size() == runtime.Progression.ICEBERGS.size(), "icebergs retained")
 		check(not paused, "server tree is running")
 		check(runtime.wrap.static_shapes > 0, "static edge collision copies exist")

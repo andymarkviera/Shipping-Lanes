@@ -8704,3 +8704,98 @@ No workflow edits. The gas, oil, refinery and cargo-fuel code is untouched. The
   a long steep climb on a fast plane (the plane first levels off, which takes
   some height: the check bounds the time, not the height); online Lift / Drop
   with a real server.
+
+## Patch 4.0.4 — audit fixes, plane HUD, plane job and replication checks (November 21, 2026)
+
+Issue #228. VERSION 4.0.3 → 4.0.4. No workflow edits. The gas, oil, refinery
+and cargo-fuel code is untouched. No save format changes: old saves load as
+before. `docs/AUDIT_4_0_4.md` and the `audit-4-0-4` branch do not exist, so the
+audit was done fresh, file by file.
+- 1, perf and bug pass:
+  - Online, a cannon salute was sent twice per press. The second send was
+    refused (rate limit, then the 5 s cooldown), so the client showed "Action
+    refused" after every salute and the server rebuilt the gameplay snapshot
+    for nothing. It is now sent once (`dedicated_runtime.client_command`).
+  - The plane job board (`Jobs.board`, its sort and a `map`) was rebuilt every
+    frame while stopped at an airport. It is now built only when the airport,
+    the plane or the job changes (`aviation.board_key`).
+  - `PlaneLook.animate` searched the whole plane model three times every frame,
+    for your plane and for every other captain's. It now finds the moving
+    parts once per model (`anim_parts` meta).
+  - The game rebuilt the delivery receipt from every offer each frame and
+    then hid it, and refreshed the hidden old Ships list each frame. Both
+    now run only where they are shown. The deliver reason is worked out once
+    per frame, not three times.
+  - The docked port title re-ran `DISPLAY.fit` every frame. It set a theme
+    override, which re-laid the label out. It now re-fits only when the name
+    or the card width changes.
+  - The server deep-copied the gameplay state twice per player, five times a
+    second. Now it copies once: the copy it compares against.
+  - Every crash had the same debris pattern: the explosion seeded its random
+    numbers before it was placed. It is now placed first.
+  - The Jetty's two cached sounds were held past exit, so Godot reported
+    "2 ObjectDB instances were leaked" after a blaster had played. They are
+    released when the last Jetty effect leaves the tree.
+  - Dead code: `JettyBoost.readiness()` (no callers) is gone.
+  - `dedicated_split_check.gd` still expected six ports. It has failed since
+    Point Nemo in 4.0.3, but CI does not run it. It now counts
+    `Progression.WORLD`.
+- 2, plane HUD: while flying, the helm bar has an instrument row above the
+  throttle slider, in the boat bar's style (cream captions, sunny figures,
+  the same plain bold face). The cells are: THR, a drawn 0–100 % gauge with
+  its percentage; IAS in knots; ALT in metres, with the height over the
+  ground (AGL) in its caption; V/S in m/s, smoothed; HDG in degrees with
+  its compass point (north +Z, east -X); FUEL %, which turns red under 20 %;
+  and GEAR, a light that is green for DOWN, red for UP, and blinks red while
+  "Press G — Gear down" shows. The big helm figure is now the airspeed, as
+  the boat's is its speed. The row is hidden on a boat.
+- 3, a headless plane job end to end, `tools/patch_4_0_4_check.gd` (66
+  checks), in the real game scene with an isolated save. It docks, switches
+  to the Turboprop and checks the instrument row. It takes the shortest job
+  from the airport board with the card's Accept. It flies with the keys:
+  `flight_autopilot.gd` presses W / S / A / D / Space through the input map,
+  moves the lever as Shift / Ctrl do, and presses G on final. It lands and
+  stops at the destination and presses Deliver. Paid: banked +pay, XP up.
+  Then it switches back to the boat. The flight runs at 1/60 s physics steps,
+  eight steps a frame: 214 s of flight in about 27 s, about 34 s in all.
+  It is not in CI (the 30 s limit). The scene-free part,
+  `tools/patch_4_0_4_logic.gd` (the HDG compass, the blaster use count, the
+  cached plane parts, VERSION), runs in `check_catalog.gd` (about 20 s).
+- 4, online replication. Other captains now see a Jetty's blaster: the status
+  row carries `boost` (`JettyBoost.uses()`, which rises once per Shift), and a
+  rise starts the replica's charge, so JettyFx plays the orb, flame and
+  sound. New `python3 tools/check_dedicated_split.py --flight`
+  (`tools/dedicated_flight_check.gd`): a real UDP server and two clients.
+  The server stages client1 airborne in a plane and swaps client2 to the
+  Jetty. Client1 holds the lever and presses G; client2 presses Shift. Both
+  go through the real helm frames and actions. It checks:
+  - client2 sees client1's plane: the right kind, in the air, its nameplate,
+    and its gear folding from down to up after G;
+  - client1 sees client2's Jetty hovering (JettyFx and the hover lift) and
+    its blaster charge and blast;
+  - client1's own plane HUD shows online;
+  - the server's plane flew, its gear came up, and the Jetty's boost fired.
+- Passed (Linux, Godot 4.7.2 headless): import, check_scripts, boot, every
+  Stage 2 command (units_probe, check_catalog, diagnostics_probe,
+  check_controls, check_flow, check_starter and the twelve probes), Stage 3
+  (compileall, the services unittests, public_handoff with psycopg,
+  world_layout tests, traversal_budget). Also patch_4_0_check through
+  patch_4_0_4_check, check_m1_voyage, ui_text_check, display_fonts_check,
+  hangar_check, debug_game_check, check_helm_keys, check_snapshot_budget,
+  globe_map_check, port_menu_check and cannon_salute_check, and
+  `check_dedicated_split.py` plain, `--prediction`, `--replication`,
+  `--families` and `--flight`.
+- Not verified: Windows play; how the instrument row looks at each window
+  size (headless has no renderer); how other captains' blaster sound plays
+  (headless has no audio). The minimap still redraws every frame. That is
+  left for 4.0.5 (below).
+
+### 4.0.5 notes (left over from the 4.0.4 audit)
+- The minimap (`globe_minimap._draw`) re-projects and re-triangulates the
+  land every frame, even docked. Redraw it only when the ship moves or turns,
+  or while a destination ring pulses.
+- `aviation.state()` still deep-copies `planes` five times a second per
+  flying captain. It is small; drop the copy once nothing mutates it.
+- Consider running `patch_4_0_4_check` and `check_dedicated_split.py --flight`
+  in CI. That needs a workflow edit, which only Andy or Hark can ask for, and
+  the 30 s limit would need to cover the flight.

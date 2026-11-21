@@ -1,5 +1,6 @@
 extends Control
 const DISPLAY = preload("res://features/ui/display_fonts.gd")
+const Progression = preload("res://features/game/progression.gd")
 ## Patch 2.0 item 5: the game's simplified HUD. It lays out what the game scene
 ## (port_test.gd in game_mode) already owns and adds four small things:
 ## - the helm bar: an R / N / D throttle slider, the speed in knots and Dock;
@@ -37,6 +38,27 @@ const BOAT_MARKS: Array[String] = ["R", "N", "D"]
 const PLANE_MARKS: Array[String] = ["0%", "50%", "100%"]
 var plane_mode: bool = false
 var marks: Array[Label] = []
+## Patch 4.0.4 item 2: the plane's instrument row, in the helm bar over the
+## throttle slider while flying (the boat bar's look: cream captions, sunny
+## figures in the plain bold face). THR is a 0-100% gauge, then airspeed,
+## altitude (with the height over the ground), vertical speed, heading,
+## fuel and the gear light. Filled from the plane each frame, shown only
+## while flying.
+const FLIGHT_CELLS: Array[String] = ["THR", "IAS", "ALT", "V/S", "HDG", "FUEL", "GEAR"]
+const COMPASS: Array[String] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+const WARN: Color = Color("ff8a7a")
+const GEAR_GREEN: Color = Color("7ed957")
+const GEAR_RED: Color = Color("ff5a4a")
+var flight: HBoxContainer
+var flight_values: Dictionary = {}
+var flight_captions: Dictionary = {}
+var throttle_gauge: Control
+var gear_light: Control
+var shown_vs_mps: float = 0.0
+var shown_throttle: float = 0.0
+var gear_state: int = 0
+var fuel_low: bool = false
+var fitted_title: String = ""
 
 ## Patch 4.0.2: the Jetty's blaster line ("" for every other hull).
 static func blaster_text(ship: HandlingShip) -> String:
@@ -79,6 +101,7 @@ func build_bar() -> void:
 	bar.offset_bottom = -20
 	var column: VBoxContainer = VBoxContainer.new()
 	bar.add_child(column)
+	build_flight(column)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	column.add_child(row)
@@ -125,6 +148,100 @@ func build_bar() -> void:
 	DISPLAY.plain(blaster, Color("5ff2e0"), 16)
 	blaster.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	blaster.hide()
+
+## Patch 4.0.4 item 2: the plane instruments, one cell each (caption over
+## figure), with a drawn throttle gauge and a gear light.
+func build_flight(column: VBoxContainer) -> void:
+	flight = HBoxContainer.new()
+	flight.name = "FlightInstruments"
+	flight.add_theme_constant_override("separation", 18)
+	flight.alignment = BoxContainer.ALIGNMENT_CENTER
+	flight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(flight)
+	for key: String in FLIGHT_CELLS:
+		var cell: VBoxContainer = VBoxContainer.new()
+		cell.name = key.replace("/", "")
+		cell.add_theme_constant_override("separation", 0)
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		flight.add_child(cell)
+		var caption: Label = text(cell, 12, PLAYFUL.CREAM)
+		DISPLAY.plain(caption, PLAYFUL.CREAM, 12)
+		caption.text = key
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		flight_captions[key] = caption
+		if key == "THR":
+			throttle_gauge = Control.new()
+			throttle_gauge.name = "ThrottleGauge"
+			throttle_gauge.custom_minimum_size = Vector2(64, 10)
+			throttle_gauge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			throttle_gauge.draw.connect(draw_throttle)
+			cell.add_child(throttle_gauge)
+		if key == "GEAR":
+			gear_light = Control.new()
+			gear_light.name = "GearLight"
+			gear_light.custom_minimum_size = Vector2(56, 10)
+			gear_light.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			gear_light.draw.connect(draw_gear)
+			cell.add_child(gear_light)
+		var value: Label = text(cell, 20, PLAYFUL.SUN)
+		DISPLAY.plain(value, PLAYFUL.SUN, 20)
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		value.custom_minimum_size.x = 64 if key in ["THR", "V/S", "GEAR"] else 78
+		flight_values[key] = value
+	flight.hide()
+
+## The THR gauge: a cream-rimmed bar filled sunny to the lever (0-100%).
+func draw_throttle() -> void:
+	var area: Rect2 = Rect2(Vector2(2, 1), throttle_gauge.size - Vector2(4, 2))
+	throttle_gauge.draw_rect(area, PLAYFUL.INK)
+	var fill: Rect2 = Rect2(area.position, Vector2(area.size.x * clampf(shown_throttle, 0.0, 1.0), area.size.y))
+	if fill.size.x > 0.5: throttle_gauge.draw_rect(fill, PLAYFUL.SUN)
+	throttle_gauge.draw_rect(area, PLAYFUL.CREAM, false, 1.5)
+	throttle_gauge.draw_line(Vector2(area.get_center().x, area.position.y), Vector2(area.get_center().x, area.end.y), Color(PLAYFUL.CREAM, 0.6), 1.0)
+
+## The gear light: green with the gear down, red with it up (blinking when
+## the "Press G" nudge shows).
+func draw_gear() -> void:
+	var colour: Color = GEAR_GREEN if gear_state == 1 else GEAR_RED
+	if gear_state == 2 and int(Time.get_ticks_msec() / 300) % 2 == 1: colour = Color(GEAR_RED, 0.25)
+	var centre: Vector2 = gear_light.size * 0.5
+	gear_light.draw_circle(centre, 5.0, colour)
+	gear_light.draw_arc(centre, 5.0, 0.0, TAU, 16, PLAYFUL.INK, 1.5, true)
+
+## The compass heading, 0-359 degrees, and its point, from FlightModel's
+## heading (atan2(forward.x, forward.z)). North is +Z and east is -X, so the
+## bearing turns the other way round.
+static func compass(heading_rad: float) -> String:
+	var degrees: int = posmod(roundi(-rad_to_deg(heading_rad)), 360)
+	return "%03d° %s" % [degrees, COMPASS[posmod(roundi(degrees / 45.0), 8)]]
+
+## Fills the instrument row from the plane (Patch 4.0.4 item 2).
+func refresh_flight(aviation: Node, delta: float) -> void:
+	var model: RefCounted = aviation.model
+	var entry: Dictionary = aviation.plane_entry()
+	var throttle: float = clampf(float(aviation.lever), 0.0, 1.0)
+	if not is_equal_approx(throttle, shown_throttle):
+		shown_throttle = throttle
+		throttle_gauge.queue_redraw()
+	flight_values.THR.text = "%d%%" % roundi(throttle * 100.0)
+	flight_values.IAS.text = "%d kn" % roundi(model.airspeed() * 3600.0 / 1852.0)
+	flight_values.ALT.text = "%s m" % Progression.thousands(maxi(0, roundi(model.position.y)))
+	flight_captions.ALT.text = "ALT · AGL %s" % Progression.thousands(maxi(0, roundi(model.agl_m)))
+	shown_vs_mps = lerpf(shown_vs_mps, model.velocity.y, 1.0 - exp(-4.0 * maxf(delta, 0.0)))
+	var vs: float = 0.0 if model.on_ground or absf(shown_vs_mps) < 0.05 else shown_vs_mps
+	flight_values["V/S"].text = "%s%.1f" % ["+" if vs > 0.0 else "", vs]
+	flight_values.HDG.text = compass(model.heading())
+	var share: float = model.fuel_l / maxf(1.0, float(entry.get("fuel_l", 1.0)))
+	flight_values.FUEL.text = "%d%%" % roundi(share * 100.0)
+	var low: bool = share < 0.2
+	if low != fuel_low:
+		fuel_low = low
+		DISPLAY.plain(flight_values.FUEL, WARN if low else PLAYFUL.SUN, 20)
+	var gear: int = 1 if model.gear_down else (2 if aviation.nudge else 0)
+	flight_values.GEAR.text = "DOWN" if model.gear_down else "UP"
+	if gear != gear_state or gear == 2:
+		gear_state = gear
+		gear_light.queue_redraw()
 
 func build_toast() -> void:
 	toast = PanelContainer.new()
@@ -319,8 +436,13 @@ func refresh(delta: float) -> void:
 	# Patch 4.0: flying, the bar shows airspeed, height and throttle instead.
 	var air: bool = view.has_method("flying") and view.flying()
 	set_plane_mode(air)
-	knots.custom_minimum_size.x = 300 if air else 92
-	if air: knots.text = view.aviation.helm_text()
+	# Patch 4.0.4 item 2: flying, the big figure is the airspeed and the
+	# instrument row above the slider carries the rest.
+	knots.custom_minimum_size.x = 92
+	flight.visible = air
+	if air:
+		knots.text = view.aviation.helm_text()
+		refresh_flight(view.aviation, delta)
 	var commanded: float = ship.commanded_throttle
 	if air:
 		if not dragging: slider.set_value_no_signal(clampf(float(view.aviation.lever), 0.0, 1.0))
@@ -362,7 +484,12 @@ func refresh(delta: float) -> void:
 	title.text = view.port.definition.display_name.to_upper()
 	title.visible = docked
 	# Patch 3.2: the heading fits its card (it shrinks rather than overflows).
-	if docked: DISPLAY.fit(title, maxf(160.0, view.port_panel.size.x - 28.0), TITLE_PX)
+	# Patch 4.0.4 item 1: fitted when the name or the card width changes
+	# (each fit re-sets a theme override, which re-lays the label out).
+	var fit_key: String = "%s|%d" % [title.text, roundi(view.port_panel.size.x)]
+	if docked and fit_key != fitted_title:
+		fitted_title = fit_key
+		DISPLAY.fit(title, maxf(160.0, view.port_panel.size.x - 28.0), TITLE_PX)
 	view.navigation.visible = not view.navigation.text.is_empty()
 	view.jobs_panel.visible = docked and not view.ships_panel.visible
 	if ships_button != null: ships_button.text = "Jobs" if view.ships_panel.visible else "Ships"

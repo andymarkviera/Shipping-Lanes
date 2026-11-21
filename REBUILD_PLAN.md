@@ -1494,6 +1494,15 @@ Runway on the south cap (same IDs). Checks: `tools/patch_4_0_3_check.gd`; the
 scene-free part also runs in `check_catalog.gd`. Waiting for Andy's Windows
 playtest.
 
+**Patch 4.0.4 (November 21, 2026, issue #228):** VERSION 4.0.4. A perf and bug
+pass (per-frame rebuilds, a double network send, a leak, a stale online check).
+While flying, the helm bar shows a plane instrument row in the boat bar's style:
+THR gauge 0–100 %, IAS, ALT with AGL, V/S, HDG, FUEL and a gear light. Other
+captains now see a Jetty's blaster charge and blast. New checks:
+`tools/patch_4_0_4_check.gd` flies a plane job end to end (take, fly, land,
+deliver) and `check_dedicated_split.py --flight` covers the online planes, gear,
+Jetty hover and blaster. Waiting for Andy's Windows playtest.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge
