@@ -28,7 +28,12 @@ static func sample(at: Vector3) -> Dictionary:
 	var surface: String = "sea"
 	var depth: float = Progression.land_depth(flat)
 	if depth > 0.0:
-		var land: float = maxf(TOON_COAST.sand_height(depth, 0.0), TOON_COAST.hill_height(depth))
+		# Patch 4.0.7 item 4: as the coast is drawn (TOON_COAST.natural_chunk):
+		# the sloping beach, and the green hill only past its foot. (Before,
+		# the hill's foot height stood right at the waterline, a 3.8 m step
+		# the hovering Jetty could never climb.)
+		var land: float = TOON_COAST.sand_height(depth, 0.0)
+		if depth > TOON_COAST.HILL_FOOT_M: land = maxf(land, TOON_COAST.hill_height(depth))
 		if land > 0.0:
 			height = land
 			surface = "land"

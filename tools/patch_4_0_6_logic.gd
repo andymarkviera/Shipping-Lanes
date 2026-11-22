@@ -7,6 +7,7 @@ extends RefCounted
 ##   the swell; the lightning; a plane's turbulence.
 ## The save migration (item 2) is tools/save_migration_logic.gd.
 const Storms = preload("res://features/sky/storms.gd")
+const DayNight = preload("res://features/sky/day_night.gd")
 const Progression = preload("res://features/game/progression.gd")
 const Flight = preload("res://features/planes/flight_model.gd")
 const Planes = preload("res://features/planes/plane_catalog.gd")
@@ -140,7 +141,19 @@ func lightning() -> void:
 
 ## A plane cruising into a storm is bumped (turbulence), and not in calm air.
 func turbulence() -> void:
+	# (Patch 4.0.7: "now" is the real clock; when no storm has a clear core at
+	# this minute, the shared clock is moved on a minute at a time, as
+	# patch_4_0_6_check.gd does, and put back afterwards.)
+	var shifted: float = 0.0
 	var spot: Vector3 = Storms.stormy_spot()
+	while spot == Vector3.INF and shifted < 7200.0:
+		DayNight.clock_offset += 60.0
+		shifted += 60.0
+		spot = Storms.stormy_spot()
+	fly_into(spot)
+	DayNight.clock_offset -= shifted
+
+func fly_into(spot: Vector3) -> void:
 	if not expect(spot != Vector3.INF, "a storm now for the plane"): return
 	var tracks: Array = []
 	for on: bool in [false, true]:

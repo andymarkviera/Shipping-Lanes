@@ -112,31 +112,51 @@ static func model(kind: String) -> Node3D:
 	body.add_child(props)
 	match str(p.engines):
 		"prop1":
-			_prop(props, Vector3(0, y, length * 0.5), body_r * 2.6, cache)
+			# Patch 4.0.7 item 2: a two-blade prop with a spinner, clear of the ground.
+			_prop(props, Vector3(0, y, length * 0.5 + 0.05), minf(body_r * 2.4, y * 0.85), 2, trim, cache)
 		"prop2":
+			# Patch 4.0.7 item 2: four-blade props on slim nacelles, clear of
+			# the ground and the fuselage (the old blades made an arrow).
 			for side: float in [-1.0, 1.0]:
 				var x: float = side * span * 0.2
-				var nacelle: MeshInstance3D = _drum(body, body_r * 0.38, body_r * 0.32, chord * 1.4, Vector3(x, wing_y - body_r * 0.2, length * 0.1), WHITE, cache)
+				var engine_y: float = wing_y - body_r * 0.2
+				var nacelle: MeshInstance3D = _drum(body, body_r * 0.38, body_r * 0.3, chord * 1.5, Vector3(x, engine_y, length * 0.1), WHITE, cache, 12)
 				nacelle.rotation.x = PI / 2.0
-				_prop(props, Vector3(x, wing_y - body_r * 0.2, length * 0.1 + chord * 0.75), body_r * 1.7, cache)
+				var exhaust: MeshInstance3D = _drum(body, body_r * 0.12, body_r * 0.16, chord * 0.3, Vector3(x + side * body_r * 0.3, engine_y + body_r * 0.1, length * 0.1 - chord * 0.2), INK, cache, 8)
+				exhaust.rotation.x = -PI / 2.0
+				_prop(props, Vector3(x, engine_y, length * 0.1 + chord * 0.8), minf(body_r * 1.5, engine_y * 0.85), 4, trim, cache, "Prop%d" % (0 if side < 0.0 else 1))
 		"fan2":
 			# Patch 4.0.1 item 5: turbofans, no flames. An under-wing nacelle on
 			# a pylon, a dark intake with a fan that spins with the throttle,
 			# a grey core nozzle and at most a faint heat shimmer behind it.
+			# Patch 4.0.7 item 2: a rounded intake lip ring with the fan's
+			# blades visible inside it, a spinner, and at the back a core
+			# nozzle with a pointed exhaust cone.
 			for side: float in [-1.0, 1.0]:
 				var x: float = side * span * 0.24
 				var radius: float = body_r * 0.5
 				var at: Vector3 = Vector3(x, wing_y - body_r * 0.75, length * 0.12)
 				_box(body, Vector3(radius * 0.25, body_r * 0.5, chord * 0.8), Vector3(x, wing_y - body_r * 0.3, length * 0.1), WHITE, cache)
-				var pod: MeshInstance3D = _drum(body, radius * 0.9, radius, chord * 1.4, at, WHITE, cache, 14)
+				var pod: MeshInstance3D = _drum(body, radius * 0.86, radius, chord * 1.4, at, WHITE, cache, 16)
 				pod.rotation.x = PI / 2.0
-				var lip: MeshInstance3D = _drum(body, radius * 1.04, radius * 1.04, chord * 0.12, at + Vector3(0, 0, chord * 0.68), Color("c9ccd4"), cache, 14)
-				lip.rotation.x = PI / 2.0
-				var intake: MeshInstance3D = _drum(body, radius * 0.86, radius * 0.86, chord * 0.1, at + Vector3(0, 0, chord * 0.7), INK, cache, 14)
+				var intake: MeshInstance3D = _drum(body, radius * 0.9, radius * 0.9, chord * 0.04, at + Vector3(0, 0, chord * 0.71), INK, cache, 16)
 				intake.rotation.x = PI / 2.0
-				var core: MeshInstance3D = _drum(body, radius * 0.5, radius * 0.3, chord * 0.4, at - Vector3(0, 0, chord * 0.85), Color("8a8f9c"), cache, 10)
+				var lip: MeshInstance3D = MeshInstance3D.new()
+				var ring: TorusMesh = TorusMesh.new()
+				ring.inner_radius = radius * 0.86
+				ring.outer_radius = radius * 1.06
+				ring.rings = 20
+				ring.ring_segments = 8
+				lip.mesh = ring
+				lip.rotation.x = PI / 2.0
+				lip.position = at + Vector3(0, 0, chord * 0.76)
+				lip.material_override = _paint(Color("c9ccd4"), cache)
+				body.add_child(lip)
+				var core: MeshInstance3D = _drum(body, radius * 0.62, radius * 0.42, chord * 0.4, at - Vector3(0, 0, chord * 0.86), Color("8a8f9c"), cache, 12)
 				core.rotation.x = -PI / 2.0
-				_fan(props, at + Vector3(0, 0, chord * 0.76), radius * 0.82, cache, "Fan%d" % (0 if side < 0.0 else 1))
+				var plug: MeshInstance3D = _drum(body, radius * 0.36, radius * 0.02, chord * 0.42, at - Vector3(0, 0, chord * 1.2), INK, cache, 10)
+				plug.rotation.x = -PI / 2.0
+				_fan(props, at + Vector3(0, 0, chord * 0.74), radius * 0.84, cache, "Fan%d" % (0 if side < 0.0 else 1))
 				var shimmer: MeshInstance3D = MeshInstance3D.new()
 				shimmer.name = "HeatShimmer"
 				var haze: CylinderMesh = CylinderMesh.new()
@@ -213,17 +233,61 @@ static func main_door(root: Node3D) -> Color:
 
 ## Patch 4.0.1 item 5: a turbofan's front fan: a spinner and a ring of wide
 ## blades, spun about +Z by animate() like a prop hub.
+## Patch 4.0.7 item 2: FAN_BLADES evenly spaced, pitched blades from the hub
+## to the lip, each on its own pivot (so every blade runs through the hub),
+## and a white spinner cone with a dark swirl mark (it shows the spin).
+const FAN_BLADES: int = 18
+const FAN_PITCH_RAD: float = 0.6
 static func _fan(parent: Node3D, at: Vector3, radius: float, cache: Dictionary, label: String = "Fan") -> void:
 	var hub: Node3D = Node3D.new()
 	hub.name = label
 	hub.position = at
 	parent.add_child(hub)
-	var spinner: MeshInstance3D = _drum(hub, radius * 0.3, radius * 0.02, radius * 0.45, Vector3(0, 0, radius * 0.1), WHITE, cache, 10)
+	var spinner: MeshInstance3D = _drum(hub, radius * 0.3, radius * 0.02, radius * 0.5, Vector3(0, 0, radius * 0.22), WHITE, cache, 12)
 	spinner.rotation.x = PI / 2.0
-	for index: int in 12:
-		var angle: float = TAU / 12.0 * index
-		var blade: MeshInstance3D = _box(hub, Vector3(radius * 0.2, radius * 0.72, 0.05 * radius), Vector3(sin(angle), cos(angle), 0) * radius * 0.6, Color("6b7280"), cache)
-		blade.rotation = Vector3(0, 0.5, -angle)
+	_box(hub, Vector3(radius * 0.05, radius * 0.22, radius * 0.04), Vector3(0, radius * 0.15, radius * 0.12), INK, cache).rotation.x = -0.55
+	var blade_mesh: ArrayMesh = _blade_mesh(radius * 0.26, radius * 0.97, radius * 0.17, radius * 0.2, radius * 0.03)
+	for index: int in FAN_BLADES:
+		var pivot: Node3D = Node3D.new()
+		pivot.name = "Blade%d" % index
+		pivot.rotation.z = TAU / FAN_BLADES * index
+		hub.add_child(pivot)
+		var blade: MeshInstance3D = MeshInstance3D.new()
+		blade.mesh = blade_mesh
+		blade.rotation.y = FAN_PITCH_RAD
+		blade.material_override = _paint(Color("7b8291"), cache)
+		pivot.add_child(blade)
+
+## Patch 4.0.7 item 2: one blade along +Y, from `root` to `tip` metres off
+## the axis: a lens-shaped section, widest a third of the way out
+## (`chord_root` at the root, `chord_mid` there, a rounded narrower tip),
+## `thick` through. Closed, flat-shaded, so the toon outline wraps it.
+static func _blade_mesh(root: float, tip: float, chord_root: float, chord_mid: float, thick: float) -> ArrayMesh:
+	var tool: SurfaceTool = SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var stations: Array = [[root, chord_root], [lerpf(root, tip, 0.35), chord_mid], [lerpf(root, tip, 0.85), chord_mid * 0.75], [tip, chord_mid * 0.35]]
+	var rings: Array = []
+	for station: Array in stations:
+		var y: float = station[0]
+		var half: float = float(station[1]) * 0.5
+		var t: float = thick * (0.5 if y < tip else 0.3)
+		rings.append([Vector3(-half, y, 0), Vector3(0, y, t), Vector3(half, y, 0), Vector3(0, y, -t)])
+	for index: int in rings.size() - 1:
+		var a: Array = rings[index]
+		var b: Array = rings[index + 1]
+		var centre: Vector3 = Vector3(0, (float(stations[index][0]) + float(stations[index + 1][0])) * 0.5, 0)
+		for side: int in 4:
+			var next: int = (side + 1) % 4
+			var outward: Vector3 = (a[side] + a[next]) * 0.5 - centre
+			outward.y = 0.0
+			_triangle(tool, a[side], b[side], b[next], outward)
+			_triangle(tool, a[side], b[next], a[next], outward)
+	for cap: int in [0, rings.size() - 1]:
+		var ring: Array = rings[cap]
+		var facing: Vector3 = Vector3.DOWN if cap == 0 else Vector3.UP
+		_triangle(tool, ring[0], ring[1], ring[2], facing)
+		_triangle(tool, ring[0], ring[2], ring[3], facing)
+	return tool.commit()
 
 ## Patch 4.0.1 item 4: the Fighter jet. A sleek grey dart: a slim fuselage
 ## with a long pointed nose and a bubble canopy, swept delta wings, twin
@@ -274,6 +338,36 @@ static func _fighter(kind: String) -> Node3D:
 	# The afterburner nozzle and its flame (grows with the throttle).
 	var nozzle: MeshInstance3D = _drum(body, body_r * 0.75, body_r * 0.9, length * 0.06, Vector3(0, y, -length * 0.37), INK, cache, 12)
 	nozzle.rotation.x = PI / 2.0
+	# Patch 4.0.7 item 2: a proper afterburner nozzle: a ring of dark steel
+	# petals round the exit, and inside it the hot throat ("NozzleGlow", lit
+	# by animate(): a dull red at idle, white-hot orange in afterburner).
+	for index: int in 10:
+		var pivot: Node3D = Node3D.new()
+		pivot.rotation.z = TAU / 10.0 * index
+		pivot.position = Vector3(0, y, -length * 0.405)
+		body.add_child(pivot)
+		var petal: MeshInstance3D = _box(pivot, Vector3(body_r * 0.48, 0.06, length * 0.035), Vector3(0, body_r * 0.78, 0), Color("3d434f"), cache)
+		petal.rotation.x = -0.18
+	var throat: MeshInstance3D = MeshInstance3D.new()
+	throat.name = "NozzleGlow"
+	var disc: CylinderMesh = CylinderMesh.new()
+	disc.top_radius = body_r * 0.72
+	disc.bottom_radius = body_r * 0.72
+	disc.height = 0.04
+	disc.radial_segments = 14
+	disc.rings = 1
+	throat.mesh = disc
+	throat.rotation.x = PI / 2.0
+	throat.position = Vector3(0, y, -length * 0.402)
+	var hot: StandardMaterial3D = StandardMaterial3D.new()
+	hot.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	hot.albedo_color = Color("5a1d14")
+	hot.emission_enabled = true
+	hot.emission = Color("ff6a1a")
+	hot.emission_energy_multiplier = 0.2
+	throat.material_override = hot
+	throat.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	body.add_child(throat)
 	var props: Node3D = Node3D.new()
 	props.name = "Props"
 	body.add_child(props)
@@ -323,33 +417,65 @@ static func _prism(parent: Node3D, outline: Array, y: float, thick: float, colou
 	parent.add_child(node)
 	return node
 
-static func _prop(parent: Node3D, at: Vector3, radius: float, cache: Dictionary) -> void:
+## Patch 4.0.7 item 2: a real propeller (Andy: the turboprop's rendered as
+## an arrow, the old blades were offset along the wrong line): a spinner
+## cone in the plane's trim colour on a dark back plate, and `blades`
+## (2 to 4) tapered blades, each on its own pivot evenly round the hub and
+## pitched PROP_PITCH_RAD about its own length, with painted tips. "Blur" is
+## a subtle translucent disc that animate() fades in only at high RPM.
+const PROP_PITCH_RAD: float = 0.38
+const BLADE: Color = Color("2f333d")
+const BLADE_TIP: Color = Color("ffc940")
+static func _prop(parent: Node3D, at: Vector3, radius: float, blades: int, trim: Color, cache: Dictionary, label: String = "Prop0") -> void:
 	var hub: Node3D = Node3D.new()
-	hub.name = "Prop"
+	hub.name = label
 	hub.position = at
+	hub.set_meta("blades", blades)
 	parent.add_child(hub)
-	var spinner: MeshInstance3D = _drum(hub, radius * 0.12, radius * 0.05, radius * 0.3, Vector3(0, 0, 0.1), INK, cache)
-	spinner.rotation.x = -PI / 2.0
-	for index: int in 3:
-		var blade: MeshInstance3D = _box(hub, Vector3(radius * 0.14, radius, 0.06), Vector3.ZERO, INK, cache)
-		blade.rotation.z = TAU / 3.0 * index
-		blade.position = Vector3(sin(TAU / 3.0 * index), cos(TAU / 3.0 * index), 0) * radius * -0.5
-	# Unshaded translucent disc: the blur of the spinning prop.
+	var plate: MeshInstance3D = _drum(hub, radius * 0.17, radius * 0.17, radius * 0.06, Vector3(0, 0, -radius * 0.02), INK, cache, 12)
+	plate.rotation.x = PI / 2.0
+	var spinner: MeshInstance3D = _drum(hub, radius * 0.16, radius * 0.015, radius * 0.38, Vector3(0, 0, radius * 0.2), trim, cache, 12)
+	spinner.rotation.x = PI / 2.0
+	var blade_mesh: ArrayMesh = _blade_mesh(radius * 0.1, radius * 0.86, radius * 0.1, radius * 0.16, radius * 0.035)
+	var tip_mesh: ArrayMesh = _blade_mesh(radius * 0.86, radius, radius * 0.12, radius * 0.11, radius * 0.03)
+	for index: int in blades:
+		var pivot: Node3D = Node3D.new()
+		pivot.name = "Blade%d" % index
+		pivot.rotation.z = TAU / blades * index
+		hub.add_child(pivot)
+		for part: Array in [[blade_mesh, BLADE], [tip_mesh, BLADE_TIP]]:
+			var piece: MeshInstance3D = MeshInstance3D.new()
+			piece.mesh = part[0]
+			piece.rotation.y = PROP_PITCH_RAD
+			piece.material_override = _paint(part[1], cache)
+			pivot.add_child(piece)
 	var disc: MeshInstance3D = MeshInstance3D.new()
 	var mesh: CylinderMesh = CylinderMesh.new()
 	mesh.top_radius = radius
 	mesh.bottom_radius = radius
-	mesh.height = 0.02
-	mesh.radial_segments = 16
+	mesh.height = 0.01
+	mesh.radial_segments = 28
+	mesh.rings = 1
 	disc.mesh = mesh
 	disc.rotation.x = PI / 2.0
 	var blur: StandardMaterial3D = StandardMaterial3D.new()
 	blur.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	blur.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	blur.albedo_color = Color(1, 1, 1, 0.18)
+	blur.albedo_color = Color(0.85, 0.88, 0.92, 0.0)
+	blur.cull_mode = BaseMaterial3D.CULL_DISABLED
 	disc.material_override = blur
+	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	disc.visible = false
 	disc.name = "Blur"
 	hub.add_child(disc)
+
+## Patch 4.0.7 item 2: the blur disc shows from BLUR_FROM of full RPM, at
+## most BLUR_ALPHA; the props and fans spool up and down at SPOOL_RATE (of
+## full RPM) a second, so they spin by RPM, not by the throttle lever.
+const BLUR_FROM: float = 0.55
+const BLUR_FULL: float = 0.9
+const BLUR_ALPHA: float = 0.16
+const SPOOL_RATE: float = 0.8
 
 ## Spins the props and the turbofans' fans, grows the Fighter's afterburner
 ## flame and the turbofans' faint heat shimmer with the engine (0..1); hides
@@ -359,13 +485,32 @@ static func animate(plane: Node3D, engine: float, gear_down: bool, delta: float)
 	# searched for every frame (own plane and every other captain's).
 	if not plane.has_meta("anim_parts"):
 		plane.set_meta("anim_parts", {"props": plane.find_child("Props", true, false),
-			"flames": plane.find_children("JetFlame", "", true, false), "haze": plane.find_children("HeatShimmer", "", true, false)})
+			"flames": plane.find_children("JetFlame", "", true, false), "haze": plane.find_children("HeatShimmer", "", true, false),
+			"glows": plane.find_children("NozzleGlow", "", true, false)})
 	var parts: Dictionary = plane.get_meta("anim_parts")
 	var props: Node = parts.props
+	# Patch 4.0.7 item 2: the RPM follows the engine (spool up and down).
+	var rpm: float = move_toward(float(plane.get_meta("rpm", engine)), clampf(engine, 0.0, 1.0), SPOOL_RATE * maxf(delta, 0.0))
+	plane.set_meta("rpm", rpm)
 	if is_instance_valid(props):
 		for hub: Node in props.get_children():
-			var rate: float = (2.0 + 40.0 * engine) if hub.name.begins_with("Fan") else (6.0 + 60.0 * engine)
+			var fan: bool = hub.name.begins_with("Fan")
+			var rate: float = (2.0 + 40.0 * rpm) if fan else (5.0 + 70.0 * rpm)
 			(hub as Node3D).rotation.z += delta * rate
+			if fan: continue
+			var blur: MeshInstance3D = hub.get_node_or_null("Blur") as MeshInstance3D
+			if blur != null:
+				var share: float = smoothstep(BLUR_FROM, BLUR_FULL, rpm)
+				blur.visible = share > 0.01
+				(blur.material_override as StandardMaterial3D).albedo_color.a = BLUR_ALPHA * share
+	for glow: Node in parts.glows:
+		# Patch 4.0.7 item 2: the Fighter's nozzle throat glows with the
+		# throttle and burns white-hot orange in afterburner (from 0.75).
+		var burner: float = smoothstep(0.7, 1.0, engine)
+		var paint: StandardMaterial3D = (glow as MeshInstance3D).material_override as StandardMaterial3D
+		if paint != null:
+			paint.albedo_color = Color("5a1d14").lerp(Color("ff8a2a"), clampf(engine * 1.2, 0.0, 1.0)).lerp(Color("fff1c4"), burner * 0.7)
+			paint.emission_energy_multiplier = 0.2 + 1.2 * engine + 4.0 * burner
 	for flame: Node in parts.flames:
 		flame.set("power", engine)
 	for haze: Node in parts.haze:

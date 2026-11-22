@@ -17,6 +17,8 @@ extends Node
 ## physics, kept under the plane at sea level so everything that follows the
 ## boat (the sea, the biomes, the minimap, relevance) follows the plane.
 ## "Switch to Boat" puts it back in the water at the port nearest the plane.
+## Patch 4.0.7 item 4: runways in use stop a hovering Jetty.
+const JETTY_LAND = preload("res://features/ships/jetty_land.gd")
 const Planes = preload("res://features/planes/plane_catalog.gd")
 const Airports = preload("res://features/planes/airports.gd")
 const Jobs = preload("res://features/planes/plane_jobs.gd")
@@ -456,6 +458,9 @@ func tick(delta: float) -> void:
 		crash()
 		return
 	airport = maxi(0, Airports.nearest(model.position))
+	# Patch 4.0.7 item 4: a plane on a runway or on final holds it (the Jetty
+	# hovering over land may not cross a runway in use).
+	JETTY_LAND.note_plane(model, airport)
 	check_low(delta)
 	follow_boat()
 	planes[plane_kind].fuel = clampf(model.fuel_l / maxf(1.0, float(plane_entry().fuel_l)), 0.0, 1.0)

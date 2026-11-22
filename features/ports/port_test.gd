@@ -167,6 +167,8 @@ var xp: int = 0
 ## Patch 4.0 items 8-13: the captain's planes and flights (the game only).
 const AVIATION = preload("res://features/planes/aviation.gd")
 var aviation: Node
+## Patch 4.0.7 item 4: land, ice and icebergs join JETTY_LAND.PASSABLE.
+const JETTY_LAND = preload("res://features/ships/jetty_land.gd")
 
 ## Patch 4.0 item 5: XP for a completed delivery that paid `pay_minor`. The
 ## authority only (server simulation, local play); a client view never awards.
@@ -535,6 +537,8 @@ func add_land(rect: Rect2, ice: bool = false) -> void:
 	body.position = Vector3(rect.get_center().x, -2, rect.get_center().y)
 	body.collision_layer = CollisionRules.SHORE
 	body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+	# Patch 4.0.7 item 4: the Jetty hovers over land (JettyLand).
+	body.add_to_group(JETTY_LAND.PASSABLE)
 	add_child(body)
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = Vector3(rect.size.x, 12, rect.size.y)
@@ -588,6 +592,7 @@ func add_natural_land() -> void:
 		body.position = Vector3(0, -2, 0)
 		body.collision_layer = CollisionRules.SHORE
 		body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+		body.add_to_group(JETTY_LAND.PASSABLE)
 		add_child(body)
 		for index: int in range(mass[1], mass[2]):
 			var rect: Rect2 = Progression.LAND[index]
@@ -609,6 +614,7 @@ func add_natural_land() -> void:
 		nemo_body.position = Vector3(0, -2, 0)
 		nemo_body.collision_layer = CollisionRules.SHORE
 		nemo_body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+		nemo_body.add_to_group(JETTY_LAND.PASSABLE)
 		nemo_root.add_child(nemo_body)
 		for rect: Rect2 in Progression.NEMO_LAND:
 			var nemo_shape: BoxShape3D = BoxShape3D.new()
@@ -675,6 +681,9 @@ func add_iceberg(index: int) -> void:
 	body.rotation.y = index * 1.7
 	body.collision_layer = CollisionRules.SHORE
 	body.collision_mask = CollisionRules.HULL | CollisionRules.CHARACTER
+	# Patch 4.0.7 item 4: the Jetty meets an iceberg's terrain (its steep
+	# flanks block it by the slope limit), not its box.
+	body.add_to_group(JETTY_LAND.PASSABLE)
 	add_child(body)
 	var shape: CylinderShape3D = CylinderShape3D.new()
 	shape.radius = radius

@@ -15,6 +15,8 @@ const SLIDE_TURN_RADPS: float = PI / 2
 ## Patch 3.1.1: "approaching" is within this distance of any berth of the port.
 const APPROACH_M: float = 150.0
 const PORT_FULL: String = "Port full — every berth is taken."
+## Patch 4.0.7 item 4: the Jetty may not dock from land.
+const JETTY_LAND = preload("res://features/ships/jetty_land.gd")
 ## How long Undock holds the ship in the berth before the helm is back. The
 ## game (Patch 2.4 item 4) raises it so the mooring lines are reeled in first.
 var undock_seconds: float = 0.5
@@ -67,6 +69,9 @@ func request_dock(owner: int, service: String, cargo: String) -> Dictionary:
 	if not members.has(owner): return {"ok": false, "message": "Ship unavailable."}
 	var entry: Dictionary = members[owner]
 	if entry.state not in ["underway", "approaching"]: return {"ok": false, "message": "Docking action already in progress."}
+	# Patch 4.0.7 item 4: the Jetty hovers over land, but docks from the water only.
+	if is_instance_valid(entry.body) and entry.body.get("hover_land") == true and JETTY_LAND.over_land(entry.body.global_position):
+		return {"ok": false, "message": "Hover back onto the water to dock."}
 	var pick: Dictionary = pick_berth(owner, service, cargo)
 	if pick.index < 0: return {"ok": false, "message": pick.readiness.message}
 	# No awaits between validation and claim: simultaneous requests serialize.

@@ -245,12 +245,14 @@ func boost_wall() -> void:
 	box.size = Vector3(40, 10, 0.1)
 	plate.shape = box
 	wall.add_child(plate)
-	wall.position = Vector3(5000, 0, 5200)
+	# (Patch 4.0.7: on open sea. The old spot is on the polar ice cap, where
+	# the Jetty now meets the terrain before the wall.)
+	wall.position = Vector3(-6000, 0, 1200)
 	root.add_child(wall)
 	var jet: HandlingShip = HandlingShip.new()
 	jet.definition = Progression.definition("small_jetty")
 	CollisionRules.add_box_hull(jet, jet.definition.hull_size_m)
-	jet.position = Vector3(5000, 0, 5000)
+	jet.position = Vector3(-6000, 0, 1000)
 	root.add_child(jet)
 	await physics_frame
 	var top: float = jet.definition.forward_acceleration_mps2 / jet.definition.linear_drag_per_second
@@ -269,7 +271,7 @@ func boost_wall() -> void:
 		touched = touched or jet.get_slide_collision_count() > 0
 		front = maxf(front, jet.position.z + jet.definition.hull_size_m.z * 0.5)
 	expect(jet.boost.phase == "blast" and touched, "the boosted Jetty met the thin wall")
-	expect(front < 5200.0 - 0.04, "the boosted Jetty did not tunnel through a 0.1 m wall (bow %.2f m short)" % (5200.0 - front))
+	expect(front < 1200.0 - 0.04, "the boosted Jetty did not tunnel through a 0.1 m wall (bow %.2f m short)" % (1200.0 - front))
 	jet.free()
 	wall.free()
 

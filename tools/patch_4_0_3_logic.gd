@@ -99,15 +99,19 @@ func bank_keys() -> void:
 			var m: RefCounted = cruise(kind)
 			pilot.model = m
 			pilot.lever = 0.7
-			var heading: float = m.heading()
 			var worst: float = 0.0
+			# (Patch 4.0.7: the turn is fast enough to come full circle in 15 s,
+			# so the heading change is added up, not read at the end.)
+			var turned: float = 0.0
 			for frame: int in roundi(15.0 / STEP):
 				var order: Dictionary = pilot.key_order(0.0, turn, 0.0, false, STEP)
+				var before: float = m.heading()
 				m.step({"throttle": order.throttle, "pitch": order.pitch, "roll": order.roll, "trick": order.yaw}, STEP)
+				turned += absf(angle_difference(before, m.heading()))
 				worst = maxf(worst, absf(rad_to_deg(m.full_bank())))
 			var key: String = "D" if turn > 0.0 else "A"
 			expect(worst <= limit + 0.5 and worst >= limit * 0.5, "%s: %s banks up to, never past, %.0f degrees (%.1f)" % [kind, key, limit, worst])
-			expect(absf(angle_difference(heading, m.heading())) > deg_to_rad(20.0), "%s: %s turns the plane" % [kind, key])
+			expect(turned > deg_to_rad(20.0), "%s: %s turns the plane (%.0f degrees)" % [kind, key, rad_to_deg(turned)])
 			fly(pilot, m, 0.0, 0.0, 8.0)
 			expect(absf(rad_to_deg(m.full_bank())) < 3.0, "%s: %s released, it rolls level (%.1f)" % [kind, key, rad_to_deg(m.full_bank())])
 	pilot.free()

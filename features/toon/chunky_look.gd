@@ -574,43 +574,61 @@ static func delta_hull_mesh(length: float, beam: float, keel: float, deck: float
 ## the racer's long deep-V in teal, white and orange, a bubble canopy over two
 ## seats, twin tail fins and one big jet nozzle on the transom. The jet flame
 ## (JET_FLAME, toon cones that grow with the throttle) comes out of the nozzle.
+## Patch 4.0.7 item 3 (Andy, issue #234): no legs under it (the hydrofoil
+## struts and foils are gone: it hovers). Restyled as a faceted, brushed
+## steel wedge of a spaceship (wedge_hull_mesh): gunmetal, black and steel
+## panels, a black glass canopy, angular fins, a steel engine block and only
+## small cool-white accent lights (a bow tip, a light bar across the stern,
+## running lights on the fins). The rear thruster (nozzle, its ring and
+## JetFlame) and JettyFx (hover and blaster) stay where they were.
 const JET_FLAME = preload("res://features/toon/jet_flame.gd")
 const JETTY_FX = preload("res://features/toon/jetty_fx.gd")
+const JETTY_GUNMETAL: Color = Color("5d6672")
+const JETTY_BLACK: Color = Color("24272d")
+const JETTY_STEEL: Color = Color("b9c0c9")
+const JETTY_DARK: Color = Color("3a4049")
+const JETTY_LIGHT: Color = Color("e4f2ff")
+## The keel's depth under the hull's origin: with the hover's lift
+## (ShipVisualMotion.HOVER_REST_M) the keel rides about JettyLand.RIDE_M clear.
+const JETTY_KEEL_M: float = -0.5
 static func _dress_jetty(root: Node3D, hull: MeshInstance3D, size: Vector3, cache: Dictionary) -> void:
-	var teal: Color = Color("1fb5a8")
-	var orange: Color = Color("ff8a2a")
 	var s: float = size.y / 4.0
 	var deck: float = 2.6 * s
 	var aft: float = -size.z / 2.0
 	var beam: float = size.x
-	# Patch 4.0.2 item 9: a long futuristic delta hull (needle nose, wide
-	# stern) with a slim canopy, swept winglets and hydrofoil struts. The rear
-	# thruster (the nozzle, its ring and the jet flame) is exactly as before.
-	var colours: Array[Color] = [Color("e8f4f2"), teal, orange, WHITE, Color("3a3f4b"), INK]
-	hull.mesh = delta_hull_mesh(size.z, beam, -2.2 * s, deck, colours)
+	hull.mesh = wedge_hull_mesh(size.z, beam, JETTY_KEEL_M, deck)
 	var top: float = deck + 0.12
-	# A glowing teal line down the spine to the needle nose.
-	_box(root, Vector3(0.08, 0.06, size.z * 0.55), Vector3(0, top + 0.3, size.z * 0.12), Color("5ff2e0"), cache)
-	# A slim raked canopy over the tandem seats, aft of the middle.
-	var cockpit_z: float = -size.z * 0.14
-	var canopy: MeshInstance3D = _ball(root, beam * 0.16, 1.0, Vector3(0, top + 0.4, cockpit_z), GLASS, cache)
-	canopy.scale = Vector3(1.0, 0.7, 4.2)
-	_box(root, Vector3(beam * 0.34, 0.1, size.z * 0.2), Vector3(0, top + 0.22, cockpit_z), Color("3a3f4b"), cache)
-	# Swept winglets at the stern corners and twin hydrofoil struts with foils.
+	var lights: StandardMaterial3D = _jetty_light(cache)
+	# A black glass canopy: a low faceted wedge on the ridge's front face.
+	var canopy: MeshInstance3D = _box(root, Vector3(beam * 0.3, 0.32, size.z * 0.2), Vector3(0, top + 0.42, -size.z * 0.02), JETTY_BLACK, cache)
+	canopy.rotation.x = -0.16
+	_box(root, Vector3(beam * 0.32, 0.04, size.z * 0.205), Vector3(0, top + 0.27, -size.z * 0.02), JETTY_STEEL, cache).rotation.x = -0.16
+	# Panel seams down the deck (thin black lines) and brushed steel side strakes.
 	for side: float in [-1.0, 1.0]:
-		var wing: MeshInstance3D = _box(root, Vector3(0.1, 0.9, 1.4), Vector3(side * beam * 0.4, top + 0.45, aft + 0.8), teal, cache)
-		wing.rotation = Vector3(0.55, 0, side * -0.25)
-		_box(root, Vector3(0.12, 0.12, 0.9), Vector3(side * beam * 0.4, top + 0.95, aft + 0.5), orange, cache)
-		var strut: MeshInstance3D = _box(root, Vector3(0.08, 1.0, 0.3), Vector3(side * beam * 0.34, -0.2, aft + size.z * 0.18), INK, cache)
-		strut.rotation.z = side * 0.25
-		_box(root, Vector3(0.7, 0.06, 0.4), Vector3(side * beam * 0.4, -0.7, aft + size.z * 0.18), INK, cache)
-	_box(root, Vector3(0.06, 0.8, 0.3), Vector3(0, -0.4, size.z * 0.22), INK, cache)
-	_box(root, Vector3(0.6, 0.06, 0.34), Vector3(0, -0.8, size.z * 0.22), INK, cache)
-	# The engine deck the thruster mounts to.
-	_box(root, Vector3(beam * 0.62, 0.18, size.z * 0.14), Vector3(0, top + 0.06, aft + size.z * 0.1), INK, cache)
-	var nozzle: MeshInstance3D = _drum(root, 0.55, 0.42, 0.9, Vector3(0, deck - 0.1, aft - 0.35), INK, cache)
+		var seam: MeshInstance3D = _box(root, Vector3(0.04, 0.03, size.z * 0.62), Vector3(side * beam * 0.17, top + 0.04, -size.z * 0.08), JETTY_BLACK, cache)
+		seam.rotation.y = side * -0.11
+		var strake: MeshInstance3D = _box(root, Vector3(0.05, 0.1, size.z * 0.55), Vector3(side * beam * 0.37, deck - 0.12, -size.z * 0.16), JETTY_STEEL, cache)
+		strake.rotation.y = side * -0.14
+		# Angular swept fins at the stern corners, a cool-white running light on each.
+		var fin: MeshInstance3D = _box(root, Vector3(0.08, 0.75, 1.3), Vector3(side * beam * 0.42, top + 0.38, aft + 0.75), JETTY_GUNMETAL, cache)
+		fin.rotation = Vector3(0.62, 0, side * -0.32)
+		_box(root, Vector3(0.1, 0.06, 0.5), Vector3(side * beam * 0.46, top + 0.7, aft + 0.42), JETTY_BLACK, cache)
+		var running: MeshInstance3D = _box(root, Vector3(0.06, 0.05, 0.18), Vector3(side * beam * 0.47, top + 0.74, aft + 0.25), JETTY_LIGHT, cache)
+		running.material_override = lights
+		# Side intakes: dark slots in the flanks.
+		var slot: MeshInstance3D = _box(root, Vector3(0.06, 0.16, 0.9), Vector3(side * beam * 0.43, deck - 0.02, aft + size.z * 0.2), JETTY_BLACK, cache)
+		slot.rotation.y = side * -0.18
+	# The light bar across the stern (Cybertruck style) and a bow tip light.
+	var bar: MeshInstance3D = _box(root, Vector3(beam * 0.84, 0.05, 0.05), Vector3(0, deck + 0.02, aft + 0.02), JETTY_LIGHT, cache)
+	bar.material_override = lights
+	var tip: MeshInstance3D = _box(root, Vector3(0.06, 0.04, 0.22), Vector3(0, deck + 0.02, size.z * 0.48), JETTY_LIGHT, cache)
+	tip.material_override = lights
+	# The engine block the thruster mounts to, in steel and black.
+	_box(root, Vector3(beam * 0.6, 0.2, size.z * 0.14), Vector3(0, top + 0.06, aft + size.z * 0.1), JETTY_DARK, cache)
+	_box(root, Vector3(beam * 0.62, 0.04, size.z * 0.145), Vector3(0, top + 0.17, aft + size.z * 0.1), JETTY_STEEL, cache)
+	var nozzle: MeshInstance3D = _drum(root, 0.55, 0.42, 0.9, Vector3(0, deck - 0.1, aft - 0.35), JETTY_BLACK, cache)
 	nozzle.rotation.x = PI / 2.0
-	var ring: MeshInstance3D = _drum(root, 0.6, 0.6, 0.12, Vector3(0, deck - 0.1, aft - 0.82), orange, cache)
+	var ring: MeshInstance3D = _drum(root, 0.6, 0.6, 0.12, Vector3(0, deck - 0.1, aft - 0.82), JETTY_STEEL, cache)
 	ring.rotation.x = PI / 2.0
 	var flame: Node3D = JET_FLAME.new()
 	flame.name = "JetFlame"
@@ -619,12 +637,80 @@ static func _dress_jetty(root: Node3D, hull: MeshInstance3D, size: Vector3, cach
 	# Patch 4.0.2: the Jetty hovers (ShipVisualMotion lifts it): downwash spray,
 	# a rooster tail and an under-glow on the water, and the Shift blaster
 	# boost's charge orb, RGB flame, shock ring and sound at the same nozzle.
+	# Patch 4.0.7 item 5: and the exaggerated water and land effects.
 	var fx: Node3D = JETTY_FX.new()
 	fx.name = "JettyFx"
 	fx.set("nozzle", flame.position)
 	fx.set("length_m", size.z)
 	fx.set("beam_m", beam)
 	root.add_child(fx)
+
+## Patch 4.0.7 item 3: the Jetty's small cool-white accent lights (unshaded,
+## so the toon pass leaves them bright).
+static func _jetty_light(cache: Dictionary) -> StandardMaterial3D:
+	if not cache.has("jetty_light"):
+		var paint: StandardMaterial3D = StandardMaterial3D.new()
+		paint.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		paint.albedo_color = JETTY_LIGHT
+		cache["jetty_light"] = paint
+	return cache["jetty_light"]
+
+## Patch 4.0.7 item 3: the Jetty's faceted wedge hull. A long delta in plan
+## (a needle nose at +Z, widest at the stern), and in profile a Cybertruck
+## line: one straight face from the nose up to a ridge peak just aft of the
+## middle, one straight face down to the stern. Sharp chines, chamfered
+## flanks and a shallow flat-V belly (no keel fin, no legs). Flat-shaded
+## facets in brushed steel, gunmetal and black.
+static func wedge_hull_mesh(length: float, beam: float, keel: float, deck: float) -> ArrayMesh:
+	var surface: SurfaceTool = SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Flat shading: every facet keeps its own normal.
+	surface.set_smooth_group(-1)
+	var half: float = beam / 2.0
+	var peak_t: float = 0.32
+	# Bands, from the ridge round to the keel: roof (steel), shoulder
+	# (gunmetal), edge (black), flank (gunmetal), belly (black).
+	var colours: Array[Color] = [JETTY_STEEL, JETTY_GUNMETAL, JETTY_BLACK, JETTY_GUNMETAL, JETTY_DARK]
+	var stations: Array[float] = [0.0, 0.14, peak_t, 0.55, 0.78, 0.93, 1.0]
+	var rings: Array[PackedVector3Array] = []
+	for t: float in stations:
+		var width: float = maxf(half * (1.0 - t), 0.02)
+		var z: float = (t - 0.5) * length
+		var ridge_rise: float = lerpf(0.5, 0.95, t / peak_t) if t <= peak_t else lerpf(0.95, 0.0, (t - peak_t) / (1.0 - peak_t))
+		var edge: float = deck + 0.02 * t
+		var ridge: float = maxf(edge + ridge_rise, edge + 0.02)
+		var chine: float = lerpf(deck - 0.45, edge - 0.08, pow(t, 1.4))
+		var belly: float = lerpf(keel, chine - 0.04, pow(t, 1.2))
+		var section: Array[Vector2] = [Vector2(0.0, ridge), Vector2(width * 0.42, lerpf(ridge, edge, 0.45)), Vector2(width, edge),
+			Vector2(width * 0.97, chine), Vector2(width * 0.55, belly + 0.06), Vector2(0.0, belly)]
+		var ring: PackedVector3Array = PackedVector3Array()
+		for point: Vector2 in section: ring.append(Vector3(-point.x, point.y, z))
+		for back: int in range(section.size() - 2, 0, -1): ring.append(Vector3(section[back].x, section[back].y, z))
+		rings.append(ring)
+	var count: int = rings[0].size()
+	for index: int in stations.size() - 1:
+		var a: PackedVector3Array = rings[index]
+		var b: PackedVector3Array = rings[index + 1]
+		for side: int in count:
+			var next: int = (side + 1) % count
+			var band: int = side if side < 5 else count - 1 - side
+			surface.set_color(colours[clampi(band, 0, colours.size() - 1)].srgb_to_linear())
+			for corner: Vector3 in [a[side], b[side], b[next], a[side], b[next], a[next]]:
+				surface.add_vertex(corner)
+	# The flat stern plate, in black.
+	var stern: PackedVector3Array = rings[0]
+	var middle: Vector3 = Vector3(0, (stern[0].y + stern[5].y) * 0.5, stern[0].z)
+	surface.set_color(JETTY_BLACK.srgb_to_linear())
+	for side: int in count:
+		for corner: Vector3 in [middle, stern[side], stern[(side + 1) % count]]:
+			surface.add_vertex(corner)
+	surface.generate_normals()
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 0.55
+	material.metallic = 0.6
+	surface.set_material(material)
+	return surface.commit()
 
 static func _tint(port: Node3D, label: String, colour: Color) -> void:
 	var mesh: MeshInstance3D = _mesh_of(port, label)

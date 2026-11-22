@@ -424,6 +424,9 @@ func replace_own_ship(kind: String) -> void:
 
 func make_replica(id: String, state: Dictionary) -> void:
 	var fresh: HandlingShip = render_ship(state.kind)
+	# Patch 4.0.7 item 5: another captain's hull (a Jetty's effects run at
+	# their remote level of detail and never touch this camera).
+	fresh.set_meta("remote_replica", true)
 	var nameplate: Label3D = Label3D.new()
 	nameplate.text = state.captain
 	nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED

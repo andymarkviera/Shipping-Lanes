@@ -1520,6 +1520,25 @@ events), `check_dedicated_split.py --errors` (a real server) and the scene-free
 part in `check_catalog.gd`. Waiting for Andy's Windows playtest with a real
 controller.
 
+**Patch 4.0.7 (November 21, 2026, issue #234, draft PR #235):** VERSION 4.0.7.
+A / D fly an arcade coordinated turn: they set the heading rate (about 23°/s
+at cruise, the Fighter 35°/s, easing in over 0.3 s), the bank follows from it
+(45° / 60° caps) and the nose stays level, so the altitude holds. On the
+ground they steer the nose wheel. Every plane has real props (2 or 4 pitched
+blades, a spinner, a blur disc only at high RPM, spinning by RPM). The
+turbofans show their fan blades and an exhaust cone, and the Fighter's nozzle
+glows in afterburner. The Jetty has no legs and is a faceted gunmetal, black
+and steel wedge with small cool-white lights. It hovers over land, ice and
+water on the shared terrain (server-authoritative, its height in the
+replicated pose). Slopes over 35°, the volcano, port grounds and runways in
+use stop it, and it cannot dock from land. Its water effects are exaggerated:
+a depression and ripples under it, spray mist, a tall rooster tail, a V wake,
+spray sheets, speed lines and an FOV kick at top speed, a white-hot blaster
+burst, and dust or snow over land. They use pooled GPU particles with LOD.
+Checks: `tools/patch_4_0_7_check.gd` (the game scene: the Jetty crosses an
+island from beach to beach); the scene-free part is in `check_catalog.gd`.
+Waiting for Andy's Windows playtest.
+
 ### Patch 3.0 item A — outer quay cranes (November 17, 2026)
 
 Implemented only the requested crane-support fix: the solid quay and its edge
